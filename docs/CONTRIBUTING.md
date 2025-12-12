@@ -74,10 +74,21 @@ git fetch upstream
    git push origin feature/your-feature-name
    ```
 
-5. **Open a Pull Request** with:
-   - Clear title and description
-   - Reference to related issues
-   - Screenshots/examples if applicable
+5. **Open a Pull Request**:
+   
+   **Option A: Interactive CLI**
+   ```bash
+   gc-pr
+   # or
+   ./scripts/create-pr.sh
+   ```
+   
+   **Option B: Manual on GitHub**
+   - Go to your fork on GitHub
+   - Click "New Pull Request"
+   - Select your branch and add title/description
+   - Reference related issues, if applicable
+   - Add screenshots/examples, if applicable
 
 6. **Address review feedback** promptly
 

@@ -35,9 +35,10 @@ declare -a GC_ALIASES=(
     "# Git-Control shortcuts"
     "alias gc-init='${SCRIPT_DIR}/template-loading.sh'"
     "alias gc-create='${SCRIPT_DIR}/create-repo.sh'"
+    "alias gc-pr='${SCRIPT_DIR}/create-pr.sh'"
     "alias gc-modules='${SCRIPT_DIR}/module-nesting.sh'"
     "alias gc-aliases='${SCRIPT_DIR}/alias-loading.sh'"
-    "alias gc-help='echo \"gc-init: Initialise repo with templates\"; echo \"gc-create: Create GitHub repo from current folder\"; echo \"gc-modules: Manage git submodules\"; echo \"gc-aliases: Reload alias installer\"'"
+    "alias gc-help='echo \"gc-init: Initialise repo with templates\"; echo \"gc-create: Create GitHub repo from current folder\"; echo \"gc-pr: Create pull request from current branch\"; echo \"gc-modules: Manage git submodules\"; echo \"gc-aliases: Reload alias installer\"'"
 )
 
 # Git shortcuts

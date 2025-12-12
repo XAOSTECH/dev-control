@@ -166,6 +166,26 @@ gc-init
 #   -h, --help                 Show help and list available templates
 ```
 
+### Repository Creation
+
+```bash
+# Interactive creation of new GitHub repository
+gc-create
+
+# Or run directly
+./scripts/create-repo.sh
+```
+
+### Pull Request Creation
+
+```bash
+# Interactive creation of pull request from current branch
+gc-pr
+
+# Or run directly
+./scripts/create-pr.sh
+```
+
 ### Module Nesting
 
 ```bash
@@ -187,6 +207,8 @@ gc-modules
 |--------|-------------|
 | [`alias-loading.sh`](../scripts/alias-loading.sh) | Interactive alias installer with category selection |
 | [`template-loading.sh`](../scripts/template-loading.sh) | Repository template initialisation tool |
+| [`create-repo.sh`](../scripts/create-repo.sh) | Interactive GitHub repository creator |
+| [`create-pr.sh`](../scripts/create-pr.sh) | Interactive pull request creator |
 | [`module-nesting.sh`](../scripts/module-nesting.sh) | Automated `.gitmodules` generator for nested repos |
 
 ### Doc Templates
