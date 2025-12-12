@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 💬 Discussions
+    url: {{REPO_URL}}/discussions
+    about: Ask questions and discuss ideas
+  - name: 📖 Documentation
+    url: {{REPO_URL}}#readme
+    about: Read the documentation

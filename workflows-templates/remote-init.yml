@@ -1,0 +1,61 @@
+# ============================================================================
+# Example: How to use git-control's reusable template workflow
+# ============================================================================
+#
+# Copy this file to any repository as .github/workflows/init-docs.yml
+# Then run it from the Actions tab
+#
+# This calls the reusable workflow from git-control, which means:
+# - Templates are always fetched from the latest git-control version
+# - No need to update the workflow when templates change
+# - Single source of truth for all your repositories
+#
+# ============================================================================
+
+name: Initialise Documentation
+
+on:
+  workflow_dispatch:
+    inputs:
+      project_name:
+        description: 'Project name (leave empty for repo name)'
+        required: false
+        type: string
+      description:
+        description: 'Project description'
+        required: false
+        type: string
+        default: 'A well-documented project'
+      license:
+        description: 'License type'
+        type: choice
+        options:
+          - MIT
+          - Apache-2.0
+          - GPL-3.0
+          - BSD-3-Clause
+        default: MIT
+      stability:
+        description: 'Project stability'
+        type: choice
+        options:
+          - experimental
+          - beta
+          - stable
+          - mature
+        default: experimental
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  init-templates:
+    uses: xaoscience/git-control/.github/workflows/central-loader.yml@main
+    with:
+      project_name: ${{ inputs.project_name }}
+      short_description: ${{ inputs.description }}
+      license_type: ${{ inputs.license }}
+      stability: ${{ inputs.stability }}
+      templates: 'all'
+      create_pr: true

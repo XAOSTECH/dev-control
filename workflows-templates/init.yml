@@ -1,0 +1,323 @@
+# ============================================================================
+# Repository Template initialiser (init.yml)
+# ============================================================================
+# 
+# This standalone workflow initialises a repository with templates from
+# git-control. It downloads from all *-templates folders:
+#   - docs-templates/      → copied to repo root (with placeholder replacement)
+#   - workflows-templates/ → copied to .github/workflows/
+#   - licenses-templates/  → copied to repo root (future)
+#   - Any other *-templates folders added later
+#
+# USAGE:
+#   1. Copy this file to your repo: .github/workflows/init.yml
+#   2. Go to Actions tab → "Initialise Repository Templates" → Run workflow
+#   3. Fill in the inputs (or use defaults)
+#   4. The workflow will create a PR with the generated templates
+#
+# No PAT required - uses the default GITHUB_TOKEN
+# ============================================================================
+
+name: Initialise Repository Templates
+
+on:
+  workflow_dispatch:
+    inputs:
+      project_name:
+        description: 'Project name (default: repo name)'
+        required: false
+        type: string
+      short_description:
+        description: 'Short project description'
+        required: false
+        type: string
+        default: 'A project powered by git-control templates'
+      license_type:
+        description: 'License type'
+        required: false
+        type: choice
+        options:
+          - MIT
+          - Apache-2.0
+          - GPL-3.0
+          - BSD-3-Clause
+        default: 'MIT'
+      stability:
+        description: 'Stability level'
+        required: false
+        type: choice
+        options:
+          - experimental
+          - beta
+          - stable
+          - mature
+        default: 'experimental'
+      templates:
+        description: 'Templates to install (comma-separated: readme,contributing,conduct,security,workflows,license,all)'
+        required: false
+        type: string
+        default: 'all'
+      git_control_ref:
+        description: 'git-control branch/tag to use'
+        required: false
+        type: string
+        default: 'main'
+      create_pr:
+        description: 'Create a PR instead of direct commit'
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  GIT_CONTROL_REPO: 'xaoscience/git-control'
+
+jobs:
+  init-templates:
+    name: Initialise Templates
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Set up variables
+        id: vars
+        run: |
+          # Repository info
+          echo "repo_name=${{ github.event.repository.name }}" >> $GITHUB_OUTPUT
+          echo "repo_owner=${{ github.repository_owner }}" >> $GITHUB_OUTPUT
+          echo "repo_url=https://github.com/${{ github.repository }}" >> $GITHUB_OUTPUT
+          
+          # Project name (use input or repo name)
+          PROJECT_NAME="${{ inputs.project_name }}"
+          if [ -z "$PROJECT_NAME" ]; then
+            PROJECT_NAME="${{ github.event.repository.name }}"
+          fi
+          echo "project_name=$PROJECT_NAME" >> $GITHUB_OUTPUT
+          
+          # Stability color mapping
+          case "${{ inputs.stability }}" in
+            experimental) echo "stability_color=orange" >> $GITHUB_OUTPUT ;;
+            beta) echo "stability_color=yellow" >> $GITHUB_OUTPUT ;;
+            stable) echo "stability_color=green" >> $GITHUB_OUTPUT ;;
+            mature) echo "stability_color=blue" >> $GITHUB_OUTPUT ;;
+            *) echo "stability_color=orange" >> $GITHUB_OUTPUT ;;
+          esac
+          
+          # Current year
+          echo "current_year=$(date +%Y)" >> $GITHUB_OUTPUT
+          
+          # Branch name for PR
+          echo "branch_name=chore/init-templates-$(date +%Y%m%d%H%M%S)" >> $GITHUB_OUTPUT
+      
+      - name: Download templates from git-control
+        run: |
+          mkdir -p .tmp-templates
+          
+          TEMPLATES="${{ inputs.templates }}"
+          GIT_CONTROL_REF="${{ inputs.git_control_ref }}"
+          BASE_URL="https://raw.githubusercontent.com/${{ env.GIT_CONTROL_REPO }}/${GIT_CONTROL_REF}"
+          
+          echo "📥 Downloading templates from git-control (ref: $GIT_CONTROL_REF)..."
+          
+          # Download docs-templates
+          echo "📄 Fetching docs-templates..."
+          mkdir -p .tmp-templates/docs
+          if [[ "$TEMPLATES" == "all" ]]; then
+            DOC_TEMPLATES="readme,contributing,conduct,security"
+          else
+            DOC_TEMPLATES="$TEMPLATES"
+          fi
+          
+          IFS=',' read -ra TEMPLATE_LIST <<< "$DOC_TEMPLATES"
+          for template in "${TEMPLATE_LIST[@]}"; do
+            template=$(echo "$template" | tr -d ' ' | tr '[:upper:]' '[:lower:]')
+            case "$template" in
+              readme)
+                curl -sfL "$BASE_URL/docs-templates/README.md" -o .tmp-templates/docs/README.md 2>/dev/null && echo "✓ README.md" || true
+                ;;
+              contributing)
+                curl -sfL "$BASE_URL/docs-templates/CONTRIBUTING.md" -o .tmp-templates/docs/CONTRIBUTING.md 2>/dev/null && echo "✓ CONTRIBUTING.md" || true
+                ;;
+              conduct|code_of_conduct)
+                curl -sfL "$BASE_URL/docs-templates/CODE_OF_CONDUCT.md" -o .tmp-templates/docs/CODE_OF_CONDUCT.md 2>/dev/null && echo "✓ CODE_OF_CONDUCT.md" || true
+                ;;
+              security)
+                curl -sfL "$BASE_URL/docs-templates/SECURITY.md" -o .tmp-templates/docs/SECURITY.md 2>/dev/null && echo "✓ SECURITY.md" || true
+                ;;
+            esac
+          done
+          
+          # Download workflows-templates (if requested)
+          if [[ "$TEMPLATES" == "all" || "$TEMPLATES" == *"workflows"* ]]; then
+            echo "⚙️ Fetching workflows-templates..."
+            mkdir -p .tmp-templates/workflows
+            # Download known workflow files (skip init.yml and remote-init.yml)
+            curl -sfL "$BASE_URL/workflows-templates/dependabot-automerge.yml" -o .tmp-templates/workflows/dependabot-automerge.yml 2>/dev/null && echo "✓ dependabot-automerge.yml" || true
+          fi
+          
+          # Download licenses-templates (if requested and exists)
+          if [[ "$TEMPLATES" == "all" || "$TEMPLATES" == *"license"* ]]; then
+            echo "📜 Fetching licenses-templates..."
+            mkdir -p .tmp-templates/licenses
+            curl -sfL "$BASE_URL/licenses-templates/LICENSE-MIT" -o .tmp-templates/licenses/LICENSE 2>/dev/null && echo "✓ LICENSE" || true
+          fi
+          
+          echo ""
+          echo "Downloaded templates:"
+          find .tmp-templates -type f 2>/dev/null || echo "  (none)"
+      
+      - name: Process templates
+        run: |
+          echo "🔧 Processing templates with repository values..."
+          
+          # Variables for replacement
+          PROJECT_NAME="${{ steps.vars.outputs.project_name }}"
+          REPO_SLUG="${{ steps.vars.outputs.repo_name }}"
+          ORG_NAME="${{ steps.vars.outputs.repo_owner }}"
+          REPO_URL="${{ steps.vars.outputs.repo_url }}"
+          SHORT_DESCRIPTION="${{ inputs.short_description }}"
+          LONG_DESCRIPTION="${{ inputs.short_description }}"
+          LICENSE_TYPE="${{ inputs.license_type }}"
+          STABILITY="${{ inputs.stability }}"
+          STABILITY_COLOR="${{ steps.vars.outputs.stability_color }}"
+          CURRENT_YEAR="${{ steps.vars.outputs.current_year }}"
+          
+          # Function to process a file with placeholder replacement
+          process_file() {
+            local src="$1"
+            local dest="$2"
+            sed \
+              -e "s|{{PROJECT_NAME}}|$PROJECT_NAME|g" \
+              -e "s|{{REPO_SLUG}}|$REPO_SLUG|g" \
+              -e "s|{{ORG_NAME}}|$ORG_NAME|g" \
+              -e "s|{{REPO_URL}}|$REPO_URL|g" \
+              -e "s|{{SHORT_DESCRIPTION}}|$SHORT_DESCRIPTION|g" \
+              -e "s|{{LONG_DESCRIPTION}}|$LONG_DESCRIPTION|g" \
+              -e "s|{{LICENSE_TYPE}}|$LICENSE_TYPE|g" \
+              -e "s|{{STABILITY}}|$STABILITY|g" \
+              -e "s|{{STABILITY_COLOR}}|$STABILITY_COLOR|g" \
+              -e "s|{{CURRENT_YEAR}}|$CURRENT_YEAR|g" \
+              "$src" > "$dest"
+          }
+          
+          # Process docs-templates → repo root
+          if [ -d ".tmp-templates/docs" ]; then
+            echo "📄 Installing docs to repo root..."
+            for file in .tmp-templates/docs/*; do
+              if [ -f "$file" ]; then
+                filename=$(basename "$file")
+                process_file "$file" "./$filename"
+                echo "✓ Created $filename"
+              fi
+            done
+          fi
+          
+          # Process workflows-templates → .github/workflows/
+          if [ -d ".tmp-templates/workflows" ]; then
+            echo "⚙️ Installing workflows to .github/workflows/..."
+            mkdir -p .github/workflows
+            for file in .tmp-templates/workflows/*; do
+              if [ -f "$file" ]; then
+                filename=$(basename "$file")
+                cp "$file" ".github/workflows/$filename"
+                echo "✓ Created .github/workflows/$filename"
+              fi
+            done
+          fi
+          
+          # Process licenses-templates → repo root
+          if [ -d ".tmp-templates/licenses" ]; then
+            echo "📜 Installing license..."
+            for file in .tmp-templates/licenses/*; do
+              if [ -f "$file" ]; then
+                filename=$(basename "$file")
+                process_file "$file" "./$filename"
+                echo "✓ Created $filename"
+              fi
+            done
+          fi
+          
+          # Cleanup
+          rm -rf .tmp-templates
+          
+          echo ""
+          echo "✅ Template processing complete!"
+      
+      - name: Create Pull Request
+        if: ${{ inputs.create_pr }}
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'docs: initialise repository templates'
+          title: '📚 Initialise repository documentation templates'
+          body: |
+            ## Summary
+            
+            This PR initialises the repository with standardised documentation templates from [git-control](https://github.com/${{ env.GIT_CONTROL_REPO }}).
+            
+            ### Templates Added
+            - Project README with badges and sections
+            - Contributing guidelines
+            - Code of Conduct
+            - Security policy
+            
+            ### Configuration Used
+            | Setting | Value |
+            |---------|-------|
+            | Project Name | `${{ steps.vars.outputs.project_name }}` |
+            | License | `${{ inputs.license_type }}` |
+            | Stability | `${{ inputs.stability }}` |
+            
+            ### Next Steps
+            1. Review and customise the generated files
+            2. Replace any remaining placeholder sections
+            3. Merge this PR
+            
+            ---
+            *Generated by [git-control](https://github.com/${{ env.GIT_CONTROL_REPO }}) template workflow*
+          branch: ${{ steps.vars.outputs.branch_name }}
+          delete-branch: true
+          labels: |
+            documentation
+            automated
+      
+      - name: Direct commit (no PR)
+        if: ${{ !inputs.create_pr }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          git add *.md
+          
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "docs: initialise repository templates"
+            git push
+            echo "✓ Templates committed directly to ${{ github.ref_name }}"
+          fi
+      
+      - name: Summary
+        run: |
+          echo "## 🎉 Template initialisation Complete!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "| Setting | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Project Name | \`${{ steps.vars.outputs.project_name }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Repository | \`${{ github.repository }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| License | \`${{ inputs.license_type }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Stability | \`${{ inputs.stability }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ inputs.create_pr }}" == "true" ]; then
+            echo "📝 A Pull Request has been created with the templates." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ Templates have been committed directly to the repository." >> $GITHUB_STEP_SUMMARY
+          fi
