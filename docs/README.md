@@ -129,6 +129,23 @@ source /path/to/git-control/scripts/alias-loading.sh --source-only
 
 ## 🚀 Usage
 
+### Main Menu
+
+Use the main `git-control.sh` wrapper to access all tools via interactive menu:
+
+```bash
+# Interactive menu - choose any tool
+./scripts/git-control.sh
+
+# Or use the alias (after running alias-loading.sh)
+gc-control
+
+# Direct command mode - skip the menu
+./scripts/git-control.sh repo      # Create repository
+./scripts/git-control.sh pr        # Create pull request
+./scripts/git-control.sh fix       # Fix commit history
+```
+
 ### Alias Loading
 
 ```bash
@@ -199,17 +216,42 @@ gc-modules
 ./scripts/module-nesting.sh /path/to/project
 ```
 
+### History Fixing
+
+Interactively rewrite commit history with date and message editing:
+
+```bash
+# Interactive mode - edit last 10 commits
+gc-fix
+
+# Or run directly
+./scripts/fix-history.sh
+
+# Specify custom range
+./scripts/fix-history.sh --range HEAD~20
+
+# Preview changes without applying
+./scripts/fix-history.sh --dry-run
+
+# Options:
+#   -r, --range RANGE    Commit range (default: HEAD~10)
+#   -d, --dry-run        Show changes without applying
+#   -v, --verbose        Enable verbose output
+```
+
 ---
 
 ## 📜 Scripts
 
 | Script | Description |
 |--------|-------------|
+| [`git-control.sh`](../scripts/git-control.sh) | **Main entry point** - Interactive menu for all tools |
 | [`alias-loading.sh`](../scripts/alias-loading.sh) | Interactive alias installer with category selection |
 | [`template-loading.sh`](../scripts/template-loading.sh) | Repository template initialisation tool |
 | [`create-repo.sh`](../scripts/create-repo.sh) | Interactive GitHub repository creator |
 | [`create-pr.sh`](../scripts/create-pr.sh) | Interactive pull request creator |
 | [`module-nesting.sh`](../scripts/module-nesting.sh) | Automated `.gitmodules` generator for nested repos |
+| [`fix-history.sh`](../scripts/fix-history.sh) | Interactive commit history rewriting tool |
 
 ### Doc Templates
 

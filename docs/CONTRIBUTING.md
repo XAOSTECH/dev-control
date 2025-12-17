@@ -55,6 +55,31 @@ cd git-control
 # Add upstream remote to stay in sync
 git remote add upstream https://github.com/xaoscience/git-control.git
 git fetch upstream
+
+# Make scripts executable
+chmod +x scripts/*.sh
+```
+
+### Using git-control Tools During Development
+
+All tools are available during development:
+
+```bash
+# Via main menu (interactive)
+./scripts/git-control.sh
+
+# Direct script access
+./scripts/create-repo.sh        # Create repositories
+./scripts/create-pr.sh          # Create pull requests  
+./scripts/template-loading.sh   # Load templates
+./scripts/fix-history.sh        # Fix commit history
+./scripts/module-nesting.sh     # Manage submodules
+
+# After alias setup, use shortcuts
+gc-control                      # Main menu
+gc-create                       # Repository creation
+gc-pr                          # Pull request creation
+gc-fix                         # Commit history fixing
 ```
 
 ## Pull Request Process
