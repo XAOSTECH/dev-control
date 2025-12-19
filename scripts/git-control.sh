@@ -88,6 +88,7 @@ COMMANDS:
   pr                     Interactive pull request creator from current branch
   modules                Automated .gitmodules generator for nested repos
   fix-history            Interactive commit history rewriting tool
+  mcp                    GitHub MCP server setup for VS Code
   help                   Show this help message
 
 INTERACTIVE MODE:
@@ -99,6 +100,7 @@ EXAMPLES:
   ./git-control.sh repo               # Create new repository
   ./git-control.sh pr                 # Create pull request
   ./git-control.sh fix-history        # Fix commit history
+  ./git-control.sh mcp                # Setup GitHub MCP
   ./git-control.sh help               # Show this help
 
 ALIASES:
@@ -109,6 +111,7 @@ ALIASES:
     gc-pr         - Pull request creation
     gc-modules    - Module nesting
     gc-fix        - History fixing
+    gc-mcp        - GitHub MCP setup
     gc-control    - Show this menu
 
 For detailed help on each tool, run the script directly:
@@ -131,7 +134,8 @@ display_menu() {
     echo -e "  ${CYAN}4)${NC}  ${BOLD}Pull Request Creator${NC}    - Create PRs from current branch"
     echo -e "  ${CYAN}5)${NC}  ${BOLD}Module Manager${NC}          - Manage git submodules"
     echo -e "  ${CYAN}6)${NC}  ${BOLD}History Fixer${NC}           - Rewrite commit history interactively"
-    echo -e "  ${CYAN}7)${NC}  ${BOLD}Help${NC}                    - Show help"
+    echo -e "  ${CYAN}7)${NC}  ${BOLD}GitHub MCP Setup${NC}        - Configure VS Code MCP server"
+    echo -e "  ${CYAN}8)${NC}  ${BOLD}Help${NC}                    - Show help"
     echo -e "  ${CYAN}0)${NC}  ${BOLD}Exit${NC}                    - Quit"
     echo ""
 }
@@ -160,7 +164,10 @@ run_tool() {
         6|fix|fix-history)
             script_name="fix-history.sh"
             ;;
-        7|help|--help|-h)
+        7|mcp)
+            script_name="mcp-setup.sh"
+            ;;
+        8|help|--help|-h)
             show_help
             return 0
             ;;

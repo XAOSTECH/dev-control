@@ -37,9 +37,11 @@ declare -a GC_ALIASES=(
     "alias gc-init='${SCRIPT_DIR}/template-loading.sh'"
     "alias gc-create='${SCRIPT_DIR}/create-repo.sh'"
     "alias gc-pr='${SCRIPT_DIR}/create-pr.sh'"
+    "alias gc-mcp='${SCRIPT_DIR}/mcp-setup.sh'"
     "alias gc-modules='${SCRIPT_DIR}/module-nesting.sh'"
     "alias gc-fix='${SCRIPT_DIR}/fix-history.sh'"
-    "alias gc-aliases='${SCRIPT_DIR}/alias-loading.sh'"
+    "alias gc-alias='${SCRIPT_DIR}/alias-loading.sh'"
+    "alias gca-alias='${SCRIPT_DIR}/alias-loading.sh <<< A && source ~/.bashrc && echo \"Changes applied (source ~/.bashrc already done)!\"'"
     "alias gc-help='echo \"gc-control: Main menu for all git-control tools\"; echo \"gc-init: Initialise repo with templates\"; echo \"gc-create: Create GitHub repo from current folder\"; echo \"gc-pr: Create pull request from current branch\"; echo \"gc-modules: Manage git submodules\"; echo \"gc-fix: Fix commit history interactively\"; echo \"gc-aliases: Reload alias installer\"'"
 )
 

@@ -92,6 +92,7 @@ Managing multiple repositories, nested submodules, and maintaining consistent co
 - 🐳 **Container Shortcuts** - Quick access to Docker/Podman commands
 - 🌐 **Network Utilities** - IP checking, port monitoring, and connectivity tools
 - 📁 **Directory Operations** - Enhanced navigation and file management
+- 🤖 **GitHub MCP Setup** - Automated GitHub MCP server configuration for VS Code with secure token management
 
 ---
 
@@ -149,11 +150,18 @@ gc-control
 ### Alias Loading
 
 ```bash
+
 # Interactive installation - choose which alias categories to install
-./scripts/alias-loading.sh
+./scripts/alias-loading.sh && source ~/.bashrc
+
+# Re-run with
+gc-alias && reload
+
+# Reinstall all and automatically reload
+gc-aalias
 
 # Categories available:
-# 1. Git Control (gc-*)   - git-control specific commands
+# 1. Git Control (gc-*)   - git-control specific commands (gc-fix, gc-pr, gc-create, gc-mcp, etc.)
 # 2. Git Shortcuts        - gs, ga, gc, gp, gl, etc.
 # 3. Safety Nets          - rm -i, cp -i, mv -i
 # 4. System Monitoring    - ports, meminfo, disk
@@ -239,6 +247,47 @@ gc-fix
 #   -v, --verbose        Enable verbose output
 ```
 
+### GitHub MCP Server Setup
+
+Automatically configure GitHub MCP for VS Code with secure token management:
+
+```bash
+# Full automated setup - create token, generate config, test connection
+gc-mcp --setup
+
+# Or run directly
+./scripts/mcp-setup.sh --setup
+
+# Configuration-only mode (with existing token)
+./scripts/mcp-setup.sh --config-only
+
+# Test existing MCP connection
+./scripts/mcp-setup.sh --test
+
+# Show current token info (masked)
+./scripts/mcp-setup.sh --show-token
+
+# Install additional MCP servers (Stack Overflow, Firecrawl, Hugging Face)
+./scripts/mcp-setup.sh --install-servers
+
+# Options:
+#   --setup             Full setup: create token, generate config, test connection
+#   --config-only       Only generate MCP configuration (requires existing token)
+#   --test              Test MCP connection (requires existing token)
+#   --show-token        Display current token info (masked)
+#   --install-servers   Install additional MCP servers
+#   --help              Show help message
+
+# What it does:
+#   ✓ Authenticates with your GitHub account
+#   ✓ Creates a Personal Access Token (PAT) with minimal required scopes
+#   ✓ Sets 90-day expiration for security
+#   ✓ Configures VS Code MCP settings with secure variable substitution
+#   ✓ Stores token in system keyring (secret-tool) for secure recovery
+#   ✓ Tests the connection
+#   ✓ Token is prompted per session (never stored in plaintext config)
+```
+
 ---
 
 ## 📜 Scripts
@@ -252,6 +301,7 @@ gc-fix
 | [`create-pr.sh`](../scripts/create-pr.sh) | Interactive pull request creator |
 | [`module-nesting.sh`](../scripts/module-nesting.sh) | Automated `.gitmodules` generator for nested repos |
 | [`fix-history.sh`](../scripts/fix-history.sh) | Interactive commit history rewriting tool |
+| [`mcp-setup.sh`](../scripts/mcp-setup.sh) | GitHub MCP server setup for VS Code with token management |
 
 ### Doc Templates
 
