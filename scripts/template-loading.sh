@@ -27,9 +27,17 @@ CYAN='\033[0;36m'
 NC='\033[0m'
 BOLD='\033[1m'
 
-# Get the directory where this script is located
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Resolve script location (handles symlinks for global/PATH usage)
+SCRIPT_PATH="${BASH_SOURCE[0]}"
+while [[ -L "$SCRIPT_PATH" ]]; do
+    SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+    SCRIPT_PATH="$(readlink "$SCRIPT_PATH")"
+    [[ "$SCRIPT_PATH" != /* ]] && SCRIPT_PATH="$SCRIPT_DIR/$SCRIPT_PATH"
+done
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
 GIT_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
+# Fallback if in git-control root
+[[ ! -d "$GIT_CONTROL_DIR/docs-templates" ]] && [[ -d "./docs-templates" ]] && GIT_CONTROL_DIR="$(pwd)"
 
 # CLI options
 CLI_FILES=""
@@ -120,10 +128,19 @@ print_error() {
 # Check if we're in a git repository
 check_git_repo() {
     if ! git rev-parse --git-dir > /dev/null 2>&1; then
-        print_error "Not a git repository!"
-        echo -e "  Run ${CYAN}git init${NC} first, or navigate to a git repository."
-        exit 1
+        print_warning "Not a git repository. Initializing..."
+        git init
+        git config user.email "${GIT_EMAIL:-noreply@github.com}" 2>/dev/null || true
+        git config user.name "${GIT_NAME:-User}" 2>/dev/null || true
+        print_success "Repository initialized"
+        echo ""
     fi
+}
+
+# Try to get git user info from global config
+get_git_user_info() {
+    GIT_NAME=$(git config --global user.name 2>/dev/null || echo "")
+    GIT_EMAIL=$(git config --global user.email 2>/dev/null || echo "")
 }
 
 # Get repository information
@@ -145,6 +162,16 @@ get_repo_info() {
         ORG_NAME=""
         REPO_SLUG=$(basename "$(pwd)")
         REPO_URL=""
+    fi
+    
+    # Try to prefill GitHub username from gh CLI if not detected from remote
+    if [[ -z "$ORG_NAME" ]] && command -v gh &>/dev/null; then
+        local gh_user
+        gh_user=$(gh api user --jq .login 2>/dev/null || true)
+        if [[ -n "$gh_user" ]]; then
+            ORG_NAME="$gh_user"
+            print_info "Detected GitHub user from gh CLI: $ORG_NAME"
+        fi
     fi
     
     PROJECT_NAME="${REPO_SLUG}"
@@ -307,8 +334,8 @@ select_templates() {
         ((idx++))
     fi
     
-    # licenses-templates
-    if [[ -d "$GIT_CONTROL_DIR/licenses-templates" ]]; then
+    # license-templates (or licenses-templates)
+    if [[ -d "$GIT_CONTROL_DIR/license-templates" ]] || [[ -d "$GIT_CONTROL_DIR/licenses-templates" ]]; then
         echo -e "  ${CYAN}$idx)${NC} Licenses            - LICENSE file"
         TEMPLATE_FOLDERS[$idx]="licenses"
         ((idx++))
@@ -318,7 +345,7 @@ select_templates() {
     for dir in "$GIT_CONTROL_DIR"/*-templates; do
         if [[ -d "$dir" ]]; then
             local name=$(basename "$dir")
-            if [[ "$name" != "docs-templates" && "$name" != "workflows-templates" && "$name" != "licenses-templates" && "$name" != "github-templates" ]]; then
+            if [[ "$name" != "docs-templates" && "$name" != "workflows-templates" && "$name" != "license-templates" && "$name" != "licenses-templates" && "$name" != "github-templates" ]]; then
                 local display=$(get_folder_display_name "$dir")
                 echo -e "  ${CYAN}$idx)${NC} $display"
                 TEMPLATE_FOLDERS[$idx]="${name%-templates}"
@@ -333,7 +360,8 @@ select_templates() {
     echo ""
     
     read -rp "Enter choices (comma-separated, e.g., 1,2,3 or A): " selection
-    echo "$selection"
+    # Store selection in global variable (avoids subshell issues)
+    SELECTED_TEMPLATE_CHOICES="$selection"
 }
 
 install_templates() {
@@ -341,8 +369,12 @@ install_templates() {
     local target_dir
     target_dir=$(pwd)
     
+    # Track if installing all (for auto-license selection)
+    local install_all=false
+    
     # Handle 'A' for all
     if [[ "$selection" =~ [Aa] ]]; then
+        install_all=true
         selection=""
         for key in "${!TEMPLATE_FOLDERS[@]}"; do
             selection+="$key,"
@@ -373,7 +405,7 @@ install_templates() {
                 install_github_templates "$target_dir"
                 ;;
             licenses)
-                install_licenses_templates "$target_dir"
+                install_licenses_templates "$target_dir" "$install_all"
                 ;;
             *)
                 # Generic handler for other template folders
@@ -460,10 +492,16 @@ install_github_templates() {
 
 install_licenses_templates() {
     local target_dir="$1"
-    local lic_dir="$GIT_CONTROL_DIR/licenses-templates"
+    local auto_choice="${2:-false}"
+    local lic_dir=""
     
-    if [[ ! -d "$lic_dir" ]]; then
-        print_warning "licenses-templates folder not found"
+    # Check both folder names
+    if [[ -d "$GIT_CONTROL_DIR/license-templates" ]]; then
+        lic_dir="$GIT_CONTROL_DIR/license-templates"
+    elif [[ -d "$GIT_CONTROL_DIR/licenses-templates" ]]; then
+        lic_dir="$GIT_CONTROL_DIR/licenses-templates"
+    else
+        print_warning "No license folder found (license-templates or licenses-templates)"
         return
     fi
     
@@ -483,12 +521,31 @@ install_licenses_templates() {
         fi
     done
     
-    read -rp "Choice [1]: " lic_choice
-    lic_choice="${lic_choice:-1}"
+    # Auto-select license when installing ALL
+    if [[ "$auto_choice" == "true" ]]; then
+        local pick=1
+        if [[ -n "$LICENSE_TYPE" ]]; then
+            for k in "${!LICENSE_FILES[@]}"; do
+                local bname
+                bname=$(basename "${LICENSE_FILES[$k]}")
+                if [[ "${bname,,}" == "${LICENSE_TYPE,,}" ]]; then
+                    pick=$k
+                    break
+                fi
+            done
+        fi
+        lic_choice="$pick"
+        print_info "Auto-selected license: $(basename "${LICENSE_FILES[$lic_choice]}")" 
+    else
+        read -rp "Choice [1]: " lic_choice
+        lic_choice="${lic_choice:-1}"
+    fi
     
     local selected_license="${LICENSE_FILES[$lic_choice]}"
     if [[ -f "$selected_license" ]]; then
         process_template "$selected_license" "$target_dir/LICENSE"
+    else
+        print_warning "No license selected or license file not found"
     fi
 }
 
@@ -609,6 +666,20 @@ process_specific_files() {
 # SUMMARY
 # ============================================================================
 
+save_project_metadata() {
+    # Store collected metadata in git config for gc-create to retrieve
+    if git rev-parse --git-dir > /dev/null 2>&1; then
+        print_info "Saving project metadata to git config..."
+        git config --local gc-init.project-name "$PROJECT_NAME" 2>/dev/null || true
+        git config --local gc-init.repo-slug "$REPO_SLUG" 2>/dev/null || true
+        git config --local gc-init.org-name "$ORG_NAME" 2>/dev/null || true
+        git config --local gc-init.repo-url "$REPO_URL" 2>/dev/null || true
+        git config --local gc-init.description "$SHORT_DESCRIPTION" 2>/dev/null || true
+        git config --local gc-init.long-description "$LONG_DESCRIPTION" 2>/dev/null || true
+        git config --local gc-init.license-type "$LICENSE_TYPE" 2>/dev/null || true
+    fi
+}
+
 show_summary() {
     echo ""
     echo -e "${BOLD}${GREEN}╔════════════════════════════════════════════════════════════╗${NC}"
@@ -620,8 +691,36 @@ show_summary() {
     echo ""
     echo -e "${BOLD}Next steps:${NC}"
     echo -e "  1. Review and customise the generated files"
-    echo -e "  2. Replace placeholder sections (marked with {{}})"
-    echo -e "  3. Commit the changes: ${CYAN}git add . && git commit -m 'Add documentation'${NC}"
+    echo -e "  2. Replace placeholder sections - if any remain (marked with {{}})"
+    echo ""
+    
+    # Offer to create GitHub repository
+    echo -e "${BOLD}Create GitHub Repository?${NC}"
+    echo "gc-init can now launch create-repo to set up your GitHub repository"
+    echo "with the configuration we just collected."
+    echo ""
+    read -rp "Launch create-repo now? (y/n) [y]: " launch_create_repo
+    local show_repo_instructions=false
+    if [[ "${launch_create_repo:-y}" =~ [Yy] ]]; then
+        echo ""
+        print_info "Launching create-repo..."
+        echo ""
+        # Find and run create-repo script
+        if [[ -f "$GIT_CONTROL_DIR/scripts/create-repo.sh" ]]; then
+            bash "$GIT_CONTROL_DIR/scripts/create-repo.sh"
+        else
+            print_warning "create-repo.sh not found at $GIT_CONTROL_DIR/scripts/create-repo.sh"
+            show_repo_instructions=true
+        fi
+    else
+        show_repo_instructions=true
+    fi
+
+    if [[ "$show_repo_instructions" == "true" ]]; then
+        echo -e "  3. Create repository: ${CYAN}gc-create${NC}"
+        echo -e "  or"
+        echo -e "  4. Create manually: ${CYAN}git init && git add . && git commit -m 'Add documentation'${NC}"
+    fi
     echo ""
 }
 
@@ -638,6 +737,10 @@ main() {
     fi
     
     print_header
+    
+    # Initialize git repo if needed and get user info early
+    get_git_user_info
+    check_git_repo
     
     local template_folders
     template_folders=$(discover_template_folders)
@@ -699,12 +802,16 @@ main() {
     get_repo_info
     collect_project_info
     
-    local selection
-    selection=$(select_templates)
+    # Call select_templates directly (avoids subshell)
+    select_templates
+    local selection="${SELECTED_TEMPLATE_CHOICES:-}"
     
     echo ""
     print_info "Installing templates..."
     install_templates "$selection"
+    
+    # Save metadata for gc-create to use
+    save_project_metadata
     
     show_summary
 }

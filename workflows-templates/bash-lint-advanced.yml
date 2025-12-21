@@ -98,7 +98,7 @@ jobs:
 
       - name: Suggest fixes on PR
         if: github.event_name == 'pull_request' && (steps.shellcheck.outputs.errors > 0 || steps.shellcheck.outputs.warnings > 0)
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const fs = require('fs');
