@@ -97,7 +97,7 @@ parse_args() {
 
 print_header() {
     echo -e "\n${BOLD}${BLUE}╔════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${BOLD}${BLUE}║${NC}         ${CYAN}Git-Control Template Loader${NC}                         ${BOLD}${BLUE}║${NC}"
+    echo -e "${BOLD}${BLUE}║${NC}               ${CYAN}Git-Control Template Loader${NC}                  ${BOLD}${BLUE}║${NC}"
     echo -e "${BOLD}${BLUE}╚════════════════════════════════════════════════════════════╝${NC}\n"
 }
 
@@ -612,7 +612,7 @@ process_specific_files() {
 show_summary() {
     echo ""
     echo -e "${BOLD}${GREEN}╔════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${BOLD}${GREEN}║${NC}                   ${CYAN}Templates Installed!${NC}                      ${BOLD}${GREEN}║${NC}"
+    echo -e "${BOLD}${GREEN}║${NC}                   ${CYAN}Templates Installed!${NC}                     ${BOLD}${GREEN}║${NC}"
     echo -e "${BOLD}${GREEN}╚════════════════════════════════════════════════════════════╝${NC}"
     echo ""
     echo -e "${BOLD}Project:${NC} $PROJECT_NAME"

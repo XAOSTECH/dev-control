@@ -101,6 +101,7 @@ EXAMPLES:
   ./git-control.sh pr                 # Create pull request
   ./git-control.sh fix-history        # Fix commit history
   ./git-control.sh mcp                # Setup GitHub MCP
+  ./git-control.sh containerise       # Create devcontainer and configure podman
   ./git-control.sh help               # Show this help
 
 ALIASES:
@@ -112,6 +113,7 @@ ALIASES:
     gc-modules    - Module nesting
     gc-fix        - History fixing
     gc-mcp        - GitHub MCP setup
+    gc-contain - Devcontainer setup
     gc-control    - Show this menu
 
 For detailed help on each tool, run the script directly:
@@ -135,7 +137,8 @@ display_menu() {
     echo -e "  ${CYAN}5)${NC}  ${BOLD}Module Manager${NC}          - Manage git submodules"
     echo -e "  ${CYAN}6)${NC}  ${BOLD}History Fixer${NC}           - Rewrite commit history interactively"
     echo -e "  ${CYAN}7)${NC}  ${BOLD}GitHub MCP Setup${NC}        - Configure VS Code MCP server"
-    echo -e "  ${CYAN}8)${NC}  ${BOLD}Help${NC}                    - Show help"
+    echo -e "  ${CYAN}8)${NC}  ${BOLD}Containerise${NC}           - Create devcontainer & configure podman"
+    echo -e "  ${CYAN}9)${NC}  ${BOLD}Help${NC}                    - Show help"
     echo -e "  ${CYAN}0)${NC}  ${BOLD}Exit${NC}                    - Quit"
     echo ""
 }
@@ -167,7 +170,10 @@ run_tool() {
         7|mcp)
             script_name="mcp-setup.sh"
             ;;
-        8|help|--help|-h)
+        8|containerise)
+            script_name="containerise.sh"
+            ;;
+        9|help|--help|-h)
             show_help
             return 0
             ;;

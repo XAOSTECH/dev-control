@@ -93,6 +93,7 @@ Managing multiple repositories, nested submodules, and maintaining consistent co
 - 🌐 **Network Utilities** - IP checking, port monitoring, and connectivity tools
 - 📁 **Directory Operations** - Enhanced navigation and file management
 - 🤖 **GitHub MCP Setup** - Automated GitHub MCP server configuration for VS Code with secure token management
+- 🐳 **Devcontainer Setup** - Auto-configure rootless podman and generate optimised devcontainer.json with secure mounts
 
 ---
 
@@ -249,14 +250,14 @@ gc-fix
 
 ### GitHub MCP Server Setup
 
-Automatically configure GitHub MCP for VS Code with secure token management:
+Automatically configure GitHub MCP and additional MCP servers for VS Code with secure token management:
 
 ```bash
-# Full automated setup - create token, generate config, test connection
-gc-mcp --setup
+# Full interactive setup - initialize MCP and configure servers
+gc-mcp
 
 # Or run directly
-./scripts/mcp-setup.sh --setup
+./scripts/mcp-setup.sh
 
 # Configuration-only mode (with existing token)
 ./scripts/mcp-setup.sh --config-only
@@ -267,25 +268,54 @@ gc-mcp --setup
 # Show current token info (masked)
 ./scripts/mcp-setup.sh --show-token
 
-# Install additional MCP servers (Stack Overflow, Firecrawl, Hugging Face)
-./scripts/mcp-setup.sh --install-servers
-
 # Options:
-#   --setup             Full setup: create token, generate config, test connection
-#   --config-only       Only generate MCP configuration (requires existing token)
-#   --test              Test MCP connection (requires existing token)
+#   (no args)           Initialize MCP and select servers to install (DEFAULT)
+#   --config-only       Only generate MCP base configuration
+#   --test              Test GitHub MCP connection
 #   --show-token        Display current token info (masked)
-#   --install-servers   Install additional MCP servers
 #   --help              Show help message
 
 # What it does:
 #   ✓ Authenticates with your GitHub account
 #   ✓ Creates a Personal Access Token (PAT) with minimal required scopes
 #   ✓ Sets 90-day expiration for security
-#   ✓ Configures VS Code MCP settings with secure variable substitution
-#   ✓ Stores token in system keyring (secret-tool) for secure recovery
-#   ✓ Tests the connection
-#   ✓ Token is prompted per session (never stored in plaintext config)
+#   ✓ Generates VS Code MCP settings with secure variable substitution
+#   ✓ Offers interactive server selection:
+#     • GitHub MCP (HTTP remote) - GitHub API access
+#     • Stack Overflow MCP (HTTP remote) - Search Q&A
+#     • Firecrawl MCP (Docker/NPX) - Web scraping and crawling
+#   ✓ All servers appear consistently with MCP logo (no extension clutter)
+#   ✓ Token is prompted per VS Code session (secure input)
+```
+
+### Devcontainer Setup
+
+Auto-configure rootless podman and generate optimised `.devcontainer/devcontainer.json`:
+
+```bash
+# Interactive setup - detects project path or prompts for input
+gc-contain
+
+# Or run directly
+./scripts/containerise.sh
+
+# Specify custom project path
+./scripts/containerise.sh /path/to/project
+
+# Options:
+#   (no args)           Uses current directory
+#   /path/to/project    Specify custom project path
+#   --help              Show help message
+
+# What it does:
+#   ✓ Checks for rootless podman (installs if needed)
+#   ✓ Detects system paths (GPG, podman socket, git config, etc.)
+#   ✓ Generates .devcontainer/devcontainer.json with:
+#     • Optimal mounts for GPG, docker/podman, git, wrangler
+#     • Configured git user and **optional** GPG signing (script prompts for your key ID; no key material is embedded)
+#     • Universal devcontainer image
+#   ✓ Guides VSCode reopening with devcontainer activation
+#   ✓ All configurations persist and work across sessions
 ```
 
 ---
@@ -301,7 +331,8 @@ gc-mcp --setup
 | [`create-pr.sh`](../scripts/create-pr.sh) | Interactive pull request creator |
 | [`module-nesting.sh`](../scripts/module-nesting.sh) | Automated `.gitmodules` generator for nested repos |
 | [`fix-history.sh`](../scripts/fix-history.sh) | Interactive commit history rewriting tool |
-| [`mcp-setup.sh`](../scripts/mcp-setup.sh) | GitHub MCP server setup for VS Code with token management |
+| [`mcp-setup.sh`](../scripts/mcp-setup.sh) | GitHub & additional MCP server setup for VS Code with token management |
+| [`containerise.sh`](../scripts/containerise.sh) | Rootless podman setup and devcontainer.json generator with mount configuration |
 
 ### Doc Templates
 

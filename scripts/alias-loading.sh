@@ -35,6 +35,7 @@ declare -a GC_ALIASES=(
     "# Git-Control shortcuts"
     "alias gc-control='${SCRIPT_DIR}/git-control.sh'"
     "alias gc-init='${SCRIPT_DIR}/template-loading.sh'"
+    "alias gc-contain='${SCRIPT_DIR}/containerise.sh'"
     "alias gc-create='${SCRIPT_DIR}/create-repo.sh'"
     "alias gc-pr='${SCRIPT_DIR}/create-pr.sh'"
     "alias gc-mcp='${SCRIPT_DIR}/mcp-setup.sh'"

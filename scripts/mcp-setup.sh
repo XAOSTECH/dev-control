@@ -12,13 +12,12 @@
 #   ✓ 90-day expiration for security
 #
 # Usage:
-#   ./mcp-setup.sh [--setup] [--config-only] [--test] [--show-token] [--install-servers] [--revoke ID] [--help]
+#   ./mcp-setup.sh [--config-only] [--test] [--show-token] [--help]
 #   
-#   --setup             Full setup: create token, configure MCP, test (DEFAULT)
-#   --config-only       Configure MCP with existing token (from gh auth token)
-#   --test              Test MCP connection only
-#   --show-token        Display current token info (masked)
-#   --install-servers   Install additional MCP servers (Stack Overflow, Firecrawl)
+#   (no args)           Initialize MCP and configure servers (DEFAULT)
+#   --config-only       Initialize MCP config only
+#   --test              Test GitHub MCP connection only
+#   --show-token        Display current GitHub token info (masked)
 #   --help              Show this help message
 ################################################################################
 
@@ -241,112 +240,23 @@ create_github_pat() {
     echo "$token"
 }
 
-# Create/update MCP configuration
+# Create base MCP configuration
 setup_mcp_config() {
-    local token="$1"
-    
-    print_header "Configuring VS Code MCP"
+    print_header "Initializing VS Code MCP"
     print_info "Target config: $MCP_CONFIG_FILE"
     
     # Ensure directory exists
     mkdir -p "$MCP_CONFIG_DIR"
     
-    # Create config with variable substitution for the token
+    # Create empty base config if it doesn't exist
     if [ ! -f "$MCP_CONFIG_FILE" ]; then
         jq -n '{
-          "servers": {
-            "io.github.github/github-mcp-server": {
-              "type": "http",
-              "url": "https://api.githubcopilot.com/mcp/",
-              "headers": {
-                "Authorization": "Bearer ${input:github_mcp_pat}"
-              }
-            }
-          },
-          "inputs": [
-            {
-              "type": "promptString",
-              "id": "github_mcp_pat",
-              "description": "GitHub Personal Access Token",
-              "password": true
-            }
-          ]
+          "servers": {},
+          "inputs": []
         }' > "$MCP_CONFIG_FILE"
-        print_step "Created config template at $MCP_CONFIG_FILE"
+        print_step "Created base config at $MCP_CONFIG_FILE"
     else
-        print_info "Config file already exists."
-        
-        # Check for existing GitHub MCP server (by URL)
-        local existing_key
-        existing_key=$(jq -r '.servers | to_entries[] | select(.value.url == "https://api.githubcopilot.com/mcp/") | .key' "$MCP_CONFIG_FILE" | head -n1)
-        
-        local target_key="io.github.github/github-mcp-server"
-        if [ -n "$existing_key" ]; then
-            print_warning "Found existing GitHub MCP server configuration: '$existing_key'"
-            
-            if [ "$existing_key" != "io.github.github/github-mcp-server" ]; then
-                 print_warning "Existing key '$existing_key' is not the preferred 'io.github.github/github-mcp-server'."
-                 read -p "Do you want to migrate '$existing_key' to 'io.github.github/github-mcp-server'? (y/n): " -n 1 -r
-                 echo
-                 if [[ $REPLY =~ ^[Yy]$ ]]; then
-                    # Delete the old key and use the new target_key
-                    jq --arg old_key "$existing_key" 'del(.servers[$old_key])' "$MCP_CONFIG_FILE" > "${MCP_CONFIG_FILE}.tmp" && mv "${MCP_CONFIG_FILE}.tmp" "$MCP_CONFIG_FILE"
-                    print_step "Removed old key '$existing_key'"
-                 else
-                    target_key="$existing_key"
-                 fi
-            else
-                target_key="$existing_key"
-            fi
-        fi
-
-        # Update or add server entry and ensure input definition exists
-        # Use --arg key "$target_key" to dynamically set the key
-        jq --arg key "$target_key" '
-        .servers[$key] = {
-          "type": "http",
-          "url": "https://api.githubcopilot.com/mcp/",
-          "headers": {
-            "Authorization": "Bearer ${input:github_mcp_pat}"
-          }
-        } + (if .servers[$key] then .servers[$key] else {} end) | 
-        .servers[$key].headers.Authorization = "Bearer ${input:github_mcp_pat}" |
-        .inputs = (.inputs // []) |
-        .inputs |= map(select(.id != "github_mcp_pat")) |
-        .inputs += [{
-            "type": "promptString",
-            "id": "github_mcp_pat",
-            "description": "GitHub Personal Access Token",
-            "password": true
-        }]' "$MCP_CONFIG_FILE" > "${MCP_CONFIG_FILE}.tmp" && mv "${MCP_CONFIG_FILE}.tmp" "$MCP_CONFIG_FILE"
-        
-        print_step "Updated '$target_key' server entry and inputs in existing config"
-    fi
-
-    if [ -n "$token" ]; then
-        echo ""
-        print_warning "ACTION REQUIRED: Token generated."
-        echo "1. Copy the token below."
-        echo "2. Reload VS Code (Ctrl+Shift+P -> Developer: Reload Window)."
-        echo "3. VS Code will prompt you to enter the value for 'github_mcp_pat'."
-        echo "4. Paste the token there."
-        echo ""
-        echo "--------------------------------------------------------------------------------"
-        # Securely display token
-        echo "Token: $token"
-        echo "--------------------------------------------------------------------------------"
-        read -n 1 -s -r -p "Press any key to clear token from screen..."
-        echo ""
-        clear
-        unset token
-        print_info "Token cleared from screen and memory."
-        echo ""
-    else
-        echo ""
-        print_success "Configuration restored."
-        print_info "VS Code will use the 'github_mcp_pat' stored in your secure keychain."
-        print_info "If you haven't saved it yet, VS Code will prompt you when you reload."
-        echo ""
+        print_info "Config file already exists at $MCP_CONFIG_FILE"
     fi
 }
 
@@ -388,33 +298,20 @@ show_next_steps() {
     echo ""
     echo "Next steps:"
     echo ""
-    echo "1. Start the MCP Server:"
+    echo "1. Start the MCP Servers:"
     echo "   - Open GitHub Copilot Chat (Ctrl+Shift+I)."
-    echo "   - Toggle 'Agent Mode' (if available) or simply start a new chat."
-    echo "   - The server should start automatically."
+    echo "   - The configured servers should start automatically."
     echo ""
-    echo "   (If tools don't appear, you may need to Reload Window: Ctrl+Shift+P -> 'Developer: Reload Window')"
+    echo "   (If tools don't appear, Reload Window: Ctrl+Shift+P -> 'Developer: Reload Window')"
     echo ""
     echo "2. Verify:"
     echo "   - Look for the 'Attach Context' (paperclip) icon in Chat."
-    echo "   - You should see GitHub tools listed there."
+    echo "   - You should see your enabled MCP tools listed."
     echo ""
     echo "Note:"
-    echo "   - Token expires in $TOKEN_EXPIRY_DAYS days"
+    echo "   - GitHub token expires in $TOKEN_EXPIRY_DAYS days"
     echo "   - To refresh, run: $0 --setup"
     echo ""
-    
-    # Ask if user wants to install additional servers
-    echo ""
-    read -p "Would you like to install additional MCP servers (Stack Overflow, Firecrawl)? (y/n): " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        install_additional_servers
-    fi
-
-    # Ask if user wants to configure workspace settings
-    echo ""
-    configure_workspace_settings
 }
 
 # Show current token info (masked)
@@ -448,31 +345,95 @@ show_help() {
 }
 
 # Install MCP server from VS Code marketplace extension (requires `code` CLI)
-install_marketplace_mcp() {
-    local extension_id="$1"
-    local name="$2"
-    
-    print_info "Installing $name from VS Code Marketplace..."
-    
-    if ! command -v code &> /dev/null; then
-        print_warning "VS Code CLI not found (code command not in PATH)"
-        print_info "Install it or use: https://marketplace.visualstudio.com/items?itemName=$extension_id"
-        return 1
-    fi
-    
-    if code --install-extension "$extension_id" 2>&1; then
-        print_success "$name installed!"
-        print_info "Reload VS Code to activate (Ctrl+Shift+P → Developer: Reload Window)"
-        return 0
-    else
-        print_warning "Failed to install $name via CLI"
-        print_info "Install manually at: https://marketplace.visualstudio.com/items?itemName=$extension_id"
-        return 1
+
+# Ensure MCP config exists with proper structure (consolidated helper)
+ensure_mcp_config() {
+    if [ ! -f "$MCP_CONFIG_FILE" ]; then
+        print_info "Creating MCP config at $MCP_CONFIG_FILE"
+        mkdir -p "$(dirname "$MCP_CONFIG_FILE")"
+        jq -n '{
+            "servers": {},
+            "inputs": []
+        }' > "$MCP_CONFIG_FILE"
     fi
 }
 
+# Add or update an input definition in MCP config
+add_mcp_input() {
+    local id="$1"
+    local type="$2"
+    local description="$3"
+    
+    ensure_mcp_config
+    
+    # Remove existing input with this id, then add the new one
+    jq --arg id "$id" --arg type "$type" --arg desc "$description" \
+        '.inputs |= map(select(.id != $id)) | .inputs += [{
+            "type": $type,
+            "id": $id,
+            "description": $desc,
+            "password": true
+        }]' "$MCP_CONFIG_FILE" > "${MCP_CONFIG_FILE}.tmp" && \
+        mv "${MCP_CONFIG_FILE}.tmp" "$MCP_CONFIG_FILE"
+}
+
+# Add server to MCP config (handles both HTTP and command-based servers)
+add_mcp_server() {
+    local server_name="$1"
+    local server_config="$2"
+    
+    ensure_mcp_config
+    
+    jq --arg name "$server_name" --argjson config "$server_config" \
+        '.servers[$name] = $config' "$MCP_CONFIG_FILE" > "${MCP_CONFIG_FILE}.tmp" && \
+        mv "${MCP_CONFIG_FILE}.tmp" "$MCP_CONFIG_FILE"
+}
+
+# Install GitHub MCP Server (via HTTP remote)
+install_github_mcp() {
+    print_header "GitHub MCP Server"
+    
+    print_info "GitHub MCP provides access to GitHub API and operations"
+    print_warning "Requires GitHub Personal Access Token (create at https://github.com/settings/tokens)"
+    print_info "Recommended scopes: repo, workflow, read:user"
+    echo ""
+    
+    read -p "Install GitHub MCP? (y/n): " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        print_info "Skipped GitHub MCP"
+        return 0
+    fi
+    
+    print_info "Adding GitHub MCP to config..."
+    
+    # Use helper to ensure config exists
+    ensure_mcp_config
+    
+    # Add GitHub PAT input
+    add_mcp_input "github_mcp_pat" "promptString" "GitHub Personal Access Token" || {
+        print_error "Failed to add input to MCP config"
+        return 1
+    }
+    
+    # Add GitHub server entry (HTTP-based)
+    add_mcp_server "github" '{
+        "type": "http",
+        "url": "https://api.githubcopilot.com/mcp/",
+        "headers": {
+            "Authorization": "Bearer ${input:github_mcp_pat}"
+        }
+    }' || {
+        print_error "Failed to add GitHub server to MCP config"
+        return 1
+    }
+    
+    print_success "GitHub MCP added to config"
+    print_info "VS Code will prompt you to enter your GitHub PAT on first use"
+}
+
 # Install Stack Overflow MCP Server (via HTTP remote, no npx needed)
-install_stackoverflow_marketplace() {
+install_stackoverflow_mcp() {
     print_header "Stack Overflow MCP Server"
     
     print_info "Stack Overflow MCP allows searching questions and accessing answers"
@@ -487,73 +448,182 @@ install_stackoverflow_marketplace() {
         return 0
     fi
     
-    if [ ! -f "$MCP_CONFIG_FILE" ]; then
-        print_error "MCP config not found. Run --setup first"
-        return 1
-    fi
-    
     print_info "Adding Stack Overflow MCP to config..."
     
-    # Use jq to safely add server without breaking existing config
-    # This preserves the entire existing structure
-    jq '.servers.stackoverflow = {
+    # Use helper to ensure config exists
+    ensure_mcp_config
+    
+    # Add server entry
+    add_mcp_server "stackoverflow" '{
         "type": "http",
         "url": "https://mcp.stackoverflow.com"
-    }' "$MCP_CONFIG_FILE" > "${MCP_CONFIG_FILE}.tmp"
-    
-    if [ $? -ne 0 ]; then
-        print_error "Failed to update config (JSON parse error)"
-        rm -f "${MCP_CONFIG_FILE}.tmp"
+    }' || {
+        print_error "Failed to add Stack Overflow to MCP config"
         return 1
-    fi
+    }
     
-    mv "${MCP_CONFIG_FILE}.tmp" "$MCP_CONFIG_FILE"
-    print_success "Stack Overflow MCP added to config (HTTP remote)"
+    print_success "Stack Overflow MCP added to config"
     print_info "You will be prompted to log in to Stack Exchange on first use"
 }
 
-# Install Firecrawl MCP Server (via marketplace extension)
-install_firecrawl_marketplace() {
+# Install Firecrawl MCP Server (Docker-based HTTP or NPX-based command)
+install_firecrawl_mcp() {
     print_header "Firecrawl MCP Server"
     
     print_info "Firecrawl MCP enables web scraping and crawling capabilities"
     print_warning "Requires Firecrawl API key (free tier available at https://www.firecrawl.dev)"
     echo ""
     
-    read -p "Install Firecrawl MCP extension? (y/n): " -n 1 -r
+    read -p "Install Firecrawl MCP? (y/n): " -n 1 -r
     echo
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
         print_info "Skipped Firecrawl MCP"
         return 0
     fi
     
-    install_marketplace_mcp "firecrawl.mcp-server" "Firecrawl MCP"
+    # Detect available container runtimes
+    local has_docker=false
+    local has_podman=false
     
-    if [ $? -eq 0 ]; then
-        print_info "After installation, configure your Firecrawl API key in VS Code settings"
+    if command -v docker &> /dev/null; then
+        has_docker=true
     fi
-}
-
-# Install Hugging Face MCP Server (via marketplace extension)
-install_huggingface_marketplace() {
-    print_header "Hugging Face MCP Server"
+    if command -v podman &> /dev/null; then
+        has_podman=true
+    fi
     
-    print_info "Hugging Face MCP provides access to models, datasets, and more"
+    # Offer installation method choice
+    echo ""
+    echo "Installation method:"
+    echo "1) Docker/Podman (HTTP, no Node.js needed on host, recommended)"
+    echo "2) NPX (command-based, requires Node.js/npm)"
     echo ""
     
-    read -p "Install Hugging Face MCP extension? (y/n): " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        print_info "Skipped Hugging Face MCP"
-        return 0
-    fi
+    read -p "Choose method (1-2): " method_choice
     
-    install_marketplace_mcp "huggingface.huggingface-vscode" "Hugging Face MCP"
+    if [ "$method_choice" = "1" ]; then
+        if [ "$has_docker" = false ] && [ "$has_podman" = false ]; then
+            print_error "Docker or Podman not found. Install one or choose method 2"
+            return 1
+        fi
+        install_firecrawl_docker
+    elif [ "$method_choice" = "2" ]; then
+        install_firecrawl_npx
+    else
+        print_error "Invalid choice"
+        return 1
+    fi
 }
 
-# Show all available MCP servers to install
-install_additional_servers() {
-    print_header "Additional MCP Servers"
+# Install Firecrawl via Docker/Podman with HTTP streamable mode
+install_firecrawl_docker() {
+    print_header "Firecrawl MCP - Docker/Podman Installation"
+    
+    local container_runtime="docker"
+    if ! command -v docker &> /dev/null && command -v podman &> /dev/null; then
+        container_runtime="podman"
+    fi
+    
+    print_info "Using container runtime: $container_runtime"
+    echo ""
+    
+    # Get API key from user
+    read -sp "Enter your Firecrawl API Key (will not be echoed): " api_key
+    echo ""
+    
+    if [ -z "$api_key" ]; then
+        print_error "API key required"
+        return 1
+    fi
+    
+    print_info "Adding Firecrawl MCP to config..."
+    
+    # Use helper to ensure config exists
+    ensure_mcp_config
+    
+    # Add Firecrawl API key input
+    add_mcp_input "firecrawlApiKey" "promptString" "Firecrawl API Key" || {
+        print_error "Failed to add input to MCP config"
+        return 1
+    }
+    
+    # Add Firecrawl server entry (HTTP-based, connects to localhost:3000)
+    add_mcp_server "firecrawl" '{
+        "type": "http",
+        "url": "http://localhost:3000/mcp"
+    }' || {
+        print_error "Failed to add Firecrawl server to MCP config"
+        return 1
+    }
+    
+    print_success "Firecrawl MCP configured in $MCP_CONFIG_FILE"
+    echo ""
+    print_warning "ACTION REQUIRED: Start the Firecrawl MCP container"
+    echo ""
+    echo "Run this command in a terminal:"
+    echo ""
+    echo "  $container_runtime run -d \\"
+    echo "    --name firecrawl-mcp \\"
+    echo "    -e FIRECRAWL_API_KEY='$api_key' \\"
+    echo "    -e HTTP_STREAMABLE_SERVER=true \\"
+    echo "    -p 3000:3000 \\"
+    echo "    node:20-slim \\"
+    echo "    sh -c 'npx -y firecrawl-mcp'"
+    echo ""
+    echo "Or use docker-compose with:"
+    echo ""
+    echo "  version: '3.8'"
+    echo "  services:"
+    echo "    firecrawl-mcp:"
+    echo "      image: node:20-slim"
+    echo "      command: sh -c 'npx -y firecrawl-mcp'"
+    echo "      environment:"
+    echo "        FIRECRAWL_API_KEY: '${api_key}'"
+    echo "        HTTP_STREAMABLE_SERVER: 'true'"
+    echo "      ports:"
+    echo "        - '3000:3000'"
+    echo ""
+    print_info "After starting the container, reload VS Code and use Firecrawl tools"
+    
+    # Clear API key from memory
+    unset api_key
+}
+
+# Install Firecrawl via NPX (requires Node.js)
+install_firecrawl_npx() {
+    print_header "Firecrawl MCP - NPX Installation"
+    
+    print_info "Adding Firecrawl MCP to config..."
+    
+    # Use helper to ensure config exists
+    ensure_mcp_config
+    
+    # Add Firecrawl API key input
+    add_mcp_input "apiKey" "promptString" "Firecrawl API Key" || {
+        print_error "Failed to add input to MCP config"
+        return 1
+    }
+    
+    # Add Firecrawl server entry (command-based, uses npx)
+    add_mcp_server "firecrawl" '{
+        "command": "npx",
+        "args": ["-y", "firecrawl-mcp"],
+        "env": {
+            "FIRECRAWL_API_KEY": "${input:apiKey}"
+        }
+    }' || {
+        print_error "Failed to add Firecrawl server to MCP config"
+        return 1
+    }
+    
+    print_success "Firecrawl MCP configured in $MCP_CONFIG_FILE"
+    print_info "NPX will download firecrawl-mcp automatically on first use"
+    print_info "Or pre-install: npm install -g firecrawl-mcp"
+}
+
+# Setup available MCP servers
+setup_mcp_servers() {
+    print_header "MCP Servers Configuration"
     
     check_dependencies
     
@@ -564,9 +634,9 @@ install_additional_servers() {
     
     echo "Available MCP servers to install:"
     echo ""
-    echo "1) Stack Overflow  - Search Q&A (HTTP remote, no CLI needed)"
-    echo "2) Firecrawl        - Web scraping (marketplace extension)"
-    echo "3) Hugging Face     - ML models & datasets (marketplace extension)"
+    echo "1) GitHub           - GitHub API access (HTTP remote)"
+    echo "2) Stack Overflow   - Search Q&A (HTTP remote)"
+    echo "3) Firecrawl        - Web scraping (Docker or NPX)"
     echo "4) All of the above"
     echo "5) Cancel"
     echo ""
@@ -575,18 +645,18 @@ install_additional_servers() {
     
     case $choice in
         1)
-            install_stackoverflow_marketplace
+            install_github_mcp
             ;;
         2)
-            install_firecrawl_marketplace
+            install_stackoverflow_mcp
             ;;
         3)
-            install_huggingface_marketplace
+            install_firecrawl_mcp
             ;;
         4)
-            install_stackoverflow_marketplace
-            install_firecrawl_marketplace
-            install_huggingface_marketplace
+            install_github_mcp
+            install_stackoverflow_mcp
+            install_firecrawl_mcp
             ;;
         5)
             print_info "Cancelled"
@@ -599,8 +669,8 @@ install_additional_servers() {
     esac
     
     echo ""
-    print_success "Additional servers configured!"
-    print_info "Open Copilot Chat to start using them."
+    print_success "MCP servers configured!"
+    print_info "Reload VS Code (Ctrl+Shift+P -> 'Developer: Reload Window') to activate the servers."
 }
 
 # Configure workspace settings (e.g. auto-start)
@@ -661,91 +731,32 @@ configure_workspace_settings() {
 ################################################################################
 
 main() {
-    local mode="${1:---setup}"
+    local mode="${1:---default}"
     
     case "$mode" in
-        --setup)
-            print_header "GitHub MCP Setup"
+        --default|"")
+            print_header "MCP Setup"
             check_dependencies
             verify_github_auth
             
-            # Check if config exists and uses the variable
-            if [ -f "$MCP_CONFIG_FILE" ] && grep -q "\${input:github_mcp_pat}" "$MCP_CONFIG_FILE"; then
-                 print_info "Existing configuration detected using secure variable."
-                 read -p "Do you want to generate a new token and rotate the secret? (y/N): " -n 1 -r
-                 echo
-                 if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-                     print_success "Keeping existing configuration."
-                     show_next_steps
-                     return 0
-                 fi
-            else
-                 # Config missing or doesn't use variable
-                 if [ ! -f "$MCP_CONFIG_FILE" ]; then
-                     print_warning "Configuration file not found."
-                     
-                     # Check if we have a stored token in secret-tool
-                     local stored_token=""
-                     if [ "$USE_KEYRING" = true ] && command -v secret-tool &> /dev/null; then
-                         stored_token=$(secret-tool lookup "$KEYRING_SERVICE" "$KEYRING_KEY" 2>/dev/null || true)
-                     fi
-
-                     if [ -n "$stored_token" ]; then
-                         print_info "Found a token stored in system keyring (secret-tool)."
-                         read -p "Do you want to use this stored token? (Y/n): " -n 1 -r
-                         echo
-                         if [[ ! $REPLY =~ ^[Nn]$ ]]; then
-                             setup_mcp_config "$stored_token"
-                             show_next_steps
-                             return 0
-                         fi
-                     else
-                         print_info "If you previously set this up, your token may still be in the VS Code keychain."
-                         read -p "Do you want to generate a NEW token? (Select 'n' to use existing VS Code secret) (y/N): " -n 1 -r
-                         echo
-                         if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-                             setup_mcp_config ""
-                             show_next_steps
-                             return 0
-                         fi
-                     fi
-                 fi
-            fi
+            # Initialize base config
+            setup_mcp_config
             
-            print_header "Creating GitHub Personal Access Token"
-            print_info "Token will be created with scopes: $TOKEN_SCOPES"
-            print_info "Expiration: $TOKEN_EXPIRY_DAYS days"
-            print_info "Browser will open to confirm creation..."
+            # Ask user to select servers
             echo ""
-            
-            local token
-            token=$(create_github_pat)
-            
-            if [ -z "$token" ]; then
-                print_error "Failed to create or retrieve token"
-                exit 1
+            read -p "Would you like to configure MCP servers now? (y/n): " -n 1 -r
+            echo
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                setup_mcp_servers
             fi
             
-            # Store token in keyring for future recovery/checks
-            store_token_securely "$token" > /dev/null
-            
-            setup_mcp_config "$token"
-            # Skip test as we expect 401/Prompt
-            print_info "Skipping connection test (VS Code will prompt for token)"
             show_next_steps
             ;;
         
         --config-only)
-            print_header "GitHub MCP Configuration (Config Only)"
+            print_header "MCP Configuration (Config Only)"
             check_dependencies
-            print_info "Using token from: gh auth token"
-            local token
-            token=$(gh auth token)
-            if [ -z "$token" ]; then
-                print_error "Unable to get token from gh auth token"
-                exit 1
-            fi
-            setup_mcp_config "$token"
+            setup_mcp_config
             show_next_steps
             ;;
         
@@ -763,10 +774,6 @@ main() {
         
         --show-token)
             show_token
-            ;;
-        
-        --install-servers)
-            install_additional_servers
             ;;
         
         --help|-h)
