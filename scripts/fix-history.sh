@@ -47,6 +47,15 @@ TEMP_STASH_PATCH="/tmp/git-fix-history-stash.patch"
 TEMP_ALL_DATES="/tmp/git-fix-history-all-dates.txt"
 TEMP_BACKUP="/tmp/git-fix-history-backup-$(date +%s).bundle"
 
+# Harness configuration (minimal test harness integrated into script)
+HARNESS_MODE=false
+HARNESS_OP=""
+HARNESS_ARG=""
+HARNESS_CLEANUP=true
+REPORT_DIR="/tmp/history-harness-reports"
+
+mkdir -p "$REPORT_DIR"
+
 # File descriptor for interactive prompts (uses /dev/tty if available)
 if [[ -t 0 ]]; then
     # Try to open /dev/tty for interactive input
@@ -112,6 +121,13 @@ Options:
                              Rewrites history to apply signatures and preserves dates
   --drop COMMIT              Drop (remove) a single non-root commit from history
                              Example: --drop 181cab0 (dropping commit by hash)
+
+  --harness-drop <commit>    Run a minimal harness that drops a commit in a temporary branch,
+                             creates a backup bundle and performs post-checks (safe wrapper)
+  --harness-sign <range>     Run a minimal harness that re-signs commits in a range (requires GPG)
+                             (Honors global ${CYAN}--dry-run${NC} flag)
+  --harness-no-cleanup       Keep temporary branch after running the harness for inspection
+
   -d, --dry-run              Show what would be changed without applying
   -s, --stash NUM            Apply specific files from stash to a commit
                              Example: --stash 0 (applies stash@{0} interactively)
@@ -122,6 +138,8 @@ Examples:
   ./scripts/fix-history.sh                           # Fix last 10 commits interactively
   ./scripts/fix-history.sh --range HEAD~20           # Work with last 20 commits
   ./scripts/fix-history.sh --dry-run                 # Preview changes without applying
+  ./scripts/fix-history.sh --harness-drop a61b084 --dry-run
+  ./scripts/fix-history.sh --harness-sign HEAD~5..HEAD
   ./scripts/fix-history.sh --stash 0                 # Apply stash@{0} to commits
   ./scripts/fix-history.sh --amend HEAD~2            # Secretly amend 2nd to last commit
   ./scripts/fix-history.sh --range main..HEAD        # Fix commits between main and HEAD
@@ -161,6 +179,23 @@ parse_args() {
             --drop)
                 DROP_COMMIT="$2"
                 shift 2
+                ;;
+            --harness-drop)
+                HARNESS_MODE=true
+                HARNESS_OP="drop"
+                HARNESS_ARG="$2"
+                shift 2
+                ;;
+            --harness-sign)
+                HARNESS_MODE=true
+                HARNESS_OP="sign"
+                HARNESS_ARG="$2"
+                shift 2
+                ;;
+
+            --harness-no-cleanup)
+                HARNESS_CLEANUP=false
+                shift
                 ;;
             -v|--verbose)
                 DEBUG=true
@@ -1003,6 +1038,138 @@ drop_single_commit() {
 }
 
 
+# ---------------------------------------------------------------------------
+# Minimal in-script harness to run safe test operations in a temp branch
+# Harness uses the global --dry-run flag (DRY_RUN) when provided.
+# ---------------------------------------------------------------------------
+
+harness_post_checks() {
+    local target_hash="$1"
+    local rf="$2"
+
+    echo "Post-operation checks:" | tee -a "$rf"
+
+    # 1) Commit absent?
+    if git log --oneline | grep -q "$target_hash"; then
+        echo "ERROR: Commit $target_hash still present in the history" | tee -a "$rf"
+        return 1
+    else
+        echo "OK: Commit $target_hash absent from history" | tee -a "$rf"
+    fi
+
+    # 2) Clean working tree?
+    if [[ -n "$(git status --porcelain)" ]]; then
+        echo "WARNING: Working tree not clean after operation" | tee -a "$rf"
+        git status --porcelain | tee -a "$rf"
+        return 1
+    else
+        echo "OK: Working tree clean" | tee -a "$rf"
+    fi
+
+    # 3) Diff summary vs origin/Main (if exists)
+    if git rev-parse --verify origin/Main >/dev/null 2>&1; then
+        echo "Diff summary (origin/Main..HEAD):" | tee -a "$rf"
+        git diff --name-status origin/Main..HEAD | tee -a "$rf"
+    else
+        echo "origin/Main not found, skipping diff summary" | tee -a "$rf"
+    fi
+
+    return 0
+}
+
+harness_finish_success() {
+    local tmp_branch="$1"
+    local rf="$2"
+
+    echo "" | tee -a "$rf"
+    echo "Harness completed successfully." | tee -a "$rf"
+    echo "Report saved: $rf" | tee -a "$rf"
+
+    if [[ "$HARNESS_CLEANUP" == "true" ]]; then
+        git checkout - || true
+        git branch -D "$tmp_branch" || true
+        echo "Cleaned up temp branch $tmp_branch" | tee -a "$rf"
+    else
+        echo "Temp branch retained: $tmp_branch" | tee -a "$rf"
+    fi
+}
+
+harness_restore_backup() {
+    local bundle="$1"
+    local rf="$2"
+    echo "Restoring from backup bundle: $bundle" | tee -a "$rf"
+    git bundle unbundle "$bundle" || true
+    git reset --hard origin/Main || git reset --hard HEAD || true
+}
+
+harness_run() {
+    TIMESTAMP=$(date -u +%Y%m%dT%H%M%SZ)
+    TMP_BRANCH="tmp/harness-${TIMESTAMP}"
+    REPORT_FILE="$REPORT_DIR/report-${TIMESTAMP}.txt"
+
+    echo "Harness report: $REPORT_FILE"
+
+    echo "Operation: ${HARNESS_OP} ${HARNESS_ARG}" | tee "$REPORT_FILE"
+
+    # Create temp branch
+    git checkout -b "$TMP_BRANCH" | tee -a "$REPORT_FILE"
+    echo "Created temp branch: $TMP_BRANCH" | tee -a "$REPORT_FILE"
+
+    # Create local bundle backup
+    BUNDLE="/tmp/harness-backup-${TIMESTAMP}.bundle"
+    git bundle create "$BUNDLE" --all
+    echo "Backup bundle: $BUNDLE" | tee -a "$REPORT_FILE"
+
+    # Honor global DRY_RUN
+    PREV_DRY_RUN="$DRY_RUN"
+    if [[ "$DRY_RUN" == "true" ]]; then
+        echo "Running harness in DRY-RUN mode" | tee -a "$REPORT_FILE"
+    fi
+
+    case "$HARNESS_OP" in
+        drop)
+            echo "Running drop for commit: $HARNESS_ARG" | tee -a "$REPORT_FILE"
+            if ! drop_single_commit "$HARNESS_ARG" 2>&1 | tee -a "$REPORT_FILE"; then
+                echo "Drop failed" | tee -a "$REPORT_FILE"
+                harness_restore_backup "$BUNDLE" "$REPORT_FILE"
+                DRY_RUN="$PREV_DRY_RUN"
+                return 1
+            fi
+
+            if ! harness_post_checks "$HARNESS_ARG" "$REPORT_FILE"; then
+                harness_restore_backup "$BUNDLE" "$REPORT_FILE"
+                DRY_RUN="$PREV_DRY_RUN"
+                return 1
+            fi
+            ;;
+        sign)
+            echo "Running sign for range: $HARNESS_ARG" | tee -a "$REPORT_FILE"
+            # set RANGE for sign_mode and let sign_mode use DRY_RUN as appropriate
+            OLD_RANGE="$RANGE"
+            RANGE="$HARNESS_ARG"
+            if ! sign_mode 2>&1 | tee -a "$REPORT_FILE"; then
+                echo "Sign failed" | tee -a "$REPORT_FILE"
+                harness_restore_backup "$BUNDLE" "$REPORT_FILE"
+                RANGE="$OLD_RANGE"
+                DRY_RUN="$PREV_DRY_RUN"
+                return 1
+            fi
+            RANGE="$OLD_RANGE"
+            ;;
+        *)
+            echo "Unknown harness operation: $HARNESS_OP" | tee -a "$REPORT_FILE"
+            DRY_RUN="$PREV_DRY_RUN"
+            return 1
+            ;;
+    esac
+
+    DRY_RUN="$PREV_DRY_RUN"
+
+    harness_finish_success "$TMP_BRANCH" "$REPORT_FILE"
+    return 0
+}
+
+
 amend_mode() {
     print_header
     
@@ -1330,5 +1497,12 @@ REBASE_EOF
         exit 0
     fi
 }
+
+# Entry point: parse args first so harness mode can run standalone
+parse_args "$@"
+if [[ "$HARNESS_MODE" == "true" ]]; then
+    harness_run
+    exit $?
+fi
 
 main "$@"

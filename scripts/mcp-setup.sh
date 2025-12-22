@@ -55,8 +55,17 @@ detect_config_dir() {
 MCP_CONFIG_DIR="$(detect_config_dir)"
 MCP_CONFIG_FILE="${MCP_CONFIG_DIR}/mcp.json"
 MCP_ENDPOINT="https://api.githubcopilot.com/mcp/"
-TOKEN_SCOPES="repo,workflow,read:user"
+TOKEN_SCOPES="repo,workflow,read:user"  # Default; can be overridden interactively
 TOKEN_EXPIRY_DAYS=90
+
+# Scope presets for interactive selection
+declare -A SCOPE_PRESETS=(
+    ["full"]="repo,workflow,read:user"
+    ["repo-rw"]="repo,read:user"
+    ["repo-ro"]="public_repo,read:user"
+    ["ci-only"]="workflow,read:user"
+    ["user-only"]="read:user"
+)
 
 # Secure storage options (priority order)
 USE_KEYRING=false
@@ -221,6 +230,39 @@ verify_github_auth() {
     fi
 }
 
+# Interactive scope selector
+select_token_scopes() {
+    print_header "GitHub PAT Scope Selection"
+    echo "Select permission level for your Personal Access Token:"
+    echo ""
+    echo -e "  ${BLUE}1)${NC} Full (repo + workflow + user read)  - Default, recommended for most uses"
+    echo -e "  ${BLUE}2)${NC} Repo R/W (repo + user read)         - Public & private repos, no workflows"
+    echo -e "  ${BLUE}3)${NC} Repo Read-Only (public_repo + user) - Read-only on public repos only"
+    echo -e "  ${BLUE}4)${NC} CI/Workflows only (workflow + user)  - For GitHub Actions integration"
+    echo -e "  ${BLUE}5)${NC} User info only (read:user)          - Minimal permissions, API access only"
+    echo -e "  ${BLUE}6)${NC} Custom                              - Enter your own scope list"
+    echo ""
+    
+    read -rp "Choice [1]: " scope_choice
+    scope_choice="${scope_choice:-1}"
+    
+    case "$scope_choice" in
+        2) TOKEN_SCOPES="${SCOPE_PRESETS[repo-rw]}" ;;
+        3) TOKEN_SCOPES="${SCOPE_PRESETS[repo-ro]}" ;;
+        4) TOKEN_SCOPES="${SCOPE_PRESETS[ci-only]}" ;;
+        5) TOKEN_SCOPES="${SCOPE_PRESETS[user-only]}" ;;
+        6) 
+            read -rp "Enter scopes (comma-separated, e.g., repo,workflow,read:user): " custom_scopes
+            TOKEN_SCOPES="${custom_scopes:-${SCOPE_PRESETS[full]}}"
+            ;;
+        *) TOKEN_SCOPES="${SCOPE_PRESETS[full]}" ;;
+    esac
+    
+    echo ""
+    print_info "Selected scopes: ${BLUE}$TOKEN_SCOPES${NC}"
+    echo ""
+}
+
 create_github_pat() {
     # Use gh auth refresh to create a new token with browser confirmation
     # This displays the device code and auth link
@@ -247,6 +289,9 @@ setup_mcp_config() {
     
     # Ensure directory exists
     mkdir -p "$MCP_CONFIG_DIR"
+    
+    # Offer interactive scope selection
+    select_token_scopes
     
     # Create empty base config if it doesn't exist
     if [ ! -f "$MCP_CONFIG_FILE" ]; then
