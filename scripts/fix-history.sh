@@ -937,9 +937,14 @@ sign_mode() {
         RANGE="$RANGE..HEAD"
     fi
 
-    if ! confirm_changes; then
-        print_info "Cancelled"
-        exit 0
+    # In harness mode we auto-confirm to allow non-interactive testing (especially with --dry-run)
+    if [[ "$HARNESS_MODE" == "true" ]]; then
+        print_info "Harness mode: auto-confirming sign operation"
+    else
+        if ! confirm_changes; then
+            print_info "Cancelled"
+            exit 0
+        fi
     fi
 
     # Capture original dates for commits in the specified range
