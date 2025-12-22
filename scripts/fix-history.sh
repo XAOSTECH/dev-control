@@ -39,11 +39,26 @@ STASH_MODE=false
 AMEND_MODE=false
 AMEND_COMMIT=""
 NO_EDIT_MODE=false
+SIGN_MODE=false
+DROP_COMMIT=""
 TEMP_COMMITS="/tmp/git-fix-history-commits.txt"
 TEMP_OPERATIONS="/tmp/git-fix-history-operations.txt"
 TEMP_STASH_PATCH="/tmp/git-fix-history-stash.patch"
 TEMP_ALL_DATES="/tmp/git-fix-history-all-dates.txt"
 TEMP_BACKUP="/tmp/git-fix-history-backup-$(date +%s).bundle"
+
+# File descriptor for interactive prompts (uses /dev/tty if available)
+if [[ -t 0 ]]; then
+    # Try to open /dev/tty for interactive input
+    if [[ -r /dev/tty ]]; then
+        exec 3</dev/tty
+    else
+        # Fallback to stdin
+        exec 3<&0
+    fi
+else
+    exec 3<&0
+fi
 
 # ============================================================================
 # HELPER FUNCTIONS
@@ -93,6 +108,10 @@ Options:
   -a, --amend COMMIT         Secretly amend a commit (not latest) with date preservation
                              Recreates history as if nothing happened
                              Example: --amend HEAD~2 (amend 2nd to last commit)
+  --sign                     Re-sign commits in the selected range (requires GPG)
+                             Rewrites history to apply signatures and preserves dates
+  --drop COMMIT              Drop (remove) a single non-root commit from history
+                             Example: --drop 181cab0 (dropping commit by hash)
   -d, --dry-run              Show what would be changed without applying
   -s, --stash NUM            Apply specific files from stash to a commit
                              Example: --stash 0 (applies stash@{0} interactively)
@@ -134,6 +153,14 @@ parse_args() {
             --no-edit)
                 NO_EDIT_MODE=true
                 shift
+                ;;
+            --sign)
+                SIGN_MODE=true
+                shift
+                ;;
+            --drop)
+                DROP_COMMIT="$2"
+                shift 2
                 ;;
             -v|--verbose)
                 DEBUG=true
@@ -451,7 +478,13 @@ interactive_edit_mode() {
         
         display_commit_history "$input_file"
         echo -e "${BOLD}Edit this commit? [y/N]:${NC}"
-        read -rp "  Commit #$idx (${hash:0:7}): " should_edit
+        # Use /dev/tty (fd 3) for interactive prompts so loop stdin isn't consumed
+        if read -u 3 -rp "  Commit #$idx (${hash:0:7}): " should_edit; then
+            :
+        else
+            # Fallback to standard input
+            read -rp "  Commit #$idx (${hash:0:7}): " should_edit
+        fi
         
         if [[ "$should_edit" =~ ^[Yy] ]]; then
             local result
@@ -505,7 +538,12 @@ confirm_changes() {
     echo -e "  After applying, you will need to:"
     echo -e "    ${CYAN}git push --force-with-lease${NC}"
     echo ""
-    read -rp "Continue? [y/N]: " confirm
+    # Use interactive FD 3 when available to avoid reading from piped stdin
+    if read -u 3 -rp "Continue? [y/N]: " confirm; then
+        :
+    else
+        read -rp "Continue? [y/N]: " confirm
+    fi
     [[ "$confirm" =~ ^[Yy] ]]
 }
 
@@ -595,21 +633,51 @@ trap rollback_on_cancel INT TERM
 # ============================================================================
 
 capture_all_dates() {
+    # Backwards compatible: capture from a start ref's parent to HEAD
     local start_ref="$1"
-    
+
     print_info "Capturing original dates for ALL commits..."
-    
+
     > "$TEMP_ALL_DATES"
-    
-    # Get all commits from start_ref to HEAD
-    for commit in $(git rev-list --reverse "$start_ref"..HEAD); do
-        author_date=$(git log -1 --format=%aI "$commit")
-        echo "$commit|$author_date" >> "$TEMP_ALL_DATES"
-    done
-    
+
+    # If start_ref is empty or equals HEAD, capture only HEAD
+    if [[ -z "$start_ref" || "$start_ref" == "HEAD" ]]; then
+        for commit in $(git rev-list --reverse HEAD); do
+            author_date=$(git log -1 --format=%aI "$commit")
+            echo "$commit|$author_date" >> "$TEMP_ALL_DATES"
+        done
+    else
+        # If start_ref is a single commit hash (parent), we capture commits after it
+        # If start_ref already contains '..' or is a range, use it directly
+        if [[ "$start_ref" == *".."* ]]; then
+            range="$start_ref"
+        else
+            range="$start_ref..HEAD"
+        fi
+
+        for commit in $(git rev-list --reverse "$range"); do
+            author_date=$(git log -1 --format=%aI "$commit")
+            echo "$commit|$author_date" >> "$TEMP_ALL_DATES"
+        done
+    fi
+
     local count
     count=$(wc -l < "$TEMP_ALL_DATES")
     print_success "Captured original dates for $count commits"
+}
+
+# Capture dates for an arbitrary git range (e.g., HEAD~5..HEAD or main..HEAD)
+capture_dates_for_range() {
+    local range="$1"
+    print_info "Capturing dates for range: $range"
+    > "$TEMP_ALL_DATES"
+    for commit in $(git rev-list --reverse "$range"); do
+        author_date=$(git log -1 --format=%aI "$commit")
+        echo "$commit|$author_date" >> "$TEMP_ALL_DATES"
+    done
+    local count
+    count=$(wc -l < "$TEMP_ALL_DATES")
+    print_success "Captured original dates for $count commits in range"
 }
 
 backup_repo() {
@@ -710,14 +778,16 @@ display_and_edit_dates() {
         > "${dates_file}.edited"
         
         # Use a different file descriptor for the loop to avoid stdin conflicts
-        while IFS='|' read -r commit_hash orig_date <&3; do
+        # Read the dates file on FD4 so we can keep FD3 reserved for interactive input
+        while IFS='|' read -r commit_hash orig_date <&4; do
             commit_idx=$((commit_idx + 1))
             local short_hash
             short_hash=$(git rev-parse --short "$commit_hash" 2>/dev/null || echo "${commit_hash:0:7}")
             
             echo -e "[$commit_idx] $short_hash"
             echo -e "    Current: ${CYAN}$orig_date${NC}"
-            read -rp "    New date (empty to keep): " user_date
+            # Use fd 3 for interactive user input to avoid stealing file input
+            if read -u 3 -rp "    New date (empty to keep): " user_date; then :; else read -rp "    New date (empty to keep): " user_date; fi
             
             local new_date="$orig_date"
             
@@ -749,7 +819,7 @@ display_and_edit_dates() {
             fi
             
             echo "$commit_hash|$new_date" >> "${dates_file}.edited"
-        done 3< "$dates_file"
+        done 4< "$dates_file"
         
         # Replace the dates file with edited version
         mv "${dates_file}.edited" "$dates_file"
@@ -812,6 +882,127 @@ recreate_history_with_dates() {
     print_success "Commit dates updated successfully"
 }
 
+# ---------------------------------------------------------------------------
+# Sign mode: re-sign commits across a range and restore dates
+# ---------------------------------------------------------------------------
+sign_mode() {
+    print_header
+    check_git_repo
+    backup_repo
+
+    if ! command -v gpg &>/dev/null && ! git config user.signingkey &>/dev/null; then
+        print_warning "GPG not found or signing key not configured. Aborting sign operation."
+        exit 1
+    fi
+
+    echo -e "${BOLD}Sign Mode${NC}"
+    echo -e "Range: ${CYAN}$RANGE${NC}"
+    # Normalize simple ranges like HEAD~5 into HEAD~5..HEAD for clarity
+    if [[ "$RANGE" != *".."* ]]; then
+        RANGE="$RANGE..HEAD"
+    fi
+
+    if ! confirm_changes; then
+        print_info "Cancelled"
+        exit 0
+    fi
+
+    # Capture original dates for commits in the specified range
+    capture_dates_for_range "$RANGE"
+
+    # Determine the oldest commit and its parent so we can rebase from parent (or --root)
+    local oldest
+    oldest=$(git rev-list --reverse "$RANGE" | head -n1)
+    if [[ -z "$oldest" ]]; then
+        print_error "Invalid range: $RANGE"
+        exit 1
+    fi
+    local parent
+    parent=$(git rev-parse "${oldest}~1" 2>/dev/null || true)
+
+    if [[ -z "$parent" ]]; then
+        REBASE_BASE="--root"
+    else
+        REBASE_BASE="$parent"
+    fi
+
+    # Check for merge commits; rebase -i with merges is risky for automated operations
+    if git rev-list --merges "$RANGE" | grep -q .; then
+        print_error "Range contains merge commits. Aborting resign; rebase with merges is risky."
+        return 1
+    fi
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        print_info "DRY RUN: would re-sign commits in range: $RANGE"
+        return 0
+    fi
+
+    # Prepare sequence editor to insert an exec to re-sign after each pick
+    local seq_editor_cmd="sed -i '/^pick /a exec git commit --amend --no-edit -n -S'"
+
+    print_info "Running interactive rebase to re-sign commits (no user interaction expected)"
+    if [[ "$REBASE_BASE" == "--root" ]]; then
+        if GIT_SEQUENCE_EDITOR="$seq_editor_cmd" git rebase -i --root; then
+            print_success "Rebase/Resign completed"
+        else
+            print_error "Rebase failed during re-sign. Please inspect and resolve conflicts."
+            git rebase --abort || true
+            exit 1
+        fi
+    else
+        if GIT_SEQUENCE_EDITOR="$seq_editor_cmd" git rebase -i "$REBASE_BASE"; then
+            print_success "Rebase/Resign completed"
+        else
+            print_error "Rebase failed during re-sign. Please inspect and resolve conflicts."
+            git rebase --abort || true
+            exit 1
+        fi
+    fi
+
+    # Restore original dates
+    recreate_history_with_dates
+    print_success "Resigning done and dates restored"
+}
+
+# ---------------------------------------------------------------------------
+# Drop a single commit (non-last) from history using rebase -i
+# ---------------------------------------------------------------------------
+drop_single_commit() {
+    local target_hash="$1"
+    check_git_repo
+    backup_repo
+
+    if ! git cat-file -e "$target_hash" 2>/dev/null; then
+        print_error "Commit not found: $target_hash"
+        exit 1
+    fi
+
+    local parent
+    parent=$(git rev-parse "${target_hash}~1" 2>/dev/null || true)
+    if [[ -z "$parent" ]]; then
+        print_error "Cannot drop root commit"
+        exit 1
+    fi
+
+    local short
+    short=$(git rev-parse --short "$target_hash")
+    export GIT_SEQUENCE_EDITOR="sed -i '/^pick .*${short}/s/^pick/drop/'"
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        print_info "DRY RUN: would drop commit ${short}"
+        return 0
+    fi
+
+    if git rebase -i --rebase-merges "$parent"; then
+        print_success "Dropped commit ${short}"
+    else
+        print_error "Rebase failed while dropping commit. Aborting."
+        git rebase --abort || true
+        exit 1
+    fi
+}
+
+
 amend_mode() {
     print_header
     
@@ -843,7 +1034,7 @@ amend_mode() {
     local stash_patch_to_apply=""
     if [[ -n "$STASH_NUM" ]] && [[ "$STASH_NUM" != "false" ]]; then
         echo -e "${BOLD}Apply stash files to this commit? [y/N]:${NC}"
-        read -rp "> " apply_stash
+        if read -u 3 -rp "> " apply_stash; then :; else read -rp "> " apply_stash; fi
         
         if [[ "$apply_stash" =~ ^[Yy] ]]; then
             print_info "Selecting files from stash@{$STASH_NUM}..."
@@ -853,7 +1044,7 @@ amend_mode() {
         fi
     fi
     
-    read -rp "Continue? [Y/n]: " confirm
+    if read -u 3 -rp "Continue? [Y/n]: " confirm; then :; else read -rp "Continue? [Y/n]: " confirm; fi
     if [[ "$confirm" =~ ^[Nn] ]]; then
         print_info "Cancelled"
         exit 0
@@ -907,6 +1098,18 @@ main() {
     print_header
     parse_args "$@"
     
+    # Handle sign mode (re-sign commits in a range)
+    if [[ "$SIGN_MODE" == "true" ]]; then
+        sign_mode
+        exit 0
+    fi
+
+    # Handle drop-commit mode (surgically remove a single commit)
+    if [[ -n "$DROP_COMMIT" ]]; then
+        drop_single_commit "$DROP_COMMIT"
+        exit 0
+    fi
+
     # Handle no-edit mode (restore dates only)
     if [[ "$NO_EDIT_MODE" == "true" ]]; then
         check_git_repo
