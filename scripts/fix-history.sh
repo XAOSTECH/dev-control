@@ -41,11 +41,37 @@ AMEND_COMMIT=""
 NO_EDIT_MODE=false
 SIGN_MODE=false
 DROP_COMMIT=""
+# Auto-resolve strategy: empty|ours|theirs
+# Can be set via environment (AUTO_RESOLVE=ours|theirs) or via --auto-resolve <mode>
+AUTO_RESOLVE="${AUTO_RESOLVE:-}"
+# Restore options
+RESTORE_MODE=false
+RESTORE_ARG=""
+RESTORE_LIST_N=10
+RESTORE_AUTO=false
+
 TEMP_COMMITS="/tmp/git-fix-history-commits.txt"
 TEMP_OPERATIONS="/tmp/git-fix-history-operations.txt"
 TEMP_STASH_PATCH="/tmp/git-fix-history-stash.patch"
 TEMP_ALL_DATES="/tmp/git-fix-history-all-dates.txt"
 TEMP_BACKUP="/tmp/git-fix-history-backup-$(date +%s).bundle"
+
+# Parse a simple --auto-resolve argument early so users can pass it anywhere on the command line
+# Accepts: --auto-resolve <ours|theirs>
+ARGS=("$@")
+for ((i=0;i<${#ARGS[@]};i++)); do
+    if [[ "${ARGS[$i]}" == "--auto-resolve" ]]; then
+        if [[ $((i+1)) -lt ${#ARGS[@]} ]]; then
+            AUTO_RESOLVE="${ARGS[$((i+1))]}"
+            if [[ "$AUTO_RESOLVE" != "ours" && "$AUTO_RESOLVE" != "theirs" ]]; then
+                echo "[WARNING] Invalid value for --auto-resolve: $AUTO_RESOLVE (allowed: ours|theirs). Ignoring." >&2
+                AUTO_RESOLVE=""
+            else
+                echo "[INFO] Auto-resolve strategy set to: $AUTO_RESOLVE" >&2
+            fi
+        fi
+    fi
+done
 
 # Harness configuration (minimal test harness integrated into script)
 HARNESS_MODE=false
@@ -53,6 +79,7 @@ HARNESS_OP=""
 HARNESS_ARG=""
 HARNESS_CLEANUP=true
 REPORT_DIR="/tmp/history-harness-reports"
+RESTORE_MODE=false
 
 mkdir -p "$REPORT_DIR"
 
@@ -127,6 +154,11 @@ Options:
   --harness-sign <range>     Run a minimal harness that re-signs commits in a range (requires GPG)
                              (Honors global ${CYAN}--dry-run${NC} flag)
   --harness-no-cleanup       Keep temporary branch after running the harness for inspection
+  --auto-resolve <mode>      Auto-resolve conflicts during automated rebase/drop. Modes: ${CYAN}ours${NC}, ${CYAN}theirs${NC}
+                             If provided, conflicting files will be auto-added (checkout --ours/--theirs)
+                             before running ${CYAN}git rebase --continue${NC}.
+  --restore                  List backup bundles and tags and interactively restore a chosen ref to a branch
+                             (Creates a restore branch and optionally resets the target branch) ${CYAN}(Honors global --dry-run flag)${NC}
 
   -d, --dry-run              Show what would be changed without applying
   -s, --stash NUM            Apply specific files from stash to a commit
@@ -193,10 +225,47 @@ parse_args() {
                 shift 2
                 ;;
 
+            --auto-resolve)
+                AUTO_RESOLVE="$2"
+                if [[ "$AUTO_RESOLVE" != "ours" && "$AUTO_RESOLVE" != "theirs" ]]; then
+                    print_error "Invalid value for --auto-resolve: $AUTO_RESOLVE (allowed: ours|theirs)"
+                    exit 1
+                fi
+                shift 2
+                ;;
+
+            --restore)
+                RESTORE_MODE=true
+                # Optional argument: if the next token is not another flag, treat it as RESTORE_ARG
+                if [[ -n "$2" && "$2" != -* ]]; then
+                    RESTORE_ARG="$2"
+                    shift 2
+                else
+                    RESTORE_ARG=""
+                    shift
+                fi
+                ;;
+
+            --restore-n)
+                RESTORE_LIST_N="$2"
+                shift 2
+                ;;
+
+            --restore-auto)
+                RESTORE_MODE=true
+                RESTORE_AUTO=true
+                shift
+                ;;
+
             --harness-no-cleanup)
                 HARNESS_CLEANUP=false
                 shift
                 ;;
+            --restore)
+                RESTORE_MODE=true
+                shift
+                ;;
+
             -v|--verbose)
                 DEBUG=true
                 shift
@@ -1007,6 +1076,90 @@ sign_mode() {
 # ---------------------------------------------------------------------------
 # Drop a single commit (non-last) from history using rebase -i
 # ---------------------------------------------------------------------------
+
+# Attempt to automatically add conflicted files and continue rebase
+# mode: 'ours' or 'theirs'
+auto_add_conflicted_files() {
+    local mode="$1"
+
+    local conflict_files
+    conflict_files=$(git diff --name-only --diff-filter=U || true)
+    if [[ -z "$conflict_files" ]]; then
+        print_warning "No conflicted files found to auto-resolve"
+        return 1
+    fi
+
+    print_info "Auto-resolving ${mode} for conflicted files..."
+    for f in $conflict_files; do
+        # If file was deleted in one side, determine whether to rm or checkout
+        if [[ "$mode" == "theirs" ]]; then
+            git checkout --theirs -- "$f" 2>/dev/null || true
+        else
+            git checkout --ours -- "$f" 2>/dev/null || true
+        fi
+
+        # If the file no longer exists in the working tree, remove it, else add
+        if [[ -f "$f" || -d "$f" ]]; then
+            git add -- "$f"
+        else
+            # If file is absent, it likely should be removed
+            git rm --quiet -- "$f" 2>/dev/null || true
+        fi
+        print_info "Staged resolution for: $f"
+    done
+
+    # Try to continue rebase
+    # Use NO_EDIT_MODE to avoid editor prompts when continuing
+    if [[ "$NO_EDIT_MODE" == "true" ]]; then
+        print_info "NO_EDIT_MODE enabled: using GIT_EDITOR=':' for git rebase --continue"
+        if GIT_EDITOR=':' git rebase --continue; then
+            print_success "Rebase continued after auto-resolution"
+            return 0
+        else
+            print_warning "git rebase --continue did not finish; there may be more conflicts"
+            return 1
+        fi
+    else
+        if git rebase --continue; then
+            print_success "Rebase continued after auto-resolution"
+            return 0
+        else
+            print_warning "git rebase --continue did not finish; there may be more conflicts"
+            return 1
+        fi
+    fi
+}
+
+# Repeatedly attempt auto-resolution until rebase finishes or we hit an error
+auto_resolve_all_conflicts() {
+    local mode="$1"
+    local attempts=0
+
+    while true; do
+        attempts=$((attempts+1))
+        if auto_add_conflicted_files "$mode"; then
+            # git rebase --continue succeeded and rebase finished
+            return 0
+        fi
+
+        # If there are still conflicts, and attempts are within reasonable limit, continue
+        local conflicts
+        conflicts=$(git diff --name-only --diff-filter=U || true)
+        if [[ -z "$conflicts" ]]; then
+            # no conflicts remain but continuation failed => abort
+            print_error "No conflicts found but rebase did not continue cleanly"
+            return 1
+        fi
+
+        if (( attempts > 15 )); then
+            print_error "Too many auto-resolve attempts; aborting"
+            return 1
+        fi
+
+        print_info "Auto-resolve attempt $attempts complete; re-checking for new conflicts..."
+        # loop and attempt resolution of new conflicts
+    done
+}
 drop_single_commit() {
     local target_hash="$1"
     check_git_repo
@@ -1033,12 +1186,76 @@ drop_single_commit() {
         return 0
     fi
 
-    if git rebase -i --rebase-merges "$parent"; then
-        print_success "Dropped commit ${short}"
+    # Capture dates for commits after the target so we can restore them later
+    print_info "Capturing original dates for commits after ${short}"
+    capture_dates_for_range "${target_hash}..HEAD"
+
+    # If NO_EDIT_MODE is enabled (user passed --no-edit), set GIT_EDITOR to ':' to prevent editor prompts
+    if [[ "$NO_EDIT_MODE" == "true" ]]; then
+        print_info "NO_EDIT_MODE enabled: running rebase with GIT_EDITOR=':' to skip editor prompts"
+        if GIT_EDITOR=':' git rebase -i --rebase-merges "$parent"; then
+            print_success "Dropped commit ${short}"
+            # Restore original commit dates if available
+            recreate_history_with_dates || print_warning "Failed to restore original dates"
+        else
+            REBASE_EXIT=1
+        fi
     else
-        print_error "Rebase failed while dropping commit. Aborting."
-        git rebase --abort || true
-        exit 1
+        if git rebase -i --rebase-merges "$parent"; then
+            print_success "Dropped commit ${short}"
+            # Restore original commit dates if available
+            recreate_history_with_dates || print_warning "Failed to restore original dates"
+        else
+            REBASE_EXIT=1
+        fi
+    fi
+
+    # If rebase succeeded (no REBASE_EXIT), attempt to restore original commit dates
+    if [[ -z "${REBASE_EXIT:-}" ]]; then
+        if [[ -f "$TEMP_ALL_DATES" ]]; then
+            print_info "Restoring original commit dates saved before drop"
+            if recreate_history_with_dates; then
+                print_success "Original commit dates restored"
+            else
+                print_warning "Failed to fully restore original commit dates"
+            fi
+        fi
+    fi
+
+    if [[ -n "${REBASE_EXIT:-}" ]]; then
+        # Rebase failed. Check for conflicted files and handle accordingly.
+        local conflicts
+        conflicts=$(git diff --name-only --diff-filter=U || true)
+        if [[ -n "$conflicts" ]]; then
+            print_warning "Rebase stopped due to conflicts in the following files:"
+            echo "$conflicts" | sed 's/^/  - /'
+
+            if [[ -n "$AUTO_RESOLVE" ]]; then
+                print_info "AUTO_RESOLVE set to '$AUTO_RESOLVE' - attempting automated resolution loop"
+                if auto_resolve_all_conflicts "$AUTO_RESOLVE"; then
+                    # After auto-resolution loop completes, verify that the target commit was removed
+                    if git log --oneline | grep -q "$short"; then
+                        print_error "Target commit ${short} still present after auto-resolution"
+                        exit 1
+                    else
+                        print_success "Conflicts auto-resolved and commit ${short} dropped"
+                        # Restore original commit dates for rewritten commits
+                        recreate_history_with_dates || print_warning "Failed to restore original dates"
+                        exit 0
+                    fi
+                else
+                    print_error "Auto-resolution loop failed; leaving rebase stopped for manual resolution"
+                    exit 2
+                fi
+            else
+                print_error "Rebase stopped. Please run: git add/rm <conflicted_files> then git rebase --continue"
+                exit 2
+            fi
+        else
+            print_error "Rebase failed while dropping commit and no conflicts detected. Aborting."
+            git rebase --abort || true
+            exit 1
+        fi
     fi
 }
 
@@ -1107,6 +1324,196 @@ harness_restore_backup() {
     git reset --hard origin/Main || git reset --hard HEAD || true
 }
 
+# List available backup bundles, harness bundles and backup tags and tmp branches
+list_restore_candidates() {
+    echo "Available backup bundles (in /tmp):"
+    ls -1 /tmp/git-fix-history-backup-* 2>/dev/null || true
+    ls -1 /tmp/harness-backup-* 2>/dev/null || true
+    echo ""
+    echo "Available backup tags (backup/*):"
+    git tag -l 'backup/*' || true
+    echo ""
+    echo "Remote tmp branches (origin/tmp/*):"
+    git ls-remote --heads origin 'tmp/*' 2>/dev/null | awk '{print $2}' | sed 's#refs/heads/##' || true
+}
+
+# Create a restore branch from a bundle or remote branch/tag
+restore_candidate() {
+    local candidate="$1"
+
+    if [[ -f "$candidate" ]]; then
+        echo "Bundle selected: $candidate"
+        git bundle list-heads "$candidate" || true
+        # Defer to interactive chooser for exact ref selection
+        list_backups_and_restore
+        return 0
+    fi
+
+    if git rev-parse --verify --quiet "$candidate" >/dev/null 2>&1; then
+        TIMESTAMP=$(date -u +%Y%m%dT%H%M%SZ)
+        local_restore="restore/${candidate}-${TIMESTAMP}"
+        git branch -f "$local_restore" "$candidate"
+        git push -u origin "$local_restore" || print_warning "Failed to push restore branch to origin"
+        print_success "Created restore branch: $local_restore"
+        return 0
+    fi
+
+    if git ls-remote --heads origin "refs/heads/${candidate}" >/dev/null 2>&1; then
+        TIMESTAMP=$(date -u +%Y%m%dT%H%M%SZ)
+        local_restore="restore/${candidate//\//_}-${TIMESTAMP}"
+        git fetch origin "refs/heads/${candidate}:refs/heads/${local_restore}" || { print_error "Failed to fetch origin/${candidate}"; return 1; }
+        git push -u origin "$local_restore" || print_warning "Failed to push restore branch to origin"
+        print_success "Created restore branch: $local_restore"
+        return 0
+    fi
+
+    print_error "Candidate not recognized or missing: $candidate"
+    return 1
+}
+
+# Interactively list available backup bundles and tags and restore a selected ref
+list_backups_and_restore() {
+    print_header
+    check_git_repo
+
+    echo "Available backup bundles (local /tmp):"
+    local bundles
+    IFS=$'\n' read -d '' -r -a bundles < <(ls -1 /tmp/git-fix-history-backup-*.bundle /tmp/harness-backup-*.bundle 2>/dev/null || true)
+
+    echo "Available backup tags (git):"
+    local tags
+    IFS=$'\n' read -d '' -r -a tags < <(git tag -l "backup/*" 2>/dev/null || true)
+
+    local idx=0
+    declare -a choices
+
+    echo ""
+    echo "Choose a backup to inspect/restore:"
+
+    for b in "${bundles[@]}"; do
+        idx=$((idx+1))
+        choices[$idx]="bundle:$b"
+        echo "  $idx) bundle: $(basename "$b")"
+    done
+
+    for t in "${tags[@]}"; do
+        idx=$((idx+1))
+        choices[$idx]="tag:$t"
+        echo "  $idx) tag: $t"
+    done
+
+    if [[ ${#choices[@]} -eq 0 ]]; then
+        print_error "No backup bundles or tags found."
+        return 1
+    fi
+
+    echo ""
+    read -u 3 -rp "Select number to restore (or 'q' to cancel): " sel
+    if [[ "$sel" == "q" ]]; then
+        print_info "Cancelled"
+        return 0
+    fi
+
+    if ! [[ "$sel" =~ ^[0-9]+$ ]] || [[ -z "${choices[$sel]}" ]]; then
+        print_error "Invalid selection"
+        return 1
+    fi
+
+    IFS=':' read -r typ val <<< "${choices[$sel]}"
+
+    TIMESTAMP=$(date -u +%Y%m%dT%H%M%SZ)
+
+    if [[ "$typ" == "bundle" ]]; then
+        local bundle_file="$val"
+        echo "Bundle selected: $bundle_file"
+        echo "Contents:"; git bundle list-heads "$bundle_file" || true
+
+        read -u 3 -rp "Enter the ref to restore (e.g. refs/heads/devcontainer/minimal) or 'q' to cancel: " ref_choice
+        if [[ "$ref_choice" == "q" ]]; then
+            print_info "Cancelled"
+            return 0
+        fi
+
+        local restore_branch="restore/$(echo "$ref_choice" | sed 's|refs/heads/||; s|/|_|g')-${TIMESTAMP}"
+        print_info "Creating local restore branch: $restore_branch from bundle ref: $ref_choice"
+        if [[ "$DRY_RUN" == "true" ]]; then
+            print_info "DRY-RUN: would run: git fetch \"$bundle_file\" \"$ref_choice\":refs/heads/$restore_branch"
+            print_info "DRY-RUN: would run: git push -u origin \"$restore_branch\""
+        else
+            git fetch "$bundle_file" "$ref_choice":"refs/heads/$restore_branch" || { print_error "Failed to fetch ref from bundle"; return 1; }
+            git push -u origin "$restore_branch" || print_warning "Failed to push restore branch to origin; branch is local"
+        fi
+
+        read -u 3 -rp "Reset a target branch to this restore? (Enter branch name or leave empty to skip): " target_branch
+        if [[ -n "$target_branch" ]]; then
+            read -u 3 -rp "Confirm: reset branch '$target_branch' to '$restore_branch' and force-push? [y/N]: " confirm
+            if [[ "$confirm" =~ ^[Yy] ]]; then
+                TAG=backup/${target_branch}-pre-restore-${TIMESTAMP}
+                if [[ "$DRY_RUN" == "true" ]]; then
+                    print_info "DRY-RUN: would run: git tag -f \"$TAG\" refs/heads/$target_branch"
+                    print_info "DRY-RUN: would run: git push origin \"refs/tags/$TAG\""
+                    print_info "DRY-RUN: would run: git checkout \"$target_branch\" || git checkout -b \"$target_branch\""
+                    print_info "DRY-RUN: would run: git reset --hard \"$restore_branch\""
+                    print_info "DRY-RUN: would run: git push --force-with-lease origin \"$target_branch\""
+                    print_success "DRY-RUN: Branch $target_branch would be reset to $restore_branch"
+                else
+                    git tag -f "$TAG" refs/heads/$target_branch 2>/dev/null || true
+                    git push origin "refs/tags/$TAG" || true
+                    git checkout "$target_branch" || git checkout -b "$target_branch"
+                    git reset --hard "$restore_branch"
+                    git push --force-with-lease origin "$target_branch"
+                    print_success "Branch $target_branch reset to $restore_branch and pushed"
+                fi
+            else
+                print_info "Skipped resetting target branch"
+            fi
+        fi
+
+        print_success "Restore branch created: $restore_branch"
+        return 0
+    else
+        # tag restore
+        local tag_name="$val"
+        echo "Tag selected: $tag_name"
+        local restore_branch="restore/${tag_name}-${TIMESTAMP}"
+        if [[ "$DRY_RUN" == "true" ]]; then
+            print_info "DRY-RUN: would run: git branch -f \"$restore_branch\" \"$tag_name\""
+            print_info "DRY-RUN: would run: git push -u origin \"$restore_branch\""
+        else
+            git branch -f "$restore_branch" "$tag_name"
+            git push -u origin "$restore_branch" || print_warning "Failed to push restore branch to origin"
+        fi
+
+        read -u 3 -rp "Reset a target branch to this tag? (Enter branch name or leave empty to skip): " target_branch
+        if [[ -n "$target_branch" ]]; then
+            read -u 3 -rp "Confirm: reset branch '$target_branch' to tag '$tag_name' and force-push? [y/N]: " confirm
+            if [[ "$confirm" =~ ^[Yy] ]]; then
+                TAG=backup/${target_branch}-pre-restore-${TIMESTAMP}
+                if [[ "$DRY_RUN" == "true" ]]; then
+                    print_info "DRY-RUN: would run: git tag -f \"$TAG\" refs/heads/$target_branch"
+                    print_info "DRY-RUN: would run: git push origin \"refs/tags/$TAG\""
+                    print_info "DRY-RUN: would run: git checkout \"$target_branch\" || git checkout -b \"$target_branch\""
+                    print_info "DRY-RUN: would run: git reset --hard \"$tag_name\""
+                    print_info "DRY-RUN: would run: git push --force-with-lease origin \"$target_branch\""
+                    print_success "DRY-RUN: Branch $target_branch would be reset to $tag_name"
+                else
+                    git tag -f "$TAG" refs/heads/$target_branch 2>/dev/null || true
+                    git push origin "refs/tags/$TAG" || true
+                    git checkout "$target_branch" || git checkout -b "$target_branch"
+                    git reset --hard "$tag_name"
+                    git push --force-with-lease origin "$target_branch"
+                    print_success "Branch $target_branch reset to $tag_name and pushed"
+                fi
+            else
+                print_info "Skipped resetting target branch"
+            fi
+        fi
+        print_success "Restore branch created from tag: $restore_branch"
+        return 0
+    fi
+}
+
+
 harness_run() {
     TIMESTAMP=$(date -u +%Y%m%dT%H%M%SZ)
     TMP_BRANCH="tmp/harness-${TIMESTAMP}"
@@ -1134,7 +1541,19 @@ harness_run() {
     case "$HARNESS_OP" in
         drop)
             echo "Running drop for commit: $HARNESS_ARG" | tee -a "$REPORT_FILE"
-            if ! drop_single_commit "$HARNESS_ARG" 2>&1 | tee -a "$REPORT_FILE"; then
+            # Capture exit code so we can differentiate conflict-stops and hard failures
+            drop_single_commit "$HARNESS_ARG" 2>&1 | tee -a "$REPORT_FILE"
+            rc=${PIPESTATUS[0]:-1}
+
+            if [[ $rc -eq 0 ]]; then
+                # Success
+                :
+            elif [[ $rc -eq 2 ]]; then
+                echo "CONFLICT: Rebase stopped due to conflicts during drop; leaving temp branch for manual resolution" | tee -a "$REPORT_FILE"
+                echo "Temp branch: $TMP_BRANCH" | tee -a "$REPORT_FILE"
+                DRY_RUN="$PREV_DRY_RUN"
+                return 1
+            else
                 echo "Drop failed" | tee -a "$REPORT_FILE"
                 harness_restore_backup "$BUNDLE" "$REPORT_FILE"
                 DRY_RUN="$PREV_DRY_RUN"
@@ -1269,7 +1688,136 @@ amend_mode() {
 main() {
     print_header
     parse_args "$@"
-    
+
+    # Handle restore mode
+    if [[ "$RESTORE_MODE" == "true" ]]; then
+        if [[ -n "$RESTORE_ARG" ]]; then
+            print_info "RESTORE_ARG provided: $RESTORE_ARG"
+            # If it's a bundle file path
+            if [[ -f "$RESTORE_ARG" ]]; then
+                print_info "Bundle file detected: $RESTORE_ARG"
+                echo "Available refs in bundle:" && git bundle list-heads "$RESTORE_ARG" || true
+                list_backups_and_restore
+                exit 0
+            fi
+
+            # If it's a tag or local ref
+            if git rev-parse --verify --quiet "$RESTORE_ARG" >/dev/null; then
+                print_info "Found tag/local ref: $RESTORE_ARG - creating restore branch"
+                TIMESTAMP=$(date -u +%Y%m%dT%H%M%SZ)
+                local_restore="restore/${RESTORE_ARG}-${TIMESTAMP}"
+                if [[ "$DRY_RUN" == "true" ]]; then
+                    print_info "DRY-RUN: would create local restore branch: $local_restore from $RESTORE_ARG"
+                    echo "Top $RESTORE_LIST_N commits on $RESTORE_ARG:" && git --no-pager log --oneline "$RESTORE_ARG" -n "$RESTORE_LIST_N"
+                else
+                    git branch -f "$local_restore" "$RESTORE_ARG"
+                    git push -u origin "$local_restore" || print_warning "Failed to push restore branch"
+                    print_success "Created restore branch: $local_restore"
+                    echo "Top $RESTORE_LIST_N commits on $local_restore:" && git --no-pager log --oneline "$local_restore" -n "$RESTORE_LIST_N"
+                fi
+                exit 0
+            fi
+
+            # If it's a remote branch name, try fetching from origin
+            if git ls-remote --heads origin "refs/heads/${RESTORE_ARG}" >/dev/null 2>&1; then
+                print_info "Found origin/${RESTORE_ARG}. Creating restore branch..."
+                TIMESTAMP=$(date -u +%Y%m%dT%H%M%SZ)
+                local_restore="restore/${RESTORE_ARG//\//_}-${TIMESTAMP}"
+                if [[ "$DRY_RUN" == "true" ]]; then
+                    print_info "DRY-RUN: would fetch origin ref refs/heads/${RESTORE_ARG} into local branch: $local_restore"
+                    print_info "DRY-RUN: would push -u origin $local_restore"
+                    echo "Top $RESTORE_LIST_N commits on origin/${RESTORE_ARG}:"
+                    git --no-pager ls-remote origin "refs/heads/${RESTORE_ARG}" || true
+                else
+                    git fetch origin "refs/heads/${RESTORE_ARG}:refs/heads/${local_restore}" || { print_error "Failed to fetch origin/${RESTORE_ARG}"; exit 1; }
+                    git push -u origin "$local_restore" || print_warning "Failed to push restore branch to origin"
+                    print_success "Created restore branch: $local_restore"
+                    echo "Top $RESTORE_LIST_N commits on $local_restore:" && git --no-pager log --oneline "$local_restore" -n "$RESTORE_LIST_N"
+                fi
+
+                if [[ "$RESTORE_AUTO" == "true" ]]; then
+                    TARGET_BRANCH="${RESTORE_TARGET:-devcontainer/minimal}"
+                    TAG=backup/${TARGET_BRANCH}-pre-restore-$(date -u +%Y%m%dT%H%M%SZ)
+                    if [[ "$DRY_RUN" == "true" ]]; then
+                        print_info "DRY-RUN: would run: git tag -f \"$TAG\" refs/heads/$TARGET_BRANCH"
+                        print_info "DRY-RUN: would run: git push origin \"refs/tags/$TAG\""
+                        print_info "DRY-RUN: would run: git checkout \"$TARGET_BRANCH\" || git checkout -b \"$TARGET_BRANCH\""
+                        print_info "DRY-RUN: would run: git reset --hard \"$local_restore\""
+                        print_info "DRY-RUN: would run: git push --force-with-lease origin \"$TARGET_BRANCH\""
+                        print_success "DRY-RUN: $TARGET_BRANCH would be reset to $local_restore"
+                    else
+                        git tag -f "$TAG" refs/heads/$TARGET_BRANCH 2>/dev/null || true
+                        git push origin "refs/tags/$TAG" || true
+                        git checkout "$TARGET_BRANCH" || git checkout -b "$TARGET_BRANCH"
+                        git reset --hard "$local_restore"
+                        if git push --force-with-lease origin "$TARGET_BRANCH"; then
+                            print_success "$TARGET_BRANCH reset to $local_restore and pushed"
+                        else
+                            print_error "Failed to push $TARGET_BRANCH to origin"
+                            exit 1
+                        fi
+                    fi
+                else
+                    # Single confirmation prompt (default target is devcontainer/minimal)
+                    TARGET_BRANCH="${RESTORE_TARGET:-devcontainer/minimal}"
+                    read -u 3 -rp "Reset ${TARGET_BRANCH} to '$local_restore' and force-push? [y/N]: " CONFIRM_RESET_OR_ALT
+
+                    # If user typed a non-yes string without spaces, treat it as alternate branch name
+                    if [[ ! "$CONFIRM_RESET_OR_ALT" =~ ^[Yy] ]]; then
+                        if [[ -n "$CONFIRM_RESET_OR_ALT" && ! "$CONFIRM_RESET_OR_ALT" =~ [[:space:]] ]]; then
+                            # User provided an alternate branch name (no spaces), confirm it
+                            TARGET_BRANCH="$CONFIRM_RESET_OR_ALT"
+                            read -u 3 -rp "Confirm reset '$TARGET_BRANCH' -> '$local_restore' and force-push? [y/N]: " CONFIRM_RESET
+                        else
+                            # No confirmation; cancel
+                            print_info "Reset cancelled by user. Restore branch remains: $local_restore"
+                            exit 0
+                        fi
+                    else
+                        CONFIRM_RESET="$CONFIRM_RESET_OR_ALT"
+                    fi
+
+                    if [[ "$CONFIRM_RESET" =~ ^[Yy] ]]; then
+                        TAG=backup/${TARGET_BRANCH}-pre-restore-$(date -u +%Y%m%dT%H%M%SZ)
+                        if [[ "$DRY_RUN" == "true" ]]; then
+                            print_info "DRY-RUN: would run: git tag -f \"$TAG\" refs/heads/$TARGET_BRANCH"
+                            print_info "DRY-RUN: would run: git push origin \"refs/tags/$TAG\""
+
+                            print_info "DRY-RUN: would run: git checkout \"$TARGET_BRANCH\" || git checkout -b \"$TARGET_BRANCH\""
+                            print_info "DRY-RUN: would run: git reset --hard \"$local_restore\""
+                            print_info "DRY-RUN: would run: git push --force-with-lease origin \"$TARGET_BRANCH\""
+                            print_success "DRY-RUN: $TARGET_BRANCH would be reset to $local_restore"
+                        else
+                            git tag -f "$TAG" refs/heads/$TARGET_BRANCH 2>/dev/null || true
+                            git push origin "refs/tags/$TAG" || true
+
+                            git checkout "$TARGET_BRANCH" || git checkout -b "$TARGET_BRANCH"
+                            git reset --hard "$local_restore"
+
+                            if git push --force-with-lease origin "$TARGET_BRANCH"; then
+                                print_success "$TARGET_BRANCH reset to $local_restore and pushed"
+                            else
+                                print_error "Failed to push $TARGET_BRANCH to origin"
+                                exit 1
+                            fi
+                        fi
+                    else
+                        print_info "Reset cancelled by user. Restore branch remains: $local_restore"
+                    fi
+                fi
+                exit 0
+            fi
+
+            # Fallback: interactive list
+            print_info "Argument '$RESTORE_ARG' not recognized; showing interactive list"
+            list_backups_and_restore
+            exit 0
+        else
+            list_backups_and_restore
+            exit 0
+        fi
+    fi
+
     # Handle sign mode (re-sign commits in a range)
     if [[ "$SIGN_MODE" == "true" ]]; then
         sign_mode
