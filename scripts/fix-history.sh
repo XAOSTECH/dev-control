@@ -932,58 +932,116 @@ display_and_edit_dates() {
 }
 
 recreate_history_with_dates() {
-    print_info "Restoring commit dates via dummy-edit workaround..."
-    
+    print_info "Restoring commit dates via rebase-based approach (preferred) with fallback to dummy-edit..."
+
     if [[ ! -f "$TEMP_ALL_DATES" ]]; then
-        print_warning "No dates file found, skipping date restoration"
+        print_warning "No dates file found ($TEMP_ALL_DATES); skipping date restoration"
         return 0
     fi
-    
-    # Dummy-edit workaround: Git only rewrites commits when content changes.
-    # Strategy: Create a temp file, amend HEAD with it, then remove it via another amend.
-    # This forces all dependent commits to be rewritten with new dates.
-    
-    local dummy_file=".tmp-date-fix-$$"
-    
-    # Get HEAD's new date from the LAST line of the dates file (HEAD is always the newest)
+
+    local total
+    total=$(wc -l < "$TEMP_ALL_DATES" | tr -d ' ')
+    if [[ "$total" -eq 0 ]]; then
+        print_warning "Captured dates file empty; nothing to do"
+        return 0
+    fi
+
+    # If multiple commits were captured, use a rebase-based method to apply each date
+    if [[ "$total" -gt 1 ]]; then
+        print_info "Attempting rebase-based application for $total commits"
+
+        local oldest_commit
+        oldest_commit=$(head -n1 "$TEMP_ALL_DATES" | cut -d'|' -f1)
+        local parent
+        parent=$(git rev-parse "${oldest_commit}~1" 2>/dev/null || true)
+
+        local helper_script="/tmp/git-fix-apply-dates-$$.sh"
+        cat > "$helper_script" <<EOF
+#!/usr/bin/env bash
+set -e
+DATES_FILE="$TEMP_ALL_DATES"
+if [[ ! -s "$DATES_FILE" ]]; then
+  exit 0
+fi
+line=
+line=
+line=$(head -n1 "${DATES_FILE}")
+if [[ -z "${line}" ]]; then
+  exit 0
+fi
+date="
+# preserve everything after first '|' (date may contain spaces)
+date="\$(echo \"\${line}\" | cut -d'|' -f2-)"
+echo "[INFO] Applying date: \$date" >&2
+GIT_AUTHOR_DATE="\$date" GIT_COMMITTER_DATE="\$date" git commit --amend --no-edit
+# remove the first line so the next exec applies the following date
+sed -i '1d' "${DATES_FILE}"
+EOF
+        chmod +x "$helper_script"
+
+        local rebase_base
+        if [[ -z "$parent" ]]; then
+            rebase_base="--root"
+        else
+            rebase_base="$parent"
+        fi
+
+        if [[ "$DRY_RUN" == "true" ]]; then
+            print_info "DRY-RUN: would run: export GIT_SEQUENCE_EDITOR=\"sed -i '/^pick /a exec $helper_script/'\" and git rebase -i $rebase_base"
+            print_info "DRY-RUN: helper script: $helper_script"
+            return 0
+        fi
+
+        export GIT_SEQUENCE_EDITOR="sed -i '/^pick /a exec $helper_script/'"
+        export GIT_EDITOR=:
+
+        print_info "Running rebase to apply captured dates (may take a while)"
+        if [[ "$rebase_base" == "--root" ]]; then
+            git rebase -i --root || print_warning "Rebase-based date application failed; will fallback to dummy amend"
+        else
+            git rebase -i "$rebase_base" || print_warning "Rebase-based date application failed; will fallback to dummy amend"
+        fi
+
+        # Cleanup helper
+        rm -f "$helper_script"
+
+        # If there are remaining lines, the rebase did not finish applying all dates
+        if [[ -s "$TEMP_ALL_DATES" ]]; then
+            print_warning "Rebase-based method did not apply all dates; falling back to dummy amend"
+        else
+            print_success "Rebase-based date application finished"
+            return 0
+        fi
+    fi
+
+    # Fallback: dummy-edit (existing behavior)
+    print_info "Performing fallback dummy-edit date restore for HEAD"
+
     local head_new_date
-    head_new_date=$(tail -1 "$TEMP_ALL_DATES" | cut -d'|' -f2)
-    
+    head_new_date=$(tail -1 "$TEMP_ALL_DATES" | cut -d'|' -f2-)
     if [[ -z "$head_new_date" ]]; then
-        print_warning "No dates found in file, nothing to update"
+        print_warning "No HEAD date available; skipping fallback"
         return 0
     fi
-    
-    # Step 1: Create dummy file and stage it
+
+    local dummy_file=".tmp-date-fix-$$"
     echo "Temporary file for date restoration - will be removed" > "$dummy_file"
     git add "$dummy_file"
-    
+
     print_info "Step 1/3: Adding dummy file to trigger commit rewrite..."
-    
-    # Step 2: Amend HEAD with the new date
-    print_info "Step 2/3: Amending HEAD with new dates..."
+    print_info "Step 2/3: Amending HEAD with date: $head_new_date"
     GIT_AUTHOR_DATE="$head_new_date" \
     GIT_COMMITTER_DATE="$head_new_date" \
-    git commit --amend --no-edit || {
-        print_error "Failed to amend commit"
-        rm -f "$dummy_file"
-        return 1
-    }
-    
-    # Step 3: Remove dummy file and amend again to remove it
-    print_info "Step 3/3: Removing dummy file..."
+    git commit --amend --no-edit || { print_error "Failed to amend HEAD for date restoration"; rm -f "$dummy_file"; return 1; }
+
+    print_info "Step 3/3: Removing dummy file and finalizing amend"
     rm -f "$dummy_file"
     git rm -f "$dummy_file" 2>/dev/null || true
-    
-    # Amend to remove the dummy file, preserving the date change
     GIT_AUTHOR_DATE="$head_new_date" \
     GIT_COMMITTER_DATE="$head_new_date" \
-    git commit --amend --no-edit || {
-        print_warning "Could not remove dummy file from final commit"
-        # But the date change should still be there
-    }
-    
-    print_success "Commit dates updated successfully"
+    git commit --amend --no-edit || print_warning "Final amend failed"
+
+    print_success "Fallback date restoration complete"
 }
 
 # ---------------------------------------------------------------------------
@@ -1130,6 +1188,48 @@ auto_add_conflicted_files() {
     fi
 }
 
+# Prompt the user to push the currently checked-out branch (or an alternate branch)
+prompt_and_push_branch() {
+    local branch="${1:-$(git rev-parse --abbrev-ref HEAD)}"
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        print_info "DRY-RUN: would create tag backup/${branch}-pre-drop-$(date -u +%Y%m%dT%H%M%SZ) and push it; then git push --force-with-lease origin ${branch}"
+        return 0
+    fi
+
+    read -u 3 -rp "Push ${branch} to origin with force and create backup tag? [y/N]: " CONFIRM_PUSH_OR_ALT
+
+    # If user typed a non-yes string without spaces, treat it as alternate branch name
+    if [[ ! "$CONFIRM_PUSH_OR_ALT" =~ ^[Yy] ]]; then
+        if [[ -n "$CONFIRM_PUSH_OR_ALT" && ! "$CONFIRM_PUSH_OR_ALT" =~ [[:space:]] ]]; then
+            branch="$CONFIRM_PUSH_OR_ALT"
+            read -u 3 -rp "Confirm: push branch '$branch' to origin with force and create backup tag? [y/N]: " CONFIRM_PUSH
+        else
+            print_info "Push cancelled by user"
+            return 0
+        fi
+    else
+        CONFIRM_PUSH="$CONFIRM_PUSH_OR_ALT"
+    fi
+
+    if [[ "$CONFIRM_PUSH" =~ ^[Yy] ]]; then
+        TAG=backup/${branch}-pre-drop-$(date -u +%Y%m%dT%H%M%SZ)
+        git tag -f "$TAG" refs/heads/$branch 2>/dev/null || true
+        git push origin "refs/tags/$TAG" || true
+
+        git checkout "$branch" || git checkout -b "$branch"
+        if git push --force-with-lease origin "$branch"; then
+            print_success "$branch pushed to origin (force)"
+            return 0
+        else
+            print_error "Failed to push $branch to origin"
+            return 1
+        fi
+    else
+        print_info "Push cancelled by user"
+    fi
+}
+
 # Repeatedly attempt auto-resolution until rebase finishes or we hit an error
 auto_resolve_all_conflicts() {
     local mode="$1"
@@ -1220,6 +1320,9 @@ drop_single_commit() {
                 print_warning "Failed to fully restore original commit dates"
             fi
         fi
+
+        # Offer to push the branch (create a backup tag first)
+        prompt_and_push_branch || print_warning "Automatic push failed or was cancelled"
     fi
 
     if [[ -n "${REBASE_EXIT:-}" ]]; then
@@ -1240,7 +1343,14 @@ drop_single_commit() {
                     else
                         print_success "Conflicts auto-resolved and commit ${short} dropped"
                         # Restore original commit dates for rewritten commits
-                        recreate_history_with_dates || print_warning "Failed to restore original dates"
+                        if recreate_history_with_dates; then
+                            print_success "Original commit dates restored"
+                        else
+                            print_warning "Failed to restore original dates"
+                        fi
+
+                        # Offer to push the branch (create a backup tag first)
+                        prompt_and_push_branch || print_warning "Automatic push failed or was cancelled"
                         exit 0
                     fi
                 else
