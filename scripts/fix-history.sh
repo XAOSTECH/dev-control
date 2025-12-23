@@ -979,6 +979,12 @@ sed -i '1d' "${DATES_FILE}"
 EOF
         chmod +x "$helper_script"
 
+        # If a persistent helper script exists in the repository, prefer it (avoids heredoc issues)
+        if [[ -f "$SCRIPT_DIR/helpers/apply-dates-helper.sh" ]]; then
+            helper_script="$SCRIPT_DIR/helpers/apply-dates-helper.sh"
+            chmod +x "$helper_script" || true
+        fi
+
         local rebase_base
         if [[ -z "$parent" ]]; then
             rebase_base="--root"
@@ -987,12 +993,13 @@ EOF
         fi
 
         if [[ "$DRY_RUN" == "true" ]]; then
-            print_info "DRY-RUN: would run: export GIT_SEQUENCE_EDITOR=\"sed -i '/^pick /a exec $helper_script/'\" and git rebase -i $rebase_base"
+            print_info "DRY-RUN: would run: export GIT_SEQUENCE_EDITOR=\"sed -i '/^pick /a exec /bin/bash $helper_script \"$TEMP_ALL_DATES\"'\" and git rebase -i $rebase_base"
             print_info "DRY-RUN: helper script: $helper_script"
             return 0
         fi
 
-        export GIT_SEQUENCE_EDITOR="sed -i '/^pick /a exec $helper_script/'"
+        # Insert exec that runs the helper with the dates file as an argument (use /bin/bash to avoid exec path issues)
+        export GIT_SEQUENCE_EDITOR="sed -i '/^pick /a exec /bin/bash $helper_script \"$TEMP_ALL_DATES\"'"
         export GIT_EDITOR=:
 
         print_info "Running rebase to apply captured dates (may take a while)"
@@ -1042,6 +1049,168 @@ EOF
     git commit --amend --no-edit || print_warning "Final amend failed"
 
     print_success "Fallback date restoration complete"
+
+    # If there are still lines remaining in the dates file, attempt reconstruction fallback
+    if [[ -s "$TEMP_ALL_DATES" ]]; then
+        print_warning "Some captured dates remain; attempting reconstruction fallback (cherry-pick replay)"
+        if [[ "$DRY_RUN" == "true" ]]; then
+            print_info "DRY-RUN: would run reconstruction fallback for remaining commits"
+        else
+            reconstruct_history_without_commit "${RECONSTRUCT_TARGET:-$oldest_commit}" || print_warning "Reconstruction fallback failed"
+        fi
+    fi
+}
+
+# Reconstruction fallback: cherry-pick remaining captured commits onto parent branch
+reconstruct_history_without_commit() {
+    local target_hash="$1"
+    local ts
+    ts=$(date -u +%Y%m%dT%H%M%SZ)
+    local tmp_branch="tmp/remove-${target_hash:0:8}-${ts}"
+
+    if [[ ! -f "$TEMP_ALL_DATES" || ! -s "$TEMP_ALL_DATES" ]]; then
+        print_warning "No remaining captured dates found for reconstruction"
+        return 1
+    fi
+
+    local parent
+    parent=$(git rev-parse "${target_hash}~1" 2>/dev/null || true)
+    if [[ -z "$parent" ]]; then
+        print_error "Cannot reconstruct: parent of $target_hash not found"
+        return 1
+    fi
+
+    print_info "Starting reconstruction fallback on branch: $tmp_branch (based on $parent)"
+    git checkout -b "$tmp_branch" "$parent"
+
+    local report_file="$REPORT_DIR/reconstruct-${target_hash:0:8}-${ts}.txt"
+    echo "Reconstruction report: $report_file" > "$report_file"
+    echo "Starting reconstruction of commits after $target_hash" | tee -a "$report_file"
+
+    # Read remaining commits from the dates file in order (oldest first)
+    local commit
+    local status=0
+
+    # Iterate through a copy of the dates file to allow in-loop modifications
+    local dates_tmp
+    dates_tmp=$(mktemp)
+    cp "$TEMP_ALL_DATES" "$dates_tmp"
+
+    while IFS='|' read -r commit commit_date; do
+        # Skip empty lines
+        if [[ -z "$commit" ]]; then
+            continue
+        fi
+
+        echo "Processing $commit (date: $commit_date)" | tee -a "$report_file"
+
+        # If commit already present in the current branch (ancestor of HEAD), skip
+        if git merge-base --is-ancestor "$commit" HEAD 2>/dev/null; then
+            echo "SKIP: $commit already present in the current branch" | tee -a "$report_file"
+            # remove the line from the master dates file
+            grep -v -F -- "${commit}|${commit_date}" "$TEMP_ALL_DATES" > "${TEMP_ALL_DATES}.tmp" && mv "${TEMP_ALL_DATES}.tmp" "$TEMP_ALL_DATES"
+            continue
+        fi
+
+        # Attempt cherry-pick
+        if git cherry-pick --allow-empty --strategy=recursive --strategy-option=theirs "$commit" >/dev/null 2>&1; then
+            # Amend to set author and dates
+            local orig_author_name
+            local orig_author_email
+            orig_author_name=$(git show -s --format='%an' "$commit" 2>/dev/null || true)
+            orig_author_email=$(git show -s --format='%ae' "$commit" 2>/dev/null || true)
+            if [[ -n "$orig_author_name" && -n "$orig_author_email" && -n "$commit_date" ]]; then
+                GIT_AUTHOR_NAME="$orig_author_name" GIT_AUTHOR_EMAIL="$orig_author_email" \
+                GIT_AUTHOR_DATE="$commit_date" GIT_COMMITTER_DATE="$commit_date" \
+                git commit --amend --no-edit --no-verify >/dev/null 2>&1 || true
+            fi
+            echo "OK: Cherry-picked $commit" | tee -a "$report_file"
+            # remove the line
+            grep -v -F -- "${commit}|${commit_date}" "$TEMP_ALL_DATES" > "${TEMP_ALL_DATES}.tmp" && mv "${TEMP_ALL_DATES}.tmp" "$TEMP_ALL_DATES"
+            continue
+        fi
+
+        # If cherry-pick failed, try auto-resolve if configured
+        if [[ -n "$AUTO_RESOLVE" ]]; then
+            echo "Conflict during cherry-pick of $commit; attempting auto-resolve ($AUTO_RESOLVE)" | tee -a "$report_file"
+            if auto_add_conflicted_files "$AUTO_RESOLVE"; then
+                # Try to continue cherry-pick
+                if git cherry-pick --continue >/dev/null 2>&1; then
+                    # Amend dates as above
+                    local orig_author_name
+                    local orig_author_email
+                    orig_author_name=$(git show -s --format='%an' "$commit" 2>/dev/null || true)
+                    orig_author_email=$(git show -s --format='%ae' "$commit" 2>/dev/null || true)
+                    if [[ -n "$orig_author_name" && -n "$orig_author_email" && -n "$commit_date" ]]; then
+                        GIT_AUTHOR_NAME="$orig_author_name" GIT_AUTHOR_EMAIL="$orig_author_email" \
+                        GIT_AUTHOR_DATE="$commit_date" GIT_COMMITTER_DATE="$commit_date" \
+                        git commit --amend --no-edit --no-verify >/dev/null 2>&1 || true
+                    fi
+                    echo "OK: Cherry-picked $commit with auto-resolve" | tee -a "$report_file"
+                    grep -v -F -- "${commit}|${commit_date}" "$TEMP_ALL_DATES" > "${TEMP_ALL_DATES}.tmp" && mv "${TEMP_ALL_DATES}.tmp" "$TEMP_ALL_DATES"
+                    continue
+                else
+                    # If the cherry-pick ended empty, skip it
+                    if git status --porcelain | grep -q '^$'; then
+                        echo "SKIP: Cherry-pick of $commit resulted in empty commit; skipping" | tee -a "$report_file"
+                        git cherry-pick --skip >/dev/null 2>&1 || true
+                        grep -v -F -- "${commit}|${commit_date}" "$TEMP_ALL_DATES" > "${TEMP_ALL_DATES}.tmp" && mv "${TEMP_ALL_DATES}.tmp" "$TEMP_ALL_DATES"
+                        continue
+                    fi
+                fi
+            else
+                echo "FAIL: Auto-resolve failed for $commit" | tee -a "$report_file"
+                status=1
+                break
+            fi
+        else
+            echo "FAIL: Conflict during cherry-pick of $commit and AUTO_RESOLVE unset" | tee -a "$report_file"
+            status=1
+            break
+        fi
+    done < "$dates_tmp"
+
+    # Cleanup temp copy
+    rm -f "$dates_tmp"
+
+    if [[ $status -eq 0 ]]; then
+        echo "Reconstruction completed successfully onto $tmp_branch" | tee -a "$report_file"
+        echo "Remaining dates file:" >> "$report_file"
+        [[ -f "$TEMP_ALL_DATES" ]] && sed -n '1,200p' "$TEMP_ALL_DATES" >> "$report_file"
+        echo "You can inspect branch: $tmp_branch" | tee -a "$report_file"
+
+        # Prompt whether to replace the original branch with this reconstructed branch (destructive)
+        local confirm_replace
+        read -u 3 -rp "Replace branch '$ORIGINAL_BRANCH' with reconstructed branch '$tmp_branch' and force-push to origin? [y/N]: " confirm_replace
+        if [[ "$confirm_replace" =~ ^[Yy] ]]; then
+            echo "Creating backup tag for $ORIGINAL_BRANCH and force-updating it to $tmp_branch" | tee -a "$report_file"
+            TAG=backup/${ORIGINAL_BRANCH}-pre-drop-$(date -u +%Y%m%dT%H%M%SZ)
+            if git show-ref --verify --quiet "refs/heads/$ORIGINAL_BRANCH"; then
+                git tag -f "$TAG" "refs/heads/$ORIGINAL_BRANCH" 2>/dev/null || git tag -f "$TAG" "$(git rev-parse HEAD)" 2>/dev/null || true
+            else
+                git tag -f "$TAG" "$(git rev-parse HEAD)" 2>/dev/null || true
+            fi
+            git push origin "refs/tags/$TAG" || true
+
+            # Reset original branch to reconstructed branch and push
+            git checkout "$ORIGINAL_BRANCH" 2>/dev/null || git checkout -b "$ORIGINAL_BRANCH"
+            git reset --hard "$tmp_branch"
+            if git push --force-with-lease origin "$ORIGINAL_BRANCH"; then
+                echo "SUCCESS: $ORIGINAL_BRANCH reset to $tmp_branch and pushed" | tee -a "$report_file"
+                # Optionally delete the tmp branch locally
+                git branch -D "$tmp_branch" 2>/dev/null || true
+            else
+                echo "ERROR: Failed to push $ORIGINAL_BRANCH to origin" | tee -a "$report_file"
+            fi
+        else
+            echo "Left reconstructed branch $tmp_branch in place for inspection" | tee -a "$report_file"
+        fi
+
+        return 0
+    else
+        echo "Reconstruction failed; leaving branch $tmp_branch for manual inspection" | tee -a "$report_file"
+        return 1
+    fi
 }
 
 # ---------------------------------------------------------------------------
@@ -1191,9 +1360,19 @@ auto_add_conflicted_files() {
 # Prompt the user to push the currently checked-out branch (or an alternate branch)
 prompt_and_push_branch() {
     local branch="${1:-$(git rev-parse --abbrev-ref HEAD)}"
+    local detached=false
+    local current_sha
+    if [[ "$branch" == "HEAD" ]]; then
+        detached=true
+        current_sha=$(git rev-parse HEAD)
+    fi
 
     if [[ "$DRY_RUN" == "true" ]]; then
-        print_info "DRY-RUN: would create tag backup/${branch}-pre-drop-$(date -u +%Y%m%dT%H%M%SZ) and push it; then git push --force-with-lease origin ${branch}"
+        if [[ "$detached" == "true" ]]; then
+            print_info "DRY-RUN: detached HEAD detected - would create tag backup/${current_sha}-pre-drop-$(date -u +%Y%m%dT%H%M%SZ) and optionally create a tmp branch to push"
+        else
+            print_info "DRY-RUN: would create tag backup/${branch}-pre-drop-$(date -u +%Y%m%dT%H%M%SZ) and push it; then git push --force-with-lease origin ${branch}"
+        fi
         return 0
     fi
 
@@ -1213,17 +1392,51 @@ prompt_and_push_branch() {
     fi
 
     if [[ "$CONFIRM_PUSH" =~ ^[Yy] ]]; then
-        TAG=backup/${branch}-pre-drop-$(date -u +%Y%m%dT%H%M%SZ)
-        git tag -f "$TAG" refs/heads/$branch 2>/dev/null || true
-        git push origin "refs/tags/$TAG" || true
+        if [[ "$detached" == "true" ]]; then
+            TAG=backup/${current_sha}-pre-drop-$(date -u +%Y%m%dT%H%M%SZ)
+            print_info "Detached HEAD: creating tag $TAG pointing to $current_sha"
+            git tag -f "$TAG" "$current_sha" 2>/dev/null || true
+            git push origin "refs/tags/$TAG" || true
 
-        git checkout "$branch" || git checkout -b "$branch"
-        if git push --force-with-lease origin "$branch"; then
-            print_success "$branch pushed to origin (force)"
-            return 0
+            if [[ "$NO_EDIT_MODE" == "true" ]]; then
+                TMP_BRANCH="tmp/repair-${current_sha:0:8}-$(date -u +%Y%m%dT%H%M%SZ)"
+                git branch -f "$TMP_BRANCH" "$current_sha"
+                if git push --force-with-lease origin "$TMP_BRANCH"; then
+                    print_success "Detached HEAD pushed as $TMP_BRANCH (force)"
+                    return 0
+                else
+                    print_error "Failed to push temporary branch $TMP_BRANCH to origin"
+                    return 1
+                fi
+            else
+                read -u 3 -rp "You are on a detached HEAD. Enter a branch name to push this HEAD to (or blank to cancel): " USER_BRANCH
+                if [[ -n "$USER_BRANCH" ]]; then
+                    git branch -f "$USER_BRANCH" "$current_sha"
+                    if git push --force-with-lease origin "$USER_BRANCH"; then
+                        print_success "$USER_BRANCH pushed to origin (force)"
+                        return 0
+                    else
+                        print_error "Failed to push $USER_BRANCH to origin"
+                        return 1
+                    fi
+                else
+                    print_info "Push cancelled by user"
+                    return 0
+                fi
+            fi
         else
-            print_error "Failed to push $branch to origin"
-            return 1
+            TAG=backup/${branch}-pre-drop-$(date -u +%Y%m%dT%H%M%SZ)
+            git tag -f "$TAG" refs/heads/$branch 2>/dev/null || true
+            git push origin "refs/tags/$TAG" || true
+
+            git checkout "$branch" || git checkout -b "$branch"
+            if git push --force-with-lease origin "$branch"; then
+                print_success "$branch pushed to origin (force)"
+                return 0
+            else
+                print_error "Failed to push $branch to origin"
+                return 1
+            fi
         fi
     else
         print_info "Push cancelled by user"
@@ -1265,67 +1478,82 @@ drop_single_commit() {
     check_git_repo
     backup_repo
 
+    # Remember the branch we started on so reconstructed branches can replace it
+    ORIGINAL_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
     if ! git cat-file -e "$target_hash" 2>/dev/null; then
         print_error "Commit not found: $target_hash"
         exit 1
     fi
 
-    local parent
-    parent=$(git rev-parse "${target_hash}~1" 2>/dev/null || true)
-    if [[ -z "$parent" ]]; then
-        print_error "Cannot drop root commit"
-        exit 1
-    fi
+    # We'll attempt up to one automatic retry if a stale rebase state is found
+    local attempt=0
+    local max_attempts=2
 
-    local short
-    short=$(git rev-parse --short "$target_hash")
-    export GIT_SEQUENCE_EDITOR="sed -i '/^pick .*${short}/s/^pick/drop/'"
+    while true; do
+        attempt=$((attempt + 1))
 
-    if [[ "$DRY_RUN" == "true" ]]; then
-        print_info "DRY RUN: would drop commit ${short}"
-        return 0
-    fi
-
-    # Capture dates for commits after the target so we can restore them later
-    print_info "Capturing original dates for commits after ${short}"
-    capture_dates_for_range "${target_hash}..HEAD"
-
-    # If NO_EDIT_MODE is enabled (user passed --no-edit), set GIT_EDITOR to ':' to prevent editor prompts
-    if [[ "$NO_EDIT_MODE" == "true" ]]; then
-        print_info "NO_EDIT_MODE enabled: running rebase with GIT_EDITOR=':' to skip editor prompts"
-        if GIT_EDITOR=':' git rebase -i --rebase-merges "$parent"; then
-            print_success "Dropped commit ${short}"
-            # Restore original commit dates if available
-            recreate_history_with_dates || print_warning "Failed to restore original dates"
-        else
-            REBASE_EXIT=1
+        local parent
+        parent=$(git rev-parse "${target_hash}~1" 2>/dev/null || true)
+        if [[ -z "$parent" ]]; then
+            print_error "Cannot drop root commit"
+            exit 1
         fi
-    else
-        if git rebase -i --rebase-merges "$parent"; then
-            print_success "Dropped commit ${short}"
-            # Restore original commit dates if available
-            recreate_history_with_dates || print_warning "Failed to restore original dates"
-        else
-            REBASE_EXIT=1
-        fi
-    fi
 
-    # If rebase succeeded (no REBASE_EXIT), attempt to restore original commit dates
-    if [[ -z "${REBASE_EXIT:-}" ]]; then
-        if [[ -f "$TEMP_ALL_DATES" ]]; then
-            print_info "Restoring original commit dates saved before drop"
-            if recreate_history_with_dates; then
-                print_success "Original commit dates restored"
+        local short
+        short=$(git rev-parse --short "$target_hash")
+        export GIT_SEQUENCE_EDITOR="sed -i '/^pick .*${short}/s/^pick/drop/'"
+
+        if [[ "$DRY_RUN" == "true" ]]; then
+            print_info "DRY RUN: would drop commit ${short}"
+            return 0
+        fi
+
+        # Capture dates for commits after the target so we can restore them later
+        print_info "Capturing original dates for commits after ${short}"
+        capture_dates_for_range "${target_hash}..HEAD"
+
+        # Reset possible REBASE_EXIT flag
+        unset REBASE_EXIT
+
+        # If NO_EDIT_MODE is enabled (user passed --no-edit), set GIT_EDITOR to ':' to prevent editor prompts
+        if [[ "$NO_EDIT_MODE" == "true" ]]; then
+            print_info "NO_EDIT_MODE enabled: running rebase with GIT_EDITOR=':' to skip editor prompts"
+            if GIT_EDITOR=':' git rebase -i --rebase-merges "$parent"; then
+                print_success "Dropped commit ${short}"
+                # Record target for potential reconstruction fallback and restore original commit dates if available
+                RECONSTRUCT_TARGET="$target_hash"
+                recreate_history_with_dates || print_warning "Failed to restore original dates"
             else
-                print_warning "Failed to fully restore original commit dates"
+                REBASE_EXIT=1
+            fi
+        else
+            if git rebase -i --rebase-merges "$parent"; then
+                print_success "Dropped commit ${short}"
+                # Record target for potential reconstruction fallback and restore original commit dates if available
+                RECONSTRUCT_TARGET="$target_hash"
+                recreate_history_with_dates || print_warning "Failed to restore original dates"
+            else
+                REBASE_EXIT=1
             fi
         fi
 
-        # Offer to push the branch (create a backup tag first)
-        prompt_and_push_branch || print_warning "Automatic push failed or was cancelled"
-    fi
+        # If rebase succeeded (no REBASE_EXIT), attempt to restore original commit dates
+        if [[ -z "${REBASE_EXIT:-}" ]]; then
+            if [[ -f "$TEMP_ALL_DATES" ]]; then
+                print_info "Restoring original commit dates saved before drop"
+                if recreate_history_with_dates; then
+                    print_success "Original commit dates restored"
+                else
+                    print_warning "Failed to fully restore original commit dates"
+                fi
+            fi
 
-    if [[ -n "${REBASE_EXIT:-}" ]]; then
+            # Offer to push the branch (create a backup tag first)
+            prompt_and_push_branch || print_warning "Automatic push failed or was cancelled"
+            break
+        fi
+
         # Rebase failed. Check for conflicted files and handle accordingly.
         local conflicts
         conflicts=$(git diff --name-only --diff-filter=U || true)
@@ -1337,12 +1565,13 @@ drop_single_commit() {
                 print_info "AUTO_RESOLVE set to '$AUTO_RESOLVE' - attempting automated resolution loop"
                 if auto_resolve_all_conflicts "$AUTO_RESOLVE"; then
                     # After auto-resolution loop completes, verify that the target commit was removed
-                    if git log --oneline | grep -q "$short"; then
+                    if git rev-list --all | grep -q "^${target_hash}$"; then
                         print_error "Target commit ${short} still present after auto-resolution"
                         exit 1
                     else
                         print_success "Conflicts auto-resolved and commit ${short} dropped"
-                        # Restore original commit dates for rewritten commits
+                        # Record target for potential reconstruction fallback and restore original commit dates for rewritten commits
+                        RECONSTRUCT_TARGET="$target_hash"
                         if recreate_history_with_dates; then
                             print_success "Original commit dates restored"
                         else
@@ -1351,7 +1580,7 @@ drop_single_commit() {
 
                         # Offer to push the branch (create a backup tag first)
                         prompt_and_push_branch || print_warning "Automatic push failed or was cancelled"
-                        exit 0
+                        return 0
                     fi
                 else
                     print_error "Auto-resolution loop failed; leaving rebase stopped for manual resolution"
@@ -1362,11 +1591,42 @@ drop_single_commit() {
                 exit 2
             fi
         else
-            print_error "Rebase failed while dropping commit and no conflicts detected. Aborting."
-            git rebase --abort || true
-            exit 1
+            # No conflicts - check whether a stale rebase state is blocking us
+            if [[ -d .git/rebase-merge || -d .git/rebase-apply ]]; then
+                print_warning "Detected existing rebase state (.git/rebase-merge or .git/rebase-apply)"
+
+                # If user configured AUTO_FIX_REBASE, proceed automatically; otherwise prompt via FD 3
+                if [[ "${AUTO_FIX_REBASE:-false}" == "true" ]]; then
+                    print_info "AUTO_FIX_REBASE=true: removing stale rebase state and retrying (attempt ${attempt}/${max_attempts})"
+                    rm -fr .git/rebase-merge .git/rebase-apply || true
+                else
+                    read -u 3 -rp "Remove stale rebase state at .git/rebase-merge and retry? [y/N]: " _CONF
+                    if [[ "$_CONF" =~ ^[Yy] ]]; then
+                        rm -fr .git/rebase-merge .git/rebase-apply || true
+                    else
+                        print_error "Rebase failed while dropping commit and no conflicts detected. Aborting."
+                        git rebase --abort || true
+                        exit 1
+                    fi
+                fi
+
+                # Retry once after removing stale state
+                if [[ $attempt -lt $max_attempts ]]; then
+                    print_info "Retrying drop operation (attempt $((attempt+1))/$max_attempts)"
+                    unset REBASE_EXIT
+                    continue
+                else
+                    print_error "Exceeded retry attempts after removing stale rebase state. Aborting."
+                    git rebase --abort || true
+                    exit 1
+                fi
+            else
+                print_error "Rebase failed while dropping commit and no conflicts detected. Aborting."
+                git rebase --abort || true
+                exit 1
+            fi
         fi
-    fi
+    done
 }
 
 
@@ -1381,9 +1641,12 @@ harness_post_checks() {
 
     echo "Post-operation checks:" | tee -a "$rf"
 
-    # 1) Commit absent?
-    if git log --oneline | grep -q "$target_hash"; then
+    # 1) Commit absent? Use git rev-parse to detect short or full SHAs and refs
+    if git rev-parse --quiet --verify "$target_hash" >/dev/null 2>&1; then
         echo "ERROR: Commit $target_hash still present in the history" | tee -a "$rf"
+        # Also print the resolved full SHA for debugging
+        full_sha=$(git rev-parse --verify "$target_hash" 2>/dev/null || true)
+        echo "Found as: ${full_sha:-<none>}" | tee -a "$rf"
         return 1
     else
         echo "OK: Commit $target_hash absent from history" | tee -a "$rf"
@@ -1633,6 +1896,22 @@ harness_run() {
 
     echo "Operation: ${HARNESS_OP} ${HARNESS_ARG}" | tee "$REPORT_FILE"
 
+    # Capture pre-op log snapshot (limit by RESTORE_LIST_N)
+    PRE_LOG="$REPORT_DIR/pre-${TIMESTAMP}.log"
+    git --no-pager log --oneline -n "${RESTORE_LIST_N}" > "$PRE_LOG"
+    echo "Pre-op log (last ${RESTORE_LIST_N} commits):" | tee -a "$REPORT_FILE"
+    sed 's/^/  /' "$PRE_LOG" | tee -a "$REPORT_FILE"
+
+    # Bail if a previous tmp/remove attempt for this commit exists to avoid repetition
+    if [[ "${HARNESS_FORCE:-false}" != "true" ]]; then
+        if git for-each-ref --format='%(refname:short)' refs/heads | grep -q "^tmp/remove-${HARNESS_ARG}-"; then
+            echo "ERROR: Found existing tmp/remove-${HARNESS_ARG}-* branches. Aborting to avoid repeated failed attempts." | tee -a "$REPORT_FILE"
+            return 1
+        fi
+    else
+        echo "WARNING: HARNESS_FORCE=true - proceeding despite existing tmp/remove branches" | tee -a "$REPORT_FILE"
+    fi
+
     # Create temp branch
     git checkout -b "$TMP_BRANCH" | tee -a "$REPORT_FILE"
     echo "Created temp branch: $TMP_BRANCH" | tee -a "$REPORT_FILE"
@@ -1655,6 +1934,20 @@ harness_run() {
             drop_single_commit "$HARNESS_ARG" 2>&1 | tee -a "$REPORT_FILE"
             rc=${PIPESTATUS[0]:-1}
 
+            # If this was a dry-run and drop_single_commit printed the DRY-RUN marker, consider the dry-run simulated
+            if [[ "$PREV_DRY_RUN" == "true" ]] && grep -q "DRY RUN: would drop commit" "$REPORT_FILE"; then
+                echo "DRY-RUN: drop operation simulated (no changes applied)" | tee -a "$REPORT_FILE"
+                # Capture post-op log snapshot
+                POST_LOG="$REPORT_DIR/post-${TIMESTAMP}.log"
+                git --no-pager log --oneline -n "${RESTORE_LIST_N}" > "$POST_LOG"
+                echo "Post-op log (last ${RESTORE_LIST_N} commits):" | tee -a "$REPORT_FILE"
+                sed 's/^/  /' "$POST_LOG" | tee -a "$REPORT_FILE"
+
+                echo "DRY-RUN mode: skipping post-op verification checks (no changes were applied)" | tee -a "$REPORT_FILE"
+                DRY_RUN="$PREV_DRY_RUN"
+                return 0
+            fi
+
             if [[ $rc -eq 0 ]]; then
                 # Success
                 :
@@ -1669,6 +1962,12 @@ harness_run() {
                 DRY_RUN="$PREV_DRY_RUN"
                 return 1
             fi
+
+            # Capture post-op log snapshot
+            POST_LOG="$REPORT_DIR/post-${TIMESTAMP}.log"
+            git --no-pager log --oneline -n "${RESTORE_LIST_N}" > "$POST_LOG"
+            echo "Post-op log (last ${RESTORE_LIST_N} commits):" | tee -a "$REPORT_FILE"
+            sed 's/^/  /' "$POST_LOG" | tee -a "$REPORT_FILE"
 
             if ! harness_post_checks "$HARNESS_ARG" "$REPORT_FILE"; then
                 harness_restore_backup "$BUNDLE" "$REPORT_FILE"
