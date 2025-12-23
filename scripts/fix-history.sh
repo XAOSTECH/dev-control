@@ -12,7 +12,7 @@
 #
 # Usage:
 #   ./scripts/fix-history.sh                    # Interactive mode
-#   ./scripts/fix-history.sh --range HEAD~5     # Fix last 5 commits
+#   ./scripts/fix-history.sh --range HEAD=5     # Fix last 5 commits
 #   ./scripts/fix-history.sh --help
 #
 
@@ -31,7 +31,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GIT_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
 
 # Configuration
-RANGE="HEAD~10"
+RANGE="HEAD=10"
 INTERACTIVE=true
 DRY_RUN=false
 STASH_NUM=""
@@ -139,11 +139,11 @@ Git-Control History Fixer - Interactive commit history rewriting
 Usage: fix-history.sh [OPTIONS]
 
 Options:
-  -r, --range RANGE          Specify commit range (default: HEAD~10)
-                             Examples: HEAD~5, main..HEAD, abc123..def456
+  -r, --range RANGE          Specify commit range (default: HEAD=10)
+                             Examples: HEAD=5, main..HEAD, abc123..def456
   -a, --amend COMMIT         Secretly amend a commit (not latest) with date preservation
                              Recreates history as if nothing happened
-                             Example: --amend HEAD~2 (amend 2nd to last commit)
+                             Example: --amend HEAD=2 (amend 2nd to last commit)
   --sign                     Re-sign commits in the selected range (requires GPG)
                              Rewrites history to apply signatures and preserves dates
   --drop COMMIT              Drop (remove) a single non-root commit from history
@@ -168,12 +168,12 @@ Options:
 
 Examples:
   ./scripts/fix-history.sh                           # Fix last 10 commits interactively
-  ./scripts/fix-history.sh --range HEAD~20           # Work with last 20 commits
+  ./scripts/fix-history.sh --range HEAD=20           # Work with last 20 commits
   ./scripts/fix-history.sh --dry-run                 # Preview changes without applying
   ./scripts/fix-history.sh --harness-drop a61b084 --dry-run
-  ./scripts/fix-history.sh --harness-sign HEAD~5..HEAD
+  ./scripts/fix-history.sh --harness-sign HEAD=5..HEAD
   ./scripts/fix-history.sh --stash 0                 # Apply stash@{0} to commits
-  ./scripts/fix-history.sh --amend HEAD~2            # Secretly amend 2nd to last commit
+  ./scripts/fix-history.sh --amend HEAD=2            # Secretly amend 2nd to last commit
   ./scripts/fix-history.sh --range main..HEAD        # Fix commits between main and HEAD
 
 EOF
@@ -770,7 +770,7 @@ capture_all_dates() {
     print_success "Captured original dates for $count commits"
 }
 
-# Capture dates for an arbitrary git range (e.g., HEAD~5..HEAD or main..HEAD)
+# Capture dates for an arbitrary git range (e.g., HEAD=5..HEAD or main..HEAD)
 capture_dates_for_range() {
     local range="$1"
     print_info "Capturing dates for range: $range"
@@ -1228,7 +1228,7 @@ sign_mode() {
 
     echo -e "${BOLD}Sign Mode${NC}"
     echo -e "Range: ${CYAN}$RANGE${NC}"
-    # Normalize simple ranges like HEAD~5 into HEAD~5..HEAD for clarity
+    # Normalize simple ranges like HEAD=5 into HEAD=5..HEAD for clarity
     if [[ "$RANGE" != *".."* ]]; then
         RANGE="$RANGE..HEAD"
     fi
@@ -2098,6 +2098,23 @@ main() {
     print_header
     parse_args "$@"
 
+    # Normalize RANGE syntax: support 'HEAD=all' and 'HEAD=N' forms (user's broken tilde key)
+    if [[ -n "$RANGE" ]]; then
+        # If user used HEAD=all or HEAD~all (case-insensitive), map to full history
+        if [[ "${RANGE,,}" =~ ^head[=~]all$ ]]; then
+            ROOT_COMMIT=$(git rev-list --max-parents=0 HEAD 2>/dev/null || true)
+            if [[ -n "$ROOT_COMMIT" ]]; then
+                RANGE="$ROOT_COMMIT..HEAD"
+                print_info "Normalized RANGE to full history: $RANGE"
+            fi
+        else
+            # Convert HEAD=N (digits) to HEAD~N to preserve existing behavior
+            if [[ "$RANGE" =~ ^HEAD=([0-9]+)$ ]]; then
+                RANGE="HEAD~${BASH_REMATCH[1]}"
+            fi
+        fi
+    fi
+
     # Handle restore mode
     if [[ "$RESTORE_MODE" == "true" ]]; then
         if [[ -n "$RESTORE_ARG" ]]; then
@@ -2298,7 +2315,7 @@ main() {
         
         echo ""
         echo -e "${BOLD}Select target commit to apply to:${NC}"
-        echo -e "  Example: ${CYAN}181cab0${NC} or ${CYAN}HEAD~2${NC}"
+        echo -e "  Example: ${CYAN}181cab0${NC} or ${CYAN}HEAD=2${NC}"
         read -rp "> " target_commit
         
         if [[ -z "$target_commit" ]]; then
