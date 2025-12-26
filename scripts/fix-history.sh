@@ -44,11 +44,23 @@ DROP_COMMIT=""
 # Auto-resolve strategy: empty|ours|theirs
 # Can be set via environment (AUTO_RESOLVE=ours|theirs) or via --auto-resolve <mode>
 AUTO_RESOLVE="${AUTO_RESOLVE:-}"
+# Reconstruction options
+RECONSTRUCT_AUTO=false   # if true, try multiple auto-resolve strategies automatically
+ALLOW_OVERRIDE_SAME_BRANCH=${ALLOW_OVERRIDE_SAME_BRANCH:-false}  # if true, auto-confirm destructive override of original branch when safe
+UPDATE_WORKTREES=${UPDATE_WORKTREES:-false}  # if true, attempt to update checked-out worktrees for target branch after pushing
+# Atomic preserve mode: perform deterministic commit-tree recreation + sign + date set in a single pass
+ATOMIC_PRESERVE=${ATOMIC_PRESERVE:-false}  # set via --atomic-preserve to enable atomic/deterministic preserve
+
 # Restore options
 RESTORE_MODE=false
 RESTORE_ARG=""
 RESTORE_LIST_N=10
 RESTORE_AUTO=false
+
+# Reconstruction metadata (populated when fallback runs)
+LAST_RECONSTRUCT_BRANCH=""
+LAST_RECONSTRUCT_REPORT=""
+LAST_RECONSTRUCT_FAILING_COMMIT=""
 
 TEMP_COMMITS="/tmp/git-fix-history-commits.txt"
 TEMP_OPERATIONS="/tmp/git-fix-history-operations.txt"
@@ -146,6 +158,8 @@ Options:
                              Example: --amend HEAD=2 (amend 2nd to last commit)
   --sign                     Re-sign commits in the selected range (requires GPG)
                              Rewrites history to apply signatures and preserves dates
+  --atomic-preserve          Deterministic preserve: recreate commits (including merges) with
+                             `git commit-tree`, immediately sign and set author/committer dates (atomic)
   --drop COMMIT              Drop (remove) a single non-root commit from history
                              Example: --drop 181cab0 (dropping commit by hash)
 
@@ -157,6 +171,10 @@ Options:
   --auto-resolve <mode>      Auto-resolve conflicts during automated rebase/drop. Modes: ${CYAN}ours${NC}, ${CYAN}theirs${NC}
                              If provided, conflicting files will be auto-added (checkout --ours/--theirs)
                              before running ${CYAN}git rebase --continue${NC}.
+  --reconstruct-auto         Automatically retry reconstruction with common strategies (ours/theirs) on failure
+  --allow-override           Skip confirmation when replacing the original branch with a tmp branch
+  --update-worktrees         When replacing a branch, detect and safely update any local worktrees that have
+                             the branch checked out (creates a bundle backup first)
   --restore                  List backup bundles and tags and interactively restore a chosen ref to a branch
                              (Creates a restore branch and optionally resets the target branch) ${CYAN}(Honors global --dry-run flag)${NC}
 
@@ -261,6 +279,27 @@ parse_args() {
                 HARNESS_CLEANUP=false
                 shift
                 ;;
+
+            --reconstruct-auto)
+                RECONSTRUCT_AUTO=true
+                shift
+                ;;
+
+            --allow-override)
+                ALLOW_OVERRIDE_SAME_BRANCH=true
+                shift
+                ;;
+
+            --atomic-preserve)
+                ATOMIC_PRESERVE=true
+                shift
+                ;;
+
+            --update-worktrees)
+                UPDATE_WORKTREES=true
+                shift
+                ;;
+
             --restore)
                 RESTORE_MODE=true
                 shift
@@ -931,6 +970,93 @@ display_and_edit_dates() {
     fi
 }
 
+# Generator for a robust apply-dates helper written from inside this script
+# Creates a secure temp helper script and records it for cleanup
+GENERATED_HELPERS=()
+
+generate_apply_dates_helper_file() {
+    local ts pid tmpf
+    ts=$(date -u +%Y%m%dT%H%M%SZ)
+    pid=$$
+    tmpf="/tmp/git-fix-apply-dates-${pid}-${ts}.sh"
+
+    cat > "$tmpf" <<'APPLY_DATES_HELPER'
+#!/usr/bin/env bash
+set -euo pipefail
+# Inline generated helper: applies first date line to current commit and verifies signing & date
+DATES_FILE="${1:-/tmp/git-fix-history-all-dates.txt}"
+if [[ -z "${DATES_FILE}" || ! -s "${DATES_FILE}" ]]; then
+  echo "[INFO] Dates file missing or empty: ${DATES_FILE}" >&2
+  exit 0
+fi
+
+# Read first non-empty line
+line=""
+while IFS= read -r L; do
+  if [[ -n "${L//[[:space:]]/}" ]]; then line="$L"; break; fi
+done < "$DATES_FILE"
+
+if [[ -z "$line" ]]; then
+  echo "[INFO] No date line to apply in: $DATES_FILE" >&2
+  exit 0
+fi
+
+if [[ "$line" != *"|"* ]]; then
+  echo "[WARN] Malformed date line (no '|'): $line" >&2
+  sed -i '1d' "$DATES_FILE" || true
+  exit 1
+fi
+
+commit_part="${line%%|*}"
+date_part="${line#*|}"
+
+if [[ -z "$date_part" ]]; then
+  echo "[WARN] No date found in line: $line" >&2
+  sed -i '1d' "$DATES_FILE" || true
+  exit 1
+fi
+
+if ! date -d "$date_part" >/dev/null 2>&1; then
+  echo "[ERROR] Unparseable date: $date_part" >&2
+  sed -i '1d' "$DATES_FILE" || true
+  exit 1
+fi
+
+# Amend and sign commit; fail loudly if anything goes wrong
+GIT_AUTHOR_DATE="$date_part" GIT_COMMITTER_DATE="$date_part" \
+  git commit --amend --no-edit -n -S >/dev/null 2>&1 || { echo "[ERROR] git commit --amend -S failed" >&2; exit 1; }
+
+sig_status=$(git log -1 --format='%G?' HEAD 2>/dev/null || true)
+if [[ "$sig_status" != "G" ]]; then
+  echo "[ERROR] Amended commit not properly signed (G required). Status: $sig_status" >&2
+  exit 1
+fi
+
+existing_epoch=$(git show -s --format=%at HEAD 2>/dev/null || true)
+date_epoch=$(date -d "$date_part" +%s 2>/dev/null || true)
+if [[ -z "$existing_epoch" || -z "$date_epoch" ]]; then
+  echo "[ERROR] Date epoch retrieval failed (expected $date_epoch actual $existing_epoch)" >&2
+  exit 1
+fi
+# Allow a small tolerance for clock/rounding differences (seconds)
+ALLOWED_EPOCH_DRIFT=30
+diff=$(( existing_epoch - date_epoch ))
+if (( diff < 0 )); then diff=$(( -diff )); fi
+if (( diff > ALLOWED_EPOCH_DRIFT )); then
+  echo "[ERROR] Date mismatch after amend (expected $date_epoch actual $existing_epoch; diff=${diff}s > ${ALLOWED_EPOCH_DRIFT}s)" >&2
+  exit 1
+fi
+
+# Success
+sed -i '1d' "$DATES_FILE" || true
+exit 0
+APPLY_DATES_HELPER
+
+    chmod +x "$tmpf" || true
+    GENERATED_HELPERS+=("$tmpf")
+    echo "$tmpf"
+}
+
 recreate_history_with_dates() {
     print_info "Restoring commit dates via rebase-based approach (preferred) with fallback to dummy-edit..."
 
@@ -946,6 +1072,16 @@ recreate_history_with_dates() {
         return 0
     fi
 
+    # If we preserved topology and have a preserve map, prefer to apply dates using that map
+    if [[ "$total" -gt 1 && "${PRESERVE_TOPOLOGY:-}" == "true" && -n "${LAST_PRESERVE_MAP:-}" && -f "${LAST_PRESERVE_MAP}" ]]; then
+        print_info "Detected preserved-topology run; will try applying dates via preserve map: $LAST_PRESERVE_MAP"
+        if apply_dates_from_preserve_map "$LAST_PRESERVE_MAP"; then
+            return 0
+        else
+            print_warning "apply_dates_from_preserve_map failed; will continue to rebase-based method"
+        fi
+    fi
+
     # If multiple commits were captured, use a rebase-based method to apply each date
     if [[ "$total" -gt 1 ]]; then
         print_info "Attempting rebase-based application for $total commits"
@@ -955,35 +1091,21 @@ recreate_history_with_dates() {
         local parent
         parent=$(git rev-parse "${oldest_commit}~1" 2>/dev/null || true)
 
-        local helper_script="/tmp/git-fix-apply-dates-$$.sh"
-        cat > "$helper_script" <<EOF
-#!/usr/bin/env bash
-set -e
-DATES_FILE="$TEMP_ALL_DATES"
-if [[ ! -s "$DATES_FILE" ]]; then
-  exit 0
-fi
-line=
-line=
-line=$(head -n1 "${DATES_FILE}")
-if [[ -z "${line}" ]]; then
-  exit 0
-fi
-date="
-# preserve everything after first '|' (date may contain spaces)
-date="\$(echo \"\${line}\" | cut -d'|' -f2-)"
-echo "[INFO] Applying date: \$date" >&2
-GIT_AUTHOR_DATE="\$date" GIT_COMMITTER_DATE="\$date" git commit --amend --no-edit
-# remove the first line so the next exec applies the following date
-sed -i '1d' "${DATES_FILE}"
-EOF
-        chmod +x "$helper_script"
-
-        # If a persistent helper script exists in the repository, prefer it (avoids heredoc issues)
+        # Use repository helper if present; otherwise generate a robust helper from this script
+        local helper_script
         if [[ -f "$SCRIPT_DIR/helpers/apply-dates-helper.sh" ]]; then
             helper_script="$SCRIPT_DIR/helpers/apply-dates-helper.sh"
             chmod +x "$helper_script" || true
+        else
+            helper_script=$(generate_apply_dates_helper_file)
         fi
+
+# preserve everything after first '|' (date may contain spaces)
+date="\$(echo \"\${line}\" | cut -d'|' -f2-)"
+# (removed) Inline date-apply log - date application delegated to helper script
+# (removed) Inline commit amend - helper will perform amend/sign/verification per commit
+# The helper script is responsible for removing applied lines from the dates file
+# helper file ready (either repo helper or generated helper)
 
         local rebase_base
         if [[ -z "$parent" ]]; then
@@ -999,7 +1121,7 @@ EOF
         fi
 
         # Insert exec that runs the helper with the dates file as an argument (use /bin/bash to avoid exec path issues)
-        export GIT_SEQUENCE_EDITOR="sed -i '/^pick /a exec /bin/bash $helper_script \"$TEMP_ALL_DATES\"'"
+        export GIT_SEQUENCE_EDITOR="sed -i -e '/^pick /a exec /bin/bash $helper_script \"$TEMP_ALL_DATES\"' -e '/^merge /a exec /bin/bash $helper_script \"$TEMP_ALL_DATES\"'"
         export GIT_EDITOR=:
 
         print_info "Running rebase to apply captured dates (may take a while)"
@@ -1056,8 +1178,419 @@ EOF
         if [[ "$DRY_RUN" == "true" ]]; then
             print_info "DRY-RUN: would run reconstruction fallback for remaining commits"
         else
-            reconstruct_history_without_commit "${RECONSTRUCT_TARGET:-$oldest_commit}" || print_warning "Reconstruction fallback failed"
+            # Try reconstruction, optionally with auto strategies
+            try_reconstruct_with_strategies "${RECONSTRUCT_TARGET:-$oldest_commit}" || {
+                print_warning "Reconstruction fallback failed"
+                show_reconstruction_state "$LAST_RECONSTRUCT_BRANCH" "$LAST_RECONSTRUCT_REPORT" "$LAST_RECONSTRUCT_FAILING_COMMIT"
+                # If user set ALLOW_OVERRIDE_SAME_BRANCH, auto-confirm replacement with preserved branch
+                if [[ "${ALLOW_OVERRIDE_SAME_BRANCH}" == "true" && -n "${LAST_RECONSTRUCT_BRANCH}" ]]; then
+                    print_info "ALLOW_OVERRIDE_SAME_BRANCH=true: attempting to override $ORIGINAL_BRANCH with $LAST_RECONSTRUCT_BRANCH"
+                    prompt_override_same_branch "$LAST_RECONSTRUCT_BRANCH" "$ORIGINAL_BRANCH"
+                fi
+            }
         fi
+    fi
+} 
+
+# Try reconstruction with multiple strategies if requested
+try_reconstruct_with_strategies() {
+    local target_hash="$1"
+    local tried=""
+
+    # First, try with whatever AUTO_RESOLVE is currently set to (could be empty)
+    if reconstruct_history_without_commit "$target_hash"; then
+        return 0
+    fi
+
+    if [[ "${RECONSTRUCT_AUTO}" == "true" ]]; then
+        # Try 'ours' then 'theirs' unless already tried
+        for strat in "ours" "theirs"; do
+            if [[ "$AUTO_RESOLVE" == "$strat" ]]; then
+                continue
+            fi
+            print_info "RECONSTRUCT_AUTO: retrying reconstruction with auto-resolve=$strat"
+            AUTO_RESOLVE="$strat"
+            if reconstruct_history_without_commit "$target_hash"; then
+                return 0
+            fi
+        done
+    fi
+
+    return 1
+}
+
+# Display reconstruction branch/report/failing commit context to aid manual resolution
+show_reconstruction_state() {
+    local branch="$1"
+    local report="$2"
+    local failing="$3"
+
+    print_info "Reconstruction branch: ${branch:-<none>}"
+    if [[ -n "$branch" && $(git rev-parse --verify --quiet "$branch") ]]; then
+        git checkout --quiet "$branch" || true
+        print_info "Branch tip: $(git rev-parse --short HEAD 2>/dev/null || echo 'unknown')"
+        print_info "Conflicted files (if any):"
+        git diff --name-only --diff-filter=U || echo "(none)"
+    fi
+
+    if [[ -n "$report" && -f "$report" ]]; then
+        print_info "Reconstruction report: $report"
+        sed -n '1,200p' "$report" || true
+    fi
+
+    if [[ -n "$failing" ]]; then
+        print_info "Failing commit: $failing"
+        git show --stat --oneline "$failing" || true
+        git show "$failing" | sed -n '1,200p' || true
+    fi
+
+    print_info "You can inspect '$branch' and resolve conflicts, then 'git cherry-pick --continue' to proceed."
+}
+
+# Find worktree paths which have the given branch checked out
+find_worktree_paths_for_branch() {
+    local branch="$1"
+    # Use git worktree list --porcelain to find branches
+    local out
+    out=$(git worktree list --porcelain 2>/dev/null || true)
+    local paths=()
+    if [[ -z "$out" ]]; then
+        # No worktrees known
+        echo ""
+        return 0
+    fi
+
+    local path=""
+    while IFS= read -r line; do
+        if [[ "$line" == worktree* ]]; then
+            path="${line#worktree }"
+        elif [[ "$line" == branch* ]]; then
+            local bref=${line#branch }
+            # Normalize to refs/heads/<branch>
+            if [[ "$bref" == "refs/heads/$branch" || "$bref" == "$branch" ]]; then
+                paths+=("$path")
+            fi
+        fi
+    done <<< "$out"
+
+    # Print newline-separated paths
+    (for p in "${paths[@]}"; do echo "$p"; done)
+}
+
+# Update worktrees which have the branch checked out to match origin/branch
+update_worktrees_to_remote() {
+    local branch="$1"
+    local ts
+    ts=$(date -u +%Y%m%dT%H%M%SZ)
+
+    local paths
+    paths=$(find_worktree_paths_for_branch "$branch")
+    if [[ -z "$paths" ]]; then
+        print_info "No worktrees found using branch: $branch"
+        return 0
+    fi
+
+    print_info "Found worktrees using '$branch', updating them to origin/$branch"
+    for p in $paths; do
+        print_info "Updating worktree at: $p"
+        # Make a bundle backup of the branch as it appears in the worktree
+        local bundle="/tmp/git-fix-worktree-backup-${branch//\//-}-${ts}.bundle"
+        git -C "$p" bundle create "$bundle" "refs/heads/$branch" || print_warning "Failed to create worktree bundle for $p"
+
+        # Fetch origin
+        git -C "$p" fetch origin || print_warning "Failed to fetch in $p"
+
+        if ! git -C "$p" show-ref --verify --quiet "refs/remotes/origin/$branch"; then
+            print_warning "origin/$branch not found; skipping update for $p"
+            continue
+        fi
+
+        # Determine current branch in that worktree
+        local curr_branch
+        curr_branch=$(git -C "$p" symbolic-ref --quiet --short HEAD 2>/dev/null || true)
+
+        if [[ "$curr_branch" == "$branch" ]]; then
+            # Detach HEAD so we can safely update the branch ref even though it was checked out
+            print_info "Branch $branch is currently checked out in $p; detaching HEAD, forcing update, and re-checking out"
+            git -C "$p" checkout --detach HEAD || print_warning "Failed to detach HEAD in $p"
+
+            # Force the branch to origin/<branch>
+            git -C "$p" branch -f "$branch" "origin/$branch" || print_warning "Failed to force-update branch $branch in $p"
+
+            # Re-checkout branch (now matches origin)
+            git -C "$p" checkout "$branch" || print_warning "Failed to checkout $branch in $p"
+
+            print_success "Safely updated checked-out branch $branch in worktree: $p (backup: $bundle)"
+        else
+            # Branch not checked out in this worktree: update local ref to match origin
+            git -C "$p" update-ref "refs/heads/$branch" "refs/remotes/origin/$branch" || print_warning "Failed to update local ref for $branch in $p"
+            print_success "Updated branch ref $branch in worktree: $p (backup: $bundle)"
+        fi
+    done
+}
+
+
+# Helper: linearise a range into a single-parent branch (UK spelling: linearise)
+linearise_range_to_branch() {
+    local range="$1"
+    local ts
+    ts=$(date -u +%Y%m%dT%H%M%SZ)
+    local tmp_branch="tmp/linearise-${ts}"
+
+    print_info "Creating linearised branch: $tmp_branch from range: $range"
+
+    local last_new=""
+
+    for c in $(git rev-list --topo-order --reverse "$range"); do
+        print_info "Linearising commit: $c"
+        local tree
+        tree=$(git rev-parse "$c^{tree}")
+        local author_name author_email author_date commit_msg
+        author_name=$(git show -s --format='%an' "$c")
+        author_email=$(git show -s --format='%ae' "$c")
+        author_date=$(git show -s --format='%aI' "$c")
+        commit_msg=$(git log -1 --format=%B "$c")
+
+        GIT_AUTHOR_NAME="$author_name" GIT_AUTHOR_EMAIL="$author_email" GIT_AUTHOR_DATE="$author_date" GIT_COMMITTER_DATE="$author_date" \
+        new_sha=$(echo "$commit_msg" | git commit-tree "$tree" ${last_new:+-p $last_new})
+
+        last_new="$new_sha"
+    done
+
+    if [[ -n "$last_new" ]]; then
+        git update-ref "refs/heads/$tmp_branch" "$last_new"
+        git checkout "$tmp_branch"
+        print_success "Linearised branch created: $tmp_branch"
+    else
+        print_warning "No commits to linearise for range: $range"
+        return 1
+    fi
+}
+
+# Helper: preserve topology (recreate commits including merges)
+preserve_topology_range_to_branch() {
+    local range="$1"
+    local ts
+    ts=$(date -u +%Y%m%dT%H%M%SZ)
+    local tmp_branch="tmp/preserve-${ts}"
+
+    print_info "Creating preserved-topology branch: $tmp_branch from range: $range"
+
+    declare -A sha_map
+    local last_new
+
+    for c in $(git rev-list --topo-order --reverse "$range"); do
+        print_info "Recreating commit: $c"
+        local tree
+        tree=$(git rev-parse "$c^{tree}")
+        local author_name author_email author_date commit_msg
+        author_name=$(git show -s --format='%an' "$c")
+        author_email=$(git show -s --format='%ae' "$c")
+        author_date=$(git show -s --format='%aI' "$c")
+        commit_msg=$(git log -1 --format=%B "$c")
+
+        parent_args=()
+        for p in $(git rev-list --parents -n 1 "$c" | cut -d' ' -f2-); do
+            if [[ -n "${sha_map[$p]:-}" ]]; then
+                parent_args+=( -p "${sha_map[$p]}" )
+            else
+                parent_args+=( -p "$p" )
+            fi
+        done
+
+        GIT_AUTHOR_NAME="$author_name" GIT_AUTHOR_EMAIL="$author_email" GIT_AUTHOR_DATE="$author_date" GIT_COMMITTER_DATE="$author_date" \
+        new_sha=$(echo "$commit_msg" | git commit-tree "$tree" ${parent_args[@]})
+
+        sha_map[$c]="$new_sha"
+        last_new="$new_sha"
+    done
+
+    if [[ -n "$last_new" ]]; then
+        git update-ref "refs/heads/$tmp_branch" "$last_new"
+        git checkout "$tmp_branch"
+        print_success "Preserved-topology branch created: $tmp_branch"
+    else
+        print_warning "Failed to create preserved-topology branch for range: $range"
+        return 1
+    fi
+}
+
+# Prompt user to optionally override the original branch with a tmp branch (destructive)
+prompt_override_same_branch() {
+    local src_branch="$1"
+    local dest_branch="$2"
+    local ts
+    ts=$(date -u +%Y%m%dT%H%M%SZ)
+
+    if [[ -z "$dest_branch" || -z "$src_branch" ]]; then
+        print_warning "Missing branches for override prompt"
+        return 1
+    fi
+
+    print_info "Comparison: $dest_branch .. $src_branch"
+    local ahead behind
+    ahead=$(git rev-list --count "${dest_branch}..${src_branch}")
+    behind=$(git rev-list --count "${src_branch}..${dest_branch}")
+    print_info "Commits: $src_branch is +${ahead}/-${behind} relative to $dest_branch"
+    git --no-pager log --left-right --oneline "${dest_branch}...${src_branch}" | sed -n '1,40p'
+
+    # Quick pre-push verification: if we have a preserve map for the source branch,
+    # verify that the signed commits there have the expected dates. If dates are
+    # mismatched, require an explicit override confirmation (or ALLOW_OVERRIDE_SAME_BRANCH=true).
+    if [[ -n "${LAST_PRESERVE_MAP:-}" && -f "${LAST_PRESERVE_MAP}" && "${src_branch}" == tmp/preserve* ]]; then
+        local total_dates=0 matched_dates=0 missing_dates=0
+        while IFS='|' read -r orig signed date; do
+            if [[ -z "$signed" || -z "$date" ]]; then continue; fi
+            total_dates=$((total_dates+1))
+            # Compare by epoch
+            existing_epoch=$(git show -s --format=%aI "$signed" 2>/dev/null || true)
+            if [[ -n "$existing_epoch" ]]; then
+                existing_epoch_s=$(date -d "$existing_epoch" +%s 2>/dev/null || true)
+                date_epoch=$(date -d "$date" +%s 2>/dev/null || true)
+                if [[ -n "$existing_epoch_s" && -n "$date_epoch" && "$existing_epoch_s" -eq "$date_epoch" ]]; then
+                    matched_dates=$((matched_dates+1))
+                fi
+            fi
+        done < "$LAST_PRESERVE_MAP"
+        missing_dates=$((total_dates-matched_dates))
+        if [[ "$total_dates" -gt 0 && "$missing_dates" -gt 0 ]]; then
+            print_warning "Preserved branch '$src_branch' has $missing_dates/$total_dates commits with mismatched dates. Overwriting remote will lose reconstructed date fixes."
+            if [[ "${ALLOW_OVERRIDE_SAME_BRANCH:-}" != "true" ]]; then
+                echo "To proceed anyway, type 'override' (case-sensitive), or re-run with ALLOW_OVERRIDE_SAME_BRANCH=true to auto-accept." 
+                read -rp "Type 'override' to confirm replacement: " _confirm
+                if [[ "$_confirm" != "override" ]]; then
+                    print_info "Override not confirmed; aborting replace to avoid losing reconstructed dates."
+                    return 0
+                fi
+                _ans=y
+            else
+                print_info "ALLOW_OVERRIDE_SAME_BRANCH=true: proceeding despite missing dates"
+            fi
+        fi
+    fi
+
+    # If we previously applied a reconstruction to the remote branch, detect
+    # whether origin/$dest_branch already points at the reconstruction result.
+    if [[ -n "${LAST_RECONSTRUCT_BRANCH:-}" && $(git rev-parse --verify --quiet "$LAST_RECONSTRUCT_BRANCH" >/dev/null; echo $?) -eq 0 ]]; then
+        remote_sha=$(git ls-remote origin "refs/heads/$dest_branch" | cut -f1 || true)
+        recon_sha=$(git rev-parse --verify "$LAST_RECONSTRUCT_BRANCH" 2>/dev/null || true)
+        if [[ -n "$remote_sha" && -n "$recon_sha" && "$remote_sha" == "$recon_sha" ]]; then
+            print_warning "Remote $dest_branch currently points at reconstructed branch $LAST_RECONSTRUCT_BRANCH (sha: ${recon_sha:0:8})."
+            print_warning "Force-pushing $src_branch will overwrite the reconstruction result."
+            if [[ "${ALLOW_OVERRIDE_SAME_BRANCH:-}" == "true" ]]; then
+                print_info "ALLOW_OVERRIDE_SAME_BRANCH=true: continuing with override"
+            else
+                echo "Options:" 
+                echo "  1) Continue and replace remote with $src_branch (may lose reconstructed dates)"
+                echo "  2) Keep reconstructed branch ($LAST_RECONSTRUCT_BRANCH) as remote (recommended)"
+                echo "  3) Cancel"
+                read -rp "Choose [1/2/3]: " _choice2
+                case "${_choice2:-2}" in
+                    1)
+                        _ans=y
+                        ;;
+                    2)
+                        print_info "Keeping reconstructed branch on remote. Aborting override."
+                        return 0
+                        ;;
+                    *)
+                        print_info "User chose to cancel override"
+                        return 0
+                        ;;
+                esac
+            fi
+        fi
+    fi
+
+    local _ans
+
+    # If we previously ran a reconstruction fallback that applied dates (and the
+    # preserve branch still has remaining captured dates), prefer the reconstructed
+    # branch and let the user choose explicitly to avoid accidentally overwriting
+    # the reconstruction with an incomplete preserved branch.
+    if [[ -n "${LAST_RECONSTRUCT_BRANCH:-}" && -n "$TEMP_ALL_DATES" && -s "$TEMP_ALL_DATES" ]]; then
+        # Ensure the reconstruct branch actually exists
+        if git rev-parse --verify --quiet "$LAST_RECONSTRUCT_BRANCH" >/dev/null; then
+            print_warning "Detected reconstruction branch available: $LAST_RECONSTRUCT_BRANCH"
+            print_warning "Captured dates remain; source branch '$src_branch' did not apply all dates."
+
+            if [[ "${ALLOW_OVERRIDE_SAME_BRANCH:-}" == "true" ]]; then
+                print_info "ALLOW_OVERRIDE_SAME_BRANCH=true: preferring reconstruction branch $LAST_RECONSTRUCT_BRANCH"
+                src_branch="$LAST_RECONSTRUCT_BRANCH"
+                _ans=y
+            else
+                echo "Choose replacement source:" 
+                echo "  1) Use preserved branch: $src_branch (may have missing dates)"
+                echo "  2) Use reconstructed branch: $LAST_RECONSTRUCT_BRANCH (dates applied via reconstruction)"
+                echo "  3) Cancel"
+                read -rp "Choose [1/2/3]: " _choice
+                case "${_choice:-3}" in
+                    1)
+                        _ans=y
+                        ;;
+                    2)
+                        src_branch="$LAST_RECONSTRUCT_BRANCH"
+                        _ans=y
+                        ;;
+                    *)
+                        print_info "User chose to cancel override"
+                        return 0
+                        ;;
+                esac
+            fi
+        fi
+    fi
+
+    if [[ "${_ans:-}" == "" ]]; then
+        if [[ "${ALLOW_OVERRIDE_SAME_BRANCH:-}" == "true" ]]; then
+            print_info "ALLOW_OVERRIDE_SAME_BRANCH=true: auto-confirming override"
+            _ans=y
+        elif [[ "$HARNESS_MODE" == "true" ]]; then
+            print_info "Harness mode: skipping destructive override prompt"
+            return 0
+        else
+            read -rp "Replace remote branch '$dest_branch' with '$src_branch' (force push)? This will rewrite remote history. Continue? [y/N]: " _ans
+        fi
+    fi
+
+    if [[ "${_ans,,}" == "y" || "${_ans,,}" == "yes" ]]; then
+        # create backup tag
+        local tag="backup/${dest_branch}-pre-override-${ts}"
+        print_info "Creating backup tag: $tag -> $dest_branch"
+        git tag -f "$tag" "$dest_branch" || true
+        print_info "Pushing backup tag to origin"
+        git push origin "refs/tags/$tag" || print_warning "Failed to push backup tag to origin"
+
+        # create bundle
+        local bundle="/tmp/git-fix-history-backup-override-${ts}.bundle"
+        print_info "Creating bundle: $bundle"
+        git bundle create "$bundle" "refs/heads/$dest_branch" || print_warning "Bundle creation failed"
+
+        print_info "Force-pushing $src_branch to origin/$dest_branch"
+        if git push origin +refs/heads/"$src_branch":refs/heads/"$dest_branch" --force-with-lease; then
+            print_success "Successfully replaced origin/$dest_branch with $src_branch"
+
+            # If any worktrees have this branch checked out, either update them (if allowed)
+            # or warn the user and skip updating local refs to avoid "used by worktree" errors.
+            local worktree_paths
+            worktree_paths=$(find_worktree_paths_for_branch "$dest_branch")
+            if [[ -n "$worktree_paths" ]]; then
+                if [[ "${UPDATE_WORKTREES}" == "true" ]]; then
+                    print_info "Worktrees detected for branch $dest_branch; updating them to origin/$dest_branch"
+                    update_worktrees_to_remote "$dest_branch"
+                else
+                    print_warning "Branch '$dest_branch' is checked out in one or more worktrees; not updating local refs. Set UPDATE_WORKTREES=true to auto-update them (will create backups)."
+                fi
+            else
+                # No worktrees reference this branch: safe to update local branch ref
+                git branch -f "$dest_branch" "refs/heads/$src_branch" || true
+            fi
+        else
+            print_error "Failed to force-push $src_branch to origin/$dest_branch"
+            return 1
+        fi
+    else
+        print_info "User declined override; leaving branches as-is"
     fi
 }
 
@@ -1067,6 +1600,11 @@ reconstruct_history_without_commit() {
     local ts
     ts=$(date -u +%Y%m%dT%H%M%SZ)
     local tmp_branch="tmp/remove-${target_hash:0:8}-${ts}"
+
+    # Record metadata about this reconstruction attempt
+    LAST_RECONSTRUCT_BRANCH="$tmp_branch"
+    LAST_RECONSTRUCT_REPORT="$REPORT_DIR/reconstruct-${target_hash:0:8}-${ts}.txt"
+    LAST_RECONSTRUCT_FAILING_COMMIT=""
 
     if [[ ! -f "$TEMP_ALL_DATES" || ! -s "$TEMP_ALL_DATES" ]]; then
         print_warning "No remaining captured dates found for reconstruction"
@@ -1090,6 +1628,7 @@ reconstruct_history_without_commit() {
     # Read remaining commits from the dates file in order (oldest first)
     local commit
     local status=0
+    declare -A new_sha_map
 
     # Iterate through a copy of the dates file to allow in-loop modifications
     local dates_tmp
@@ -1112,8 +1651,48 @@ reconstruct_history_without_commit() {
             continue
         fi
 
-        # Attempt cherry-pick
+        # Attempt to recreate merge commits deterministically first (commit-tree)
+        local parents
+        parents=$(git rev-list --parents -n 1 "$commit" | cut -d' ' -f2-)
+        local parent_count
+        parent_count=$(echo "$parents" | wc -w)
+
+        if [[ "$parent_count" -gt 1 ]]; then
+            echo "INFO: Recreating merge commit $commit with parents: $parents" | tee -a "$report_file"
+            local tree
+            tree=$(git rev-parse "$commit^{tree}")
+            local orig_author_name orig_author_email commit_msg
+            orig_author_name=$(git show -s --format='%an' "$commit" 2>/dev/null || true)
+            orig_author_email=$(git show -s --format='%ae' "$commit" 2>/dev/null || true)
+            commit_msg=$(git log -1 --format=%B "$commit")
+
+            parent_args=()
+            for p in $parents; do
+                if [[ -n "${new_sha_map[$p]:-}" ]]; then
+                    parent_args+=( -p "${new_sha_map[$p]}" )
+                else
+                    parent_args+=( -p "$p" )
+                fi
+            done
+
+            if new_sha=$(GIT_AUTHOR_NAME="$orig_author_name" GIT_AUTHOR_EMAIL="$orig_author_email" \
+                GIT_AUTHOR_DATE="$commit_date" GIT_COMMITTER_DATE="$commit_date" \
+                echo "$commit_msg" | git commit-tree "$tree" "${parent_args[@]}" 2>/dev/null); then
+                new_sha_map[$commit]="$new_sha"
+                echo "OK: Recreated merge commit $commit -> $new_sha" | tee -a "$report_file"
+                grep -v -F -- "${commit}|${commit_date}" "$TEMP_ALL_DATES" > "${TEMP_ALL_DATES}.tmp" && mv "${TEMP_ALL_DATES}.tmp" "$TEMP_ALL_DATES"
+                continue
+            else
+                echo "WARN: Failed to recreate merge commit $commit; attempting cherry-pick fallback" | tee -a "$report_file"
+            fi
+        fi
+
+        # Attempt cherry-pick (non-merge or fallback)
         if git cherry-pick --allow-empty --strategy=recursive --strategy-option=theirs "$commit" >/dev/null 2>&1; then
+            # Capture new sha of cherry-picked commit
+            local new_sha
+            new_sha=$(git rev-parse --verify HEAD 2>/dev/null || true)
+
             # Amend to set author and dates
             local orig_author_name
             local orig_author_email
@@ -1124,6 +1703,12 @@ reconstruct_history_without_commit() {
                 GIT_AUTHOR_DATE="$commit_date" GIT_COMMITTER_DATE="$commit_date" \
                 git commit --amend --no-edit --no-verify >/dev/null 2>&1 || true
             fi
+
+            # Map original -> new sha for future merge recreation
+            if [[ -n "$new_sha" ]]; then
+                new_sha_map[$commit]="$new_sha"
+            fi
+
             echo "OK: Cherry-picked $commit" | tee -a "$report_file"
             # remove the line
             grep -v -F -- "${commit}|${commit_date}" "$TEMP_ALL_DATES" > "${TEMP_ALL_DATES}.tmp" && mv "${TEMP_ALL_DATES}.tmp" "$TEMP_ALL_DATES"
@@ -1136,6 +1721,10 @@ reconstruct_history_without_commit() {
             if auto_add_conflicted_files "$AUTO_RESOLVE"; then
                 # Try to continue cherry-pick
                 if git cherry-pick --continue >/dev/null 2>&1; then
+                    # Capture and map new sha
+                    local new_sha
+                    new_sha=$(git rev-parse --verify HEAD 2>/dev/null || true)
+
                     # Amend dates as above
                     local orig_author_name
                     local orig_author_email
@@ -1146,6 +1735,12 @@ reconstruct_history_without_commit() {
                         GIT_AUTHOR_DATE="$commit_date" GIT_COMMITTER_DATE="$commit_date" \
                         git commit --amend --no-edit --no-verify >/dev/null 2>&1 || true
                     fi
+
+                    # Map original -> new sha
+                    if [[ -n "$new_sha" ]]; then
+                        new_sha_map[$commit]="$new_sha"
+                    fi
+
                     echo "OK: Cherry-picked $commit with auto-resolve" | tee -a "$report_file"
                     grep -v -F -- "${commit}|${commit_date}" "$TEMP_ALL_DATES" > "${TEMP_ALL_DATES}.tmp" && mv "${TEMP_ALL_DATES}.tmp" "$TEMP_ALL_DATES"
                     continue
@@ -1208,10 +1803,15 @@ reconstruct_history_without_commit() {
 
         return 0
     else
+        # Try to extract the failing commit for easier inspection
+        LAST_RECONSTRUCT_FAILING_COMMIT=$(grep -E "FAIL: (Auto-resolve failed for|Conflict during cherry-pick of)" "$report_file" | tail -n1 | sed -E 's/.* ([0-9a-f]{7,40}).*/\1/' || true)
+        if [[ -n "$LAST_RECONSTRUCT_FAILING_COMMIT" ]]; then
+            echo "Reconstruction failed at commit: $LAST_RECONSTRUCT_FAILING_COMMIT" | tee -a "$report_file"
+        fi
         echo "Reconstruction failed; leaving branch $tmp_branch for manual inspection" | tee -a "$report_file"
         return 1
     fi
-}
+} 
 
 # ---------------------------------------------------------------------------
 # Sign mode: re-sign commits across a range and restore dates
@@ -1220,6 +1820,10 @@ sign_mode() {
     print_header
     check_git_repo
     backup_repo
+
+    # Remember the original branch so we can offer to override it after creating tmp branches
+    ORIGINAL_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+    print_info "Original branch recorded: $ORIGINAL_BRANCH"
 
     if ! command -v gpg &>/dev/null && ! git config user.signingkey &>/dev/null; then
         print_warning "GPG not found or signing key not configured. Aborting sign operation."
@@ -1264,8 +1868,34 @@ sign_mode() {
 
     # Check for merge commits; rebase -i with merges is risky for automated operations
     if git rev-list --merges "$RANGE" | grep -q .; then
-        print_error "Range contains merge commits. Aborting resign; rebase with merges is risky."
-        return 1
+        print_warning "Range contains merge commits. Rewriting with merges directly is risky."
+        echo "Options:"
+        echo "  1) Linearise the range (merge topology will be flattened)."
+        echo "  2) Retain merge topology (experimental - preserves merges)."
+        echo "  3) Abort."
+        if read -u 3 -rp "Choose [1/2/3]: " _choice; then
+            :
+        else
+            read -rp "Choose [1/2/3]: " _choice
+        fi
+        case "${_choice:-1}" in
+            1)
+                print_info "User chose: Linearise range (will create tmp/linear-<ts>)"
+                linearise_range_to_branch "$RANGE"
+                # After creation, set RANGE to new branch
+                RANGE="$(git rev-parse --abbrev-ref HEAD)"
+                ;;
+            2)
+                print_info "User chose: Retain merge topology (experimental) - creating tmp/preserve-<ts>"
+                PRESERVE_TOPOLOGY=true
+                preserve_topology_range_to_branch "$RANGE"
+                RANGE="$(git rev-parse --abbrev-ref HEAD)"
+                ;;
+            *)
+                print_error "Operation aborted by user due to merge commits present"
+                return 1
+                ;;
+        esac
     fi
 
     if [[ "$DRY_RUN" == "true" ]]; then
@@ -1273,31 +1903,394 @@ sign_mode() {
         return 0
     fi
 
-    # Prepare sequence editor to insert an exec to re-sign after each pick
-    local seq_editor_cmd="sed -i '/^pick /a exec git commit --amend --no-edit -n -S'"
+    # Prepare sequence editor to insert an exec to re-sign after each pick and merge
+    local seq_editor_cmd="sed -i -e '/^pick /a exec git commit --amend --no-edit -n -S' -e '/^merge /a exec git commit --amend --no-edit -n -S'"
 
     print_info "Running interactive rebase to re-sign commits (no user interaction expected)"
     if [[ "$REBASE_BASE" == "--root" ]]; then
-        if GIT_SEQUENCE_EDITOR="$seq_editor_cmd" git rebase -i --root; then
-            print_success "Rebase/Resign completed"
+        if [[ "${PRESERVE_TOPOLOGY:-}" == "true" ]]; then
+            # For preserved-topology branches, either run atomic preserve or sign commits directly
+            if [[ "${ATOMIC_PRESERVE:-}" == "true" ]]; then
+                if atomic_preserve_range_to_branch "$RANGE"; then
+                    print_success "Atomic preserve completed (deterministic commit-tree + sign + dates)"
+                else
+                    print_error "Atomic preserve failed. Please inspect and resolve conflicts."
+                    exit 1
+                fi
+            else
+                if sign_preserved_topology_branch; then
+                    print_success "Preserve/Sign completed (preserving merges)"
+                else
+                    print_error "Signing preserved topology branch failed. Please inspect and resolve conflicts."
+                    exit 1
+                fi
+            fi
         else
-            print_error "Rebase failed during re-sign. Please inspect and resolve conflicts."
-            git rebase --abort || true
-            exit 1
+            if GIT_SEQUENCE_EDITOR="$seq_editor_cmd" git rebase -i --root; then
+                print_success "Rebase/Resign completed"
+            else
+                print_error "Rebase failed during re-sign. Please inspect and resolve conflicts."
+                git rebase --abort || true
+                exit 1
+            fi
         fi
     else
-        if GIT_SEQUENCE_EDITOR="$seq_editor_cmd" git rebase -i "$REBASE_BASE"; then
-            print_success "Rebase/Resign completed"
-        else
-            print_error "Rebase failed during re-sign. Please inspect and resolve conflicts."
-            git rebase --abort || true
-            exit 1
+        if [[ "${PRESERVE_TOPOLOGY:-}" == "true" ]]; then
+            # Preserve merges during rebase-based resign or choose atomic path
+            if [[ "${ATOMIC_PRESERVE:-}" == "true" ]]; then
+                if atomic_preserve_range_to_branch "$RANGE"; then
+                    print_success "Atomic preserve completed (deterministic commit-tree + sign + dates)"
+                else
+                    print_error "Atomic preserve failed. Please inspect and resolve conflicts."
+                    exit 1
+                fi
+            else
+                if GIT_SEQUENCE_EDITOR="$seq_editor_cmd" git rebase -i --rebase-merges "$REBASE_BASE"; then
+                    print_success "Rebase/Resign completed (preserving merges)"
+                else
+                    print_error "Rebase failed during re-sign (preserve merges). Please inspect and resolve conflicts."
+                    git rebase --abort || true
+                    exit 1
+                fi
+            fi
+            if GIT_SEQUENCE_EDITOR="$seq_editor_cmd" git rebase -i "$REBASE_BASE"; then
+                print_success "Rebase/Resign completed"
+            else
+                print_error "Rebase failed during re-sign. Please inspect and resolve conflicts."
+                git rebase --abort || true
+                exit 1
+            fi
         fi
     fi
 
     # Restore original dates
     recreate_history_with_dates
     print_success "Resigning done and dates restored"
+
+    # If we created a tmp branch (linearise/preserve), offer to override the original branch with it
+    if [[ -n "${ORIGINAL_BRANCH:-}" && "${RANGE}" == tmp/* ]]; then
+        prompt_override_same_branch "${RANGE}" "${ORIGINAL_BRANCH}"
+    fi
+}
+
+# Sign a preserved-topology branch without running rebase -i to avoid flattening merges
+sign_preserved_topology_branch() {
+    local src_branch
+    src_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || true)
+    if [[ -z "$src_branch" ]]; then
+        print_error "No current branch to sign"
+        return 1
+    fi
+
+    local ts tmp_branch preserve_map
+    ts=$(date -u +%Y%m%dT%H%M%SZ)
+    tmp_branch="tmp/preserve-signed-${ts}"
+    preserve_map="/tmp/git-fix-preserve-map-${ts}.txt"
+
+    print_info "Signing preserved-topology branch: $src_branch -> $tmp_branch"
+    print_info "Preserve map will be written to: $preserve_map"
+
+    # Ensure map file is created empty
+    : > "$preserve_map"
+
+    declare -A sha_map
+    local last_new
+
+    for c in $(git rev-list --topo-order --reverse "$src_branch"); do
+        print_info "Signing commit: $c"
+        local tree author_name author_email author_date commit_msg
+        tree=$(git rev-parse "$c^{tree}")
+        author_name=$(git show -s --format='%an' "$c")
+        author_email=$(git show -s --format='%ae' "$c")
+        author_date=$(git show -s --format='%aI' "$c")
+        commit_msg=$(git log -1 --format=%B "$c")
+
+        parent_args=()
+        for p in $(git rev-list --parents -n 1 "$c" | cut -d' ' -f2-); do
+            if [[ -n "${sha_map[$p]:-}" ]]; then
+                parent_args+=( -p "${sha_map[$p]}" )
+            else
+                parent_args+=( -p "$p" )
+            fi
+        done
+
+        # Create unsigned commit with exact parents/tree and author dates
+        GIT_AUTHOR_NAME="$author_name" GIT_AUTHOR_EMAIL="$author_email" GIT_AUTHOR_DATE="$author_date" \
+        GIT_COMMITTER_DATE="$author_date" \
+        new_sha=$(echo "$commit_msg" | git commit-tree "$tree" ${parent_args[@]})
+
+        # Place signed ref temporarily and sign by amending in a detached checkout
+        git update-ref "refs/heads/$tmp_branch" "$new_sha" || true
+        git checkout --quiet "$new_sha" || true
+
+        # Preserve commit dates when amending/signing (attempt amend and tolerate lack of GPG in tests)
+        GIT_COMMITTER_DATE="$author_date" GIT_AUTHOR_DATE="$author_date" \
+            git commit --amend --no-edit -n -S >/dev/null 2>&1 || true
+        signed_sha=$(git rev-parse HEAD)
+
+        # Verify signature status (G = Good, N = No signature, U = Bad, etc.)
+        sig_status=$(git log -1 --format='%G?' HEAD 2>/dev/null || true)
+        if [[ "$sig_status" != "G" ]]; then
+            unsigned_log="/tmp/git-fix-preserve-unsigned-${ts}.txt"
+            echo "$c|$signed_sha|$author_date|UNSIGNED|$sig_status" >> "$unsigned_log"
+            LAST_PRESERVE_UNSIGNED="$unsigned_log"
+            print_warning "Commit $signed_sha not signed (status: $sig_status); recorded in $unsigned_log"
+        fi
+
+        # Record mapping: original|signed|date
+        echo "$c|$signed_sha|$author_date" >> "$preserve_map"
+
+        sha_map[$c]="$signed_sha"
+        last_new="$signed_sha"
+
+        # Update branch ref to the latest signed commit
+        git update-ref "refs/heads/$tmp_branch" "$last_new" || true
+    done
+
+    # Save last mapping path into a global variable for later use
+    LAST_PRESERVE_MAP="$preserve_map"
+
+    if [[ -n "$last_new" ]]; then
+        git checkout "$tmp_branch"
+        print_success "Signed preserved-topology branch created: $tmp_branch"
+        return 0
+    else
+        print_warning "Failed to sign preserved-topology branch"
+        return 1
+    fi
+}
+
+# Atomic preserve: deterministic commit-tree recreation with immediate signing & date verification
+atomic_preserve_range_to_branch() {
+    local range="$1"
+    local ts
+    ts=$(date -u +%Y%m%dT%H%M%SZ)
+    local tmp_branch="tmp/atomic-preserve-${ts}"
+    local preserve_map="/tmp/git-fix-atomic-preserve-map-${ts}.txt"
+    local logf="/tmp/git-fix-atomic-preserve-${ts}.log"
+    : > "$preserve_map"
+    : > "$logf"
+
+    print_info "Creating atomic-preserve branch: $tmp_branch from range: $range"
+
+    declare -A sha_map
+    local last_new
+
+    for c in $(git rev-list --topo-order --reverse "$range"); do
+        print_info "[atomic] Recreating commit: $c"
+        echo "[atomic] Recreating commit: $c" >> "$logf"
+
+        local tree author_name author_email author_date commit_msg
+        tree=$(git rev-parse "$c^{tree}")
+        author_name=$(git show -s --format='%an' "$c")
+        author_email=$(git show -s --format='%ae' "$c")
+        author_date=$(git show -s --format='%aI' "$c")
+        commit_msg=$(git log -1 --format=%B "$c")
+
+        parent_args=()
+        for p in $(git rev-list --parents -n 1 "$c" | cut -d' ' -f2-); do
+            if [[ -n "${sha_map[$p]:-}" ]]; then
+                parent_args+=( -p "${sha_map[$p]}" )
+            else
+                parent_args+=( -p "$p" )
+            fi
+        done
+
+        # Create unsigned commit with exact parents/tree and author dates
+        GIT_AUTHOR_NAME="$author_name" GIT_AUTHOR_EMAIL="$author_email" GIT_AUTHOR_DATE="$author_date" \
+        GIT_COMMITTER_DATE="$author_date" \
+        new_sha=$(echo "$commit_msg" | git commit-tree "$tree" ${parent_args[@]})
+
+        if [[ -z "$new_sha" ]]; then
+            echo "[atomic] Failed to create commit-tree for $c" | tee -a "$logf"
+            print_warning "Failed to create commit-tree for $c"
+            return 1
+        fi
+
+        # Update a temporary branch ref to the new commit and checkout to amend/sign
+        git update-ref "refs/heads/$tmp_branch" "$new_sha" || true
+        if ! git checkout --quiet "$new_sha" 2>/dev/null; then
+            echo "[atomic] Failed to checkout intermediate commit $new_sha" | tee -a "$logf"
+            print_warning "Failed to checkout intermediate commit"
+            return 1
+        fi
+
+        # Amend to sign (and ensure dates preserved). Fail-fast on unsigned commits unless allowed.
+        echo "[atomic] Amending/signing commit: $new_sha -> date: $author_date" | tee -a "$logf"
+        GIT_AUTHOR_DATE="$author_date" GIT_COMMITTER_DATE="$author_date" \
+            git commit --amend --no-edit -n -S >>"$logf" 2>&1 || true
+
+        signed_sha=$(git rev-parse HEAD)
+        if [[ -z "$signed_sha" ]]; then
+            echo "[atomic] Amend/sign failed (no HEAD) for $new_sha" | tee -a "$logf"
+            print_warning "Amend/sign failed for commit $new_sha"
+            return 1
+        fi
+
+        # Verify signature status
+        sig_status=$(git log -1 --format='%G?' HEAD 2>/dev/null || true)
+        if [[ "$sig_status" != "G" ]]; then
+            echo "[atomic] Commit $signed_sha has non-good signature: $sig_status" | tee -a "$logf"
+            if [[ "${ALLOW_UNSIGNED_PRESERVE:-false}" != "true" ]]; then
+                print_error "Commit $signed_sha not signed correctly (status: $sig_status). Aborting atomic preserve."
+                echo "$c|$signed_sha|$author_date|UNSIGNED|$sig_status" >> "/tmp/git-fix-preserve-unsigned-${ts}.txt"
+                LAST_PRESERVE_UNSIGNED="/tmp/git-fix-preserve-unsigned-${ts}.txt"
+                return 1
+            else
+                print_warning "ALLOW_UNSIGNED_PRESERVE=true: continuing despite unsigned commit $signed_sha"
+            fi
+        fi
+
+        # Verify date matches expected epoch
+        existing_epoch=$(git show -s --format=%at HEAD 2>/dev/null || true)
+        date_epoch=$(date -d "$author_date" +%s 2>/dev/null || true)
+        if [[ -n "$existing_epoch" && -n "$date_epoch" && "$existing_epoch" -ne "$date_epoch" ]]; then
+            echo "[atomic] Date mismatch for $signed_sha: expected $date_epoch actual $existing_epoch" | tee -a "$logf"
+            print_error "Date mismatch after amend for commit $signed_sha. Aborting atomic preserve."
+            return 1
+        fi
+
+        # Record mapping and update refs
+        echo "$c|$signed_sha|$author_date" >> "$preserve_map"
+        sha_map[$c]="$signed_sha"
+        last_new="$signed_sha"
+
+        git update-ref "refs/heads/$tmp_branch" "$last_new" || true
+
+    done
+
+    # Save mapping globally and checkout branch
+    LAST_PRESERVE_MAP="$preserve_map"
+    if [[ -n "$last_new" ]]; then
+        git checkout "$tmp_branch"
+        print_success "Atomic preserved-topology branch created: $tmp_branch (map: $preserve_map log: $logf)"
+        return 0
+    else
+        print_warning "Failed to create atomic preserved-topology branch for range: $range"
+        return 1
+    fi
+}
+
+# Apply dates to signed preserved branch using the preserve map
+apply_dates_from_preserve_map() {
+    local mapfile="$1"
+    if [[ -z "$mapfile" || ! -f "$mapfile" ]]; then
+        print_warning "No preserve map provided to apply dates"
+        return 1
+    fi
+
+    local ts logf
+    ts=$(date -u +%Y%m%dT%H%M%SZ)
+    logf="/tmp/git-fix-preserve-dates-${ts}.log"
+    : > "$logf"
+
+    print_info "Applying dates using map: $mapfile (log: $logf)"
+    local remaining=0
+
+    # Fail-fast: if any entries in the preserve map indicate signing failure, abort
+    local failed_sigs
+    failed_sigs=$(grep -E '\|.*sig:FAIL$' "$mapfile" || true)
+    if [[ -n "$failed_sigs" ]]; then
+        print_warning "Preserve map contains commits that failed signing (sig:FAIL). Aborting map-based date application; reconstruction required."
+        echo "$failed_sigs" | tee -a "$logf"
+        return 1
+    fi
+
+    # Detect target branch (preferably the preserved branch). Capture current branch first.
+    local cur_branch target_branch sample_sha
+    cur_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || true)
+
+    if [[ "$cur_branch" != "HEAD" ]]; then
+        target_branch="$cur_branch"
+    else
+        # Try to detect a tmp/preserve branch that contains the first mapped sha
+        sample_sha=$(awk -F'|' 'NR==1{print $2}' "$mapfile" || true)
+        if [[ -n "$sample_sha" ]]; then
+            target_branch=$(git branch --contains "$sample_sha" --format='%(refname:short)' 2>/dev/null | grep '^tmp/preserve' | head -n1 || true)
+        fi
+
+        # Fallback: try any tmp/preserve branch
+        if [[ -z "$target_branch" ]]; then
+            target_branch=$(git for-each-ref --format='%(refname:short)' refs/heads/tmp/preserve* | head -n1 || true)
+        fi
+    fi
+
+    if [[ -z "$target_branch" ]]; then
+        print_warning "Could not determine target branch to update refs. Proceeding but branch refs will not be adjusted." | tee -a "$logf"
+    else
+        print_info "Target branch for date application: $target_branch" | tee -a "$logf"
+    fi
+
+    # Read map lines into an array to avoid issues if we update the file in-place
+    map_lines=()
+    while IFS= read -r L; do
+        map_lines+=("$L")
+    done < "$mapfile"
+
+    for L in "${map_lines[@]}"; do
+        IFS='|' read -r orig new_sha date <<< "$L"
+        if [[ -z "$orig" || -z "$new_sha" || -z "$date" ]]; then
+            echo "[WARN] Skipping malformed line: $L" | tee -a "$logf"
+            continue
+        fi
+
+        # Compare by unix epoch to avoid formatting differences
+        existing_epoch=$(git show -s --format=%at "$new_sha" 2>/dev/null || true)
+        date_epoch=$(date -d "$date" +%s 2>/dev/null || true)
+
+        if [[ -n "$existing_epoch" && -n "$date_epoch" && "$existing_epoch" -eq "$date_epoch" ]]; then
+            echo "[INFO] Date for $new_sha already matches ($date)" | tee -a "$logf"
+            continue
+        fi
+
+        echo "[INFO] Setting date for $new_sha -> $date" | tee -a "$logf"
+
+        # Checkout commit in detached HEAD and try to amend with retry
+        if ! git checkout --quiet "$new_sha" 2>/dev/null; then
+            echo "[WARN] Failed to checkout $new_sha" | tee -a "$logf"
+            remaining=$((remaining+1))
+            continue
+        fi
+
+        local attempt=0
+        local success=false
+        while [[ $attempt -lt 3 ]]; do
+            attempt=$((attempt+1))
+            echo "[DEBUG] Amend attempt $attempt for $new_sha" | tee -a "$logf"
+            GIT_AUTHOR_DATE="$date" GIT_COMMITTER_DATE="$date" \
+                git commit --amend --no-edit -n -S >/dev/null 2>>"$logf" && success=true && break
+            sleep 0.1
+        done
+
+        if [[ "$success" != "true" ]]; then
+            echo "[WARN] Amend failed for $new_sha after $attempt attempts" | tee -a "$logf"
+            remaining=$((remaining+1))
+            continue
+        fi
+
+        signed_new=$(git rev-parse HEAD)
+        echo "[INFO] Amended $new_sha -> $signed_new (date set: $date)" | tee -a "$logf"
+
+        # Update the map: replace second field with the new SHA
+        # Use awk to safely update only the matching orig entry
+        tmp_map="${mapfile}.tmp"
+        awk -F'|' -v OFS='|' -v o="$orig" -v ns="$signed_new" '{ if ($1==o) $2=ns; print }' "$mapfile" > "$tmp_map" && mv "$tmp_map" "$mapfile" || true
+
+        # Update target branch ref if we detected it
+        if [[ -n "$target_branch" ]]; then
+            git update-ref -m "apply_dates $orig" "refs/heads/$target_branch" "$signed_new" || true
+        fi
+    done
+
+    if [[ "$remaining" -eq 0 ]]; then
+        # All dates applied: clear TEMP_ALL_DATES
+        : > "$TEMP_ALL_DATES" || true
+        print_success "Applied all dates via preserve map (see $logf)"
+        return 0
+    else
+        print_warning "Some dates could not be applied via preserve map (see $logf)"
+        return 1
+    fi
 }
 
 # ---------------------------------------------------------------------------
