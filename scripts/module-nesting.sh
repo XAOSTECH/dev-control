@@ -14,6 +14,12 @@
 
 set -e
 
+# Make sure ERR is traced in functions
+set -o errtrace
+
+# Trap errors and print useful context
+trap 'last_cmd="$BASH_COMMAND"; print_error "ERROR: \"${last_cmd}\" at line ${BASH_LINENO[0]} in ${FUNCNAME[1]:-main}"' ERR
+
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -49,7 +55,7 @@ print_error() {
 }
 
 print_debug() {
-    if [[ "$DEBUG" == "true" ]]; then
+    if [[ "${DEBUG:-false}" == "true" || "${DEBUG:-false}" == "1" ]]; then
         echo -e "${CYAN}[DEBUG]${NC} $1"
     fi
 }
@@ -62,6 +68,18 @@ print_debug() {
 is_git_repo() {
     local dir="$1"
     [[ -d "$dir/.git" ]] || [[ -f "$dir/.git" ]]
+}
+
+# Directories to skip (noisy or irrelevant)
+EXCLUDE_DIRS=(.tmp .devcontainer .vscode node_modules .cache)
+
+should_skip_dir() {
+    local dname
+    dname=$(basename "$1")
+    for e in "${EXCLUDE_DIRS[@]}"; do
+        [[ "$dname" == "$e" ]] && return 0
+    done
+    return 1
 }
 
 # Check if a directory is the root of a git worktree
@@ -91,11 +109,12 @@ get_remote_url() {
 get_submodule_name() {
     local path="$1"
     local name
-    
+
     name=$(basename "$path")
-    
-    name=$(echo "$name" | tr ' ' '_' | tr -cd '[:alnum:]_-')
-    
+
+    # Convert spaces to underscores and strip any remaining invalid chars
+    name=$(echo "$name" | tr ' ' '_' | tr -cd '[:alnum:]._-')
+
     echo "$name"
 }
 
@@ -120,7 +139,12 @@ find_direct_git_children() {
     for dir in "$parent_dir"/*/; do
         [[ -d "$dir" ]] || continue
         dir="${dir%/}"
-        
+        # Skip noisy directories
+        if should_skip_dir "$dir"; then
+            print_debug "Skipping excluded dir: $dir"
+            continue
+        fi
+
         if is_git_repo "$dir"; then
             git_children+=("$dir")
         fi
@@ -153,11 +177,17 @@ generate_gitmodules() {
     local content=""
     local submodule_count=0
     
+    print_debug "generate_gitmodules: repo_dir=$repo_dir root_dir=$root_dir"
     # Find direct git children (submodules)
     for child_dir in "$repo_dir"/*/; do
         [[ -d "$child_dir" ]] || continue
         child_dir="${child_dir%/}"
-        
+        # Skip noisy directories
+        if should_skip_dir "$child_dir"; then
+            print_debug "Skipping excluded dir: $child_dir"
+            continue
+        fi
+
         # Recursively check for git repos in this subtree
         # We need to find the first git repos under this directory
         find_git_repos_for_parent "$repo_dir" "$child_dir" "$root_dir" content submodule_count
@@ -171,8 +201,12 @@ find_git_repos_for_parent() {
     local parent_repo="$1"
     local current_dir="$2"
     local root_dir="$3"
-    local -n content_ref=$4
-    local -n count_ref=$5
+    # Keep the original variable names so recursive calls can pass them.
+    local content_name="$4"
+    local count_name="$5"
+    local -n content_ref="$content_name"
+    local -n count_ref="$count_name"
+    print_debug "ENTER find_git_repos_for_parent parent=${parent_repo} current=${current_dir} root=${root_dir} (content=${content_name} count=${count_name})"
     
     # If this is a git repo, add it as a submodule
     if is_git_repo "$current_dir"; then
@@ -190,8 +224,12 @@ find_git_repos_for_parent() {
         content_ref+="	url = $url"$'\n'
         content_ref+=$'\n'
         
-        ((count_ref++))
-        
+        # Increment the caller's counter without triggering 'set -e' when the
+        # previous value is 0 (using arithmetic expansion with direct assignment)
+        count_ref=$((count_ref + 1))
+        print_debug "count_ref now: ${count_ref} (parent_repo=${parent_repo}, current_dir=${current_dir})"
+        print_debug "Added submodule: name=${name} rel_path=${rel_path} url=${url}"
+        print_debug "Returning from find_git_repos_for_parent: parent=${parent_repo} current=${current_dir}"
         # Don't recurse into this git repo (it has its own submodules)
         return
     fi
@@ -200,7 +238,13 @@ find_git_repos_for_parent() {
     for subdir in "$current_dir"/*/; do
         [[ -d "$subdir" ]] || continue
         subdir="${subdir%/}"
-        find_git_repos_for_parent "$parent_repo" "$subdir" "$root_dir" content_ref count_ref
+        # Skip noisy directories
+        if should_skip_dir "$subdir"; then
+            print_debug "Skipping excluded dir: $subdir"
+            continue
+        fi
+        print_debug "Recursing into subdir: $subdir (parent=${parent_repo})"
+        find_git_repos_for_parent "$parent_repo" "$subdir" "$root_dir" "$content_name" "$count_name"
     done
 }
 
@@ -219,6 +263,8 @@ write_gitmodules() {
         return
     fi
     
+    print_debug "Writing .gitmodules to $gitmodules_path (content length: ${#content} chars)"
+    print_debug "First line of content: $(printf '%s' "$content" | sed -n '1p')"
     echo -e "$content" > "$gitmodules_path"
     print_success "Generated .gitmodules for: $(basename "$repo_dir")"
 }
@@ -238,6 +284,7 @@ process_repository() {
     done
     
     print_info "${indent}Processing: $(get_relative_path "$root_dir" "$repo_dir")"
+    print_debug "ENTER process_repository repo=${repo_dir} root=${root_dir} depth=${depth}"
     
     # Generate and write .gitmodules for this repository
     local content=""
@@ -251,6 +298,12 @@ process_repository() {
         # Skip .git directory
         [[ "$(basename "$child")" == ".git" ]] && continue
         
+        # Skip noisy directories
+        if should_skip_dir "$child"; then
+            print_debug "Skipping excluded dir: $child"
+            continue
+        fi
+
         find_git_repos_for_parent "$repo_dir" "$child" "$root_dir" content submodule_count
     done
     
@@ -270,6 +323,12 @@ process_repository() {
         [[ -d "$child" ]] || continue
         child="${child%/}"
         
+        # Skip noisy directories
+        if should_skip_dir "$child"; then
+            print_debug "Skipping excluded dir: $child"
+            continue
+        fi
+
         if is_git_repo "$child"; then
             process_repository "$child" "$root_dir" $((depth + 1))
         else
@@ -277,12 +336,18 @@ process_repository() {
             for nested in "$child"/*/; do
                 [[ -d "$nested" ]] || continue
                 nested="${nested%/}"
+                # Skip noisy nested dirs
+                if should_skip_dir "$nested"; then
+                    print_debug "Skipping excluded nested dir: $nested"
+                    continue
+                fi
                 if is_git_repo "$nested"; then
                     process_repository "$nested" "$root_dir" $((depth + 1))
                 fi
             done
         fi
     done
+    print_debug "EXIT process_repository repo=${repo_dir}"
 }
 
 # ============================================================================
@@ -328,10 +393,16 @@ show_plan() {
     echo ""
     
     # Count git repos
-    local repo_count=0
-    while IFS= read -r -d '' git_dir; do
-        ((repo_count++))
-    done < <(find "$root_dir" -name ".git" -print0 2>/dev/null)
+    mapfile -d '' -t git_dirs < <(find "$root_dir" -name ".git" -print0 2>/dev/null)
+    local repo_count=${#git_dirs[@]}
+
+    # Debug: print first few .git paths (only if DEBUG=true)
+    if [[ "${DEBUG}" == "true" && $repo_count -gt 0 ]]; then
+        echo "DEBUG: first .git entries:"
+        for ((i=0;i<${#git_dirs[@]} && i<10;i++)); do
+            printf '  %s\n' "${git_dirs[i]}"
+        done
+    fi
     
     echo -e "  Git repositories found: ${GREEN}$repo_count${NC}"
     echo ""
