@@ -1174,6 +1174,13 @@ date="\$(echo \"\${line}\" | cut -d'|' -f2-)"
 
     # If there are still lines remaining in the dates file, attempt reconstruction fallback
     if [[ -s "$TEMP_ALL_DATES" ]]; then
+        # CRITICAL: If topology was preserved, DO NOT use cherry-pick fallback (it linearizes merges)
+        if [[ "${PRESERVE_TOPOLOGY:-}" == "true" ]]; then
+            print_warning "Some dates remain, but PRESERVE_TOPOLOGY=true; skipping cherry-pick fallback to preserve merge structure"
+            print_info "Using preserved-topology branch as final result (dates may not be perfectly applied, but topology preserved)"
+            return 0
+        fi
+        
         print_warning "Some captured dates remain; attempting reconstruction fallback (cherry-pick replay)"
         if [[ "$DRY_RUN" == "true" ]]; then
             print_info "DRY-RUN: would run reconstruction fallback for remaining commits"
@@ -1953,6 +1960,7 @@ sign_mode() {
                     exit 1
                 fi
             fi
+        else
             if GIT_SEQUENCE_EDITOR="$seq_editor_cmd" git rebase -i "$REBASE_BASE"; then
                 print_success "Rebase/Resign completed"
             else
