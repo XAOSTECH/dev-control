@@ -8,12 +8,24 @@
 #   - Reorder commits
 #   - Edit commit messages
 #   - Change commit dates (author and committer)
-#   - Verify changes before applying
+#   - Re-sign commits and apply deterministic (atomic) preservation
+#   - Run safe harnesses that create backup bundles for inspection
+#   - Cleanup temporary backup tags/branches and harness artifacts
+#   - Verify changes before applying (supports --dry-run)
 #
-# Usage:
-#   ./scripts/fix-history.sh                    # Interactive mode
-#   ./scripts/fix-history.sh --range HEAD=5     # Fix last 5 commits
-#   ./scripts/fix-history.sh --help
+# Usage examples:
+#   ./scripts/fix-history.sh                    # Interactive mode (edit last 10 commits)
+#   ./scripts/fix-history.sh --range HEAD=20 --dry-run   # Preview changes without applying
+#   ./scripts/fix-history.sh --sign --range HEAD=all -v  # Re-sign a branch (requires GPG)
+#
+# Cleaning and harness helpers:
+#   ./scripts/fix-history.sh --only-cleanup      # Only cleanup tmp/backup tags and branches
+#   ./scripts/fix-history.sh --no-cleanup ...    # Skip cleanup prompt at end of run
+#
+# Environment variables can be used in place of flags when applicable (examples: PRESERVE_TOPOLOGY, UPDATE_WORKTREES, NO_EDIT_MODE, AUTO_FIX_REBASE, RECONSTRUCT_AUTO)
+# For advanced non-interactive runs consider setting env vars and using --sign / --atomic-preserve flags.
+#
+# Run `./scripts/fix-history.sh --help` for the full option list.
 #
 
 set -e
@@ -172,7 +184,7 @@ Options:
                              (Honors global ${CYAN}--dry-run${NC} flag)
   --harness-no-cleanup       Keep temporary branch after running the harness for inspection
   --no-cleanup               Skip cleanup prompt at end of operation; do not offer to delete tmp/backup refs
-  --cleanup-only             Only cleanup tmp/backup tags and branches (no other operations)
+  --only-cleanup             Only cleanup tmp/backup tags and branches (no other operations)
   --auto-resolve <mode>      Auto-resolve conflicts during automated rebase/drop. Modes: ${CYAN}ours${NC}, ${CYAN}theirs${NC}
                              If provided, conflicting files will be auto-added (checkout --ours/--theirs)
                              before running ${CYAN}git rebase --continue${NC}.
@@ -231,7 +243,7 @@ parse_args() {
                 NO_CLEANUP=true
                 shift
                 ;;
-            --cleanup-only)
+            --only-cleanup)
                 CLEANUP_ONLY=true
                 NO_CLEANUP=false
                 shift

@@ -1,4 +1,4 @@
-# git-control
+# Git-Control
 
 <!-- Project Shields/Badges -->
 <p align="center">
@@ -14,8 +14,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/xaoscience/git-control/actions">
-    <img alt="CI Status" src="https://img.shields.io/github/actions/workflow/status/xaoscience/git-control/ci.yml?branch=main&style=flat-square&logo=github-actions&label=CI">
+  <a href="https://github.com/xaoscience/git-control/actions/workflows/bash-lint.yml">
+    <img alt="CI Status" src="https://github.com/xaoscience/git-control/actions/workflows/bash-lint.yml/badge.svg?branch=Main">
   </a>
   <a href="https://github.com/xaoscience/git-control/issues">
     <img alt="Issues" src="https://img.shields.io/github/issues/xaoscience/git-control?style=flat-square&logo=github&color=yellow">
@@ -85,10 +85,8 @@ Managing multiple repositories, nested submodules, and maintaining consistent co
 ## ✨ Features
 
 - 🚀 **Interactive Alias Installer** - Dynamically detects script paths and creates portable aliases
-  
-  • **gca** - Amend staged changes and force-push; supports `--save-date` (or `-s`) to preserve the author date when amending (uses the current HEAD author date).
 - 🔧 **Template System** - Initialise repos with docs, workflows, and configuration templates
-- 📦 **Submodule Management** - Auto-generate and maintain `.gitmodules` for nested repos
+- 📦 **Submodule Management** - Auto-generate `.gitmodules` and maintain `.tmp` for nested repos
 - 🔒 **Safety Aliases** - Protective wrappers for dangerous commands (`rm`, `mv`, `cp`)
 - ⚡ **Git Shortcuts** - Optimised aliases for common Git operations
 - 🐳 **Container Shortcuts** - Quick access to Docker/Podman commands
@@ -246,37 +244,118 @@ gc-modules
 ./scripts/module-nesting.sh /path/to/project
 ```
 
-### History Fixing
+#### Extra features
 
-Interactively rewrite commit history with date and message editing:
+Use the action flags below to manage per-module temporary folders after module-nesting (e.g. `--copy-temp`) or independently (e.g. `--only-copy-temp`). All flows support `--dry-run` for safe previews.
+
+##### Feature breakdown
+
+- `--copy-temp` / `--only-copy-temp`
+  - What it does: Collects temporary folders (e.g., `.tmp`, `tmp`, `.temp`) and merges their contents into per-parent directories under `
+`$ROOT/.tmp/<parent>` non-destructively (does not overwrite existing files).
+  - When to use: Consolidate per-module temporary build outputs for cleanup or archiving.
+  - Preview: `./scripts/module-nesting.sh --only-copy-temp --dry-run /path/to/project`
+
+- `--prune` / `--only-prune`
+  - What it does: Moves originals to a recycle location (or deletes with `--delete`) and replaces originals with symlinks pointing at `
+`$ROOT/.tmp/<parent>`.
+  - If no copied record exists, `--only-prune --dry-run` simulates a `--only-copy-temp --dry-run` `
+`$ROOT/.tmp/<parent>` destinations rather than ephemeral `/tmp` paths.
+  - Preview: `./scripts/module-nesting.sh --only-prune --dry-run /path/to/project`
+
+- `--aggressive`
+  - What it does: Merges temp folders into `
+`$ROOT/.tmp/<parent>`, removes original temp folders, replaces them with directory symlinks, and appends entries to the nearest `.gitignore` (except for folders named `.tmp`).
+  - Preview: `./scripts/module-nesting.sh --aggressive --dry-run /path/to/project` (reports merges, removals, and `.gitignore` changes; reports `already contains` when no change is needed)
+
+- `--dry-run` behavior
+  - Use `--dry-run` with any flow to preview actions without modifying your workspace.
+  - `.gitmodules` generation now respects `--dry-run` and will report file writes/removals; enable `DEBUG=true` to preview content snippets during a dry-run.
+
+- `--test`
+  - Runs a safe `copy-temp` → `prune` → `aggressive` sequence in `--dry-run` mode: `./scripts/module-nesting.sh --test`
+
+Examples:
 
 ```bash
-# Interactive mode - edit last 10 commits
-gc-fix
+# Preview .gitmodules generation without making changes
+./scripts/module-nesting.sh --dry-run /path/to/project -y
 
-# Or run directly
-./scripts/fix-history.sh
+# Preview copy -> prune -> aggressive sequence
+./scripts/module-nesting.sh --test
 
-# Specify custom range
-./scripts/fix-history.sh --range HEAD~20
-
-# Preview changes without applying
-./scripts/fix-history.sh --dry-run
-
-# Skip cleanup prompt at end of operation
-./scripts/fix-history.sh --no-cleanup
-
-# Only cleanup tmp/backup tags and branches (no other operations)
-./scripts/fix-history.sh --cleanup-only
-
-# Options:
-#   -r, --range RANGE       Commit range (default: HEAD~10)
-#   -d, --dry-run           Show changes without applying
-#   -v, --verbose           Enable verbose output
-#   --no-cleanup            Skip interactive cleanup prompt at end
-#   --cleanup-only          Only perform cleanup (delete tmp/backup refs)
+# Preview aggressive changes (including .gitignore simulation)
+./scripts/module-nesting.sh --aggressive --dry-run /path/to/project
 ```
 
+> Tip: Run with `DEBUG=true` (for example `DEBUG=true ./scripts/module-nesting.sh --dry-run /path -y`) for additional diagnostic output and a content preview of simulated `.gitmodules`.
+
+
+
+
+### History Fixing
+
+Interactively rewrite commit history with fine-grained control over commit messages, author/committer dates, signing and reconstruction strategies.
+
+##### Feature breakdown
+
+- `--range` / `-r`
+  - Select a commit range to operate on (default: `HEAD=10`). Examples: `HEAD=5`, `main..HEAD`, `abc123..def456`.
+
+- `--amend` / `-a`
+  - Amend a non-tip commit while preserving dates and optionally signing the amended commit. Example: `--amend HEAD=2`.
+
+- `--sign` / `--atomic-preserve`
+  - `--sign`: re-sign commits in the selected range (requires GPG).
+  - `--atomic-preserve`: recreate commits deterministically (including merges) with `git commit-tree`, sign them and set author/committer dates atomically.
+
+- `--drop`
+  - Remove a single non-root commit from history (specify commit hash).
+
+- Harness & safety helpers (`--harness-drop`, `--harness-sign`, `--harness-no-cleanup`)
+  - Run minimal harnesses that apply operations safely in a temporary branch and produce a backup bundle for inspection.
+
+- Conflict & reconstruction options (`--auto-resolve`, `--reconstruct-auto`, `--allow-override`)
+  - `--auto-resolve <ours|theirs>` will auto-add conflicted files using the chosen strategy during rebase.
+  - `--reconstruct-auto` retries reconstruction with common strategies on failure.
+  - `--allow-override` skips confirmation when replacing the original branch with a temporary branch.
+
+- Worktree & restore helpers (`--update-worktrees`, `--restore`)
+  - `--update-worktrees` detects local worktrees with the branch checked out and updates them safely (creates bundle backup).
+  - `--restore` lists and restores backup bundles/tags interactively.
+
+- Dry-run & diagnostic (`-d`, `--dry-run`, `-v`)
+  - Use `--dry-run` to preview all changes without applying them; `-v` or `--verbose` increases diagnostic output.
+
+- Stash support (`-s`)
+  - `--stash N` lets you selectively apply files from `stash@{N}` into the rewritten commits.
+
+- Cleanup options (`--no-cleanup`, `--only-cleanup`)
+  - `--no-cleanup`: skip the interactive cleanup prompt at the end of a run and do not offer to delete temporary backup refs or branches.
+  - `--only-cleanup`: only perform cleanup of temporary tags, bundles and backup branches (useful to tidy harness artifacts after a failed run).
+
+##### Env vars vs CLI flags
+
+Most behaviours are available either via environment variables or equivalent CLI flags. Common env vars you may use are: `PRESERVE_TOPOLOGY`, `UPDATE_WORKTREES`, `NO_EDIT_MODE`, `AUTO_FIX_REBASE`, `RECONSTRUCT_AUTO` — you can set these in your shell or pass the corresponding flags when invoking the script.
+
+##### Examples
+
+```bash
+# Interactive: edit the last 10 commits
+./scripts/fix-history.sh
+
+# Preview changes without applying
+./scripts/fix-history.sh --dry-run --range HEAD=20
+
+# Re-sign an entire branch and show verbose output
+./scripts/fix-history.sh --sign --range HEAD=all -v
+
+# Use env-vars (equivalent to flags) for a non-interactive run
+PRESERVE_TOPOLOGY=TRUE UPDATE_WORKTREES=true NO_EDIT_MODE=true AUTO_FIX_REBASE=true RECONSTRUCT_AUTO=true \
+  ./scripts/fix-history.sh --sign --range HEAD=all -v
+```
+
+> Tip: When experimenting with large-scale rewrites, prefer `--dry-run` and harness modes to capture backups before making changes.
 ### GitHub MCP Server Setup
 
 Automatically configure GitHub MCP and additional MCP servers for VS Code with secure token management:
@@ -303,19 +382,20 @@ gc-mcp
 #   --test              Test GitHub MCP connection
 #   --show-token        Display current token info (masked)
 #   --help              Show help message
-
-# What it does:
-#   ✓ Authenticates with your GitHub account
-#   ✓ Creates a Personal Access Token (PAT) with minimal required scopes
-#   ✓ Sets 90-day expiration for security
-#   ✓ Generates VS Code MCP settings with secure variable substitution
-#   ✓ Offers interactive server selection:
-#     • GitHub MCP (HTTP remote) - GitHub API access
-#     • Stack Overflow MCP (HTTP remote) - Search Q&A
-#     • Firecrawl MCP (Docker/NPX) - Web scraping and crawling
-#   ✓ All servers appear consistently with MCP logo (no extension clutter)
-#   ✓ Token is prompted per VS Code session (secure input)
 ```
+#### What it does:
+- ✅ Authenticates with your GitHub account
+- ✅ Creates a Personal Access Token (PAT) with minimal required scopes
+- ✅ Sets a 90-day expiration policy for security
+- ✅ Generates VS Code MCP settings with secure variable substitution:
+  - Optimal mounts for GPG, docker/podman, git, wrangler
+  - Configured git user and optional GPG signing (script prompts for your key ID; no key material is embedded)
+- ✅ Offers interactive server selection:
+  - GitHub MCP (HTTP remote) — GitHub API access
+  - Stack Overflow MCP (HTTP remote) — Search Q&A
+  - Firecrawl MCP (Docker/NPX) — Web scraping and crawling
+- ✅ All servers appear consistently as manually installed
+- ✅ Token is saved in the system keychain or prompted per VS Code session (secure input)
 
 ### Devcontainer Setup
 
@@ -335,17 +415,17 @@ gc-contain
 #   (no args)           Uses current directory
 #   /path/to/project    Specify custom project path
 #   --help              Show help message
-
-# What it does:
-#   ✓ Checks for rootless podman (installs if needed)
-#   ✓ Detects system paths (GPG, podman socket, git config, etc.)
-#   ✓ Generates .devcontainer/devcontainer.json with:
-#     • Optimal mounts for GPG, docker/podman, git, wrangler
-#     • Configured git user and **optional** GPG signing (script prompts for your key ID; no key material is embedded)
-#     • Universal devcontainer image
-#   ✓ Guides VSCode reopening with devcontainer activation
-#   ✓ All configurations persist and work across sessions
 ```
+
+#### What it does:
+- ✅ Checks for rootless podman (installs if needed)
+- ✅ Detects system paths (GPG, podman socket, git config, etc.)
+- ✅ Generates `.devcontainer/devcontainer.json` with:
+  - Optimal mounts for GPG, docker/podman, git, wrangler
+  - Configured git user and optional GPG signing (script prompts for your key ID; no key material is embedded)
+  - Universal devcontainer image
+- ✅ Guides VS Code reopening with devcontainer activation
+- ✅ Ensures configurations persist and work across sessions
 
 ---
 
@@ -407,7 +487,7 @@ gc-contain
 
 ## 🔄 GitHub Actions Workflows
 
-Git-Control provides two ways to initialise templates via GitHub Actions:
+In addition to initialising from local (gc-init), Git-Control provides two ways to initialise templates via GitHub Actions:
 
 ### Option 1: Standalone Workflow (Recommended)
 
