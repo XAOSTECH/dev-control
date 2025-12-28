@@ -242,10 +242,18 @@ gc-fix
 # Preview changes without applying
 ./scripts/fix-history.sh --dry-run
 
+# Skip cleanup prompt at end of operation
+./scripts/fix-history.sh --no-cleanup
+
+# Only cleanup tmp/backup tags and branches (no other operations)
+./scripts/fix-history.sh --cleanup-only
+
 # Options:
-#   -r, --range RANGE    Commit range (default: HEAD~10)
-#   -d, --dry-run        Show changes without applying
-#   -v, --verbose        Enable verbose output
+#   -r, --range RANGE       Commit range (default: HEAD~10)
+#   -d, --dry-run           Show changes without applying
+#   -v, --verbose           Enable verbose output
+#   --no-cleanup            Skip interactive cleanup prompt at end
+#   --cleanup-only          Only perform cleanup (delete tmp/backup refs)
 ```
 
 ### GitHub MCP Server Setup

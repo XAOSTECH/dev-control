@@ -39,6 +39,8 @@ STASH_MODE=false
 AMEND_MODE=false
 AMEND_COMMIT=""
 NO_EDIT_MODE=false
+NO_CLEANUP=false
+CLEANUP_ONLY=false
 SIGN_MODE=false
 DROP_COMMIT=""
 # Auto-resolve strategy: empty|ours|theirs
@@ -169,6 +171,8 @@ Options:
   --harness-sign <range>     Run a minimal harness that re-signs commits in a range (requires GPG)
                              (Honors global ${CYAN}--dry-run${NC} flag)
   --harness-no-cleanup       Keep temporary branch after running the harness for inspection
+  --no-cleanup               Skip cleanup prompt at end of operation; do not offer to delete tmp/backup refs
+  --cleanup-only             Only cleanup tmp/backup tags and branches (no other operations)
   --auto-resolve <mode>      Auto-resolve conflicts during automated rebase/drop. Modes: ${CYAN}ours${NC}, ${CYAN}theirs${NC}
                              If provided, conflicting files will be auto-added (checkout --ours/--theirs)
                              before running ${CYAN}git rebase --continue${NC}.
@@ -221,6 +225,15 @@ parse_args() {
                 ;;
             --no-edit)
                 NO_EDIT_MODE=true
+                shift
+                ;;
+            --no-cleanup)
+                NO_CLEANUP=true
+                shift
+                ;;
+            --cleanup-only)
+                CLEANUP_ONLY=true
+                NO_CLEANUP=false
                 shift
                 ;;
             --sign)
@@ -3392,9 +3405,64 @@ amend_mode() {
     fi
 }
 
+# Cleanup function: removes tmp and backup branches/tags at end of run
+cleanup_tmp_and_backup_refs() {
+    local backup_tags backup_branches
+    
+    print_info "Scanning for temporary and backup references..."
+    
+    backup_tags=$(git tag -l | grep -i 'tmp\|backup' || true)
+    # Get both local and remote branches (strip 'remotes/origin/' prefix from remote branches)
+    backup_branches=$(git branch -a | grep -i 'tmp\|backup' | sed 's/^[[:space:]]*remotes\/origin\///' | sed 's/^[[:space:]]*//' || true)
+    
+    local tag_count=$(echo "$backup_tags" | grep -c . || true)
+    local branch_count=$(echo "$backup_branches" | grep -c . || true)
+    
+    if [[ $tag_count -eq 0 && $branch_count -eq 0 ]]; then
+        print_success "No temporary or backup references found"
+        return 0
+    fi
+    
+    echo ""
+    if [[ $tag_count -gt 0 ]]; then
+        echo "Found $tag_count backup/tmp tags:"
+        echo "$backup_tags" | sed 's/^/  - /'
+    fi
+    if [[ $branch_count -gt 0 ]]; then
+        echo "Found $branch_count backup/tmp branches:"
+        echo "$backup_branches" | sed 's/^/  - /'
+    fi
+    echo ""
+    
+    read -u 3 -rp "Delete these references? [y/N]: " confirm_cleanup
+    if [[ "$confirm_cleanup" =~ ^[Yy] ]]; then
+        if [[ $tag_count -gt 0 ]]; then
+            echo "$backup_tags" | xargs -r git tag -d 2>/dev/null || true
+            echo "$backup_tags" | xargs -r git push origin --delete
+            print_success "Deleted $tag_count tags from local and remote"
+        fi
+        if [[ $branch_count -gt 0 ]]; then
+            # Try to delete locally if they exist, but don't fail if they're remote-only
+            echo "$backup_branches" | xargs -r git branch -D 2>/dev/null || true
+            # Delete from remote (primary deletion for remote-only branches)
+            echo "$backup_branches" | xargs -r git push origin --delete
+            print_success "Deleted $branch_count branches from local and remote"
+        fi
+    else
+        print_info "Cleanup cancelled"
+    fi
+}
+
 main() {
     print_header
     parse_args "$@"
+    
+    # If cleanup-only mode, run cleanup and exit
+    if [[ "$CLEANUP_ONLY" == "true" ]]; then
+        check_git_repo
+        cleanup_tmp_and_backup_refs
+        exit 0
+    fi
 
     # Normalize RANGE syntax EARLY: support 'HEAD=all' and 'HEAD=N' forms
     # This must happen before any function (like sign_mode) uses RANGE
@@ -3773,6 +3841,12 @@ REBASE_EOF
     else
         print_info "Changes cancelled - no commits modified"
         exit 0
+    fi
+    
+    # Offer cleanup of tmp/backup refs at end of successful operation
+    if [[ "$NO_CLEANUP" != "true" ]]; then
+        echo ""
+        cleanup_tmp_and_backup_refs
     fi
 }
 
