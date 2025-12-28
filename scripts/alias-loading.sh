@@ -54,7 +54,9 @@ declare -a GIT_ALIASES=(
     "alias gaa='git add .'"
     "alias gc='git commit -m'"
     "alias gca='git add . && git commit --amend --no-edit && git push --force-with-lease origin HEAD'"
+    'gcda() { git add . "$@"; author_date=$(git show -s --format=%aD HEAD); GIT_COMMITTER_DATE="$author_date" git commit --amend --no-edit --date="$author_date"; git push --force-with-lease origin HEAD; }'
     "alias gp='git push'"
+    "alias gpf='git push --force-with-lease'"
     "alias gpl='git pull'"
     "alias gf='git fetch --all --prune'"
     "alias gl='git log --oneline --graph --decorate --all'"

@@ -85,6 +85,8 @@ Managing multiple repositories, nested submodules, and maintaining consistent co
 ## ✨ Features
 
 - 🚀 **Interactive Alias Installer** - Dynamically detects script paths and creates portable aliases
+  
+  • **gca** - Amend staged changes and force-push; supports `--save-date` (or `-s`) to preserve the author date when amending (uses the current HEAD author date).
 - 🔧 **Template System** - Initialise repos with docs, workflows, and configuration templates
 - 📦 **Submodule Management** - Auto-generate and maintain `.gitmodules` for nested repos
 - 🔒 **Safety Aliases** - Protective wrappers for dangerous commands (`rm`, `mv`, `cp`)
@@ -155,23 +157,42 @@ gc-control
 # Interactive installation - choose which alias categories to install
 ./scripts/alias-loading.sh && source ~/.bashrc
 
-# Re-run with
-gc-alias && reload
-
 # Reinstall all and automatically reload
 gc-aalias
-
-# Categories available:
-# 1. Git Control (gc-*)   - git-control specific commands (gc-fix, gc-pr, gc-create, gc-mcp, etc.)
-# 2. Git Shortcuts        - gs, ga, gc, gp, gl, etc.
-# 3. Safety Nets          - rm -i, cp -i, mv -i
-# 4. System Monitoring    - ports, meminfo, disk
-# 5. Directory Operations - md, rd
-# 6. Network Utilities    - myip, ping, fastping
-# 7. Container Shortcuts  - dps, dpsa, drm, drmi
-# 8. Quick Edits          - bashrc, reload
 ```
 
+### Alias Usage
+
+**Categories:**
+
+| Category | Commands / Notes |
+| --- | --- |
+| **Git Control (gc-*)** | `gc-fix`, `gc-pr`, `gc-create`, `gc-mcp` |
+| **Git Shortcuts** | `gs`, `ga`, `gc`, `gp`, `gl` |
+| **Safety Nets** | `rm -i`, `cp -i`, `mv -i` under aliases of `rm`, `cp`, `mv`|
+| **System Monitoring** | `ports`, `meminfo`, `disk` |
+| **Directory Operations** | `md`, `rd`, `..`, `ll` |
+| **Network Utilities** | `myip`, `ping`, `fastping` |
+| **Container Shortcuts** | `dps`, `dpsa`, `drm`, `drmi` |
+| **Quick Edits** | `bashrc`, `reload` |
+
+**Examples**
+
+```bash
+# Git commit amend (no edit) and push force
+gca
+
+# Similar amend, with original author date (also restores it after gca)
+gcda
+
+# Git push force with lease
+gcpf
+
+# Decorated, oneline Git log
+gl
+```
+
+*Tip: run `./scripts/alias-loading.sh` and `source ~/.bashrc` to install or refresh aliases.*
 ### Template Loading
 
 Allows for creation of new $NAME-templates folders, which will be copied by default.
