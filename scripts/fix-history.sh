@@ -1073,6 +1073,12 @@ recreate_history_with_dates() {
         print_warning "Captured dates file empty; nothing to do"
         return 0
     fi
+    
+    # CRITICAL: Make a copy of TEMP_ALL_DATES before rebase-based restoration modifies it
+    # This preserves the complete list for reconstruction fallback
+    local DATES_FOR_RECONSTRUCTION
+    DATES_FOR_RECONSTRUCTION=$(mktemp)
+    cp "$TEMP_ALL_DATES" "$DATES_FOR_RECONSTRUCTION"
 
     # If we preserved topology and have a preserve map, prefer to apply dates using that map
     # BUT: only if we're NOT using reconstruction fallback (cherry-pick already preserved dates)
@@ -1187,6 +1193,9 @@ date="\$(echo \"\${line}\" | cut -d'|' -f2-)"
         if [[ "$DRY_RUN" == "true" ]]; then
             print_info "DRY-RUN: would run reconstruction fallback for remaining commits"
         else
+            # CRITICAL: Restore the complete list from copy before rebase-based phase modified it
+            cp "$DATES_FOR_RECONSTRUCTION" "$TEMP_ALL_DATES"
+            
             # Try reconstruction, optionally with auto strategies
             try_reconstruct_with_strategies "${RECONSTRUCT_TARGET:-$oldest_commit}" || {
                 print_warning "Reconstruction fallback failed"
@@ -1199,6 +1208,9 @@ date="\$(echo \"\${line}\" | cut -d'|' -f2-)"
             }
         fi
     fi
+    
+    # Cleanup reconstruction copy
+    rm -f "$DATES_FOR_RECONSTRUCTION"
 } 
 
 # Try reconstruction with multiple strategies if requested
@@ -1921,8 +1933,12 @@ reconstruct_history_without_commit() {
             git reset --hard "$tmp_branch"
             if git push --force-with-lease origin "$ORIGINAL_BRANCH"; then
                 echo "SUCCESS: $ORIGINAL_BRANCH reset to $tmp_branch and pushed" | tee -a "$report_file"
-                # Optionally delete the tmp branch locally
+                # Delete the tmp branch locally
                 git branch -D "$tmp_branch" 2>/dev/null || true
+                # Clean up any other leftover tmp/remove-* branches from previous failed attempts
+                print_info "Cleaning up leftover reconstruction branches..."
+                git branch -l | grep "tmp/remove-${target_hash:0:8}-" | xargs -r git branch -D 2>/dev/null || true
+                echo "Cleanup complete" | tee -a "$report_file"
             else
                 echo "ERROR: Failed to push $ORIGINAL_BRANCH to origin" | tee -a "$report_file"
             fi
@@ -2743,8 +2759,12 @@ drop_single_commit() {
         fi
 
         # Capture dates for commits after the target so we can restore them later
+        # IMPORTANT: Capture ALL commits from target..HEAD BEFORE rebase, as rebase will change topology
         print_info "Capturing original dates for commits after ${short}"
         capture_dates_for_range "${target_hash}..HEAD"
+        local captured_commits_count
+        captured_commits_count=$(wc -l < "$TEMP_ALL_DATES" 2>/dev/null || echo 0)
+        print_info "Captured $captured_commits_count commits for potential reconstruction"
 
         # Reset possible REBASE_EXIT flag
         unset REBASE_EXIT
@@ -2754,6 +2774,21 @@ drop_single_commit() {
             print_info "NO_EDIT_MODE enabled: running rebase with GIT_EDITOR=':' to skip editor prompts"
             if GIT_EDITOR=':' git rebase -i --rebase-merges "$parent"; then
                 print_success "Dropped commit ${short}"
+                
+                # CRITICAL FIX: After rebase, filter TEMP_ALL_DATES to only commits NOT already in HEAD
+                print_info "Filtering out commits already present in rebased branch..."
+                local temp_filtered
+                temp_filtered=$(mktemp)
+                while IFS='|' read -r commit commit_date; do
+                    if [[ -n "$commit" ]] && ! git merge-base --is-ancestor "$commit" HEAD 2>/dev/null; then
+                        echo "$commit|$commit_date" >> "$temp_filtered"
+                    fi
+                done < "$TEMP_ALL_DATES"
+                mv "$temp_filtered" "$TEMP_ALL_DATES"
+                local remaining
+                remaining=$(wc -l < "$TEMP_ALL_DATES" 2>/dev/null || echo 0)
+                print_info "After filtering: $remaining commits need reconstruction"
+                
                 # Record target for potential reconstruction fallback and restore original commit dates if available
                 RECONSTRUCT_TARGET="$target_hash"
                 recreate_history_with_dates || print_warning "Failed to restore original dates"
@@ -2763,6 +2798,21 @@ drop_single_commit() {
         else
             if git rebase -i --rebase-merges "$parent"; then
                 print_success "Dropped commit ${short}"
+                
+                # CRITICAL FIX: After rebase, filter TEMP_ALL_DATES to only commits NOT already in HEAD
+                print_info "Filtering out commits already present in rebased branch..."
+                local temp_filtered
+                temp_filtered=$(mktemp)
+                while IFS='|' read -r commit commit_date; do
+                    if [[ -n "$commit" ]] && ! git merge-base --is-ancestor "$commit" HEAD 2>/dev/null; then
+                        echo "$commit|$commit_date" >> "$temp_filtered"
+                    fi
+                done < "$TEMP_ALL_DATES"
+                mv "$temp_filtered" "$TEMP_ALL_DATES"
+                local remaining
+                remaining=$(wc -l < "$TEMP_ALL_DATES" 2>/dev/null || echo 0)
+                print_info "After filtering: $remaining commits need reconstruction"
+                
                 # Record target for potential reconstruction fallback and restore original commit dates if available
                 RECONSTRUCT_TARGET="$target_hash"
                 recreate_history_with_dates || print_warning "Failed to restore original dates"
@@ -2797,12 +2847,27 @@ drop_single_commit() {
             if [[ -n "$AUTO_RESOLVE" ]]; then
                 print_info "AUTO_RESOLVE set to '$AUTO_RESOLVE' - attempting automated resolution loop"
                 if auto_resolve_all_conflicts "$AUTO_RESOLVE"; then
-                    # After auto-resolution loop completes, verify that the target commit was removed
-                    if git rev-list --all | grep -q "^${target_hash}$"; then
-                        print_error "Target commit ${short} still present after auto-resolution"
+                    # After auto-resolution loop completes, verify that the target commit was removed from current branch
+                    if git merge-base --is-ancestor "$target_hash" HEAD 2>/dev/null; then
+                        print_error "Target commit ${short} still present in current branch after auto-resolution"
                         exit 1
                     else
-                        print_success "Conflicts auto-resolved and commit ${short} dropped"
+                        print_success "Conflicts auto-resolved and commit ${short} dropped from branch"
+                        
+                        # CRITICAL FIX: After auto-resolution, filter TEMP_ALL_DATES to only commits NOT already in HEAD
+                        print_info "Filtering out commits already present in rebased branch..."
+                        local temp_filtered
+                        temp_filtered=$(mktemp)
+                        while IFS='|' read -r commit commit_date; do
+                            if [[ -n "$commit" ]] && ! git merge-base --is-ancestor "$commit" HEAD 2>/dev/null; then
+                                echo "$commit|$commit_date" >> "$temp_filtered"
+                            fi
+                        done < "$TEMP_ALL_DATES"
+                        mv "$temp_filtered" "$TEMP_ALL_DATES"
+                        local remaining
+                        remaining=$(wc -l < "$TEMP_ALL_DATES" 2>/dev/null || echo 0)
+                        print_info "After filtering: $remaining commits need reconstruction"
+                        
                         # Record target for potential reconstruction fallback and restore original commit dates for rewritten commits
                         RECONSTRUCT_TARGET="$target_hash"
                         if recreate_history_with_dates; then
