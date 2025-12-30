@@ -173,7 +173,35 @@ get_repo_info() {
             print_info "Detected GitHub user from gh CLI: $ORG_NAME"
         fi
     fi
-    
+
+    # If we have an org and repo slug, try to fetch repo metadata (description, license) from GitHub
+    if [[ -n "$ORG_NAME" && -n "$REPO_SLUG" ]] && command -v gh &>/dev/null; then
+        # Try to detect repository description and license (if present)
+        local gh_desc
+        gh_desc=$(gh repo view "${ORG_NAME}/${REPO_SLUG}" --json description --jq .description 2>/dev/null || true)
+        if [[ -n "$gh_desc" && "$gh_desc" != "null" ]]; then
+            SHORT_DESCRIPTION="$gh_desc"
+            print_info "Detected GitHub description: $SHORT_DESCRIPTION"
+        fi
+
+        # If no description from gh, try to extract a short summary from README.md (first paragraph after header)
+        if [[ -z "$SHORT_DESCRIPTION" && -f README.md ]]; then
+            local readme_summary
+            readme_summary=$(awk 'BEGIN{p=0} /^#/{p=1; next} p==1 && NF{print; exit}' README.md 2>/dev/null || true)
+            if [[ -n "$readme_summary" ]]; then
+                SHORT_DESCRIPTION="$readme_summary"
+                print_info "Detected README summary: $SHORT_DESCRIPTION"
+            fi
+        fi
+
+        local gh_license
+        gh_license=$(gh repo view "${ORG_NAME}/${REPO_SLUG}" --json licenseInfo --jq .licenseInfo.spdxId 2>/dev/null || true)
+        if [[ -n "$gh_license" && "$gh_license" != "null" ]]; then
+            LICENSE_TYPE="$gh_license"
+            print_info "Detected GitHub license: $LICENSE_TYPE"
+        fi
+    fi
+
     PROJECT_NAME="${REPO_SLUG}"
 }
 
@@ -182,7 +210,7 @@ get_repo_info() {
 # ============================================================================
 
 collect_project_info() {
-    echo -e "${BOLD}Project Configuration${NC}\n"
+    echo -e "${BOLD}Project Configuration${NC}"
     
     # Project name
     read -rp "Project name [$PROJECT_NAME]: " input
@@ -205,12 +233,13 @@ collect_project_info() {
     read -rp "Repository URL [$REPO_URL]: " input
     REPO_URL="${input:-$REPO_URL}"
     
-    # Short description
-    read -rp "Short description: " SHORT_DESCRIPTION
-    SHORT_DESCRIPTION="${SHORT_DESCRIPTION:-A project by $ORG_NAME}"
+    # Short description (prefill if detected; leave blank to keep)
+    local sd_default="${SHORT_DESCRIPTION:-A project by $ORG_NAME}"
+    read -rp "Short description [${sd_default}] (leave blank to keep): " input
+    SHORT_DESCRIPTION="${input:-$sd_default}"
     
-    # Long description
-    echo "Long description (press Enter twice to finish):"
+    # Long description (press Enter twice to finish; leave blank to use short description)
+    echo "Long description (press Enter twice to finish; leave blank to use short description):"
     LONG_DESCRIPTION=""
     while IFS= read -r line; do
         [[ -z "$line" ]] && break
@@ -226,13 +255,28 @@ collect_project_info() {
     echo "  3) GPL-3.0"
     echo "  4) BSD-3-Clause"
     echo "  5) Other"
-    read -rp "Choice [1]: " license_choice
-    case "${license_choice:-1}" in
+    # Determine default from detected LICENSE_TYPE
+    local default_license_choice=1
+    if [[ -n "$LICENSE_TYPE" ]]; then
+        case "${LICENSE_TYPE,,}" in
+            mit) default_license_choice=1 ;;
+            apache*|apache-2.0) default_license_choice=2 ;;
+            gpl*|gpl-3.0) default_license_choice=3 ;;
+            bsd*|bsd-3-clause) default_license_choice=4 ;;
+            *) default_license_choice=5 ;;
+        esac
+        print_info "Detected license: $LICENSE_TYPE (will be used if you leave blank)"
+    fi
+    read -rp "Choice [${default_license_choice}]: " license_choice
+    case "${license_choice:-$default_license_choice}" in
         1) LICENSE_TYPE="MIT" ;;
         2) LICENSE_TYPE="Apache-2.0" ;;
         3) LICENSE_TYPE="GPL-3.0" ;;
         4) LICENSE_TYPE="BSD-3-Clause" ;;
-        *) read -rp "Enter license name: " LICENSE_TYPE ;;
+        5) 
+            read -rp "Enter license name [${LICENSE_TYPE:-}]: " custom_license
+            LICENSE_TYPE="${custom_license:-$LICENSE_TYPE}"
+            ;;
     esac
     
     # Stability
@@ -315,7 +359,8 @@ select_templates() {
     
     # docs-templates
     if [[ -d "$GIT_CONTROL_DIR/docs-templates" ]]; then
-        echo -e "  ${CYAN}$idx)${NC} Documentation       - README, CONTRIBUTING, CODE_OF_CONDUCT, SECURITY"
+        echo -e "  ${CYAN}$idx)${NC} Documentation       - README, CONTRIBUTING, CODE_OF_CONDUCT, SECURITY  (→ docs/)"
+        echo -e "     ${YELLOW}Sub-options:${NC} A) README AX) README, BADGES ONLY B) CONTRIBUTING  C) CODE_OF_CONDUCT  D) SECURITY "
         TEMPLATE_FOLDERS[$idx]="docs"
         ((idx++))
     fi
@@ -359,7 +404,7 @@ select_templates() {
     echo -e "  ${YELLOW}Q)${NC} Quit"
     echo ""
     
-    read -rp "Enter choices (comma-separated, e.g., 1,2,3 or A): " selection
+    read -rp "Enter choices (e.g., 1AX, 1C, 1D, 2, 3, 4): " selection
     # Store selection in global variable (avoids subshell issues)
     SELECTED_TEMPLATE_CHOICES="$selection"
 }
@@ -389,10 +434,47 @@ install_templates() {
     fi
     
     IFS=',' read -ra SELECTED <<< "$selection"
-    
-    for sel in "${SELECTED[@]}"; do
-        sel=$(echo "$sel" | tr -d ' ')
-        local folder_type="${TEMPLATE_FOLDERS[$sel]}"
+
+    for rawsel in "${SELECTED[@]}"; do
+        sel=$(echo "$rawsel" | tr -d ' ')
+        # parse numeric and letter suffix (e.g., 1, 1A, 1AX)
+        if [[ "$sel" =~ ^([0-9]+)([A-Za-z]+)$ ]]; then
+            num="${BASH_REMATCH[1]}"
+            suffix="${BASH_REMATCH[2]}"
+        else
+            num="$sel"
+            suffix=""
+        fi
+        folder_type="${TEMPLATE_FOLDERS[$num]}"
+        
+        if [[ "$folder_type" == "docs" && -n "$suffix" ]]; then
+            # If suffix contains X -> add badges after title
+            if [[ "$suffix" =~ [Xx] ]]; then
+                add_badges_after_title "$target_dir/README.md"
+                # if only X present, continue to next selection
+                if [[ ! "$suffix" =~ [AaBbCcDd] ]]; then
+                    continue
+                fi
+            fi
+            # Map letters to specific doc files
+            declare -a docs_files=()
+            [[ "$suffix" =~ [Aa] ]] && docs_files+=("README.md")
+            [[ "$suffix" =~ [Bb] ]] && docs_files+=("CONTRIBUTING.md")
+            [[ "$suffix" =~ [Cc] ]] && docs_files+=("CODE_OF_CONDUCT.md")
+            [[ "$suffix" =~ [Dd] ]] && docs_files+=("SECURITY.md")
+            
+            if [[ "${#docs_files[@]}" -gt 0 ]]; then
+                for f in "${docs_files[@]}"; do
+                    local tpl="$GIT_CONTROL_DIR/docs-templates/$f"
+                    if [[ -f "$tpl" ]]; then
+                        process_template "$tpl" "$target_dir/$f"
+                    else
+                        print_warning "Template not found: $f"
+                    fi
+                done
+            fi
+            continue
+        fi
         
         case "$folder_type" in
             docs)
@@ -429,6 +511,59 @@ install_docs_templates() {
             process_template "$file" "$target_dir/$filename"
         fi
     done
+}
+
+# Insert badges block after the first title line in README (idempotent)
+add_badges_after_title() {
+    local readme_path="$1"
+    local tmp
+    tmp=$(mktemp)
+
+    local badges
+    badges=$(cat <<'EOF'
+
+<p align="center">
+  <a href="{{REPO_URL}}">
+    <img alt="GitHub repo" src="https://img.shields.io/badge/GitHub-{{ORG_NAME}}%2F-{{REPO_SLUG}}-181717?style=for-the-badge&logo=github">
+  </a>
+  <a href="{{REPO_URL}}/releases">
+    <img alt="GitHub release" src="https://img.shields.io/github/v/release/{{ORG_NAME}}/{{REPO_SLUG}}?style=for-the-badge&logo=semantic-release&color=blue">
+  </a>
+  <a href="{{REPO_URL}}/blob/main/LICENSE">
+    <img alt="License" src="https://img.shields.io/github/license/{{ORG_NAME}}/{{REPO_SLUG}}?style=for-the-badge&color=green">
+  </a>
+</p>
+
+EOF
+)
+    # Replace placeholders
+    badges="${badges//\{\{REPO_URL\}\}/$REPO_URL}"
+    badges="${badges//\{\{ORG_NAME\}\}/$ORG_NAME}"
+    badges="${badges//\{\{REPO_SLUG\}\}/$REPO_SLUG}"
+
+    # If README doesn't exist, create from template if available
+    if [[ ! -f "$readme_path" ]]; then
+        if [[ -f "$GIT_CONTROL_DIR/docs-templates/README.md" ]]; then
+            process_template "$GIT_CONTROL_DIR/docs-templates/README.md" "$readme_path"
+        else
+            echo -e "# $PROJECT_NAME\n" > "$readme_path"
+        fi
+    fi
+
+    # Check if badges already present
+    if grep -q 'img alt="GitHub repo"' "$readme_path"; then
+        print_info "Badges already present in README, skipping insertion"
+        rm -f "$tmp"
+        return
+    fi
+
+    # Insert badges after the first H1
+    awk -v badges="$badges" 'BEGIN{inserted=0} /^# / && !inserted{print; print badges; inserted=1; next} {print}' "$readme_path" > "$tmp" || {
+        # Fallback: prepend badges
+        printf "%s\n%s" "$badges" "$(cat "$readme_path")" > "$tmp"
+    }
+    mv "$tmp" "$readme_path"
+    print_success "Inserted badges into $readme_path"
 }
 
 install_workflows_templates() {
@@ -792,7 +927,6 @@ main() {
     for dir in $template_folders; do
         echo "  • $(basename "$dir")"
     done
-    echo ""
     
     if ! git rev-parse --git-dir > /dev/null 2>&1; then
         print_warning "Not a git repository - some features may not work."
