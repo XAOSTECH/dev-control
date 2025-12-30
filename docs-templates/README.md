@@ -3,7 +3,7 @@
 <!-- Project Shields/Badges -->
 <p align="center">
   <a href="{{REPO_URL}}">
-    <img alt="GitHub repo" src="https://img.shields.io/badge/GitHub-{{ORG_NAME}}%2F{{REPO_SLUG}}-181717?style=for-the-badge&logo=github">
+    <img alt="GitHub repo" src="https://img.shields.io/badge/GitHub-{{ORG_NAME}}%2F-{{REPO_SLUG}}-181717?style=for-the-badge&logo=github">
   </a>
   <a href="{{REPO_URL}}/releases">
     <img alt="GitHub release" src="https://img.shields.io/github/v/release/{{ORG_NAME}}/{{REPO_SLUG}}?style=for-the-badge&logo=semantic-release&color=blue">
@@ -15,7 +15,7 @@
 
 <p align="center">
   <a href="{{REPO_URL}}/actions">
-    <img alt="CI Status" src="https://img.shields.io/github/actions/workflow/status/{{ORG_NAME}}/{{REPO_SLUG}}/ci.yml?branch=main&style=flat-square&logo=github-actions&label=CI">
+    <img alt="CI Status" src="https://github.com/{{ORG_NAME}}/{{REPO_SLUG}}/actions/workflows/bash-lint.yml/badge.svg?branch=Main>
   </a>
   <a href="{{REPO_URL}}/issues">
     <img alt="Issues" src="https://img.shields.io/github/issues/{{ORG_NAME}}/{{REPO_SLUG}}?style=flat-square&logo=github&color=yellow">

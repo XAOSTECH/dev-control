@@ -343,9 +343,9 @@ write_gitmodules() {
         # No submodules found - remove .gitmodules if it exists
         if [[ -f "$gitmodules_path" ]]; then
             if [[ "$DRY_RUN" == "true" ]]; then
-                print_info "DRY-RUN: Would remove .gitmodules in $(basename \"$repo_dir\") at $gitmodules_path"
+                print_info "DRY-RUN: Would remove .gitmodules in $(basename "$repo_dir") at $gitmodules_path"
             else
-                print_info "No submodules found in $(basename \"$repo_dir\") - removing .gitmodules"
+                print_info "No submodules found in $(basename "$repo_dir") - removing .gitmodules"
                 rm "$gitmodules_path"
             fi
         fi
@@ -358,7 +358,7 @@ write_gitmodules() {
     if [[ "$DRY_RUN" == "true" ]]; then
         local line_count
         line_count=$(printf '%s' "$content" | wc -l)
-        print_info "DRY-RUN: Would write .gitmodules (${line_count} lines) to $gitmodules_path for repo $(basename \"$repo_dir\")"
+        print_info "DRY-RUN: Would write .gitmodules (${line_count} lines) to $gitmodules_path for repo $(basename "$repo_dir")"
         if [[ "${DEBUG:-false}" == "true" ]]; then
             echo -e "DRY-RUN: .gitmodules content preview (first 120 lines):"
             printf '%s
@@ -366,7 +366,8 @@ write_gitmodules() {
         fi
     else
         echo -e "$content" > "$gitmodules_path"
-        print_success "Generated .gitmodules for: $(basename \"$repo_dir\")"
+        # Use a simple, unescaped basename expansion to avoid embedding stray quote characters
+        print_success "Generated .gitmodules for: $(basename "$repo_dir")"
     fi
 }
 
@@ -418,12 +419,12 @@ process_repository() {
             print_info "${indent}  Removed empty .gitmodules"
         fi
     fi
-    
+
     # Recursively process nested git repositories
     for child in "$repo_dir"/*/; do
         [[ -d "$child" ]] || continue
         child="${child%/}"
-        
+
         # Skip noisy directories
         if should_skip_dir "$child"; then
             print_debug "Skipping excluded dir: $child"
