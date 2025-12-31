@@ -220,16 +220,19 @@ collect_project_info() {
     read -rp "Repository slug [$REPO_SLUG]: " input
     REPO_SLUG="${input:-$REPO_SLUG}"
     
-    # Organisation/Username
+    # Repository owner (GitHub username or organisation) — allow overriding detected value
     if [[ -z "$ORG_NAME" ]]; then
-        read -rp "GitHub username/org: " ORG_NAME
+        read -rp "Repository owner (user/org): " REPO_OWNER
+        REPO_OWNER="${REPO_OWNER:-$ORG_NAME}"
     else
-        read -rp "GitHub username/org [$ORG_NAME]: " input
-        ORG_NAME="${input:-$ORG_NAME}"
+        read -rp "Repository owner (user/org) [${ORG_NAME}]: " input
+        REPO_OWNER="${input:-$ORG_NAME}"
     fi
-    
-    # Repository URL
-    REPO_URL="https://github.com/$ORG_NAME/$REPO_SLUG"
+    # Mirror back to ORG_NAME for compatibility with older code paths
+    ORG_NAME="$REPO_OWNER"
+
+    # Repository URL (constructed from chosen owner)
+    REPO_URL="https://github.com/$REPO_OWNER/$REPO_SLUG"
     read -rp "Repository URL [$REPO_URL]: " input
     REPO_URL="${input:-$REPO_URL}"
     
@@ -807,7 +810,7 @@ save_project_metadata() {
         print_info "Saving project metadata to git config..."
         git config --local gc-init.project-name "$PROJECT_NAME" 2>/dev/null || true
         git config --local gc-init.repo-slug "$REPO_SLUG" 2>/dev/null || true
-        git config --local gc-init.org-name "$ORG_NAME" 2>/dev/null || true
+        git config --local gc-init.org-name "${REPO_OWNER:-$ORG_NAME}" 2>/dev/null || true
         git config --local gc-init.repo-url "$REPO_URL" 2>/dev/null || true
         git config --local gc-init.description "$SHORT_DESCRIPTION" 2>/dev/null || true
         git config --local gc-init.long-description "$LONG_DESCRIPTION" 2>/dev/null || true

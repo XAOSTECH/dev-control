@@ -195,6 +195,8 @@ gl
 
 Allows for creation of new $NAME-templates folders, which will be copied by default.
 
+**Note:** During interactive setup you can specify the repository owner (GitHub username or organisation). By default `gc-init` will use the detected org from the remote or your `gh` account, but you may override it.
+
 ```bash
 # Interactive mode - initialise a new repo with templates
 gc-init

@@ -114,12 +114,17 @@ load_gc_init_metadata() {
     ORG_NAME=$(git config --local gc-init.org-name 2>/dev/null || echo "")
     SHORT_DESCRIPTION=$(git config --local gc-init.description 2>/dev/null || echo "")
     LICENSE_TYPE=$(git config --local gc-init.license-type 2>/dev/null || echo "")
-    
+
     if [[ -n "$PROJECT_NAME" ]]; then
         print_info "Loaded project metadata from gc-init"
         print_info "  Project: $PROJECT_NAME"
         print_info "  Repo: $REPO_SLUG"
         print_info "  Org: $ORG_NAME"
+        local owner_display="${REPO_OWNER:-${ORG_NAME:-$GH_USERNAME}}"
+        if [[ -n "$owner_display" && -n "$REPO_SLUG" ]]; then
+            print_info "  Full: ${owner_display}/${REPO_SLUG}"
+            print_info "  Repo URL: https://github.com/${owner_display}/${REPO_SLUG}"
+        fi
         if [[ -n "$SHORT_DESCRIPTION" ]]; then
             print_info "  Description: $SHORT_DESCRIPTION"
         fi
@@ -167,6 +172,10 @@ collect_repo_info() {
     echo -e "${BOLD}Repository Configuration${NC}\n"
     read -rp "Repository name [$name_default]: " REPO_NAME
     REPO_NAME="${REPO_NAME:-$name_default}"
+
+    # Repository owner (user/org) - allow overriding the detected account/org
+    read -rp "Repository owner (user/org) [${ORG_NAME:-$GH_USERNAME}]: " REPO_OWNER
+    REPO_OWNER="${REPO_OWNER:-${ORG_NAME:-$GH_USERNAME}}"
     
     # Compute a sanitized slug for actual repo creation (lowercase, safe chars)
     REPO_SLUG=$(echo "$REPO_NAME" | tr ' ' '-' | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9._-]//g')
@@ -333,10 +342,11 @@ EOF
 }
 
 create_github_repo() {
-    print_info "Creating GitHub repository: ${CYAN}$GH_USERNAME/$REPO_NAME${NC} ($REPO_VISIBILITY)"
+    local REPO_OWNER_LOCAL="${REPO_OWNER:-${ORG_NAME:-$GH_USERNAME}}"
+    print_info "Creating GitHub repository: ${CYAN}$REPO_OWNER_LOCAL/$REPO_NAME${NC} ($REPO_VISIBILITY)"
     
-    # Build gh command
-    local gh_args=("repo" "create" "$REPO_NAME")
+    # Build gh command (specify owner explicitly if provided)
+    local gh_args=("repo" "create" "${REPO_OWNER_LOCAL}/${REPO_NAME}")
     gh_args+=("--$REPO_VISIBILITY")
     gh_args+=("--source" ".")
     gh_args+=("--push")
@@ -352,7 +362,8 @@ create_github_repo() {
     # Create the repository
     if gh "${gh_args[@]}"; then
         print_success "Repository created successfully!"
-        REPO_URL="https://github.com/$GH_USERNAME/$REPO_SLUG"
+        REPO_OWNER="$REPO_OWNER_LOCAL"
+        REPO_URL="https://github.com/$REPO_OWNER_LOCAL/$REPO_SLUG"
     else
         print_error "Failed to create repository"
         exit 1
@@ -534,8 +545,9 @@ main() {
 
     collect_repo_info
     
+    local REPO_OWNER_DISPLAY="${REPO_OWNER:-${ORG_NAME:-$GH_USERNAME}}"
     echo -e "${BOLD}Ready to create:${NC}"
-    echo -e "  Repository: ${CYAN}$GH_USERNAME/$REPO_NAME${NC}"
+    echo -e "  Repository: ${CYAN}$REPO_OWNER_DISPLAY/$REPO_NAME${NC}"
     echo -e "  Visibility: ${CYAN}$REPO_VISIBILITY${NC}"
     if [[ -n "$REPO_TOPICS" ]]; then
         echo -e "  Topics:     ${CYAN}$REPO_TOPICS${NC}"
