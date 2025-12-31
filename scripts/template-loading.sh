@@ -43,6 +43,21 @@ GIT_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
 CLI_FILES=""
 CLI_OVERWRITE=false
 CLI_HELP=false
+# Batch mode options
+BATCH_MODE=false
+REUSE_OWNER=false
+ASSUME_YES=false
+POSITIONAL_ARGS=()
+# Batch owner prefill control: when true, do not prefill owner prompts with detected ORG_NAME
+BATCH_SKIP_OWNER=false
+# Reuse templates/settings across the batch
+BATCH_REUSE_TEMPLATES=false
+BATCH_SELECTED_CHOICES=""
+BATCH_LICENSE_TYPE=""
+BATCH_STABILITY=""
+BATCH_STABILITY_COLOR=""
+# Creation queue for batch mode
+CREATE_QUEUE=()
 
 # ============================================================================
 # CLI ARGUMENT PARSING
@@ -56,6 +71,9 @@ show_help() {
     echo "Options:"
     echo "  -f, --files FILE1,FILE2    Only process specific files (comma-separated)"
     echo "  -o, --overwrite            Overwrite existing files without prompting"
+    echo "  -b, --batch                Batch mode: initialise multiple repositories (provide directories or use '*' to select all subdirs)"
+    echo "      --reuse-owner          Prompt for repository owner once and reuse for all repos in the batch"
+    echo "  -y, --yes                  Assume defaults and run non-interactively in batch mode"
     echo "  -h, --help                 Show this help message"
     echo ""
     echo "Examples:"
@@ -76,6 +94,7 @@ show_help() {
 }
 
 parse_args() {
+    POSITIONAL_ARGS=()
     while [[ $# -gt 0 ]]; do
         case "$1" in
             -f|--files)
@@ -86,18 +105,38 @@ parse_args() {
                 CLI_OVERWRITE=true
                 shift
                 ;;
+            -b|--batch)
+                BATCH_MODE=true
+                shift
+                ;;
+            --reuse-owner)
+                REUSE_OWNER=true
+                shift
+                ;;
+            -y|--yes)
+                ASSUME_YES=true
+                shift
+                ;;
             -h|--help)
                 CLI_HELP=true
                 shift
                 ;;
-            *)
+            --) # end of options
+                shift
+                break
+                ;;
+            -*)
                 print_error "Unknown option: $1"
                 echo "Use --help for usage information"
                 exit 1
                 ;;
+            *)
+                POSITIONAL_ARGS+=("$1")
+                shift
+                ;;
         esac
     done
-}
+} 
 
 # ============================================================================
 # HELPER FUNCTIONS
@@ -125,10 +164,11 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# Check if we're in a git repository
+# Check if we're in a git repository with a LOCAL .git folder
 check_git_repo() {
-    if ! git rev-parse --git-dir > /dev/null 2>&1; then
-        print_warning "Not a git repository. Initializing..."
+    # Check for local .git directory (not inherited from parent)
+    if [[ ! -d ".git" ]]; then
+        print_warning "No local .git directory. Initializing..."
         git init
         git config user.email "${GIT_EMAIL:-noreply@github.com}" 2>/dev/null || true
         git config user.name "${GIT_NAME:-User}" 2>/dev/null || true
@@ -174,31 +214,49 @@ get_repo_info() {
         fi
     fi
 
-    # If we have an org and repo slug, try to fetch repo metadata (description, license) from GitHub
-    if [[ -n "$ORG_NAME" && -n "$REPO_SLUG" ]] && command -v gh &>/dev/null; then
-        # Try to detect repository description and license (if present)
-        local gh_desc
-        gh_desc=$(gh repo view "${ORG_NAME}/${REPO_SLUG}" --json description --jq .description 2>/dev/null || true)
-        if [[ -n "$gh_desc" && "$gh_desc" != "null" ]]; then
-            SHORT_DESCRIPTION="$gh_desc"
-            print_info "Detected GitHub description: $SHORT_DESCRIPTION"
+    # Load cached metadata from git config (set by previous gc-init runs)
+    # Only load from LOCAL config if a local .git directory exists
+    if [[ -d ".git" ]]; then
+        local cached_license
+        cached_license=$(git config --local gc-init.license-type 2>/dev/null || echo "")
+        if [[ -n "$cached_license" ]]; then
+            LICENSE_TYPE="$cached_license"
+            print_info "Loaded licence from git config: $LICENSE_TYPE"
         fi
+        
+        local cached_org
+        cached_org=$(git config --local gc-init.org-name 2>/dev/null || echo "")
+        if [[ -n "$cached_org" ]]; then
+            ORG_NAME="$cached_org"
+        fi
+        
+        local cached_description
+        cached_description=$(git config --local gc-init.description 2>/dev/null || echo "")
+        if [[ -n "$cached_description" ]]; then
+            SHORT_DESCRIPTION="$cached_description"
+        fi
+    fi
 
-        # If no description from gh, try to extract a short summary from README.md (first paragraph after header)
-        if [[ -z "$SHORT_DESCRIPTION" && -f README.md ]]; then
-            local readme_summary
-            readme_summary=$(awk 'BEGIN{p=0} /^#/{p=1; next} p==1 && NF{print; exit}' README.md 2>/dev/null || true)
-            if [[ -n "$readme_summary" ]]; then
-                SHORT_DESCRIPTION="$readme_summary"
-                print_info "Detected README summary: $SHORT_DESCRIPTION"
+    # If we have an org and repo slug, try to fetch repo metadata from GitHub (only if not cached)
+    if [[ -n "$ORG_NAME" && -n "$REPO_SLUG" ]] && command -v gh &>/dev/null; then
+        # Try to detect repository description from GitHub (if not already cached)
+        if [[ -z "$SHORT_DESCRIPTION" ]]; then
+            local gh_desc
+            gh_desc=$(gh repo view "${ORG_NAME}/${REPO_SLUG}" --json description --jq .description 2>/dev/null || true)
+            if [[ -n "$gh_desc" && "$gh_desc" != "null" ]]; then
+                SHORT_DESCRIPTION="$gh_desc"
+                print_info "Detected GitHub description: $SHORT_DESCRIPTION"
             fi
         fi
 
-        local gh_license
-        gh_license=$(gh repo view "${ORG_NAME}/${REPO_SLUG}" --json licenseInfo --jq .licenseInfo.spdxId 2>/dev/null || true)
-        if [[ -n "$gh_license" && "$gh_license" != "null" ]]; then
-            LICENSE_TYPE="$gh_license"
-            print_info "Detected GitHub license: $LICENSE_TYPE"
+        # Try to detect licence from GitHub (if not already cached)
+        if [[ -z "$LICENSE_TYPE" ]]; then
+            local gh_license
+            gh_license=$(gh repo view "${ORG_NAME}/${REPO_SLUG}" --json licenseInfo --jq .licenseInfo.spdxId 2>/dev/null || true)
+            if [[ -n "$gh_license" && "$gh_license" != "null" ]]; then
+                LICENSE_TYPE="$gh_license"
+                print_info "Detected GitHub licence: $LICENSE_TYPE"
+            fi
         fi
     fi
 
@@ -210,6 +268,14 @@ get_repo_info() {
 # ============================================================================
 
 collect_project_info() {
+    # Quick exit if batch reusing config and this is not the first repo
+    # BUT: description is always per-repo, so we must ask it separately below
+    local skip_shared_config=false
+    if [[ "$BATCH_REUSE_TEMPLATES" == "true" && -n "$BATCH_SELECTED_CHOICES" ]]; then
+        skip_shared_config=true
+        print_info "Skipping shared config (using initialisation config)"
+    fi
+    
     echo -e "${BOLD}Project Configuration${NC}"
     
     # Project name
@@ -221,13 +287,30 @@ collect_project_info() {
     REPO_SLUG="${input:-$REPO_SLUG}"
     
     # Repository owner (GitHub username or organisation) — allow overriding detected value
-    if [[ -z "$ORG_NAME" ]]; then
-        read -rp "Repository owner (user/org): " REPO_OWNER
-        REPO_OWNER="${REPO_OWNER:-$ORG_NAME}"
-    else
-        read -rp "Repository owner (user/org) [${ORG_NAME}]: " input
+    if [[ "$BATCH_MODE" == "true" && "$REUSE_OWNER" == "true" ]]; then
+        # Shared owner was selected for the batch; skip per-repo prompting and use shared value
+        REPO_OWNER="${REPO_OWNER}"
+        print_info "Using shared repository owner: $REPO_OWNER"
+        if [[ -n "$ORG_NAME" && "$ORG_NAME" != "$REPO_OWNER" ]]; then
+            print_warning "Detected remote owner '$ORG_NAME' differs from chosen shared owner '$REPO_OWNER'"
+        fi
+    elif [[ "$BATCH_MODE" == "true" && "$BATCH_SKIP_OWNER" == "true" ]]; then
+        # In batch non-shared mode we do not prefill owner prompt with detected ORG_NAME
+        read -rp "Repository owner (user/org): " input
         REPO_OWNER="${input:-$ORG_NAME}"
+        if [[ -n "$ORG_NAME" && -n "$REPO_OWNER" && "$REPO_OWNER" != "$ORG_NAME" ]]; then
+            print_warning "Detected remote owner '$ORG_NAME' differs from entered owner '$REPO_OWNER'"
+        fi
+    else
+        if [[ -z "$ORG_NAME" ]]; then
+            read -rp "Repository owner (user/org): " REPO_OWNER
+            REPO_OWNER="${REPO_OWNER:-$ORG_NAME}"
+        else
+            read -rp "Repository owner (user/org) [${ORG_NAME}]: " input
+            REPO_OWNER="${input:-$ORG_NAME}"
+        fi
     fi
+
     # Mirror back to ORG_NAME for compatibility with older code paths
     ORG_NAME="$REPO_OWNER"
 
@@ -236,13 +319,17 @@ collect_project_info() {
     read -rp "Repository URL [$REPO_URL]: " input
     REPO_URL="${input:-$REPO_URL}"
     
-    # Short description (prefill if detected; leave blank to keep)
-    local sd_default="${SHORT_DESCRIPTION:-A project by $ORG_NAME}"
-    read -rp "Short description [${sd_default}] (leave blank to keep): " input
-    SHORT_DESCRIPTION="${input:-$sd_default}"
+    # Short description — ALWAYS asked per-repo, never shared in batch mode
+    # Prefill from THIS repo's cached config (loaded by get_repo_info)
+    if [[ -n "$SHORT_DESCRIPTION" ]]; then
+        read -rp "Short description [$SHORT_DESCRIPTION]: " input
+        SHORT_DESCRIPTION="${input:-$SHORT_DESCRIPTION}"
+    else
+        read -rp "Short description: " SHORT_DESCRIPTION
+    fi
     
-    # Long description (press Enter twice to finish; leave blank to use short description)
-    echo "Long description (press Enter twice to finish; leave blank to use short description):"
+    # Long description
+    echo "Long description (press Enter twice when done):"
     LONG_DESCRIPTION=""
     while IFS= read -r line; do
         [[ -z "$line" ]] && break
@@ -250,53 +337,55 @@ collect_project_info() {
     done
     LONG_DESCRIPTION="${LONG_DESCRIPTION:-$SHORT_DESCRIPTION}"
     
-    # License
-    echo ""
-    echo "Select license type:"
-    echo "  1) MIT"
-    echo "  2) Apache-2.0"
-    echo "  3) GPL-3.0"
-    echo "  4) BSD-3-Clause"
-    echo "  5) Other"
-    # Determine default from detected LICENSE_TYPE
-    local default_license_choice=1
-    if [[ -n "$LICENSE_TYPE" ]]; then
-        case "${LICENSE_TYPE,,}" in
-            mit) default_license_choice=1 ;;
-            apache*|apache-2.0) default_license_choice=2 ;;
-            gpl*|gpl-3.0) default_license_choice=3 ;;
-            bsd*|bsd-3-clause) default_license_choice=4 ;;
-            *) default_license_choice=5 ;;
+    # If not reusing batch config, ask for licence and stability per-repo
+    if [[ "$skip_shared_config" != "true" ]]; then
+        echo ""
+        echo "Select licence type:"
+        echo "  1) MIT"
+        echo "  2) Apache-2.0"
+        echo "  3) GPL-3.0"
+        echo "  4) BSD-3-Clause"
+        echo "  5) Other"
+        # Determine default from detected LICENSE_TYPE
+        local default_license_choice=1
+        if [[ -n "$LICENSE_TYPE" ]]; then
+            case "${LICENSE_TYPE,,}" in
+                mit) default_license_choice=1 ;;
+                apache*|apache-2.0) default_license_choice=2 ;;
+                gpl*|gpl-3.0) default_license_choice=3 ;;
+                bsd*|bsd-3-clause) default_license_choice=4 ;;
+                *) default_license_choice=5 ;;
+            esac
+            print_info "Detected licence: $LICENSE_TYPE (will be used if you leave blank)"
+        fi
+        read -rp "Choice [${default_license_choice}]: " license_choice
+        case "${license_choice:-$default_license_choice}" in
+            1) LICENSE_TYPE="MIT" ;;
+            2) LICENSE_TYPE="Apache-2.0" ;;
+            3) LICENSE_TYPE="GPL-3.0" ;;
+            4) LICENSE_TYPE="BSD-3-Clause" ;;
+            5) 
+                read -rp "Enter licence name [${LICENSE_TYPE:-}]: " custom_license
+                LICENSE_TYPE="${custom_license:-$LICENSE_TYPE}"
+                ;;
         esac
-        print_info "Detected license: $LICENSE_TYPE (will be used if you leave blank)"
+        
+        # Stability
+        echo ""
+        echo "Select stability level:"
+        echo "  1) experimental (orange)"
+        echo "  2) beta (yellow)"
+        echo "  3) stable (green)"
+        echo "  4) mature (blue)"
+        read -rp "Choice [1]: " stability_choice
+        case "${stability_choice:-1}" in
+            1) STABILITY="experimental"; STABILITY_COLOR="orange" ;;
+            2) STABILITY="beta"; STABILITY_COLOR="yellow" ;;
+            3) STABILITY="stable"; STABILITY_COLOR="green" ;;
+            4) STABILITY="mature"; STABILITY_COLOR="blue" ;;
+            *) STABILITY="experimental"; STABILITY_COLOR="orange" ;;
+        esac
     fi
-    read -rp "Choice [${default_license_choice}]: " license_choice
-    case "${license_choice:-$default_license_choice}" in
-        1) LICENSE_TYPE="MIT" ;;
-        2) LICENSE_TYPE="Apache-2.0" ;;
-        3) LICENSE_TYPE="GPL-3.0" ;;
-        4) LICENSE_TYPE="BSD-3-Clause" ;;
-        5) 
-            read -rp "Enter license name [${LICENSE_TYPE:-}]: " custom_license
-            LICENSE_TYPE="${custom_license:-$LICENSE_TYPE}"
-            ;;
-    esac
-    
-    # Stability
-    echo ""
-    echo "Select stability level:"
-    echo "  1) experimental (orange)"
-    echo "  2) beta (yellow)"
-    echo "  3) stable (green)"
-    echo "  4) mature (blue)"
-    read -rp "Choice [1]: " stability_choice
-    case "${stability_choice:-1}" in
-        1) STABILITY="experimental"; STABILITY_COLOR="orange" ;;
-        2) STABILITY="beta"; STABILITY_COLOR="yellow" ;;
-        3) STABILITY="stable"; STABILITY_COLOR="green" ;;
-        4) STABILITY="mature"; STABILITY_COLOR="blue" ;;
-        *) STABILITY="experimental"; STABILITY_COLOR="orange" ;;
-    esac
     
     CURRENT_YEAR=$(date +%Y)
 }
@@ -800,13 +889,193 @@ process_specific_files() {
     done
 }
 
+run_batch_init() {
+    local dirs=()
+
+    if [[ ${#POSITIONAL_ARGS[@]} -gt 0 ]]; then
+        dirs=("${POSITIONAL_ARGS[@]}")
+    else
+        # Collect immediate subdirectories in current directory
+        while IFS= read -r d; do
+            dirs+=("$d")
+        done < <(find . -maxdepth 1 -mindepth 1 -type d -not -name '.*' -printf '%P\n')
+    fi
+
+    if [[ ${#dirs[@]} -eq 0 ]]; then
+        print_warning "No directories found to process in batch mode"
+        return 1
+    fi
+
+    # Ask whether to use a single repository owner for all repos (only once)
+    # Default to Yes for convenience (empty input treated as Yes)
+    read -rp "Use a single repository owner for all repos? (Y/n): " use_single_owner
+    if [[ -z "${use_single_owner}" || "${use_single_owner}" =~ ^[Yy] ]]; then
+        # For convenience, try to detect an owner from the first directory's local git config
+        local candidate_owner=""
+        if [[ -d "${dirs[0]}" ]]; then
+            pushd "${dirs[0]}" > /dev/null 2>&1 || true
+            # Only check local git config, don't init or fetch from GitHub
+            if git rev-parse --git-dir > /dev/null 2>&1; then
+                candidate_owner=$(git config --local gc-init.org-name 2>/dev/null || echo "")
+            fi
+            popd > /dev/null 2>&1 || true
+        fi
+
+        if [[ -n "$candidate_owner" ]]; then
+            read -rp "Repository owner (user/org) [${candidate_owner}]: " shared_owner
+            REPO_OWNER="${shared_owner:-$candidate_owner}"
+        else
+            read -rp "Repository owner (user/org): " shared_owner
+            REPO_OWNER="${shared_owner:-$REPO_OWNER}"
+        fi
+
+        ORG_NAME="$REPO_OWNER"
+        REUSE_OWNER=true
+        BATCH_SKIP_OWNER=false
+        print_info "Using owner: $REPO_OWNER for all repositories"
+    else
+        # Do not prefill owner prompts from detected remotes; prompt per-repo
+        BATCH_SKIP_OWNER=true
+        print_info "Will prompt for repository owner individually"
+    fi
+
+    # Offer to reuse initialisation config (templates, licence, stability) for all repos
+    read -rp "Reuse initialisation config (templates, licence, stability) for all repositories? (y/N): " reuse_templates
+    if [[ "${reuse_templates}" =~ ^[Yy] ]]; then
+        BATCH_REUSE_TEMPLATES=true
+        print_info "Will reuse initialisation config across the batch"
+        # If --yes was passed, prefill sensible defaults for the batch
+        if [[ "$ASSUME_YES" == "true" ]]; then
+            BATCH_SELECTED_CHOICES="A"
+            BATCH_LICENSE_TYPE="${LICENSE_TYPE:-GPL-3.0}"
+            BATCH_STABILITY="${STABILITY:-stable}"
+            BATCH_STABILITY_COLOR="${STABILITY_COLOR:-green}"
+            print_info "Batch will run non-interactively with defaults"
+        fi
+    fi
+
+    for d in "${dirs[@]}"; do
+        print_header
+        print_info "Processing: $d"
+
+        pushd "$d" > /dev/null || { print_error "Failed to enter $d"; continue; }
+
+        # Ensure git repo initialised for this folder FIRST (before any config operations)
+        check_git_repo
+
+        # Reset variables for this repo iteration (prevent carryover from previous repos)
+        # These must be reset AFTER check_git_repo but BEFORE get_repo_info
+        SHORT_DESCRIPTION=""
+        LONG_DESCRIPTION=""
+        LICENSE_TYPE=""
+        STABILITY=""
+        STABILITY_COLOR=""
+        PROJECT_NAME=""
+        REPO_SLUG=""
+        REPO_URL=""
+        ORG_NAME=""
+
+        # Attempt to detect repo info (may set ORG_NAME if remote present)
+        # This will load from THIS repo's local git config
+        get_repo_info
+
+        # If user provided a shared owner earlier, warn when the detected owner for this repo differs
+        if [[ "$REUSE_OWNER" == "true" && -n "$ORG_NAME" && -n "$REPO_OWNER" && "$ORG_NAME" != "$REPO_OWNER" ]]; then
+            print_warning "Detected remote owner '$ORG_NAME' differs from chosen shared owner '$REPO_OWNER' for $d"
+        fi
+
+        # Pre-fill sensible defaults based on folder name
+        PROJECT_NAME="$(basename "$PWD")"
+        REPO_SLUG="$(basename "$PWD")"
+        if [[ -n "$REPO_OWNER" ]]; then
+            ORG_NAME="$REPO_OWNER"
+        fi
+        REPO_URL="https://github.com/${ORG_NAME}/${REPO_SLUG}"
+
+        if [[ "$ASSUME_YES" == "true" ]]; then
+            SHORT_DESCRIPTION="${SHORT_DESCRIPTION:-A project by $ORG_NAME}"
+            LONG_DESCRIPTION="${LONG_DESCRIPTION:-$SHORT_DESCRIPTION}"
+            LICENSE_TYPE="${LICENSE_TYPE:-MIT}"
+            STABILITY="${STABILITY:-experimental}"
+            STABILITY_COLOR="${STABILITY_COLOR:-orange}"
+            CURRENT_YEAR=$(date +%Y)
+        else
+            # Interactive collect (prefilled with defaults)
+            collect_project_info
+        fi
+
+        # Handle batch reuse of initialisation config
+        if [[ "$BATCH_REUSE_TEMPLATES" == "true" ]]; then
+            if [[ -z "$BATCH_SELECTED_CHOICES" ]]; then
+                # First repo: allow selection and capture it for reuse
+                select_templates
+                BATCH_SELECTED_CHOICES="${SELECTED_TEMPLATE_CHOICES:-A}"
+                BATCH_LICENSE_TYPE="${LICENSE_TYPE:-$BATCH_LICENSE_TYPE}"
+                BATCH_STABILITY="${STABILITY:-$BATCH_STABILITY}"
+                BATCH_STABILITY_COLOR="${STABILITY_COLOR:-$BATCH_STABILITY_COLOR}"
+                print_info "Captured initialisation config for reuse: ${BATCH_SELECTED_CHOICES}"
+            else
+                # Reuse previously captured initialisation config
+                SELECTED_TEMPLATE_CHOICES="${BATCH_SELECTED_CHOICES}"
+                LICENSE_TYPE="${BATCH_LICENSE_TYPE}"
+                STABILITY="${BATCH_STABILITY}"
+                STABILITY_COLOR="${BATCH_STABILITY_COLOR}"
+                print_info "Using shared initialisation config (templates, licence, stability)"
+            fi
+        else
+            # Not reusing batch config; allow interactive selection for this repo
+            select_templates
+            SELECTED_TEMPLATE_CHOICES="${SELECTED_TEMPLATE_CHOICES:-A}"
+        fi
+
+        # Default to installing ALL templates unless user set a different selection
+        SELECTED_TEMPLATE_CHOICES="${SELECTED_TEMPLATE_CHOICES:-A}"
+        print_info "Installing templates: ${SELECTED_TEMPLATE_CHOICES}"
+        install_templates "${SELECTED_TEMPLATE_CHOICES}"
+
+        # Save metadata for gc-create
+        save_project_metadata
+
+        # Show summary and auto-queue creation for batch mode (no per-repo prompts)
+        local saved_batch="$BATCH_MODE"
+        BATCH_MODE="true"
+        show_summary
+        BATCH_MODE="$saved_batch"
+
+        if [[ "$BATCH_MODE" == "true" ]]; then
+            CREATE_QUEUE+=("$PWD")
+            print_info "Queued for creation: $PWD"
+        fi
+
+        popd > /dev/null || true
+    done
+
+    # After processing all folders, offer to create queued repos
+    if [[ ${#CREATE_QUEUE[@]} -gt 0 ]]; then
+        echo ""
+        read -rp "Create queued repositories now? (y/n) [y]: " create_now
+        if [[ "${create_now:-y}" =~ [Yy] ]]; then
+            # Build args for create-repo.sh
+            local cre_args=("--batch")
+            [[ "$ASSUME_YES" == "true" ]] && cre_args+=("--yes")
+            # Pass directories as relative paths
+            cre_args+=("${CREATE_QUEUE[@]}")
+            print_info "Launching create-repo for ${#CREATE_QUEUE[@]} repositories"
+            bash "$GIT_CONTROL_DIR/scripts/create-repo.sh" "${cre_args[@]}"
+        else
+            print_info "Queued repositories preserved; you can run: create-repo --batch <dirs...>"
+        fi
+    fi
+}
+
 # ============================================================================
 # SUMMARY
 # ============================================================================
 
 save_project_metadata() {
-    # Store collected metadata in git config for gc-create to retrieve
-    if git rev-parse --git-dir > /dev/null 2>&1; then
+    # Store collected metadata in LOCAL git config for gc-create to retrieve
+    # Only save if a local .git directory exists
+    if [[ -d ".git" ]]; then
         print_info "Saving project metadata to git config..."
         git config --local gc-init.project-name "$PROJECT_NAME" 2>/dev/null || true
         git config --local gc-init.repo-slug "$REPO_SLUG" 2>/dev/null || true
@@ -837,21 +1106,27 @@ show_summary() {
     echo "gc-init can now launch create-repo to set up your GitHub repository"
     echo "with the configuration we just collected."
     echo ""
-    read -rp "Launch create-repo now? (y/n) [y]: " launch_create_repo
+
     local show_repo_instructions=false
-    if [[ "${launch_create_repo:-y}" =~ [Yy] ]]; then
-        echo ""
-        print_info "Launching create-repo..."
-        echo ""
-        # Find and run create-repo script
-        if [[ -f "$GIT_CONTROL_DIR/scripts/create-repo.sh" ]]; then
-            bash "$GIT_CONTROL_DIR/scripts/create-repo.sh"
+    if [[ "$BATCH_MODE" == "true" ]]; then
+        print_info "Batch mode: skipping create-repo prompt for $PROJECT_NAME"
+        show_repo_instructions=true
+    else
+        read -rp "Launch create-repo now? (y/n) [y]: " launch_create_repo
+        if [[ "${launch_create_repo:-y}" =~ [Yy] ]]; then
+            echo ""
+            print_info "Launching create-repo..."
+            echo ""
+            # Find and run create-repo script
+            if [[ -f "$GIT_CONTROL_DIR/scripts/create-repo.sh" ]]; then
+                bash "$GIT_CONTROL_DIR/scripts/create-repo.sh"
+            else
+                print_warning "create-repo.sh not found at $GIT_CONTROL_DIR/scripts/create-repo.sh"
+                show_repo_instructions=true
+            fi
         else
-            print_warning "create-repo.sh not found at $GIT_CONTROL_DIR/scripts/create-repo.sh"
             show_repo_instructions=true
         fi
-    else
-        show_repo_instructions=true
     fi
 
     if [[ "$show_repo_instructions" == "true" ]]; then
@@ -923,7 +1198,13 @@ main() {
         print_success "Done!"
         exit 0
     fi
-    
+
+    if [[ "$BATCH_MODE" == "true" ]]; then
+        print_info "Batch mode enabled"
+        run_batch_init
+        exit 0
+    fi
+
     print_info "Git-Control directory: $GIT_CONTROL_DIR"
     print_info "Working directory: $(pwd)"
     print_info "Available template folders:"

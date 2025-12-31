@@ -24,6 +24,10 @@ GIT_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
 
 # CLI mode: none|topics|description|all
 EDIT_MODE="none"
+# Batch mode options
+BATCH_MODE=false
+ASSUME_YES=false
+BATCH_DIRS=()
 
 # ============================================================================
 # HELPER FUNCTIONS
@@ -78,7 +82,7 @@ check_prerequisites() {
     fi
 }
 
-# Simple CLI argument parser for --edit modes
+# CLI argument parser (supports --edit and batch options)
 parse_args() {
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -95,9 +99,20 @@ parse_args() {
                 shift ;;
             --edit-topics)
                 EDIT_MODE="topics" ; shift ;;
+            --batch)
+                BATCH_MODE=true ; shift ;;
+            -y|--yes)
+                ASSUME_YES=true ; shift ;;
             -h|--help)
-                echo "Usage: $0 [--edit[=topics|description|all]]" ; exit 0 ;;
+                echo "Usage: $0 [--edit[=topics|description|all]] [--batch] [--yes] [DIR...]
+
+Examples:
+  $0 --batch ./repo1 ./repo2    # Create repos from these directories using cached gc-init metadata
+  $0 --batch -y                 # Create repos for all subfolders non-interactively
+  $0 ./some/repo                # Create repo for a specific directory" ; exit 0 ;;
             *)
+                # Positional args are treated as directories to create
+                BATCH_DIRS+=("$1")
                 shift ;;
         esac
     done
@@ -496,6 +511,69 @@ update_repo_topics() {
 }
 
 # ============================================================================
+# BATCH HANDLER
+# ============================================================================
+
+process_batch_create() {
+    # If no explicit dirs passed, find immediate subdirectories
+    local dirs=()
+    if [[ ${#BATCH_DIRS[@]} -gt 0 ]]; then
+        dirs=("${BATCH_DIRS[@]}")
+    else
+        while IFS= read -r d; do
+            dirs+=("$d")
+        done < <(find . -maxdepth 1 -mindepth 1 -type d -printf '%P\n')
+    fi
+
+    if [[ ${#dirs[@]} -eq 0 ]]; then
+        print_warning "No directories found to process for batch create"
+        return 1
+    fi
+
+    check_prerequisites
+    get_git_credentials
+
+    for d in "${dirs[@]}"; do
+        if [[ ! -d "$d" ]]; then
+            print_warning "Skipping non-directory: $d"
+            continue
+        fi
+
+        print_header
+        print_info "Processing: $d"
+        pushd "$d" > /dev/null || { print_error "Failed to enter $d"; continue; }
+
+        # Load metadata saved by gc-init (if any)
+        load_gc_init_metadata
+
+        # If minimal metadata present, use it for non-interactive create
+        if [[ "$ASSUME_YES" == "true" && -n "$PROJECT_NAME" ]]; then
+            REPO_NAME="$PROJECT_NAME"
+            REPO_SLUG="${REPO_SLUG:-$(echo "$REPO_NAME" | tr ' ' '-' | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9._-]//g')}"
+            REPO_OWNER="${ORG_NAME:-$GH_USERNAME}"
+            REPO_DESCRIPTION="${SHORT_DESCRIPTION:-A project by $REPO_OWNER}"
+            REPO_VISIBILITY="private"
+
+            echo "Creating repository: $REPO_OWNER/$REPO_SLUG"
+            init_local_git
+            create_github_repo
+            update_repo_topics || true
+            show_summary
+        else
+            # Fallback to interactive per-directory flow
+            collect_repo_info
+            init_local_git
+            create_github_repo
+            update_repo_topics
+            show_summary
+        fi
+
+        popd > /dev/null || true
+    done
+}
+
+
+# ============================================================================
 # SUMMARY
 # ============================================================================
 
@@ -529,8 +607,14 @@ show_summary() {
 # ============================================================================
 
 main() {
-    # Parse CLI args (e.g., --edit)
+    # Parse CLI args (e.g., --edit or --batch)
     parse_args "$@"
+
+    # If batch mode requested, delegate to batch handler
+    if [[ "$BATCH_MODE" == "true" ]] || [[ ${#BATCH_DIRS[@]} -gt 0 ]]; then
+        process_batch_create
+        exit 0
+    fi
 
     print_header
     check_prerequisites
