@@ -695,15 +695,18 @@ prune_bak_dirs() {
     prune_dirs "$1" ".bak" "$2"
 }
 
-# Generic: Copy directories into $ROOT/<dest_term>/<parent_name> with configurable patterns
-# Usage: copy_dirs "$root_dir" ".tmp" false ".tmp" ".temp" "tmp" "temp"
+# Generic: Copy directories with configurable dest_term, naming strategy, and patterns
+# Usage: copy_dirs "$root_dir" ".tmp" "parent" false ".tmp" ".temp" "tmp" "temp"
+#   Naming strategy is determined by pattern type:
+#   - Exact patterns (.bak, bak, etc.) → group by parent name
+#   - Wildcard patterns (*.bak, *.tmp, etc.) → preserve folder name with date stamp
 #   Parameters after KEEP_EPHEMERAL are directory patterns to match (case-insensitive)
 copy_dirs() {
     local root_dir="$1"
     local dest_term="$2"  # ".tmp" or ".bak"
     local KEEP_EPHEMERAL="${3:-false}"
     shift 3
-    local patterns=("$@")  # patterns to match (e.g., ".tmp" ".temp" "tmp" "temp")
+    local patterns=("$@")  # patterns to match (e.g., ".tmp" ".temp" "*.tmp" "*.temp")
 
     if [[ -z "$root_dir" ]]; then
         print_error "copy_dirs: root_dir required"
@@ -750,12 +753,13 @@ copy_dirs() {
     dest_canon=$(realpath -m "$dest_dir" 2>/dev/null || echo "$dest_dir")
     
     # Build find pattern from patterns array (case-insensitive)
+    # Note: patterns are passed unquoted so find can interpret wildcards
     local find_pattern=""
     for pattern in "${patterns[@]}"; do
         if [[ -z "$find_pattern" ]]; then
-            find_pattern="-iname '$pattern'"
+            find_pattern="-iname $pattern"
         else
-            find_pattern="$find_pattern -o -iname '$pattern'"
+            find_pattern="$find_pattern -o -iname $pattern"
         fi
     done
 
@@ -806,9 +810,37 @@ copy_dirs() {
             continue
         fi
 
-        local parent_name
-        parent_name=$(basename "$(dirname "$srcdir")")
-        local target="$dest_dir/$parent_name"
+        local target
+        local folder_name
+        folder_name=$(basename "$srcdir")
+        
+        # Determine if this folder matched a wildcard pattern (e.g., *.bak, *.tmp)
+        # by checking if folder_name ends with a pattern or IS a pattern
+        local matched_wildcard=false
+        for pattern in "${patterns[@]}"; do
+            # Check if pattern starts with * (wildcard pattern)
+            if [[ "$pattern" == \** ]]; then
+                # Extract the suffix (e.g., ".bak" from "*.bak")
+                local suffix="${pattern#\*}"
+                # Check if folder_name ends with this suffix
+                if [[ "$folder_name" == *"$suffix" ]]; then
+                    matched_wildcard=true
+                    break
+                fi
+            fi
+        done
+        
+        if [[ "$matched_wildcard" == "true" ]]; then
+            # Wildcard match (e.g., XAOSTECH.bak): preserve folder name with date stamp
+            local date_stamp
+            date_stamp=$(date +%Y-%m-%d)
+            target="$dest_dir/${folder_name}_${date_stamp}"
+        else
+            # Exact pattern match (e.g., .bak, bak): group by parent folder name
+            local parent_name
+            parent_name=$(basename "$(dirname "$srcdir")")
+            target="$dest_dir/$parent_name"
+        fi
         # Only create the per-parent target when not in dry-run
         if [[ "$DRY_RUN" != "true" ]]; then
             mkdir -p "$target"
@@ -896,22 +928,23 @@ copy_dirs() {
 
 # Convenience wrappers
 copy_temp_dirs() {
-    copy_dirs "$1" ".tmp" "${2:-false}" ".tmp" ".temp" "tmp" "temp"
+    copy_dirs "$1" ".tmp" "${2:-false}" ".tmp" ".temp" "tmp" "temp" "*.tmp" "*.temp"
 }
 
 copy_bak_dirs() {
-    copy_dirs "$1" ".bak" "${2:-false}" ".bak" ".backup" "bak" "backup"
+    copy_dirs "$1" ".bak" "${2:-false}" ".bak" ".backup" "bak" "backup" "*.bak" "*.backup"
 }
 
 # Generic: Aggressive replace with configurable dest_term and patterns
-# Usage: aggressive_replace "$root_dir" ".tmp" false ".tmp" ".temp" "tmp" "temp"
-#   Parameters after KEEP_EPHEMERAL are directory patterns to match (case-insensitive)
+# Usage: aggressive_replace "$root_dir" ".tmp" false ".tmp" ".temp" "tmp" "temp" "*.tmp" "*.temp"
+#   Parameters: root_dir dest_term KEEP_EPHEMERAL [patterns...]
+#   Naming strategy is determined by pattern type (same as copy_dirs)
 aggressive_replace() {
     local root_dir="$1"
     local dest_term="$2"  # ".tmp" or ".bak"
     local KEEP_EPHEMERAL="${3:-false}"
     shift 3
-    local patterns=("$@")  # patterns to match (e.g., ".tmp" ".temp" "tmp" "temp")
+    local patterns=("$@")  # patterns to match (e.g., ".tmp" ".temp" "*.tmp" "*.temp")
 
     if [[ -z "$root_dir" ]]; then
         print_error "aggressive_replace: root_dir required"
@@ -965,12 +998,13 @@ aggressive_replace() {
     fi
 
     # Build find pattern from patterns array (case-insensitive)
+    # Note: patterns are passed unquoted so find can interpret wildcards
     local find_pattern=""
     for pattern in "${patterns[@]}"; do
         if [[ -z "$find_pattern" ]]; then
-            find_pattern="-iname '$pattern'"
+            find_pattern="-iname $pattern"
         else
-            find_pattern="$find_pattern -o -iname '$pattern'"
+            find_pattern="$find_pattern -o -iname $pattern"
         fi
     done
 
@@ -1028,9 +1062,36 @@ aggressive_replace() {
             continue
         fi
 
-        local parent_name
-        parent_name=$(basename "$(dirname "$srcdir")")
-        local target="$dest_dir/$parent_name"
+        local target
+        local folder_name
+        folder_name=$(basename "$srcdir")
+        
+        # Determine if this folder matched a wildcard pattern (e.g., *.bak, *.tmp)
+        local matched_wildcard=false
+        for pattern in "${patterns[@]}"; do
+            # Check if pattern starts with * (wildcard pattern)
+            if [[ "$pattern" == \** ]]; then
+                # Extract the suffix (e.g., ".bak" from "*.bak")
+                local suffix="${pattern#\*}"
+                # Check if folder_name ends with this suffix
+                if [[ "$folder_name" == *"$suffix" ]]; then
+                    matched_wildcard=true
+                    break
+                fi
+            fi
+        done
+        
+        if [[ "$matched_wildcard" == "true" ]]; then
+            # Wildcard match (e.g., XAOSTECH.bak): preserve folder name with date stamp
+            local date_stamp
+            date_stamp=$(date +%Y-%m-%d)
+            target="$dest_dir/${folder_name}_${date_stamp}"
+        else
+            # Exact pattern match (e.g., .bak, bak): group by parent folder name
+            local parent_name
+            parent_name=$(basename "$(dirname "$srcdir")")
+            target="$dest_dir/$parent_name"
+        fi
         mkdir -p "$target"
 
         # rsync contents non-destructively (don't overwrite existing files)
@@ -1158,11 +1219,11 @@ aggressive_replace() {
 
 # Convenience wrappers
 aggressive_replace_dirs() {
-    aggressive_replace "$1" ".tmp" "${2:-false}" ".tmp" ".temp" "tmp" "temp"
+    aggressive_replace "$1" ".tmp" "${2:-false}" ".tmp" ".temp" "tmp" "temp" "*.tmp" "*.temp"
 }
 
 aggressive_replace_bak_dirs() {
-    aggressive_replace "$1" ".bak" "${2:-false}" ".bak" ".backup" "bak" "backup"
+    aggressive_replace "$1" ".bak" "${2:-false}" ".bak" ".backup" "bak" "backup" "*.bak" "*.backup"
 }
 
 
@@ -1337,12 +1398,9 @@ main() {
                 ;;
             --aggressive)
                 AGGRESSIVE=true
-                # Aggressive mode implies only-copy-temp behavior and overrides other flags
-                ONLY_COPY_TEMP=true
                 ;;
             --aggressive-bak)
                 AGGRESSIVE_BAK=true
-                ONLY_COPY_BAK=true
                 ;;
             --agressive)
                 AGGRESSIVE=true
@@ -1489,24 +1547,30 @@ main() {
     if [[ "$ONLY_COPY_TEMP" == "true" ]]; then
         root_dir=$(get_root_directory "$root_dir")
         print_info "Root directory: $root_dir"
-        if [[ "$AGGRESSIVE" == "true" ]]; then
-            print_warning "Aggressive mode enabled: originals will be removed and replaced with symlinks; --dry-run is supported to preview actions; other destructive flags are ignored."
-            if [[ "$DRY_RUN" == "true" ]]; then
-                print_info "DRY-RUN: previewing aggressive actions (no files will be modified)."
-            fi
-            aggressive_replace_dirs "$root_dir"
-        else
-            copy_temp_dirs "$root_dir"
-            # If prune requested with only-copy-temp, run prune now
-            if [[ "$PRUNE" == "true" ]]; then
-                prune_temp_dirs "$root_dir"
-            fi
+        copy_temp_dirs "$root_dir"
+        # If prune requested with only-copy-temp, run prune now
+        if [[ "$PRUNE" == "true" ]]; then
+            prune_temp_dirs "$root_dir"
         fi
         exit 0
     fi
 
+    # If running aggressive mode (both .tmp and .bak), execute both
+    if [[ "$AGGRESSIVE" == "true" ]]; then
+        root_dir=$(get_root_directory "$root_dir")
+        print_info "Root directory: $root_dir"
+        print_warning "Aggressive mode enabled: originals will be removed and replaced with symlinks; --dry-run is supported to preview actions; other destructive flags are ignored."
+        if [[ "$DRY_RUN" == "true" ]]; then
+            print_info "DRY-RUN: previewing aggressive actions (no files will be modified)."
+        fi
+        # Run aggressive for both .tmp and .bak
+        aggressive_replace_dirs "$root_dir"
+        aggressive_replace_bak_dirs "$root_dir"
+        exit 0
+    fi
+
     # If running only the copy-bak flow, prompt for root and execute
-    if [[ "$ONLY_COPY_BAK" == "true" ]]; then
+    if [[ "$ONLY_COPY_BAK" == "true" || "$AGGRESSIVE_BAK" == "true" ]]; then
         root_dir=$(get_root_directory "$root_dir")
         print_info "Root directory: $root_dir"
         if [[ "$AGGRESSIVE_BAK" == "true" ]]; then
