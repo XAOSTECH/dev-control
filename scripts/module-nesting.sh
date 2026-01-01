@@ -113,20 +113,31 @@ path_has_excluded_temp_component() {
 
 # Feature flags: --copy-temp  (run after module nesting)
 #                --only-copy-temp  (run only the copy-temp flow)
+#                --copy-bak        (run after module nesting - backup folders)
+#                --only-copy-bak   (run only the copy-bak flow)
 #                --prune           (after copying, prune originals and link to backup)
 #                --only-prune      (run prune flow only)
-#                --dry-run         (show what would be done, no changes)  # supported with --aggressive to preview destructive actions
+#                --prune-bak       (prune backup folders)
+#                --only-prune-bak  (run only the prune-bak flow)
+#                --dry-run         (show what would be done, no changes)
 #                --delete          (permanently delete originals instead of moving to recycle)
 #                -y                (auto-confirm prompts)
-#                --aggressive      (AGGRESSIVE replace: merge into $ROOT/.tmp/<parent>, delete originals, create symlink of parent instead of files, and append to .gitignore when the temp folder name is not '.tmp'; overrides other destructive flags; --dry-run is allowed) 
+#                --aggressive      (AGGRESSIVE replace temp: merge, delete originals, create symlinks, append to .gitignore)
+#                --aggressive-bak  (AGGRESSIVE replace backup: same as aggressive but for .bak folders)
+#                --test            (run a safety test sequence in --dry-run mode)
 COPY_TEMP=false
 ONLY_COPY_TEMP=false
+COPY_BAK=false
+ONLY_COPY_BAK=false
 PRUNE=false
 ONLY_PRUNE=false
+PRUNE_BAK=false
+ONLY_PRUNE_BAK=false
 DRY_RUN=false
 DELETE=false
 FORCE=false
 AGGRESSIVE=false
+AGGRESSIVE_BAK=false
 TEST=false
 
 # Temp file to record copied mappings (source<TAB>target)
@@ -486,21 +497,27 @@ get_root_directory() {
     echo "$root_dir"
 }
 
-# Prune temp directories after successful copy: move to recycle (or delete) and replace with symlink
-prune_temp_dirs() {
+# Generic: Prune directories after successful copy: move to recycle (or delete) and replace with symlink
+# Usage: prune_dirs "$root_dir" ".tmp" "$record_file"
+prune_dirs() {
     local root_dir="$1"
-    local record_file="$2"
+    local dest_term="$2"  # ".tmp" or ".bak"
+    local record_file="$3"
 
     if [[ -z "$root_dir" ]]; then
-        print_error "prune_temp_dirs: root_dir required"
+        print_error "prune_dirs: root_dir required"
+        return 1
+    fi
+    if [[ -z "$dest_term" ]]; then
+        print_error "prune_dirs: dest_term required"
         return 1
     fi
     if [[ -n "$record_file" && ! -f "$record_file" ]]; then
-        print_error "prune_temp_dirs: record_file not found: $record_file"
+        print_error "prune_dirs: record_file not found: $record_file"
         return 1
     fi
 
-    local dest_dir="$root_dir/.tmp"
+    local dest_dir="$root_dir/$dest_term"
     local recycle_base="$dest_dir/.recycle"
     # For DRY_RUN we avoid creating $dest_dir or $recycle_base inside the repo to
     # prevent leaving preview artifacts; instead create a temporary recycle base
@@ -527,7 +544,7 @@ prune_temp_dirs() {
         fi
     fi
 
-    print_info "Prune: using record file: $record_file"
+    print_info "Prune ($dest_term): using record file: $record_file"
 
     while IFS=$'\t' read -r src tgt; do
         [[ -z "$src" || -z "$tgt" ]] && continue
@@ -655,7 +672,7 @@ prune_temp_dirs() {
         pruned=$((pruned + 1))
     done < "$record_file"
 
-    print_success "Prune complete: processed=$total pruned=$pruned skipped=$skipped"
+    print_success "Prune ($dest_term) complete: processed=$total pruned=$pruned skipped=$skipped"
     if [[ $warned_large -gt 0 ]]; then
         print_warning "There were $warned_large large files (>10MB) encountered during prune operations."
     fi
@@ -669,16 +686,39 @@ prune_temp_dirs() {
     return 0
 }
 
-# Copy temp directories into $ROOT/.tmp/<parent_name> (non-destructive)
-copy_temp_dirs() {
+# Convenience wrappers
+prune_temp_dirs() {
+    prune_dirs "$1" ".tmp" "$2"
+}
+
+prune_bak_dirs() {
+    prune_dirs "$1" ".bak" "$2"
+}
+
+# Generic: Copy directories into $ROOT/<dest_term>/<parent_name> with configurable patterns
+# Usage: copy_dirs "$root_dir" ".tmp" false ".tmp" ".temp" "tmp" "temp"
+#   Parameters after KEEP_EPHEMERAL are directory patterns to match (case-insensitive)
+copy_dirs() {
     local root_dir="$1"
-    local KEEP_EPHEMERAL="${2:-false}"
+    local dest_term="$2"  # ".tmp" or ".bak"
+    local KEEP_EPHEMERAL="${3:-false}"
+    shift 3
+    local patterns=("$@")  # patterns to match (e.g., ".tmp" ".temp" "tmp" "temp")
+
     if [[ -z "$root_dir" ]]; then
-        print_error "copy_temp_dirs: root_dir required"
+        print_error "copy_dirs: root_dir required"
+        return 1
+    fi
+    if [[ -z "$dest_term" ]]; then
+        print_error "copy_dirs: dest_term required"
+        return 1
+    fi
+    if [[ ${#patterns[@]} -eq 0 ]]; then
+        print_error "copy_dirs: at least one pattern required"
         return 1
     fi
 
-    local dest_dir="$root_dir/.tmp"
+    local dest_dir="$root_dir/$dest_term"
 
     # In dry-run mode we do not create the destination folders in the workspace,
     # but we do create an ephemeral COPIED_RECORD in /tmp so we can preview --prune
@@ -708,7 +748,17 @@ copy_temp_dirs() {
     # Canonicalize destination path to correctly detect symlinks and subpaths
     local dest_canon
     dest_canon=$(realpath -m "$dest_dir" 2>/dev/null || echo "$dest_dir")
-    # Find temp directories (case-insensitive) but exclude the destination dir itself
+    
+    # Build find pattern from patterns array (case-insensitive)
+    local find_pattern=""
+    for pattern in "${patterns[@]}"; do
+        if [[ -z "$find_pattern" ]]; then
+            find_pattern="-iname '$pattern'"
+        else
+            find_pattern="$find_pattern -o -iname '$pattern'"
+        fi
+    done
+
     # Build prune args from EXCLUDE_TEMP so we do not descend into known build/output directories
     local prune_args=()
     for e in "${EXCLUDE_TEMP[@]}"; do
@@ -719,9 +769,9 @@ copy_temp_dirs() {
         unset 'prune_args[${#prune_args[@]}-1]'
     fi
 
-    # If in dry-run or DEBUG, list all matched temp directories for diagnosis
+    # If in dry-run or DEBUG, list all matched directories for diagnosis
     if [[ "${DEBUG:-false}" == "true" || "$DRY_RUN" == "true" ]]; then
-        print_info "Matched temp directories (diagnostic: showing canonical paths)"
+        print_info "Matched $dest_term directories (diagnostic: showing canonical paths)"
         while IFS= read -r -d '' d; do
             dcanon=$(realpath -m "$d" 2>/dev/null || echo "$d")
             if [[ "$dcanon" == "$dest_canon" || "$dcanon" == "$dest_canon"/* ]]; then
@@ -729,15 +779,15 @@ copy_temp_dirs() {
             else
                 print_info "  $d  (canonical: $dcanon)"
             fi
-        done < <(if [[ ${#prune_args[@]} -gt 0 ]]; then find "$root_dir" \( "${prune_args[@]}" \) -prune -o -type d \( -iname '.tmp' -o -iname '.temp' -o -iname 'tmp' -o -iname 'temp' \) -print0 2>/dev/null; else find "$root_dir" -type d \( -iname '.tmp' -o -iname '.temp' -o -iname 'tmp' -o -iname 'temp' \) -print0 2>/dev/null; fi)
+        done < <(if [[ ${#prune_args[@]} -gt 0 ]]; then find "$root_dir" \( "${prune_args[@]}" \) -prune -o -type d \( $find_pattern \) -print0 2>/dev/null; else find "$root_dir" -type d \( $find_pattern \) -print0 2>/dev/null; fi)
     fi
 
-    while IFS= read -r -d '' tempdir; do
-        # canonicalize the tempdir so symlinks are resolved and subpaths detected
-        temp_canon=$(realpath -m "$tempdir" 2>/dev/null || echo "$tempdir")
+    while IFS= read -r -d '' srcdir; do
+        # canonicalize the srcdir so symlinks are resolved and subpaths detected
+        src_canon=$(realpath -m "$srcdir" 2>/dev/null || echo "$srcdir")
 
-        # skip temp dirs already under the destination path to avoid recursion
-        if [[ "$temp_canon" == "$dest_canon" || "$temp_canon" == "$dest_canon"/* ]]; then
+        # skip dirs already under the destination path to avoid recursion
+        if [[ "$src_canon" == "$dest_canon" || "$src_canon" == "$dest_canon"/* ]]; then
             skipped=$((skipped + 1))
             skipped_dest=$((skipped_dest + 1))
             skipped_list+="$tempdir (destination)\n"
@@ -745,19 +795,19 @@ copy_temp_dirs() {
             continue
         fi
 
-        # skip if the tempdir is inside a known build/output directory (e.g., build/, CMakeFiles)
+        # skip if the srcdir is inside a known build/output directory (e.g., build/, CMakeFiles)
         # Use EXCLUDE_TEMP here (not EXCLUDE_DIRS) so we don't skip legitimate .tmp folders
         # which are the target of these flows.
-        if path_has_excluded_temp_component "$tempdir"; then
+        if path_has_excluded_temp_component "$srcdir"; then
             skipped=$((skipped + 1))
             skipped_excluded=$((skipped_excluded + 1))
-            skipped_list+="$tempdir (excluded parent component)\n"
-            [[ "${DEBUG:-false}" == "true" ]] && print_debug "Skipped $tempdir because it contains an excluded component"
+            skipped_list+="$srcdir (excluded parent component)\n"
+            [[ "${DEBUG:-false}" == "true" ]] && print_debug "Skipped $srcdir because it contains an excluded component"
             continue
         fi
 
         local parent_name
-        parent_name=$(basename "$(dirname "$tempdir")")
+        parent_name=$(basename "$(dirname "$srcdir")")
         local target="$dest_dir/$parent_name"
         # Only create the per-parent target when not in dry-run
         if [[ "$DRY_RUN" != "true" ]]; then
@@ -766,24 +816,24 @@ copy_temp_dirs() {
 
         # rsync contents non-destructively (don't overwrite existing files)
         if [[ "$DRY_RUN" == "true" ]]; then
-            print_info "DRY-RUN: Would merge $tempdir -> $target"
+            print_info "DRY-RUN: Would merge $srcdir -> $target"
         else
-            rsync -a --ignore-existing --prune-empty-dirs "$tempdir/" "$target/"
-            print_info "Merged $tempdir -> $target"
+            rsync -a --ignore-existing --prune-empty-dirs "$srcdir/" "$target/"
+            print_info "Merged $srcdir -> $target"
         fi
 
         # record mapping for pruning (source<TAB>target) — only when a record file exists
         if [[ -n "$COPIED_RECORD" ]]; then
-            printf '%s\t%s\n' "$tempdir" "$target" >> "$COPIED_RECORD"
+            printf '%s\t%s\n' "$srcdir" "$target" >> "$COPIED_RECORD"
         else
-            print_info "DRY-RUN: Would record mapping $tempdir -> $target"
+            print_info "DRY-RUN: Would record mapping $srcdir -> $target"
         fi
 
         found=$((found + 1))
-    done < <(if [[ ${#prune_args[@]} -gt 0 ]]; then find "$root_dir" \( "${prune_args[@]}" \) -prune -o -type d \( -iname '.tmp' -o -iname '.temp' -o -iname 'tmp' -o -iname 'temp' \) -print0 2>/dev/null; else find "$root_dir" -type d \( -iname '.tmp' -o -iname '.temp' -o -iname 'tmp' -o -iname 'temp' \) -print0 2>/dev/null; fi)
+    done < <(if [[ ${#prune_args[@]} -gt 0 ]]; then find "$root_dir" \( "${prune_args[@]}" \) -prune -o -type d \( $find_pattern \) -print0 2>/dev/null; else find "$root_dir" -type d \( $find_pattern \) -print0 2>/dev/null; fi)
 
     if [[ $found -eq 0 && $skipped -eq 0 ]]; then
-        print_info "No temp dirs found to copy in $root_dir"
+        print_info "No $dest_term dirs found to copy in $root_dir"
         # If this was a DRY-RUN with an ephemeral record, keep it only when the
         # caller explicitly requested it (KEEP_EPHEMERAL) or when --prune was
         # requested so a subsequent prune preview can use it. Otherwise remove it.
@@ -817,12 +867,12 @@ copy_temp_dirs() {
         fi
     else
         if [[ "$DRY_RUN" == "true" ]]; then
-            print_info "DRY-RUN: Would copy/merge $found temp dir(s) into $dest_dir (non-destructive). An ephemeral record was created to allow --prune preview (no workspace files will be created)."
+            print_info "DRY-RUN: Would copy/merge $found $dest_term dir(s) into $dest_dir (non-destructive). An ephemeral record was created to allow --prune preview (no workspace files will be created)."
             if [[ $skipped -gt 0 && "${DEBUG:-false}" == "true" ]]; then
                 echo -e "Also skipped $skipped directory(s) located under $dest_dir:\n$skipped_list"
             fi
         else
-            print_success "Copied/merged $found temp dir(s) into $dest_dir (non-destructive)"
+            print_success "Copied/merged $found $dest_term dir(s) into $dest_dir (non-destructive)"
             if [[ $skipped -gt 0 && "${DEBUG:-false}" == "true" ]]; then
                 echo -e "Also skipped $skipped directory(s) located under $dest_dir:\n$skipped_list"
             fi
@@ -844,18 +894,41 @@ copy_temp_dirs() {
 
 }
 
-# Aggressive replace: Merge temp dirs into $ROOT/.tmp/<parent>, delete originals, create symlinks, and append to .gitignore
-aggressive_replace_dirs() {
+# Convenience wrappers
+copy_temp_dirs() {
+    copy_dirs "$1" ".tmp" "${2:-false}" ".tmp" ".temp" "tmp" "temp"
+}
+
+copy_bak_dirs() {
+    copy_dirs "$1" ".bak" "${2:-false}" ".bak" ".backup" "bak" "backup"
+}
+
+# Generic: Aggressive replace with configurable dest_term and patterns
+# Usage: aggressive_replace "$root_dir" ".tmp" false ".tmp" ".temp" "tmp" "temp"
+#   Parameters after KEEP_EPHEMERAL are directory patterns to match (case-insensitive)
+aggressive_replace() {
     local root_dir="$1"
-    local KEEP_EPHEMERAL="${2:-false}"
+    local dest_term="$2"  # ".tmp" or ".bak"
+    local KEEP_EPHEMERAL="${3:-false}"
+    shift 3
+    local patterns=("$@")  # patterns to match (e.g., ".tmp" ".temp" "tmp" "temp")
+
     if [[ -z "$root_dir" ]]; then
-        print_error "aggressive_replace_dirs: root_dir required"
+        print_error "aggressive_replace: root_dir required"
+        return 1
+    fi
+    if [[ -z "$dest_term" ]]; then
+        print_error "aggressive_replace: dest_term required"
+        return 1
+    fi
+    if [[ ${#patterns[@]} -eq 0 ]]; then
+        print_error "aggressive_replace: at least one pattern required"
         return 1
     fi
 
-    local dest_dir="$root_dir/.tmp"
+    local dest_dir="$root_dir/$dest_term"
 
-    print_warning "AGGRESSIVE MODE: originals will be removed and replaced with symlinks to $dest_dir. This will also append to .gitignore for non '.tmp' folders."
+    print_warning "AGGRESSIVE MODE ($dest_term): originals will be removed and replaced with symlinks to $dest_dir. This will also append to .gitignore for non '$dest_term' folders."
 
     # If dry-run, skip interactive confirmation (we are previewing)
     if [[ "$FORCE" != "true" ]]; then
@@ -891,6 +964,16 @@ aggressive_replace_dirs() {
         COPIED_RECORD_TEMP=false
     fi
 
+    # Build find pattern from patterns array (case-insensitive)
+    local find_pattern=""
+    for pattern in "${patterns[@]}"; do
+        if [[ -z "$find_pattern" ]]; then
+            find_pattern="-iname '$pattern'"
+        else
+            find_pattern="$find_pattern -o -iname '$pattern'"
+        fi
+    done
+
     # Build prune args from EXCLUDE_TEMP so we do not descend into known build/output directories
     local prune_args=()
     for e in "${EXCLUDE_TEMP[@]}"; do
@@ -909,9 +992,9 @@ aggressive_replace_dirs() {
     local dest_canon
     dest_canon=$(realpath -m "$dest_dir" 2>/dev/null || echo "$dest_dir")
 
-    # If in dry-run or DEBUG, list all matched temp directories for diagnosis
+    # If in dry-run or DEBUG, list all matched directories for diagnosis
     if [[ "${DEBUG:-false}" == "true" || "$DRY_RUN" == "true" ]]; then
-        print_info "Matched temp directories (diagnostic: showing canonical paths)"
+        print_info "Matched $dest_term directories (diagnostic: showing canonical paths)"
         while IFS= read -r -d '' d; do
             dcanon=$(realpath -m "$d" 2>/dev/null || echo "$d")
             if [[ "$dcanon" == "$dest_canon" || "$dcanon" == "$dest_canon"/* ]]; then
@@ -919,75 +1002,65 @@ aggressive_replace_dirs() {
             else
                 print_info "  $d  (canonical: $dcanon)"
             fi
-        done < <(if [[ ${#prune_args[@]} -gt 0 ]]; then find "$root_dir" \( "${prune_args[@]}" \) -prune -o -type d \( -iname '.tmp' -o -iname '.temp' -o -iname 'tmp' -o -iname 'temp' \) -print0 2>/dev/null; else find "$root_dir" -type d \( -iname '.tmp' -o -iname '.temp' -o -iname 'tmp' -o -iname 'temp' \) -print0 2>/dev/null; fi)
+        done < <(if [[ ${#prune_args[@]} -gt 0 ]]; then find "$root_dir" \( "${prune_args[@]}" \) -prune -o -type d \( $find_pattern \) -print0 2>/dev/null; else find "$root_dir" -type d \( $find_pattern \) -print0 2>/dev/null; fi)
     fi
 
-    # If in dry-run or DEBUG, list all matched temp directories for diagnosis
-    if [[ "${DEBUG:-false}" == "true" || "$DRY_RUN" == "true" ]]; then
-        print_info "Matched temp directories (diagnostic)"
-        while IFS= read -r -d '' d; do
-            if [[ "$d" == "$dest_dir" || "$d" == "$dest_dir"/* ]]; then
-                print_info "  [DEST] $d"
-            else
-                print_info "  $d"
-            fi
-        done < <(if [[ ${#prune_args[@]} -gt 0 ]]; then find "$root_dir" \( "${prune_args[@]}" \) -prune -o -type d \( -iname '.tmp' -o -iname '.temp' -o -iname 'tmp' -o -iname 'temp' \) -print0 2>/dev/null; else find "$root_dir" -type d \( -iname '.tmp' -o -iname '.temp' -o -iname 'tmp' -o -iname 'temp' \) -print0 2>/dev/null; fi)
-    fi
+    while IFS= read -r -d '' srcdir; do
+        src_canon=$(realpath -m "$srcdir" 2>/dev/null || echo "$srcdir")
 
-    while IFS= read -r -d '' tempdir; do
-        temp_canon=$(realpath -m "$tempdir" 2>/dev/null || echo "$tempdir")
-
-        # skip temp dirs already under the destination path to avoid recursion (handles symlinks)
-        if [[ "$temp_canon" == "$dest_canon" || "$temp_canon" == "$dest_canon"/* ]]; then
+        # skip dirs already under the destination path to avoid recursion (handles symlinks)
+        if [[ "$src_canon" == "$dest_canon" || "$src_canon" == "$dest_canon"/* ]]; then
             skipped=$((skipped + 1))
             skipped_dest=$((skipped_dest + 1))
-            skipped_list+="$tempdir (destination)\n"
-            [[ "${DEBUG:-false}" == "true" ]] && print_debug "Skipped $tempdir (canonical: $temp_canon) because it is inside destination $dest_canon"
+            skipped_list+="$srcdir (destination)\n"
+            [[ "${DEBUG:-false}" == "true" ]] && print_debug "Skipped $srcdir (canonical: $src_canon) because it is inside destination $dest_canon"
             continue
         fi
 
-        # skip if the tempdir is inside a known build/output directory (e.g., build/, CMakeFiles)
-        # Use EXCLUDE_TEMP here (not EXCLUDE_DIRS) so we don't skip legitimate .tmp folders
+        # skip if the srcdir is inside a known build/output directory (e.g., build/, CMakeFiles)
+        # Use EXCLUDE_TEMP here (not EXCLUDE_DIRS) so we don't skip legitimate .tmp/.bak folders
         # which are the target of these flows.
-        if path_has_excluded_temp_component "$tempdir"; then
+        if path_has_excluded_temp_component "$srcdir"; then
             skipped=$((skipped + 1))
             skipped_excluded=$((skipped_excluded + 1))
-            skipped_list+="$tempdir (excluded parent component)\n"
-            [[ "${DEBUG:-false}" == "true" ]] && print_debug "Skipped $tempdir because it contains an excluded component"
+            skipped_list+="$srcdir (excluded parent component)\n"
+            [[ "${DEBUG:-false}" == "true" ]] && print_debug "Skipped $srcdir because it contains an excluded component"
             continue
         fi
 
         local parent_name
-        parent_name=$(basename "$(dirname "$tempdir")")
+        parent_name=$(basename "$(dirname "$srcdir")")
         local target="$dest_dir/$parent_name"
         mkdir -p "$target"
 
         # rsync contents non-destructively (don't overwrite existing files)
         if [[ "$DRY_RUN" == "true" ]]; then
-            print_info "DRY-RUN: Would merge $tempdir -> $target"
+            print_info "DRY-RUN: Would merge $srcdir -> $target"
         else
-            rsync -a --ignore-existing --prune-empty-dirs "$tempdir/" "$target/"
-            print_info "Merged $tempdir -> $target"
+            rsync -a --ignore-existing --prune-empty-dirs "$srcdir/" "$target/"
+            print_info "Merged $srcdir -> $target"
         fi
 
         # record mapping for tracing (source<TAB>target)
-        printf '%s\t%s\n' "$tempdir" "$target" >> "$COPIED_RECORD"
+        printf '%s\t%s\n' "$srcdir" "$target" >> "$COPIED_RECORD"
 
-        # Append to .gitignore if basename != .tmp (case-insensitive)
+        # Append to .gitignore if basename != dest_term (case-insensitive)
         local base
-        base=$(basename "$tempdir")
-        if [[ "$(printf '%s' "$base" | tr '[:upper:]' '[:lower:]')" != ".tmp" ]]; then
+        base=$(basename "$srcdir")
+        local dest_term_lower
+        dest_term_lower=$(printf '%s' "$dest_term" | tr '[:upper:]' '[:lower:]')
+        if [[ "$(printf '%s' "$base" | tr '[:upper:]' '[:lower:]')" != "$dest_term_lower" ]]; then
             local gitroot
-            gitroot=$(git -C "$(dirname "$tempdir")" rev-parse --show-toplevel 2>/dev/null || true)
+            gitroot=$(git -C "$(dirname "$srcdir")" rev-parse --show-toplevel 2>/dev/null || true)
             local gitignore_file entry
             if [[ -n "$gitroot" ]]; then
                 gitignore_file="$gitroot/.gitignore"
-                # relative path to tempdir from repo root (fallback to basename)
+                # relative path to srcdir from repo root (fallback to basename)
                 local rel
-                rel=$(realpath --relative-to="$gitroot" "$tempdir" 2>/dev/null || echo "$base")
+                rel=$(realpath --relative-to="$gitroot" "$srcdir" 2>/dev/null || echo "$base")
                 entry="${rel}/"
             else
-                gitignore_file="$(dirname "$tempdir")/.gitignore"
+                gitignore_file="$(dirname "$srcdir")/.gitignore"
                 entry="${base}/"
             fi
             mkdir -p "$(dirname "$gitignore_file")"
@@ -1011,53 +1084,53 @@ aggressive_replace_dirs() {
 
         # remove original and create symlink pointing to backup target
         if [[ "$DRY_RUN" == "true" ]]; then
-            print_info "DRY-RUN: Would remove $tempdir and create symlink pointing to $target"
+            print_info "DRY-RUN: Would remove $srcdir and create symlink pointing to $target"
         else
             # Ensure the target directory exists so the symlink points at a directory
             mkdir -p "$target"
-            rm -rf "$tempdir"
+            rm -rf "$srcdir"
             local parent_dir
-            parent_dir=$(dirname "$tempdir")
+            parent_dir=$(dirname "$srcdir")
             # Create a relative symlink target to make links portable across hosts/containers
             local rel_target
             rel_target=$(realpath --relative-to="$parent_dir" "$target" 2>/dev/null || echo "$target")
-            ln -sfn "$rel_target" "$tempdir"
-            print_info "Replaced $tempdir -> $rel_target (relative -> $target) (original removed and symlinked)"
+            ln -sfn "$rel_target" "$srcdir"
+            print_info "Replaced $srcdir -> $rel_target (relative -> $target) (original removed and symlinked)"
         fi
 
         found=$((found + 1))
-    done < <(if [[ ${#prune_args[@]} -gt 0 ]]; then find "$root_dir" \( "${prune_args[@]}" \) -prune -o -type d \( -iname '.tmp' -o -iname '.temp' -o -iname 'tmp' -o -iname 'temp' \) -print0 2>/dev/null; else find "$root_dir" -type d \( -iname '.tmp' -o -iname '.temp' -o -iname 'tmp' -o -iname 'temp' \) -print0 2>/dev/null; fi)
+    done < <(if [[ ${#prune_args[@]} -gt 0 ]]; then find "$root_dir" \( "${prune_args[@]}" \) -prune -o -type d \( $find_pattern \) -print0 2>/dev/null; else find "$root_dir" -type d \( $find_pattern \) -print0 2>/dev/null; fi)
 
     if [[ $found -eq 0 && $skipped -eq 0 ]]; then
-        print_info "No temp dirs found to aggressively replace in $root_dir"
+        print_info "No $dest_term dirs found to aggressively replace in $root_dir"
         if [[ "${COPIED_RECORD_TEMP:-false}" == "true" ]]; then
             if [[ "$KEEP_EPHEMERAL" == "true" || "$PRUNE" == "true" ]]; then
-                print_info "DRY-RUN: No temp dirs found; keeping ephemeral record $COPIED_RECORD for preview"
+                print_info "DRY-RUN: No $dest_term dirs found; keeping ephemeral record $COPIED_RECORD for preview"
             else
-                print_ephemeral_notice_once "DRY-RUN: No temp dirs found; ephemeral record will be removed"
+                print_ephemeral_notice_once "DRY-RUN: No $dest_term dirs found; ephemeral record will be removed"
                 [[ -f "$COPIED_RECORD" ]] && rm -f "$COPIED_RECORD" && COPIED_RECORD=""
             fi
         else
             [[ -f "$COPIED_RECORD" ]] && rm -f "$COPIED_RECORD" && COPIED_RECORD=""
         fi
     elif [[ $found -eq 0 && $skipped -gt 0 ]]; then
-        print_info "Found $skipped candidate temp dir(s) but none were processed. Summary: dest_skipped=$skipped_dest excluded_skipped=$skipped_excluded other_skipped=$skipped_other"
+        print_info "Found $skipped candidate $dest_term dir(s) but none were processed. Summary: dest_skipped=$skipped_dest excluded_skipped=$skipped_excluded other_skipped=$skipped_other"
         print_info "Destination canonical path: $dest_canon"
         if [[ "${DEBUG:-false}" == "true" ]]; then
             echo -e "Skipped directories and reasons:\n$skipped_list"
         fi
         if [[ "${COPIED_RECORD_TEMP:-false}" == "true" ]]; then
             if [[ "$KEEP_EPHEMERAL" == "true" || "$PRUNE" == "true" ]]; then
-                print_info "DRY-RUN: Candidate temp dirs were skipped; keeping ephemeral record $COPIED_RECORD for preview"
+                print_info "DRY-RUN: Candidate $dest_term dirs were skipped; keeping ephemeral record $COPIED_RECORD for preview"
             else
-                print_ephemeral_notice_once "DRY-RUN: Candidate temp dirs were skipped; ephemeral record will be removed"
+                print_ephemeral_notice_once "DRY-RUN: Candidate $dest_term dirs were skipped; ephemeral record will be removed"
                 [[ -f "$COPIED_RECORD" ]] && rm -f "$COPIED_RECORD" && COPIED_RECORD=""
             fi
         else
             [[ -f "$COPIED_RECORD" ]] && rm -f "$COPIED_RECORD" && COPIED_RECORD=""
         fi
     else
-        print_success "Aggressively processed $found temp dir(s) into $dest_dir"
+        print_success "Aggressively processed $found $dest_term dir(s) into $dest_dir"
         if [[ $skipped -gt 0 && "${DEBUG:-false}" == "true" ]]; then
             echo -e "Also skipped $skipped directory(s) located under $dest_dir or excluded:\n$skipped_list"
         fi
@@ -1081,6 +1154,15 @@ aggressive_replace_dirs() {
         echo "$COPIED_RECORD"
     fi
 
+}
+
+# Convenience wrappers
+aggressive_replace_dirs() {
+    aggressive_replace "$1" ".tmp" "${2:-false}" ".tmp" ".temp" "tmp" "temp"
+}
+
+aggressive_replace_bak_dirs() {
+    aggressive_replace "$1" ".bak" "${2:-false}" ".bak" ".backup" "bak" "backup"
 }
 
 
@@ -1118,23 +1200,32 @@ show_plan() {
     echo -e "  • Use remote URLs where available, relative paths otherwise"
     echo -e "  • Overwrite existing .gitmodules files"
     echo ""
-    echo -e "Additional options:"
+    echo -e "Additional options (temp folders):"
     echo -e "  --copy-temp       : After module nesting, collect and merge temp directories into \$ROOT/.tmp/<parent>"
     echo -e "  --only-copy-temp  : Skip module nesting; only run the temp collection flow (prompts for root)"
     echo -e "  --prune           : After copy, move originals to recycle (or delete with --delete) and replace with symlinks to backups"
     echo -e "  --only-prune      : Run prune flow only (uses latest copied record in \$ROOT/.tmp)"
-    echo -e "  --dry-run         : Show actions without making changes (applies to copy, prune and aggressive)"
-    echo -e "  --delete          : Permanently delete originals when pruning instead of moving to recycle"
     echo -e "  --aggressive      : Aggressively replace temp folders: merge into \$ROOT/.tmp/<parent>, remove originals, create symlinks, and append to .gitignore when folder name is not '.tmp' (overrides other flags)"
+    echo ""
+    echo -e "Additional options (backup folders):"
+    echo -e "  --copy-bak        : After module nesting, collect and merge backup directories into \$ROOT/.bak/<parent>"
+    echo -e "  --only-copy-bak   : Skip module nesting; only run the backup collection flow (prompts for root)"
+    echo -e "  --prune-bak       : After copy-bak, move originals to recycle (or delete with --delete) and replace with symlinks"
+    echo -e "  --only-prune-bak  : Run backup prune flow only (uses latest copied record in \$ROOT/.bak)"
+    echo -e "  --aggressive-bak  : Aggressively replace backup folders: merge into \$ROOT/.bak/<parent>, remove originals, create symlinks, and append to .gitignore"
+    echo ""
+    echo -e "Common options:"
+    echo -e "  --dry-run         : Show actions without making changes (applies to all operations)"
+    echo -e "  --delete          : Permanently delete originals instead of moving to recycle"
     echo -e "  -y, --yes         : Auto-confirm prompts (use with caution)"
     echo -e "  --test            : Run a safety test sequence (copy -> prune -> aggressive) in --dry-run mode by default"
     echo ""
 
     # Print a concise options summary for confirmation
     echo -e "${BOLD}Enabled actions:${NC}"
-    echo -e "  Copy temp: ${CYAN}${COPY_TEMP}${NC}  | Only copy: ${CYAN}${ONLY_COPY_TEMP}${NC}  | Prune: ${CYAN}${PRUNE}${NC}  | Only prune: ${CYAN}${ONLY_PRUNE}${NC}"
-    echo -e "  Aggressive: ${CYAN}${AGGRESSIVE}${NC}  | Delete: ${CYAN}${DELETE}${NC}  | Auto-confirm: ${CYAN}${FORCE}${NC}"
-    echo -e "  Dry-run: ${CYAN}${DRY_RUN}${NC}"
+    echo -e "  .tmp - Copy: ${CYAN}${COPY_TEMP}${NC}  | Prune: ${CYAN}${PRUNE}${NC}  | Aggressive: ${CYAN}${AGGRESSIVE}${NC}"
+    echo -e "  .bak - Copy: ${CYAN}${COPY_BAK}${NC}  | Prune: ${CYAN}${PRUNE_BAK}${NC}  | Aggressive: ${CYAN}${AGGRESSIVE_BAK}${NC}"
+    echo -e "  Delete: ${CYAN}${DELETE}${NC}  | Auto-confirm: ${CYAN}${FORCE}${NC}  | Dry-run: ${CYAN}${DRY_RUN}${NC}"
     echo ""
 
     if [[ "$DRY_RUN" == "true" ]]; then
@@ -1179,19 +1270,16 @@ show_summary() {
         prune_temp_dirs "$root_dir" "$COPIED_RECORD"
     fi
 
-    # If only-prune flag provided independently, run prune now
-    if [[ "$ONLY_PRUNE" == "true" ]]; then
-        print_info "--only-prune enabled: running prune flow against $root_dir"
-        # If no record provided, try to find latest record in $root_dir/.tmp
-        if [[ -z "$COPIED_RECORD" || ! -f "$COPIED_RECORD" ]]; then
-            COPIED_RECORD=$(ls -1t "$root_dir/.tmp"/copied_dirs.* 2>/dev/null | head -n1 || true)
-            if [[ -z "$COPIED_RECORD" || ! -f "$COPIED_RECORD" ]]; then
-                print_error "No copied record file found in $root_dir/.tmp. Run with --copy-temp first or provide a record."
-            else
-                prune_temp_dirs "$root_dir" "$COPIED_RECORD"
-            fi
-        else
-            prune_temp_dirs "$root_dir" "$COPIED_RECORD"
+    # If copy-bak requested, run copy now
+    if [[ "$COPY_BAK" == "true" ]]; then
+        print_info "--copy-bak enabled: collecting backup directories into $root_dir/.bak"
+        if [[ "$DRY_RUN" == "true" ]]; then
+            print_info "DRY-RUN: preview only — ephemeral record will be created to allow --prune-bak preview (no workspace files will be created)."
+        fi
+        copy_bak_dirs "$root_dir"
+        # If user also requested prune after copy, run prune (ephemeral record is used in DRY-RUN)
+        if [[ "$PRUNE_BAK" == "true" && -n "$COPIED_RECORD" && -f "$COPIED_RECORD" ]]; then
+            prune_bak_dirs "$root_dir" "$COPIED_RECORD"
         fi
     fi
 
@@ -1213,7 +1301,7 @@ main() {
     
     local root_dir=""
 
-    # Parse CLI flags: --copy-temp and --only-copy-temp
+    # Parse CLI flags: --copy-temp, --copy-bak and variants
     local args=()
     for arg in "$@"; do
         case "$arg" in
@@ -1223,11 +1311,23 @@ main() {
             --only-copy-temp)
                 ONLY_COPY_TEMP=true
                 ;;
+            --copy-bak)
+                COPY_BAK=true
+                ;;
+            --only-copy-bak)
+                ONLY_COPY_BAK=true
+                ;;
             --prune)
                 PRUNE=true
                 ;;
             --only-prune)
                 ONLY_PRUNE=true
+                ;;
+            --prune-bak)
+                PRUNE_BAK=true
+                ;;
+            --only-prune-bak)
+                ONLY_PRUNE_BAK=true
                 ;;
             --dry-run)
                 DRY_RUN=true
@@ -1240,6 +1340,10 @@ main() {
                 # Aggressive mode implies only-copy-temp behavior and overrides other flags
                 ONLY_COPY_TEMP=true
                 ;;
+            --aggressive-bak)
+                AGGRESSIVE_BAK=true
+                ONLY_COPY_BAK=true
+                ;;
             --agressive)
                 AGGRESSIVE=true
                 ONLY_COPY_TEMP=true
@@ -1251,7 +1355,7 @@ main() {
                 FORCE=true
                 ;;
             -h|--help)
-                echo "Usage: $(basename "$0") [ROOT_DIR] [--copy-temp] [--only-copy-temp] [--prune] [--only-prune] [--dry-run] [--delete] [--aggressive] [-y]"
+                echo "Usage: $(basename "$0") [ROOT_DIR] [--copy-temp|--copy-bak] [--prune|--prune-bak] [--aggressive|--aggressive-bak] [--dry-run] [--delete] [-y]"
                 exit 0
                 ;;
             *)
@@ -1398,6 +1502,68 @@ main() {
                 prune_temp_dirs "$root_dir"
             fi
         fi
+        exit 0
+    fi
+
+    # If running only the copy-bak flow, prompt for root and execute
+    if [[ "$ONLY_COPY_BAK" == "true" ]]; then
+        root_dir=$(get_root_directory "$root_dir")
+        print_info "Root directory: $root_dir"
+        if [[ "$AGGRESSIVE_BAK" == "true" ]]; then
+            print_warning "Aggressive mode enabled for .bak: originals will be removed and replaced with symlinks; --dry-run is supported to preview actions; other destructive flags are ignored."
+            if [[ "$DRY_RUN" == "true" ]]; then
+                print_info "DRY-RUN: previewing aggressive actions (no files will be modified)."
+            fi
+            aggressive_replace_bak_dirs "$root_dir"
+        else
+            copy_bak_dirs "$root_dir"
+            # If prune requested with only-copy-bak, run prune now
+            if [[ "$PRUNE_BAK" == "true" ]]; then
+                prune_bak_dirs "$root_dir"
+            fi
+        fi
+        exit 0
+    fi
+
+    # If running only the prune-bak flow, prompt for root and execute (skip module nesting)
+    if [[ "$ONLY_PRUNE_BAK" == "true" ]]; then
+        root_dir=$(get_root_directory "$root_dir")
+        print_info "Root directory: $root_dir"
+        # Find latest copied record in the root .bak directory (if any)
+        local record
+        record=$(ls -1t "$root_dir/.bak"/copied_dirs.* 2>/dev/null | head -n1 || true)
+
+        if [[ -z "$record" || ! -f "$record" ]]; then
+            if [[ "$DRY_RUN" == "true" ]]; then
+                print_info "DRY-RUN: No copied record found in $root_dir/.bak — simulating '--only-copy-bak --dry-run' to generate ephemeral record for prune preview"
+                copy_bak_dirs "$root_dir" "true"
+                record="$COPIED_RECORD"
+                if [[ -z "$record" || ! -f "$record" ]]; then
+                    print_error "Failed to generate ephemeral copied record for prune preview"
+                    exit 1
+                fi
+                print_info "DRY-RUN: Using ephemeral record $record for prune preview"
+            else
+                print_error "No copied record found in $root_dir/.bak. Run with --copy-bak first or provide a record file."
+                exit 1
+            fi
+        fi
+
+        print_info "--only-prune-bak enabled: running prune flow against $root_dir using record $record"
+        if [[ "$DRY_RUN" == "true" ]]; then
+            print_info "DRY-RUN: previewing prune actions (no changes will be made)"
+        fi
+
+        prune_bak_dirs "$root_dir" "$record"
+
+        # Cleanup ephemeral record if it was created during DRY_RUN copy preview
+        if [[ "${COPIED_RECORD_TEMP:-false}" == "true" && -n "$COPIED_RECORD" && -f "$COPIED_RECORD" ]]; then
+            rm -f "$COPIED_RECORD" || true
+            COPIED_RECORD=""
+            COPIED_RECORD_TEMP=false
+            print_ephemeral_notice_once "Removed ephemeral copied-record used for DRY-RUN-only-prune-bak preview"
+        fi
+
         exit 0
     fi
 
