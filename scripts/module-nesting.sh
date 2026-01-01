@@ -1100,6 +1100,17 @@ aggressive_replace() {
         else
             rsync -a --ignore-existing --prune-empty-dirs "$srcdir/" "$target/"
             print_info "Merged $srcdir -> $target"
+            
+            # Fix internal .tmp symlinks that may have been created with old relative paths
+            # When we merge XAOSTECH into .bak/XAOSTECH.bak_2026-01-01, any .tmp symlink
+            # inside it needs to point to the shared .tmp location, not old relative paths
+            if [[ -L "$target/.tmp" ]]; then
+                # Remove the broken/old symlink
+                rm -f "$target/.tmp"
+                # Create a new relative symlink pointing to the shared .tmp/<folder_name> location
+                ln -sr "$(dirname "$target")/../tmp/$folder_name" "$target/.tmp" 2>/dev/null || true
+                [[ "${DEBUG:-false}" == "true" ]] && print_debug "Fixed .tmp symlink in $target to point to shared .tmp location"
+            fi
         fi
 
         # record mapping for tracing (source<TAB>target)

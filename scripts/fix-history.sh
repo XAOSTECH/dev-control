@@ -17,6 +17,7 @@
 #   ./scripts/fix-history.sh                    # Interactive mode (edit last 10 commits)
 #   ./scripts/fix-history.sh --range HEAD=20 --dry-run   # Preview changes without applying
 #   ./scripts/fix-history.sh --sign --range HEAD=all -v  # Re-sign a branch (requires GPG)
+#   PRESERVE_TOPOLOGY=TRUE UPDATE_WORKTREES=true NO_EDIT_MODE=true AUTO_FIX_REBASE=true RECONSTRUCT_AUTO=true gc-fix --sign --range HEAD=all -v
 #
 # Cleaning and harness helpers:
 #   ./scripts/fix-history.sh --only-cleanup      # Only cleanup tmp/backup tags and branches
@@ -3870,4 +3871,3 @@ if [[ "$HARNESS_MODE" == "true" ]]; then
 fi
 
 main "$@"
-PRESERVE_TOPOLOGY=TRUE UPDATE_WORKTREES=true NO_EDIT_MODE=true AUTO_FIX_REBASE=true RECONSTRUCT_AUTO=true gc-fix --sign --range HEAD=all -v
