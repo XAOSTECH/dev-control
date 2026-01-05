@@ -57,14 +57,17 @@ jobs:
                 const pr = prRes.data;
                 const author = pr.user && pr.user.login;
                 const labels = (pr.labels || []).map(l => l.name);
-                const isDependabot = !!author && (author === 'dependabot[bot]' || author.toLowerCase().includes('dependabot'));
-                const hasAutomergeLabel = labels.includes('automerge') || labels.includes('dependabot/automerge') || labels.includes('auto-merge');
-                
-                if (isDependabot || hasAutomergeLabel) {
+                const isDependabot = author === 'dependabot[bot]';
+                const isRepoOwner = author === owner;
+                const isCloudflare = author === 'cloudflare-workers-and-pages[bot]';
+                const isPages = author === 'github-pages[bot]' || author === 'github-pages-deploy-action[bot]';
+                const isLabel = labels.includes('automerge');
+
+                if (isDependabot || isRepoOwner || isCloudflare || isPages || isLabel) {
                   validPRs.push(prNum);
-                  core.info(`PR #${prNum} valid (author=${author}, isDependabot=${isDependabot})`);
+                  core.info(`PR #${prNum} valid (author=${author}, isDependabot=${isDependabot}, isRepoOwner=${isRepoOwner}, isCloudflare=${isCloudflare}, isPages=${isPages}, isLabel=${isLabel})`);
                 } else {
-                  core.info(`PR #${prNum} skipped (not Dependabot and no automerge label)`);
+                  core.info(`PR #${prNum} skipped (not an allowed author and no automerge label)`);
                 }
               } catch (error) {
                 core.info(`PR #${prNum} not found or error: ${error.message}`);
