@@ -1,0 +1,12 @@
+name: example
+version: 1.0.0
+description: Example plugin demonstrating the plugin system
+author: xaoscience
+url: https://github.com/xaoscience/git-control
+
+requires: ">=2.0.0"
+depends: []
+
+commands:
+  - name: hello
+    description: Say hello (example command)
