@@ -77,8 +77,8 @@ version_compare() {
     
     local IFS=.
     local i
-    local v1_parts=($v1)
-    local v2_parts=($v2)
+    local v1_parts=("$v1")
+    local v2_parts=("$v2")
     
     # Fill empty positions with zeros
     for ((i=${#v1_parts[@]}; i<${#v2_parts[@]}; i++)); do

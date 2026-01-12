@@ -108,10 +108,14 @@ load_gc_config() {
 gc_config() {
     local key="$1"
     local default="${2:-}"
-    local var="GC_CONFIG_${key}"
+    local var_name
     
-    if [[ -n "${!var+x}" ]]; then
-        echo "${!var}"
+    # Replace dots and dashes with underscores for variable name
+    var_name="GC_CONFIG_${key//./_}"
+    var_name="${var_name//-/_}"
+    
+    if [[ -n "${!var_name+x}" ]]; then
+        echo "${!var_name}"
     else
         echo "$default"
     fi
@@ -122,6 +126,11 @@ gc_config_set() {
     local value="$2"
     local scope="${3:-project}"
     local config_file
+    local var_name
+    
+    # Replace dots and dashes with underscores for variable name
+    var_name="GC_CONFIG_${key//./_}"
+    var_name="${var_name//-/_}"
     
     if [[ "$scope" == "global" ]]; then
         config_file="$GC_GLOBAL_CONFIG"
@@ -142,7 +151,7 @@ gc_config_set() {
         echo "${key}: ${value}" >> "$config_file"
     fi
     
-    eval "GC_CONFIG_${key//-/_}=\"$value\""
+    printf -v "$var_name" '%s' "$value"
 }
 
 gc_config_show() {

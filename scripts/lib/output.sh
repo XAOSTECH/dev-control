@@ -52,14 +52,14 @@ outf() {
 # Output only in verbose mode
 # Usage: verbose "message"
 verbose() {
-    [[ "$OUTPUT_VERBOSE" == "true" ]] && echo "$@"
+    [[ "$OUTPUT_VERBOSE" == "true" ]] && echo "$*"
     return 0
 }
 
 # Output only in debug mode
 # Usage: debug "message"
 debug() {
-    [[ "$OUTPUT_DEBUG" == "true" ]] && echo "[DEBUG] $@" >&2
+    [[ "$OUTPUT_DEBUG" == "true" ]] && echo "[DEBUG] $*" >&2
     return 0
 }
 
