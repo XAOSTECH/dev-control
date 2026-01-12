@@ -1,0 +1,321 @@
+#!/usr/bin/env bash
+#
+# Git-Control (gc) - Main Entry Point
+# Unified CLI for all git-control tools
+#
+# Usage:
+#   gc <command> [options]    # Run a specific command
+#   gc                        # Interactive menu
+#   gc --help                 # Show help
+#   gc --version              # Show version
+#
+# Commands:
+#   init, repo, pr, fix, modules, licenses, mcp, container, aliases
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2024-2026 xaoscience
+
+set -e
+
+# Version
+GC_VERSION="2.0.0"
+GC_BUILD_DATE="2026-01-12"
+
+# Resolve symlinks and get script directory
+resolve_path() {
+    local path="$1"
+    while [[ -L "$path" ]]; do
+        local dir
+        dir=$(dirname "$path")
+        path=$(readlink "$path")
+        [[ "$path" != /* ]] && path="$dir/$path"
+    done
+    echo "$path"
+}
+
+SCRIPT_PATH=$(resolve_path "${BASH_SOURCE[0]}")
+GC_ROOT="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+SCRIPTS_DIR="$GC_ROOT/scripts"
+COMMANDS_DIR="$GC_ROOT/commands"
+PLUGINS_DIR="$GC_ROOT/plugins"
+LIB_DIR="$SCRIPTS_DIR/lib"
+
+# Source core libraries
+source "$LIB_DIR/colors.sh"
+source "$LIB_DIR/print.sh"
+
+# Global options
+GC_QUIET=false
+GC_VERBOSE=false
+GC_JSON=false
+GC_DEBUG=false
+
+# ============================================================================
+# COMMAND REGISTRY
+# ============================================================================
+
+# Map command names to scripts
+declare -A COMMAND_MAP=(
+    ["init"]="template-loading.sh"
+    ["template"]="template-loading.sh"
+    ["templates"]="template-loading.sh"
+    ["repo"]="create-repo.sh"
+    ["create"]="create-repo.sh"
+    ["pr"]="create-pr.sh"
+    ["pull-request"]="create-pr.sh"
+    ["fix"]="fix-history.sh"
+    ["history"]="fix-history.sh"
+    ["modules"]="module-nesting.sh"
+    ["nest"]="module-nesting.sh"
+    ["submodules"]="module-nesting.sh"
+    ["licenses"]="licenses.sh"
+    ["lic"]="licenses.sh"
+    ["license"]="licenses.sh"
+    ["mcp"]="mcp-setup.sh"
+    ["container"]="containerise.sh"
+    ["containerise"]="containerise.sh"
+    ["containerize"]="containerise.sh"
+    ["aliases"]="alias-loading.sh"
+    ["alias"]="alias-loading.sh"
+    ["menu"]="git-control.sh"
+)
+
+# Command descriptions for help
+declare -A COMMAND_DESC=(
+    ["init"]="Initialize repository with templates (README, LICENSE, etc.)"
+    ["repo"]="Create GitHub repository from current folder"
+    ["pr"]="Create pull request from current branch"
+    ["fix"]="Fix commit history (reorder, edit, sign, drop)"
+    ["modules"]="Manage git submodules and .gitmodules"
+    ["licenses"]="Audit and manage licenses across repo/submodules"
+    ["mcp"]="Configure Model Context Protocol servers"
+    ["container"]="Setup devcontainer for project"
+    ["aliases"]="Install bash aliases for git-control"
+    ["menu"]="Open interactive menu (default)"
+)
+
+# ============================================================================
+# HELP & VERSION
+# ============================================================================
+
+show_version() {
+    if [[ "$GC_JSON" == "true" ]]; then
+        cat <<EOF
+{"version": "$GC_VERSION", "build_date": "$GC_BUILD_DATE", "root": "$GC_ROOT"}
+EOF
+    else
+        echo "git-control $GC_VERSION ($GC_BUILD_DATE)"
+        echo "Location: $GC_ROOT"
+    fi
+}
+
+show_help() {
+    cat << EOF
+${BOLD}git-control${NC} - Comprehensive Git workflow automation toolkit
+
+${BOLD}USAGE${NC}
+  gc <command> [options]
+  gc                        Interactive menu
+  gc --help                 Show this help
+  gc --version              Show version info
+
+${BOLD}COMMANDS${NC}
+EOF
+
+    # Print commands in a formatted table
+    local commands=("init" "repo" "pr" "fix" "modules" "licenses" "mcp" "container" "aliases")
+    for cmd in "${commands[@]}"; do
+        printf "  ${CYAN}%-12s${NC} %s\n" "$cmd" "${COMMAND_DESC[$cmd]}"
+    done
+
+    cat << EOF
+
+${BOLD}GLOBAL OPTIONS${NC}
+  -h, --help                Show help (for gc or specific command)
+  -v, --version             Show version
+  -q, --quiet               Suppress non-essential output
+  --verbose                 Enable verbose output
+  --json                    Output in JSON format (where supported)
+  --debug                   Enable debug mode
+
+${BOLD}EXAMPLES${NC}
+  gc init                   Initialize repo with templates
+  gc repo                   Create GitHub repo from current folder
+  gc pr                     Create pull request
+  gc fix --range HEAD=5     Fix last 5 commits
+  gc licenses --deep        Audit licenses including submodules
+  gc aliases                Install bash aliases
+
+${BOLD}ALIASES${NC}
+  After running 'gc aliases', these shortcuts are available:
+    gc-init, gc-repo, gc-pr, gc-fix, gc-modules, gc-licenses, gc-mcp
+
+${BOLD}CONFIGURATION${NC}
+  Global config:  ~/.config/git-control/config.yaml
+  Project config: .gc-init.yaml (in repository root)
+
+${BOLD}MORE INFO${NC}
+  https://github.com/xaoscience/git-control
+EOF
+}
+
+# ============================================================================
+# COMMAND DISCOVERY & DISPATCH
+# ============================================================================
+
+# Find command script (built-in or plugin)
+find_command() {
+    local cmd="$1"
+    
+    # Check built-in command map first
+    if [[ -n "${COMMAND_MAP[$cmd]}" ]]; then
+        local script="$SCRIPTS_DIR/${COMMAND_MAP[$cmd]}"
+        if [[ -f "$script" ]]; then
+            echo "$script"
+            return 0
+        fi
+    fi
+    
+    # Check commands directory
+    if [[ -f "$COMMANDS_DIR/${cmd}.sh" ]]; then
+        echo "$COMMANDS_DIR/${cmd}.sh"
+        return 0
+    fi
+    
+    # Check plugins
+    for plugin_dir in "$PLUGINS_DIR"/*/; do
+        if [[ -f "${plugin_dir}commands/${cmd}.sh" ]]; then
+            echo "${plugin_dir}commands/${cmd}.sh"
+            return 0
+        fi
+    done
+    
+    return 1
+}
+
+# List all available commands
+list_commands() {
+    local commands=()
+    
+    # Built-in commands
+    for cmd in "${!COMMAND_MAP[@]}"; do
+        commands+=("$cmd")
+    done
+    
+    # Commands directory
+    if [[ -d "$COMMANDS_DIR" ]]; then
+        for script in "$COMMANDS_DIR"/*.sh; do
+            [[ -f "$script" ]] || continue
+            local name
+            name=$(basename "$script" .sh)
+            commands+=("$name")
+        done
+    fi
+    
+    # Plugin commands
+    for plugin_dir in "$PLUGINS_DIR"/*/; do
+        [[ -d "$plugin_dir" ]] || continue
+        for script in "${plugin_dir}commands/"*.sh; do
+            [[ -f "$script" ]] || continue
+            local name
+            name=$(basename "$script" .sh)
+            commands+=("plugin:$name")
+        done
+    done
+    
+    # Unique and sorted
+    printf '%s\n' "${commands[@]}" | sort -u
+}
+
+# Run a command
+run_command() {
+    local cmd="$1"
+    shift
+    
+    local script
+    if script=$(find_command "$cmd"); then
+        # Export global options for child scripts
+        export GC_QUIET GC_VERBOSE GC_JSON GC_DEBUG GC_ROOT
+        
+        # Execute the script
+        exec bash "$script" "$@"
+    else
+        print_error "Unknown command: $cmd"
+        echo ""
+        echo "Available commands:"
+        list_commands | while read -r c; do
+            echo "  $c"
+        done
+        echo ""
+        echo "Run 'gc --help' for usage information."
+        exit 1
+    fi
+}
+
+# ============================================================================
+# MAIN
+# ============================================================================
+
+main() {
+    # Parse global options first
+    local args=()
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -h|--help)
+                if [[ ${#args[@]} -gt 0 ]]; then
+                    # Help for a specific command
+                    run_command "${args[0]}" --help
+                else
+                    show_help
+                fi
+                exit 0
+                ;;
+            -v|--version)
+                show_version
+                exit 0
+                ;;
+            -q|--quiet)
+                GC_QUIET=true
+                shift
+                ;;
+            --verbose)
+                GC_VERBOSE=true
+                shift
+                ;;
+            --json)
+                GC_JSON=true
+                shift
+                ;;
+            --debug)
+                GC_DEBUG=true
+                set -x
+                shift
+                ;;
+            --list-commands)
+                list_commands
+                exit 0
+                ;;
+            -*)
+                # Unknown global option - might be for subcommand
+                args+=("$1")
+                shift
+                ;;
+            *)
+                args+=("$1")
+                shift
+                ;;
+        esac
+    done
+    
+    # No command specified - run interactive menu
+    if [[ ${#args[@]} -eq 0 ]]; then
+        run_command "menu"
+        exit 0
+    fi
+    
+    # Run specified command
+    local cmd="${args[0]}"
+    run_command "$cmd" "${args[@]:1}"
+}
+
+main "$@"
