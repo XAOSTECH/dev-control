@@ -1,0 +1,13 @@
+# git-control global configuration
+# Location: ~/.config/git-control/config.yaml
+
+default-license: MIT
+default-branch: main
+auto-sign-commits: true
+auto-push-after-fix: false
+license-deep-scan: false
+interactive-mode: true
+color-output: auto
+editor: nano
+github-org:
+template-set: default
