@@ -7,30 +7,22 @@
 #   source "${SCRIPT_DIR}/lib/colors.sh"
 #   source "${SCRIPT_DIR}/lib/print.sh"
 #
+# Note: colors.sh must be sourced first for colors to be available
 
-# Ensure colors are loaded
-if [[ -z "${NC:-}" ]]; then
-    # Inline fallback if colors.sh not sourced
-    RED='\033[0;31m'
-    GREEN='\033[0;32m'
-    YELLOW='\033[1;33m'
-    BLUE='\033[0;34m'
-    CYAN='\033[0;36m'
-    NC='\033[0m'
-    BOLD='\033[1m'
-fi
-
-# Print a styled header box
-# Usage: print_header "Title Text"
+# Print a styled header box with auto-padding
+# Usage: print_header "Title Text" [width]
+# The title will be centered automatically with proper padding
 print_header() {
     local title="$1"
-    local width=${2:-64}
-    local padding=$(( (width - ${#title} - 2) / 2 ))
-    local pad_str
-    pad_str=$(printf '%*s' "$padding" '')
+    local width=${2:-68}
+    local title_len=${#title}
+    local total_padding=$(( width - title_len))
+    local left_padding=$(( total_padding / 2 ))
+    local right_padding=$(( total_padding - left_padding ))
     
     echo -e "\n${BOLD}${BLUE}╔$(printf '═%.0s' $(seq 1 $width))╗${NC}"
-    echo -e "${BOLD}${BLUE}║${NC}${pad_str}${CYAN}${title}${NC}${pad_str}${BOLD}${BLUE}║${NC}"
+    printf "${BOLD}${BLUE}║${NC}%*s${CYAN}%s${NC}%*s${BOLD}${BLUE}║${NC}\n" \
+        "$left_padding" "" "$title" "$right_padding" ""
     echo -e "${BOLD}${BLUE}╚$(printf '═%.0s' $(seq 1 $width))╝${NC}\n"
 }
 

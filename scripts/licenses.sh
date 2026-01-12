@@ -21,25 +21,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GIT_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
 
 # Source shared libraries
-if [[ -f "$SCRIPT_DIR/lib/colors.sh" ]]; then
-    source "$SCRIPT_DIR/lib/colors.sh"
-else
-    # Inline fallback
-    RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
-    BLUE='\033[0;34m'; CYAN='\033[0;36m'; NC='\033[0m'; BOLD='\033[1m'
-fi
-
-if [[ -f "$SCRIPT_DIR/lib/print.sh" ]]; then
-    source "$SCRIPT_DIR/lib/print.sh"
-fi
-
-if [[ -f "$SCRIPT_DIR/lib/license.sh" ]]; then
-    source "$SCRIPT_DIR/lib/license.sh"
-fi
-
-if [[ -f "$SCRIPT_DIR/lib/git-utils.sh" ]]; then
-    source "$SCRIPT_DIR/lib/git-utils.sh"
-fi
+source "$SCRIPT_DIR/lib/colors.sh"
+source "$SCRIPT_DIR/lib/print.sh"
+source "$SCRIPT_DIR/lib/license.sh"
+source "$SCRIPT_DIR/lib/git-utils.sh"
 
 # CLI options
 DEEP_SCAN=false

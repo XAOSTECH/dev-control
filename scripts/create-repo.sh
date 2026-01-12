@@ -10,17 +10,13 @@
 
 set -e
 
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-CYAN='\033[0;36m'
-NC='\033[0m'
-BOLD='\033[1m'
-
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GIT_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
+
+# Source shared libraries
+source "$SCRIPT_DIR/lib/colors.sh"
+source "$SCRIPT_DIR/lib/print.sh"
 
 # CLI mode: none|topics|description|all
 EDIT_MODE="none"
@@ -32,28 +28,6 @@ BATCH_DIRS=()
 # ============================================================================
 # HELPER FUNCTIONS
 # ============================================================================
-
-print_header() {
-    echo -e "\n${BOLD}${BLUE}╔══════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${BOLD}${BLUE}║${NC}                 ${CYAN}Git-Control Repository Creator${NC}               ${BOLD}${BLUE}║${NC}"
-    echo -e "${BOLD}${BLUE}╚══════════════════════════════════════════════════════════════╝${NC}\n"
-}
-
-print_info() {
-    echo -e "${BLUE}[INFO]${NC} $1"
-}
-
-print_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
-}
-
-print_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
-}
-
-print_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
 
 # ============================================================================
 # PREREQUISITE CHECKS
