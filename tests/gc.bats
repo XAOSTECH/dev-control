@@ -3,8 +3,8 @@
 # Integration tests for gc command
 #
 
-load 'test_helper/bats-support/load'
-load 'test_helper/bats-assert/load'
+load '../test_helper/bats-support/load'
+load '../test_helper/bats-assert/load'
 
 setup() {
     GC="$BATS_TEST_DIRNAME/../gc"

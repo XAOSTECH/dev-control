@@ -40,7 +40,6 @@ gc_version() {
 # Usage: gc_install_info
 gc_install_info() {
     local install_dir="${GC_INSTALL_DIR:-$(cd "$_VERSION_LIB_DIR/../.." && pwd)}"
-    local install_type="source"
     
     if [[ -d "$install_dir/.git" ]]; then
         local commit
@@ -50,7 +49,6 @@ gc_install_info() {
         echo "Installed from: git ($branch @ $commit)"
         echo "Location: $install_dir"
     elif [[ -f "$install_dir/.version" ]]; then
-        install_type="release"
         echo "Installed from: release"
         echo "Location: $install_dir"
     else
@@ -77,8 +75,10 @@ version_compare() {
     
     local IFS=.
     local i
-    local v1_parts=("$v1")
-    local v2_parts=("$v2")
+    local -a v1_parts
+    local -a v2_parts
+    v1_parts=($v1)
+    v2_parts=($v2)
     
     # Fill empty positions with zeros
     for ((i=${#v1_parts[@]}; i<${#v2_parts[@]}; i++)); do

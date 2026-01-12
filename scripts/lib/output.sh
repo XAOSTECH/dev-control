@@ -38,8 +38,8 @@ init_output_mode() {
 # Output only if not in quiet mode
 # Usage: out "message"
 out() {
-    [[ "$OUTPUT_QUIET" == "true" ]] && return 0
-    echo "$@"
+    [[ "${OUTPUT_QUIET:-${GC_QUIET:-false}}" == "true" ]] && return 0
+    echo "$*"
 }
 
 # Output only if not in quiet mode (with formatting)

@@ -181,9 +181,7 @@ generate_devcontainer() {
       },
       "extensions": [
         "github.copilot",
-        "github.copilot-chat",
-        "eamodio.gitlens",
-        "ms-azuretools.vscode-docker"
+        "github.copilot-chat"
       ]
     }
   },
