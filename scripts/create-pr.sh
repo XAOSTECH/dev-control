@@ -8,6 +8,8 @@
 #   - Git configured with user credentials
 #   - Currently on a feature/fix branch (not main/master)
 #
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2024-2026 xaoscience
 
 set -e
 
@@ -18,33 +20,17 @@ GIT_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
 # Source shared libraries
 source "$SCRIPT_DIR/lib/colors.sh"
 source "$SCRIPT_DIR/lib/print.sh"
-
-# ============================================================================
-# HELPER FUNCTIONS
-# ============================================================================
+source "$SCRIPT_DIR/lib/git-utils.sh"
 
 # ============================================================================
 # PREREQUISITE CHECKS
 # ============================================================================
 
 check_prerequisites() {
-    if ! command -v gh &> /dev/null; then
-        print_error "GitHub CLI (gh) is not installed."
-        echo -e "  Install with: ${CYAN}sudo apt install gh${NC} or ${CYAN}brew install gh${NC}"
-        echo -e "  Then run: ${CYAN}gh auth login${NC}"
-        exit 1
-    fi
-    
-    if ! gh auth status &> /dev/null; then
-        print_error "GitHub CLI is not authenticated."
-        echo -e "  Run: ${CYAN}gh auth login${NC}"
-        exit 1
-    fi
-    
-    if ! command -v git &> /dev/null; then
-        print_error "Git is not installed."
-        exit 1
-    fi
+    require_git
+    require_gh_cli
+    require_git_repo
+    require_feature_branch
 }
 
 # ============================================================================
@@ -52,21 +38,9 @@ check_prerequisites() {
 # ============================================================================
 
 check_git_status() {
-    if ! git rev-parse --git-dir > /dev/null 2>&1; then
-        print_error "Not a git repository."
-        exit 1
-    fi
+    CURRENT_BRANCH=$(get_current_branch)
     
-    CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-    
-    if [[ "$CURRENT_BRANCH" == "main" ]] || [[ "$CURRENT_BRANCH" == "master" ]]; then
-        print_error "You are on the main branch. Create a feature branch first."
-        exit 1
-    fi
-    
-    if git diff --quiet; then
-        print_warning "No uncommitted changes."
-    else
+    if has_uncommitted_changes; then
         print_warning "You have uncommitted changes."
         read -rp "Commit changes first? [Y/n]: " commit_choice
         if [[ ! "$commit_choice" =~ ^[Nn] ]]; then
@@ -76,7 +50,7 @@ check_git_status() {
         fi
     fi
     
-    REMOTE=$(git config --get remote.origin.url 2>/dev/null || echo "")
+    REMOTE=$(get_remote_url)
     if [[ -z "$REMOTE" ]]; then
         print_error "No remote 'origin' configured."
         exit 1
@@ -91,7 +65,7 @@ check_git_status() {
 # ============================================================================
 
 collect_pr_info() {
-    echo -e "${BOLD}Pull Request Details${NC}\n"
+    print_section "Pull Request Details"
     
     read -rp "PR Title: " PR_TITLE
     if [[ -z "$PR_TITLE" ]]; then
@@ -109,10 +83,10 @@ collect_pr_info() {
     
     echo ""
     echo "Target base branch:"
-    echo -e "  ${CYAN}1)${NC} main (default)"
-    echo -e "  ${CYAN}2)${NC} master"
-    echo -e "  ${CYAN}3)${NC} develop"
-    echo -e "  ${CYAN}4)${NC} Other"
+    print_menu_item "1" "main (default)"
+    print_menu_item "2" "master"
+    print_menu_item "3" "develop"
+    print_menu_item "4" "Other"
     read -rp "Choice [1]: " base_choice
     
     case "${base_choice:-1}" in
@@ -128,11 +102,11 @@ collect_pr_info() {
     
     echo ""
     echo "PR Type:"
-    echo -e "  ${CYAN}1)${NC} 🐛 Bug fix"
-    echo -e "  ${CYAN}2)${NC} ✨ New feature"
-    echo -e "  ${CYAN}3)${NC} 📚 Documentation"
-    echo -e "  ${CYAN}4)${NC} 🔧 Refactoring"
-    echo -e "  ${CYAN}5)${NC} 🧪 Tests"
+    print_menu_item "1" "🐛 Bug fix"
+    print_menu_item "2" "✨ New feature"
+    print_menu_item "3" "📚 Documentation"
+    print_menu_item "4" "🔧 Refactoring"
+    print_menu_item "5" "🧪 Tests"
     read -rp "Choice [1]: " type_choice
     
     case "${type_choice:-1}" in
@@ -158,7 +132,7 @@ collect_pr_info() {
 # ============================================================================
 
 push_branch() {
-    if git rev-parse --verify "origin/$CURRENT_BRANCH" &> /dev/null; then
+    if remote_branch_exists "$CURRENT_BRANCH"; then
         print_info "Branch already exists on remote."
         return 0
     fi
@@ -214,28 +188,22 @@ add_labels() {
 # ============================================================================
 
 show_summary() {
-    echo ""
-    echo -e "${BOLD}${GREEN}╔══════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${BOLD}${GREEN}║${NC}              ${CYAN}Pull Request Created!${NC}                          ${BOLD}${GREEN}║${NC}"
-    echo -e "${BOLD}${GREEN}╚══════════════════════════════════════════════════════════════╝${NC}"
-    echo ""
-    echo -e "${BOLD}PR Details:${NC}"
-    echo -e "  • ${CYAN}Title:${NC}       $PR_TITLE"
-    echo -e "  • ${CYAN}Branch:${NC}      $CURRENT_BRANCH → $PR_BASE"
-    echo -e "  • ${CYAN}Label:${NC}       $PR_LABEL"
-    if [[ -n "$ISSUE_NUMBER" ]]; then
-        echo -e "  • ${CYAN}Issue:${NC}       #$ISSUE_NUMBER"
-    fi
-    if [[ -n "$PR_DRAFT" ]]; then
-        echo -e "  • ${CYAN}Status:${NC}      Draft"
-    fi
-    echo ""
-    echo -e "${BOLD}Quick Commands:${NC}"
-    echo -e "  ${GREEN}gh pr view --web${NC}      - Open in browser"
-    echo -e "  ${GREEN}gh pr status${NC}         - Check PR status"
-    echo -e "  ${GREEN}gh pr merge${NC}          - Merge PR"
-    echo ""
+    print_header_success "Pull Request Created!"
+    
+    print_section "PR Details:"
+    print_detail "Title" "$PR_TITLE"
+    print_detail "Branch" "$CURRENT_BRANCH → $PR_BASE"
+    print_detail "Label" "$PR_LABEL"
+    [[ -n "$ISSUE_NUMBER" ]] && print_detail "Issue" "#$ISSUE_NUMBER"
+    [[ -n "$PR_DRAFT" ]] && print_detail "Status" "Draft"
+    
+    print_section "Quick Commands:"
+    print_command_hint "Open in browser" "gh pr view --web"
+    print_command_hint "Check PR status" "gh pr status"
+    print_command_hint "Merge PR" "gh pr merge"
+    
     if [[ -n "$PR_URL" ]]; then
+        echo ""
         echo -e "  ${CYAN}URL:${NC} $PR_URL"
     fi
     echo ""
@@ -246,23 +214,10 @@ show_summary() {
 # ============================================================================
 
 main() {
-    print_header
+    print_header "Git-Control PR Creator"
     check_prerequisites
     check_git_status
     collect_pr_info
-    
-    echo -e "${BOLD}Ready to create PR:${NC}"
-    echo -e "  Branch:  ${CYAN}$CURRENT_BRANCH${NC} → ${CYAN}$PR_BASE${NC}"
-    echo -e "  Title:   ${CYAN}$PR_TITLE${NC}"
-    echo ""
-    read -rp "Proceed? [Y/n]: " confirm
-    if [[ "$confirm" =~ ^[Nn] ]]; then
-        print_info "Cancelled."
-        exit 0
-    fi
-    
-    echo ""
-    
     push_branch
     create_pull_request
     add_labels
