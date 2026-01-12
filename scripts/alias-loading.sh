@@ -8,17 +8,13 @@
 
 set -e
 
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-CYAN='\033[0;36m'
-NC='\033[0m'
-BOLD='\033[1m'
-
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GIT_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
+
+# Source shared libraries
+source "$SCRIPT_DIR/lib/colors.sh"
+source "$SCRIPT_DIR/lib/print.sh"
 
 # Configuration
 BASHRC="$HOME/.bashrc"
@@ -42,8 +38,10 @@ declare -a GC_ALIASES=(
     "alias gc-modules='${SCRIPT_DIR}/module-nesting.sh'"
     "alias gc-fix='${SCRIPT_DIR}/fix-history.sh'"
     "alias gc-alias='${SCRIPT_DIR}/alias-loading.sh'"
+    "alias gc-licenses='${SCRIPT_DIR}/licenses.sh'"
+    "alias gc-lic='${SCRIPT_DIR}/licenses.sh'"
     "alias gca-alias='${SCRIPT_DIR}/alias-loading.sh <<< A && source ~/.bashrc && echo \"Changes applied (source ~/.bashrc already done)!\"'"
-    "alias gc-help='echo \"gc-control: Main menu for all git-control tools\"; echo \"gc-init: Initialise repo with templates\"; echo \"gc-create: Create GitHub repo from current folder\"; echo \"gc-pr: Create pull request from current branch\"; echo \"gc-modules: Manage git submodules\"; echo \"gc-fix: Fix commit history interactively\"; echo \"gc-aliases: Reload alias installer\"'"
+    "alias gc-help='echo \"gc-control: Main menu for all git-control tools\"; echo \"gc-init: Initialise repo with templates\"; echo \"gc-create: Create GitHub repo from current folder\"; echo \"gc-pr: Create pull request from current branch\"; echo \"gc-modules: Manage git submodules\"; echo \"gc-licenses: Detect and audit licenses\"; echo \"gc-fix: Fix commit history interactively\"; echo \"gc-aliases: Reload alias installer\"'"
 )
 
 # Git shortcuts
@@ -210,28 +208,6 @@ declare -a SEARCH_ALIASES=(
 # HELPER FUNCTIONS
 # ============================================================================
 
-print_header() {
-    echo -e "\n${BOLD}${BLUE}╔════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${BOLD}${BLUE}║${NC}                 ${CYAN}Git-Control Alias Installer${NC}                ${BOLD}${BLUE}║${NC}"
-    echo -e "${BOLD}${BLUE}╚════════════════════════════════════════════════════════════╝${NC}\n"
-}
-
-print_info() {
-    echo -e "${BLUE}[INFO]${NC} $1"
-}
-
-print_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
-}
-
-print_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
-}
-
-print_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
-
 create_backup() {
     local file="$1"
     if [[ -f "$file" ]]; then
@@ -248,7 +224,7 @@ create_backup() {
 
 display_menu() {
     echo -e "${BOLD}Select alias categories to install:${NC}\n"
-    echo -e "  ${CYAN}1)${NC} Git-Control Commands  - gc-init, gc-modules, gc-aliases"
+    echo -e "  ${CYAN}1)${NC} Git-Control Commands  - gc-init, gc-modules, gc-licenses..."
     echo -e "  ${CYAN}2)${NC} Git Shortcuts         - gs, ga, gc, gp, gl, gco, gb..."
     echo -e "  ${CYAN}3)${NC} Safety Nets           - rm -i, cp -i, mv -i..."
     echo -e "  ${CYAN}4)${NC} System Monitoring     - ports, meminfo, disk, psg..."
@@ -399,11 +375,8 @@ EOF
 }
 
 show_summary() {
-    echo ""
-    echo -e "${BOLD}${GREEN}╔══════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${BOLD}${GREEN}║${NC}                    ${CYAN}Installation Complete!${NC}                    ${BOLD}${GREEN}║${NC}"
-    echo -e "${BOLD}${GREEN}╚══════════════════════════════════════════════════════════════╝${NC}"
-    echo ""
+    print_header "Installation Complete!"
+    
     echo -e "${BOLD}Files modified:${NC}"
     echo -e "  • ${CYAN}~/.bash_aliases${NC} - Updated with selected aliases"
     if [[ "$BASHRC_MODIFIED" == "true" ]]; then
@@ -431,7 +404,7 @@ show_summary() {
 # ============================================================================
 
 main() {
-    print_header
+    print_header "Git-Control Alias Installer"
     
     print_info "Script directory: $SCRIPT_DIR"
     print_info "Git-Control directory: $GIT_CONTROL_DIR"

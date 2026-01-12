@@ -19,51 +19,22 @@
 
 set -e
 
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+GIT_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
+
 # Make sure ERR is traced in functions
 set -o errtrace
 
-# Trap errors and print useful context
-trap 'last_cmd="$BASH_COMMAND"; print_error "ERROR: \"${last_cmd}\" at line ${BASH_LINENO[0]} in ${FUNCNAME[1]:-main}"' ERR
+# Source shared libraries
+source "$SCRIPT_DIR/lib/colors.sh"
+source "$SCRIPT_DIR/lib/print.sh"
 
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-CYAN='\033[0;36m'
-NC='\033[0m'
-BOLD='\033[1m'
+# Trap errors and print useful context
 
 # ============================================================================
 # HELPER FUNCTIONS
 # ============================================================================
-
-print_header() {
-    echo -e "\n${BOLD}${BLUE}╔════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${BOLD}${BLUE}║${NC}         ${CYAN}Git-Control Module Nesting Manager${NC}                  ${BOLD}${BLUE}║${NC}"
-    echo -e "${BOLD}${BLUE}╚════════════════════════════════════════════════════════════╝${NC}\n"
-}
-
-print_info() {
-    echo -e "${BLUE}[INFO]${NC} $1"
-}
-
-print_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
-}
-
-print_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
-}
-
-print_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
-
-print_debug() {
-    if [[ "${DEBUG:-false}" == "true" || "${DEBUG:-false}" == "1" ]]; then
-        echo -e "${CYAN}[DEBUG]${NC} $1"
-    fi
-}
 
 # ============================================================================
 # GIT DETECTION FUNCTIONS
