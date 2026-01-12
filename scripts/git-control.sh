@@ -10,12 +10,17 @@
 #   - Pull Request Creation
 #   - Module Nesting
 #   - History Fixing
+#   - License Auditing
+#   - MCP Setup
+#   - Containerisation
 #
 # Usage:
 #   ./git-control.sh              # Interactive menu
 #   ./git-control.sh alias        # Run specific tool directly
 #   ./git-control.sh help         # Show available commands
 #
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2024-2026 xaoscience
 
 set -e
 
@@ -28,24 +33,20 @@ source "$SCRIPT_DIR/lib/colors.sh"
 source "$SCRIPT_DIR/lib/print.sh"
 
 # ============================================================================
-# HELPER FUNCTIONS
-# ============================================================================
-
-# ============================================================================
 # SCRIPT AVAILABILITY CHECKS
 # ============================================================================
 
 check_script_exists() {
     local script="$1"
-    if [[ ! -f "$SCRIPT_DIR/$script" ]]; then
-        print_error "Script not found: $script"
-        exit 1
-    fi
+    local path="$SCRIPT_DIR/$script"
     
-    if [[ ! -x "$SCRIPT_DIR/$script" ]]; then
-        chmod +x "$SCRIPT_DIR/$script"
-        print_info "Made script executable: $script"
+    if [[ -f "$path" && -x "$path" ]]; then
+        return 0
+    elif [[ -f "$path" ]]; then
+        chmod +x "$path"
+        return 0
     fi
+    return 1
 }
 
 # ============================================================================
@@ -57,42 +58,42 @@ show_help() {
 Git-Control - Comprehensive Git workflow automation toolkit
 
 USAGE:
-  ./git-control.sh [COMMAND] [OPTIONS]
+  git-control.sh [COMMAND] [OPTIONS]
 
 COMMANDS:
-  alias                  Interactive alias installer with category selection
-  template               Repository template initialisation tool
-  repo, create           Interactive GitHub repository creator
-  pr                     Interactive pull request creator from current branch
-  modules                Automated .gitmodules generator for nested repos
-  fix-history            Interactive commit history rewriting tool
-  mcp                    GitHub MCP server setup for VS Code
-  help                   Show this help message
+  alias, aliases     Install bash aliases (gc-aliases)
+  init, template     Initialize repo with templates (gc-init)
+  repo, create       Create GitHub repository (gc-repo)
+  pr                 Create pull request (gc-pr)
+  modules, nest      Manage submodules (gc-modules)
+  fix, history       Fix commit history (gc-fix)
+  licenses, lic      Audit licenses (gc-licenses)
+  mcp                Setup MCP servers (gc-mcp)
+  container          Setup devcontainer (gc-container)
+  help               Show this help message
 
 INTERACTIVE MODE:
-  If no command is specified, displays an interactive menu to choose tools.
+  Run without arguments to use the interactive menu.
 
 EXAMPLES:
-  ./git-control.sh                    # Show interactive menu
-  ./git-control.sh alias              # Run alias installer directly
-  ./git-control.sh repo               # Create new repository
-  ./git-control.sh pr                 # Create pull request
-  ./git-control.sh fix-history        # Fix commit history
-  ./git-control.sh mcp                # Setup GitHub MCP
-  ./git-control.sh containerise       # Create devcontainer and configure podman
-  ./git-control.sh help               # Show this help
+  ./git-control.sh                   # Interactive menu
+  ./git-control.sh init              # Initialize templates
+  ./git-control.sh repo              # Create repository
+  ./git-control.sh pr                # Create pull request
+  ./git-control.sh fix --range HEAD=5  # Fix last 5 commits
+  ./git-control.sh licenses --deep   # Audit licenses recursively
 
 ALIASES:
-  You can create shell aliases by running:
-    gc-aliases    - Re-run alias installer
-    gc-init       - Template loading
-    gc-create     - Repository creation
-    gc-pr         - Pull request creation
-    gc-modules    - Module nesting
-    gc-fix        - History fixing
-    gc-mcp        - GitHub MCP setup
-    gc-contain - Devcontainer setup
-    gc-control    - Show this menu
+  After running 'gc-aliases', these shortcuts are available:
+    gc          - Main git-control menu
+    gc-init     - Template loading
+    gc-repo     - Repository creation
+    gc-pr       - Pull request creation
+    gc-fix      - History fixing
+    gc-modules  - Module nesting
+    gc-aliases  - Alias loading
+    gc-licenses - License auditing
+    gc-mcp      - MCP setup
 
 For detailed help on each tool, run the script directly:
   ./scripts/alias-loading.sh --help
@@ -107,126 +108,102 @@ EOF
 # ============================================================================
 
 display_menu() {
-    echo -e "${BOLD}Select a tool:${NC}\n"
-    echo -e "  ${CYAN}1)${NC}  ${BOLD}Alias Installer${NC}        - Create productive shell aliases"
-    echo -e "  ${CYAN}2)${NC}  ${BOLD}Template Loader${NC}         - Initialise repos with templates"
-    echo -e "  ${CYAN}3)${NC}  ${BOLD}Repository Creator${NC}      - Create GitHub repositories"
-    echo -e "  ${CYAN}4)${NC}  ${BOLD}Pull Request Creator${NC}    - Create PRs from current branch"
-    echo -e "  ${CYAN}5)${NC}  ${BOLD}Module Manager${NC}          - Manage git submodules"
-    echo -e "  ${CYAN}6)${NC}  ${BOLD}History Fixer${NC}           - Rewrite commit history interactively"
-    echo -e "  ${CYAN}7)${NC}  ${BOLD}GitHub MCP Setup${NC}        - Configure VS Code MCP server"
-    echo -e "  ${CYAN}8)${NC}  ${BOLD}Containerise${NC}           - Create devcontainer & configure podman"
-    echo -e "  ${CYAN}9)${NC}  ${BOLD}Help${NC}                    - Show help"
-    echo -e "  ${CYAN}0)${NC}  ${BOLD}Exit${NC}                    - Quit"
+    print_header "Git-Control"
+    
+    print_menu_item "1" "Alias Loading (gc-aliases)       - Install bash aliases"
+    print_menu_item "2" "Template Loading (gc-init)       - Initialize repo templates"
+    print_menu_item "3" "Repository Creator (gc-repo)     - Create GitHub repository"
+    print_menu_item "4" "PR Creator (gc-pr)               - Create pull request"
+    print_menu_item "5" "Module Nesting (gc-modules)      - Manage submodules"
+    print_menu_item "6" "History Fixer (gc-fix)           - Fix commit history"
+    print_menu_item "7" "License Auditor (gc-licenses)    - Audit licenses"
+    print_menu_item "8" "MCP Setup (gc-mcp)               - Setup MCP servers"
+    print_menu_item "9" "Containerise (gc-container)      - Setup devcontainer"
+    print_menu_item "0" "Exit"
     echo ""
 }
 
 run_tool() {
     local choice="$1"
-    local script_name=""
-    local script_path=""
+    shift
     
     case "$choice" in
-        1|alias)
-            script_name="alias-loading.sh"
+        1|alias|aliases)
+            check_script_exists "alias-loading.sh" && \
+                bash "$SCRIPT_DIR/alias-loading.sh" "$@"
             ;;
-        2|template|init)
-            script_name="template-loading.sh"
+        2|init|template|templates)
+            check_script_exists "template-loading.sh" && \
+                bash "$SCRIPT_DIR/template-loading.sh" "$@"
             ;;
         3|repo|create)
-            script_name="create-repo.sh"
+            check_script_exists "create-repo.sh" && \
+                bash "$SCRIPT_DIR/create-repo.sh" "$@"
             ;;
         4|pr)
-            script_name="create-pr.sh"
+            check_script_exists "create-pr.sh" && \
+                bash "$SCRIPT_DIR/create-pr.sh" "$@"
             ;;
-        5|modules)
-            script_name="module-nesting.sh"
+        5|modules|nest|nesting)
+            check_script_exists "module-nesting.sh" && \
+                bash "$SCRIPT_DIR/module-nesting.sh" "$@"
             ;;
-        6|fix|fix-history)
-            script_name="fix-history.sh"
+        6|fix|history)
+            check_script_exists "fix-history.sh" && \
+                bash "$SCRIPT_DIR/fix-history.sh" "$@"
             ;;
-        7|mcp)
-            script_name="mcp-setup.sh"
+        7|licenses|lic)
+            check_script_exists "licenses.sh" && \
+                bash "$SCRIPT_DIR/licenses.sh" "$@"
             ;;
-        8|containerise)
-            script_name="containerise.sh"
+        8|mcp)
+            check_script_exists "mcp-setup.sh" && \
+                bash "$SCRIPT_DIR/mcp-setup.sh" "$@"
             ;;
-        9|help|--help|-h)
-            show_help
-            return 0
+        9|container|containerise)
+            check_script_exists "containerise.sh" && \
+                bash "$SCRIPT_DIR/containerise.sh" "$@"
             ;;
-        0|exit|quit)
-            print_info "Exiting..."
+        0|exit|q|quit)
+            print_info "Goodbye!"
             exit 0
             ;;
+        help|-h|--help)
+            show_help
+            ;;
         *)
-            print_error "Invalid selection: $choice"
+            print_error "Unknown command: $choice"
+            echo "Use 'help' for available commands"
             return 1
             ;;
     esac
-    
-    if [[ -n "$script_name" ]]; then
-        script_path="$SCRIPT_DIR/$script_name"
-        
-        if [[ ! -f "$script_path" ]]; then
-            print_error "Script not found: $script_name"
-            return 1
-        fi
-        
-        if [[ ! -x "$script_path" ]]; then
-            chmod +x "$script_path"
-        fi
-        
-        print_info "Starting: ${CYAN}$script_name${NC}"
-        echo ""
-        
-        # Run the script - pass through any additional arguments
-        "$script_path" "$@"
-    fi
 }
 
 # ============================================================================
-# MAIN EXECUTION
+# MAIN
 # ============================================================================
 
 main() {
-    # Handle command-line arguments
+    # If arguments provided, run directly
     if [[ $# -gt 0 ]]; then
-        # Direct command mode
         run_tool "$@"
         exit $?
     fi
     
-    # Interactive menu mode
-    print_header
-    print_info "Git-Control Toolkit"
-    echo ""
-    
-    local continue_menu=true
-    while [[ "$continue_menu" == "true" ]]; do
+    # Interactive mode
+    while true; do
         display_menu
-        read -rp "Choice [0]: " user_choice
+        read -rp "Select option: " choice
+        echo ""
         
-        if [[ -z "$user_choice" ]] || [[ "$user_choice" == "0" ]]; then
-            print_info "Exiting..."
+        if [[ "$choice" == "0" ]]; then
+            print_info "Goodbye!"
             exit 0
         fi
         
-        if run_tool "$user_choice"; then
-            echo ""
-            read -rp "Return to menu? [Y/n]: " return_menu
-            if [[ "$return_menu" =~ ^[Nn] ]]; then
-                continue_menu=false
-            fi
-            echo ""
-        else
-            echo ""
-            read -rp "Try again? [Y/n]: " try_again
-            if [[ ! "$try_again" =~ ^[Yy] ]]; then
-                continue_menu=false
-            fi
-            echo ""
-        fi
+        run_tool "$choice"
+        echo ""
+        read -rp "Press Enter to continue..."
     done
 }
 

@@ -13,6 +13,8 @@
 #
 # Aliases: gc-licenses, gc-lic
 #
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2024-2026 xaoscience
 
 set -e
 
@@ -125,9 +127,7 @@ parse_args() {
 # ============================================================================
 
 print_license_header() {
-    echo -e "\n${BOLD}${BLUE}╔══════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${BOLD}${BLUE}║${NC}               ${CYAN}Git-Control License Auditor${NC}                   ${BOLD}${BLUE}║${NC}"
-    echo -e "${BOLD}${BLUE}╚══════════════════════════════════════════════════════════════╝${NC}\n"
+    print_header "Git-Control License Auditor"
 }
 
 print_license_table() {
@@ -136,7 +136,7 @@ print_license_table() {
     
     # Table header
     printf "${BOLD}%-40s %-15s %-18s %-15s${NC}\n" "Repository" "License" "Source" "Category"
-    printf "${BLUE}%s${NC}\n" "$(printf '─%.0s' {1..90})"
+    print_separator 90
     
     # Root repository
     local root_spdx root_source root_category
@@ -196,7 +196,7 @@ print_compatibility_check() {
     local root_license="$2"
     local submodule_licenses="$3"
     
-    echo -e "\n${BOLD}Compatibility Check: ${CYAN}$target_license${NC}\n"
+    print_section "Compatibility Check: $target_license"
     
     # Collect all licenses
     local all_licenses=()
@@ -213,11 +213,11 @@ print_compatibility_check() {
     # Check compatibility
     local issues
     if issues=$(check_license_compatibility "$target_license" "${all_licenses[@]}" 2>&1); then
-        echo -e "${GREEN}✓${NC} All detected licenses are compatible with ${BOLD}$target_license${NC}"
+        print_success "All detected licenses are compatible with ${BOLD}$target_license${NC}"
     else
-        echo -e "${RED}✗${NC} Compatibility issues found:\n"
+        print_error "Compatibility issues found:"
         echo "$issues" | while read -r issue; do
-            echo -e "  ${YELLOW}⚠${NC} $issue"
+            print_warning "$issue"
         done
     fi
     echo ""
@@ -236,10 +236,10 @@ apply_license_template() {
     local template_file="$template_dir/$license"
     
     if [[ ! -f "$template_file" ]]; then
-        echo -e "${RED}[ERROR]${NC} License template not found: $license" >&2
+        print_error "License template not found: $license"
         echo "Available templates:"
         for f in "$template_dir"/*; do
-            [[ -f "$f" ]] && echo "  - $(basename "$f")"
+            [[ -f "$f" ]] && print_list_item "$(basename "$f")"
         done
         exit 1
     fi
@@ -263,13 +263,13 @@ apply_license_template() {
         -e "s|{{ORG_NAME}}|$org_name|g" \
         "$template_file" > "$dest"
     
-    echo -e "${GREEN}[SUCCESS]${NC} Applied $license license to $dest"
+    print_success "Applied $license license to $dest"
     
     # Cache the license
     if [[ -d "$target/.git" ]]; then
         git -C "$target" config --local gc-init.license-type "$license"
         git -C "$target" config --local gc-init.license-source "file:LICENSE"
-        echo -e "${BLUE}[INFO]${NC} Cached license metadata in git config"
+        print_info "Cached license metadata in git config"
     fi
 }
 
@@ -289,7 +289,7 @@ main() {
     TARGET_DIR=$(cd "$TARGET_DIR" 2>/dev/null && pwd)
     
     if [[ ! -d "$TARGET_DIR" ]]; then
-        echo -e "${RED}[ERROR]${NC} Directory not found: $TARGET_DIR" >&2
+        print_error "Directory not found: $TARGET_DIR"
         exit 1
     fi
     
@@ -300,33 +300,30 @@ main() {
     fi
     
     # Detect licenses
+    if [[ "$JSON_OUTPUT" != "true" ]]; then
+        print_license_header
+    fi
+    
+    # Get root license
     local root_license
     root_license=$(detect_license "$TARGET_DIR")
     
+    # Get submodule licenses if deep scan
     local submodule_licenses="[]"
     if [[ "$DEEP_SCAN" == "true" ]]; then
         submodule_licenses=$(scan_submodule_licenses "$TARGET_DIR" "true")
     fi
     
-    # Output results
+    # Output
     if [[ "$JSON_OUTPUT" == "true" ]]; then
         print_json_output "$root_license" "$submodule_licenses"
     else
-        print_license_header
         print_license_table "$root_license" "$submodule_licenses"
-        
-        # Check compatibility if requested
-        if [[ -n "$CHECK_COMPAT" ]]; then
-            print_compatibility_check "$CHECK_COMPAT" "$root_license" "$submodule_licenses"
-        fi
     fi
     
-    # Cache root license
-    local root_spdx root_source
-    root_spdx=$(echo "$root_license" | jq -r '.spdx_id' 2>/dev/null)
-    root_source=$(echo "$root_license" | jq -r '.source' 2>/dev/null)
-    if [[ "$root_spdx" != "NOASSERTION" && -d "$TARGET_DIR/.git" ]]; then
-        cache_license "$root_spdx" "$root_source"
+    # Compatibility check
+    if [[ -n "$CHECK_COMPAT" ]]; then
+        print_compatibility_check "$CHECK_COMPAT" "$root_license" "$submodule_licenses"
     fi
 }
 

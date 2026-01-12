@@ -7,6 +7,8 @@
 #   - GitHub CLI (gh) installed and authenticated
 #   - Git configured with user credentials
 #
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2024-2026 xaoscience
 
 set -e
 
@@ -17,6 +19,8 @@ GIT_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
 # Source shared libraries
 source "$SCRIPT_DIR/lib/colors.sh"
 source "$SCRIPT_DIR/lib/print.sh"
+source "$SCRIPT_DIR/lib/git-utils.sh"
+source "$SCRIPT_DIR/lib/config.sh"
 
 # CLI mode: none|topics|description|all
 EDIT_MODE="none"
@@ -26,123 +30,103 @@ ASSUME_YES=false
 BATCH_DIRS=()
 
 # ============================================================================
-# HELPER FUNCTIONS
-# ============================================================================
-
-# ============================================================================
 # PREREQUISITE CHECKS
 # ============================================================================
 
 check_prerequisites() {
-    # Check for gh CLI
-    if ! command -v gh &> /dev/null; then
-        print_error "GitHub CLI (gh) is not installed."
-        echo -e "  Install with: ${CYAN}sudo apt install gh${NC} or ${CYAN}brew install gh${NC}"
-        echo -e "  Then run: ${CYAN}gh auth login${NC}"
-        exit 1
-    fi
-    
-    # Check gh authentication
-    if ! gh auth status &> /dev/null; then
-        print_error "GitHub CLI is not authenticated."
-        echo -e "  Run: ${CYAN}gh auth login${NC}"
-        exit 1
-    fi
-    
-    # Check for git
-    if ! command -v git &> /dev/null; then
-        print_error "Git is not installed."
-        exit 1
-    fi
+    require_git
+    require_gh_cli
 }
 
 # CLI argument parser (supports --edit and batch options)
 parse_args() {
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            --edit)
-                EDIT_MODE="all" ; shift ;;
-            --edit=*)
-                val="${1#*=}"
-                case "$val" in
-                    topics) EDIT_MODE="topics" ;;
-                    description) EDIT_MODE="description" ;;
-                    all) EDIT_MODE="all" ;;
-                    *) EDIT_MODE="$val" ;;
+            -e|--edit)
+                case "${2:-all}" in
+                    topics|description|all) EDIT_MODE="$2"; shift 2 ;;
+                    *) EDIT_MODE="all"; shift ;;
                 esac
-                shift ;;
-            --edit-topics)
-                EDIT_MODE="topics" ; shift ;;
-            --batch)
-                BATCH_MODE=true ; shift ;;
+                ;;
+            -b|--batch)
+                BATCH_MODE=true
+                shift
+                ;;
             -y|--yes)
-                ASSUME_YES=true ; shift ;;
+                ASSUME_YES=true
+                shift
+                ;;
             -h|--help)
-                echo "Usage: $0 [--edit[=topics|description|all]] [--batch] [--yes] [DIR...]
-
-Examples:
-  $0 --batch ./repo1 ./repo2    # Create repos from these directories using cached gc-init metadata
-  $0 --batch -y                 # Create repos for all subfolders non-interactively
-  $0 ./some/repo                # Create repo for a specific directory" ; exit 0 ;;
+                show_help
+                exit 0
+                ;;
+            -*)
+                print_error "Unknown option: $1"
+                exit 1
+                ;;
             *)
-                # Positional args are treated as directories to create
+                # Positional arg: treat as directory for batch
                 BATCH_DIRS+=("$1")
-                shift ;;
+                shift
+                ;;
         esac
     done
-} 
+}
+
+show_help() {
+    cat << 'EOF'
+Git-Control Repository Creator - Create GitHub repos with ease
+
+USAGE:
+  create-repo.sh [OPTIONS] [DIRECTORIES...]
+
+OPTIONS:
+  -e, --edit [MODE]      Edit existing repo metadata (topics|description|all)
+  -b, --batch            Batch mode: process multiple directories
+  -y, --yes              Assume yes to prompts
+  -h, --help             Show this help
+
+EXAMPLES:
+  create-repo.sh                       # Create repo for current directory
+  create-repo.sh --edit topics         # Edit topics only
+  create-repo.sh --batch dir1 dir2     # Create repos for multiple dirs
+
+ALIASES:
+  gc-repo, gc-create
+
+EOF
+}
 
 # ============================================================================
 # GIT CONFIG FETCHING
 # ============================================================================
 
 load_gc_init_metadata() {
-    # Try to load metadata saved by gc-init from git config
-    PROJECT_NAME=$(git config --local gc-init.project-name 2>/dev/null || echo "")
-    REPO_SLUG=$(git config --local gc-init.repo-slug 2>/dev/null || echo "")
-    ORG_NAME=$(git config --local gc-init.org-name 2>/dev/null || echo "")
-    SHORT_DESCRIPTION=$(git config --local gc-init.description 2>/dev/null || echo "")
-    LICENSE_TYPE=$(git config --local gc-init.license-type 2>/dev/null || echo "")
-
-    if [[ -n "$PROJECT_NAME" ]]; then
-        print_info "Loaded project metadata from gc-init"
-        print_info "  Project: $PROJECT_NAME"
-        print_info "  Repo: $REPO_SLUG"
-        print_info "  Org: $ORG_NAME"
-        local owner_display="${REPO_OWNER:-${ORG_NAME:-$GH_USERNAME}}"
-        if [[ -n "$owner_display" && -n "$REPO_SLUG" ]]; then
-            print_info "  Full: ${owner_display}/${REPO_SLUG}"
-            print_info "  Repo URL: https://github.com/${owner_display}/${REPO_SLUG}"
-        fi
-        if [[ -n "$SHORT_DESCRIPTION" ]]; then
-            print_info "  Description: $SHORT_DESCRIPTION"
-        fi
-        echo ""
+    # Try loading from gc-init config first
+    if load_gc_metadata; then
+        print_info "Loaded gc-init metadata from git config"
+    fi
+    
+    # Fallback to folder name
+    if [[ -z "$REPO_NAME" ]]; then
+        REPO_NAME=$(basename "$(pwd)")
     fi
 }
 
 get_git_credentials() {
-    # Get username from git config
-    GIT_USERNAME=$(git config --get user.name 2>/dev/null || echo "")
+    # Get GitHub username from gh cli
+    if command -v gh &>/dev/null; then
+        GH_USERNAME=$(gh api user --jq '.login' 2>/dev/null || echo "")
+    fi
+    
+    # Fallback to git config
+    if [[ -z "$GH_USERNAME" ]]; then
+        GH_USERNAME=$(git config --get user.name 2>/dev/null || echo "")
+    fi
+    
     GIT_EMAIL=$(git config --get user.email 2>/dev/null || echo "")
     
-    # Get GitHub username from gh CLI (more reliable for API calls)
-    GH_USERNAME=$(gh api user --jq '.login' 2>/dev/null || echo "")
-    
-    if [[ -z "$GH_USERNAME" ]]; then
-        print_error "Could not fetch GitHub username."
-        echo -e "  Ensure you're authenticated: ${CYAN}gh auth login${NC}"
-        exit 1
-    fi
-    
-    print_info "GitHub User: ${CYAN}$GH_USERNAME${NC}"
-    if [[ -n "$GIT_USERNAME" ]]; then
-        print_info "Git Name: ${CYAN}$GIT_USERNAME${NC}"
-    fi
-    if [[ -n "$GIT_EMAIL" ]]; then
-        print_info "Git Email: ${CYAN}$GIT_EMAIL${NC}"
-    fi
-    echo ""
+    print_info "GitHub user: ${CYAN}$GH_USERNAME${NC}"
 }
 
 # ============================================================================
@@ -150,65 +134,30 @@ get_git_credentials() {
 # ============================================================================
 
 collect_repo_info() {
-    local current_folder
-    current_folder=$(basename "$(pwd)")
+    print_section "Repository Configuration"
     
-    # Use gc-init data if available, otherwise use current folder name
-    local name_default="${PROJECT_NAME:-${REPO_SLUG:-$current_folder}}"
-    local desc_default="${SHORT_DESCRIPTION:-A repository by $GH_USERNAME}"
-    
-    # Repository name (displayed as entered, preserve capitalization)
-    echo -e "${BOLD}Repository Configuration${NC}\n"
-    read -rp "Repository name [$name_default]: " REPO_NAME
-    REPO_NAME="${REPO_NAME:-$name_default}"
-
-    # Repository owner (user/org) - allow overriding the detected account/org
-    read -rp "Repository owner (user/org) [${ORG_NAME:-$GH_USERNAME}]: " REPO_OWNER
-    REPO_OWNER="${REPO_OWNER:-${ORG_NAME:-$GH_USERNAME}}"
-    
-    # Compute a sanitized slug for actual repo creation (lowercase, safe chars)
-    REPO_SLUG=$(echo "$REPO_NAME" | tr ' ' '-' | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9._-]//g')
+    # Repo name
+    read -rp "Repository name [$REPO_NAME]: " input
+    REPO_NAME="${input:-$REPO_NAME}"
     
     # Description
-    read -rp "Description [$desc_default]: " input_desc
-    REPO_DESCRIPTION="${input_desc:-$desc_default}"
+    read -rp "Description: " REPO_DESCRIPTION
     
     # Visibility
     echo ""
-    echo "Repository visibility:"
-    echo -e "  ${CYAN}1)${NC} Private (default)"
-    echo -e "  ${CYAN}2)${NC} Public"
-    read -rp "Choice [1]: " visibility_choice
-    case "${visibility_choice:-1}" in
-        2) REPO_VISIBILITY="public" ;;
-        *) REPO_VISIBILITY="private" ;;
+    echo "Visibility:"
+    print_menu_item "1" "Public (default)"
+    print_menu_item "2" "Private"
+    read -rp "Choice [1]: " vis_choice
+    
+    case "${vis_choice:-1}" in
+        2) REPO_VISIBILITY="private" ;;
+        *) REPO_VISIBILITY="public" ;;
     esac
     
-    # Topics/Tags
+    # Topics
     echo ""
-    echo -e "Enter topics/tags (comma-separated, e.g., ${CYAN}python,automation,cli${NC}):"
-    read -rp "> " REPO_TOPICS_INPUT
-    
-    # Clean and format topics
-    if [[ -n "$REPO_TOPICS_INPUT" ]]; then
-        # 1. Remove spaces around commas
-        # 2. Convert remaining spaces within topics to hyphens
-        # 3. Lowercase everything
-        # 4. Remove any invalid characters
-        REPO_TOPICS=$(echo "$REPO_TOPICS_INPUT" | \
-            sed 's/[[:space:]]*,[[:space:]]*/,/g' | \
-            tr ' ' '-' | \
-            tr '[:upper:]' '[:lower:]' | \
-            sed 's/[^a-z0-9,_-]//g' | \
-            sed 's/^,//;s/,$//' | \
-            sed 's/,,*/,/g')
-    else
-        REPO_TOPICS=""
-    fi
-    
-    # Homepage (optional)
-    echo ""
-    read -rp "Homepage URL (optional): " REPO_HOMEPAGE
+    read -rp "Topics (comma-separated, optional): " REPO_TOPICS
     
     echo ""
 }
@@ -218,81 +167,19 @@ collect_repo_info() {
 # ============================================================================
 
 init_local_git() {
-    # Check if already a git repo
-    if [[ -d ".git" ]]; then
-        local has_remote=false
-        local has_commits=false
-        local existing_remote=""
-        local commit_count=0
-        
-        # Check for existing remote
-        if git remote get-url origin &>/dev/null; then
-            has_remote=true
-            existing_remote=$(git remote get-url origin)
-        fi
-        
-        # Check for existing commits
-        if git log --oneline -1 &>/dev/null; then
-            has_commits=true
-            commit_count=$(git rev-list --count HEAD 2>/dev/null || echo "0")
-        fi
-        
-        # Report what we found
-        print_warning "Existing .git folder detected"
-        if [[ "$has_commits" == "true" ]]; then
-            echo -e "  • ${CYAN}Commits:${NC} $commit_count existing commit(s)"
-        fi
-        if [[ "$has_remote" == "true" ]]; then
-            echo -e "  • ${CYAN}Remote:${NC}  $existing_remote"
-        fi
-        echo ""
-        
-        # Offer options based on what exists
-        echo "How would you like to proceed?"
-        echo -e "  ${CYAN}1)${NC} Keep existing commits, remove remote only (recommended)"
-        echo -e "  ${CYAN}2)${NC} Start fresh - remove .git entirely and reinitialise"
-        echo -e "  ${CYAN}3)${NC} Cancel operation"
-        read -rp "Choice [1]: " git_choice
-        
-        case "${git_choice:-1}" in
-            2)
-                print_info "Removing existing .git folder..."
-                rm -rf .git
-                print_info "Initialising fresh git repository..."
-                git config --global init.defaultBranch Main
-                git init
-                create_initial_commit
-                return
-                ;;
-            3)
-                print_info "Cancelled."
-                exit 0
-                ;;
-            *)
-                # Option 1: Keep commits, remove remote if exists
-                if [[ "$has_remote" == "true" ]]; then
-                    git remote remove origin
-                    print_info "Removed existing remote 'origin'"
-                fi
-                if [[ "$has_commits" == "false" ]]; then
-                    print_info "No commits found, creating initial commit..."
-                    create_initial_commit
-                else
-                    print_info "Keeping $commit_count existing commit(s)"
-                fi
-                ;;
-        esac
-    else
-        print_info "Initialising git repository..."
-        git config --global init.defaultBranch Main
+    if [[ ! -d ".git" ]]; then
+        print_info "Initializing local git repository..."
         git init
-        create_initial_commit
+        print_success "Git initialized"
+    else
+        print_info "Git repository already exists"
     fi
 }
 
 create_initial_commit() {
+    # Create .gitignore if it doesn't exist
     if [[ ! -f ".gitignore" ]]; then
-        cat > .gitignore << 'EOF'
+        cat > .gitignore << 'GITIGNORE'
 # OS generated files
 .DS_Store
 Thumbs.db
@@ -303,276 +190,170 @@ Thumbs.db
 *.swp
 *.swo
 
-# Dependencies
-node_modules/
-vendor/
-__pycache__/
-*.pyc
-
 # Build outputs
 dist/
 build/
-*.egg-info/
+*.o
+*.a
 
-# Environment
-.env
-.env.local
-*.env
+# Dependencies
+node_modules/
+venv/
+__pycache__/
 
 # Logs
 *.log
 logs/
-EOF
-        print_info "Created default .gitignore"
+
+# Environment
+.env
+.env.local
+GITIGNORE
+        print_info "Created .gitignore"
     fi
     
-    git add .
-    git commit -m "Initial commit" || print_warning "Nothing to commit"
+    # Stage and commit
+    if [[ -z "$(git log -1 2>/dev/null)" ]]; then
+        git add .
+        git commit -m "Initial commit" --allow-empty
+        print_success "Initial commit created"
+    fi
 }
 
 create_github_repo() {
-    local REPO_OWNER_LOCAL="${REPO_OWNER:-${ORG_NAME:-$GH_USERNAME}}"
-    print_info "Creating GitHub repository: ${CYAN}$REPO_OWNER_LOCAL/$REPO_NAME${NC} ($REPO_VISIBILITY)"
+    print_info "Creating GitHub repository..."
     
-    # Build gh command (specify owner explicitly if provided)
-    local gh_args=("repo" "create" "${REPO_OWNER_LOCAL}/${REPO_NAME}")
-    gh_args+=("--$REPO_VISIBILITY")
-    gh_args+=("--source" ".")
+    local gh_args=("repo" "create")
+    gh_args+=("$REPO_NAME")
+    gh_args+=("--source=.")
     gh_args+=("--push")
+    gh_args+=("--$REPO_VISIBILITY")
     
     if [[ -n "$REPO_DESCRIPTION" ]]; then
         gh_args+=("--description" "$REPO_DESCRIPTION")
     fi
     
-    if [[ -n "$REPO_HOMEPAGE" ]]; then
-        gh_args+=("--homepage" "$REPO_HOMEPAGE")
-    fi
-    
-    # Create the repository
     if gh "${gh_args[@]}"; then
-        print_success "Repository created successfully!"
-        REPO_OWNER="$REPO_OWNER_LOCAL"
-        REPO_URL="https://github.com/$REPO_OWNER_LOCAL/$REPO_SLUG"
+        print_success "Repository created!"
+        REPO_URL=$(gh repo view --json url --jq '.url' 2>/dev/null)
     else
         print_error "Failed to create repository"
         exit 1
     fi
 }
 
-# ============================================================================
-# TOPICS/TAGS UPDATE
-# ============================================================================
-
 update_repo_topics() {
-    if [[ -z "$REPO_TOPICS" ]]; then
-        print_info "No topics specified, skipping..."
-        return 0
-    fi
-}
-
-# Edit repository metadata (description/topics)
-edit_repo_metadata() {
-    # Ensure GitHub credentials are available (only if missing)
-    if [[ -z "$GH_USERNAME" ]]; then
-        get_git_credentials
-    fi
-
-    # Load saved metadata if available
-    load_gc_init_metadata
-
-    # Try to determine repository name from saved slug or git remote
-    if [[ -z "$REPO_NAME" ]]; then
-        if [[ -n "$REPO_SLUG" ]]; then
-            REPO_NAME="$REPO_SLUG"
-        elif git remote get-url origin &>/dev/null; then
-            origin_url=$(git remote get-url origin 2>/dev/null || echo "")
-            if [[ "$origin_url" =~ github\.com[:/]([^/]+)/([^/.]+) ]]; then
-                GH_USERNAME="${BASH_REMATCH[1]}"
-                REPO_NAME="${BASH_REMATCH[2]}"
-            fi
-        fi
-    fi
-
-    # If still unknown, present a short list of repos for selection
-    if [[ -z "$REPO_NAME" ]]; then
-        print_info "Fetching repositories for $GH_USERNAME..."
-        mapfile -t repos < <(gh repo list "$GH_USERNAME" --limit 20 --json name --jq '.[].name' 2>/dev/null || true)
-        if [[ ${#repos[@]} -gt 0 ]]; then
-            echo "Select a repository to edit:"
-            for i in "${!repos[@]}"; do
-                printf "  %d) %s\n" $((i+1)) "${repos[$i]}"
-            done
-            read -rp "Choice (number or name): " choice
-            if [[ "$choice" =~ ^[0-9]+$ ]] && (( choice>=1 && choice<=${#repos[@]} )); then
-                REPO_NAME="${repos[$((choice-1))]}"
-            else
-                REPO_NAME="$choice"
-            fi
-        else
-            read -rp "Repository name to edit: " REPO_NAME
-        fi
-    fi
-
-    # Fetch current topics from GitHub if not provided
-    if [[ -z "$REPO_TOPICS" ]]; then
-        REPO_TOPICS=$(gh api "/repos/$GH_USERNAME/$REPO_NAME/topics" -H "Accept: application/vnd.github+json" --jq '.names|join(",")' 2>/dev/null || echo "")
-    fi
-
-    # Description
-    if [[ "$EDIT_MODE" == "all" || "$EDIT_MODE" == "description" ]]; then
-        read -rp "Description [${REPO_DESCRIPTION:-none}]: " input_desc
-        input_desc="${input_desc:-$REPO_DESCRIPTION}"
-        if [[ -n "$input_desc" ]]; then
-            if gh repo edit "$GH_USERNAME/$REPO_NAME" --description "$input_desc" &>/dev/null; then
-                print_success "Description updated"
-                REPO_DESCRIPTION="$input_desc"
-            else
-                print_warning "Failed to update description via gh"
-            fi
-        fi
-    fi
-
-    # Topics
-    if [[ "$EDIT_MODE" == "all" || "$EDIT_MODE" == "topics" ]]; then
-        read -rp "Topics (comma-separated) [${REPO_TOPICS:-none}]: " input_topics
-        input_topics="${input_topics:-$REPO_TOPICS}"
-        REPO_TOPICS="$input_topics"
-        if [[ -n "$REPO_TOPICS" ]]; then
-            update_repo_topics || print_warning "Topics update failed — try 'gh repo edit --add-topic <topic>'"
-        fi
-    fi
-}
-
-# Restore update_repo_topics function (start of function)
-update_repo_topics() { 
-    
-    print_info "Updating repository topics..."
-    
-    # Convert comma-separated to JSON array
-    local topics_json
-    topics_json=$(echo "$REPO_TOPICS" | tr ',' '\n' | while read -r topic; do
-        [[ -n "$topic" ]] && echo "\"$topic\""
-    done | paste -sd ',' | sed 's/^/[/;s/$/]/')
-    
-    # Use GitHub API to set topics
-    if gh api \
-        --method PUT \
-        -H "Accept: application/vnd.github+json" \
-        -H "X-GitHub-Api-Version: 2022-11-28" \
-        "/repos/$GH_USERNAME/$REPO_NAME/topics" \
-        --input - <<< "{\"names\": $topics_json}" &>/dev/null; then
-        print_success "Topics updated!"
-    else
-        # Fallback: use gh repo edit
-        print_warning "API method failed, trying gh repo edit..."
+    if [[ -n "$REPO_TOPICS" ]]; then
+        print_info "Adding topics..."
+        # Convert comma-separated to space-separated for gh
+        local topics_list
+        topics_list=$(echo "$REPO_TOPICS" | tr ',' ' ')
         
-        # Build --add-topic arguments
-        local topic_args=""
-        IFS=',' read -ra TOPIC_ARRAY <<< "$REPO_TOPICS"
-        for topic in "${TOPIC_ARRAY[@]}"; do
-            topic=$(echo "$topic" | tr -d ' ')
-            topic_args+="--add-topic $topic "
+        for topic in $topics_list; do
+            topic=$(echo "$topic" | xargs) # trim whitespace
+            gh repo edit --add-topic "$topic" 2>/dev/null || true
         done
-        
-        # Run single command with all topics
-        if eval "gh repo edit $GH_USERNAME/$REPO_NAME $topic_args" 2>/dev/null; then
-            print_success "Topics updated!"
-        else
-            print_warning "Could not update topics. Add them manually with:"
-            echo -e "  ${CYAN}gh repo edit --add-topic <topic>${NC}"
-        fi
+        print_success "Topics added"
     fi
 }
 
 # ============================================================================
-# BATCH HANDLER
+# EDIT MODE
+# ============================================================================
+
+edit_repo_metadata() {
+    print_info "Editing repository metadata..."
+    
+    case "$EDIT_MODE" in
+        topics)
+            read -rp "New topics (comma-separated): " new_topics
+            REPO_TOPICS="$new_topics"
+            update_repo_topics
+            ;;
+        description)
+            read -rp "New description: " new_desc
+            gh repo edit --description "$new_desc"
+            print_success "Description updated"
+            ;;
+        all)
+            read -rp "New description (press Enter to skip): " new_desc
+            [[ -n "$new_desc" ]] && gh repo edit --description "$new_desc"
+            
+            read -rp "New topics (comma-separated, press Enter to skip): " new_topics
+            if [[ -n "$new_topics" ]]; then
+                REPO_TOPICS="$new_topics"
+                update_repo_topics
+            fi
+            print_success "Metadata updated"
+            ;;
+    esac
+}
+
+# ============================================================================
+# BATCH MODE
 # ============================================================================
 
 process_batch_create() {
-    # If no explicit dirs passed, find immediate subdirectories
-    local dirs=()
-    if [[ ${#BATCH_DIRS[@]} -gt 0 ]]; then
-        dirs=("${BATCH_DIRS[@]}")
-    else
-        while IFS= read -r d; do
-            dirs+=("$d")
-        done < <(find . -maxdepth 1 -mindepth 1 -type d -printf '%P\n')
+    print_header "Batch Repository Creation"
+    
+    if [[ ${#BATCH_DIRS[@]} -eq 0 ]]; then
+        print_error "No directories specified for batch mode"
+        exit 1
     fi
-
-    if [[ ${#dirs[@]} -eq 0 ]]; then
-        print_warning "No directories found to process for batch create"
-        return 1
-    fi
-
-    check_prerequisites
-    get_git_credentials
-
-    for d in "${dirs[@]}"; do
-        if [[ ! -d "$d" ]]; then
-            print_warning "Skipping non-directory: $d"
+    
+    for dir in "${BATCH_DIRS[@]}"; do
+        echo ""
+        print_separator
+        print_info "Processing: $dir"
+        
+        if [[ ! -d "$dir" ]]; then
+            print_warning "Directory not found: $dir, skipping"
             continue
         fi
-
-        print_header
-        print_info "Processing: $d"
-        pushd "$d" > /dev/null || { print_error "Failed to enter $d"; continue; }
-
-        # Load metadata saved by gc-init (if any)
+        
+        pushd "$dir" > /dev/null || continue
+        
+        REPO_NAME=$(basename "$dir")
         load_gc_init_metadata
-
-        # If minimal metadata present, use it for non-interactive create
-        if [[ "$ASSUME_YES" == "true" && -n "$PROJECT_NAME" ]]; then
-            REPO_NAME="$PROJECT_NAME"
-            REPO_SLUG="${REPO_SLUG:-$(echo "$REPO_NAME" | tr ' ' '-' | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9._-]//g')}"
-            REPO_OWNER="${ORG_NAME:-$GH_USERNAME}"
-            REPO_DESCRIPTION="${SHORT_DESCRIPTION:-A project by $REPO_OWNER}"
-            REPO_VISIBILITY="private"
-
-            echo "Creating repository: $REPO_OWNER/$REPO_SLUG"
-            init_local_git
-            create_github_repo
-            update_repo_topics || true
-            show_summary
-        else
-            # Fallback to interactive per-directory flow
-            collect_repo_info
-            init_local_git
-            create_github_repo
-            update_repo_topics
-            show_summary
+        
+        if [[ "$ASSUME_YES" != "true" ]]; then
+            read -rp "Create repo '$REPO_NAME'? [Y/n]: " confirm
+            if [[ "$confirm" =~ ^[Nn] ]]; then
+                print_info "Skipped"
+                popd > /dev/null || true
+                continue
+            fi
         fi
-
+        
+        init_local_git
+        create_initial_commit
+        create_github_repo
+        update_repo_topics
+        show_summary
+        
         popd > /dev/null || true
     done
 }
-
 
 # ============================================================================
 # SUMMARY
 # ============================================================================
 
 show_summary() {
-    echo ""
-    echo -e "${BOLD}${GREEN}╔══════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${BOLD}${GREEN}║${NC}                   ${CYAN}Repository Created!${NC}                        ${BOLD}${GREEN}║${NC}"
-    echo -e "${BOLD}${GREEN}╚══════════════════════════════════════════════════════════════╝${NC}"
-    echo ""
-    echo -e "${BOLD}Repository Details:${NC}"
-    echo -e "  • ${CYAN}Name:${NC}        $REPO_NAME"
-    echo -e "  • ${CYAN}Owner:${NC}       $GH_USERNAME"
-    echo -e "  • ${CYAN}Visibility:${NC}  $REPO_VISIBILITY"
-    echo -e "  • ${CYAN}URL:${NC}         $REPO_URL"
-    if [[ -n "$REPO_DESCRIPTION" ]]; then
-        echo -e "  • ${CYAN}Description:${NC} $REPO_DESCRIPTION"
-    fi
-    if [[ -n "$REPO_TOPICS" ]]; then
-        echo -e "  • ${CYAN}Topics:${NC}      $REPO_TOPICS"
-    fi
-    echo ""
-    echo -e "${BOLD}Quick Commands:${NC}"
-    echo -e "  ${GREEN}gh repo view --web${NC}    - Open in browser"
-    echo -e "  ${GREEN}gh repo edit${NC}          - Edit settings"
-    echo -e "  ${GREEN}gc-init${NC}               - Add templates"
+    print_header_success "Repository Created!"
+    
+    print_section "Repository Details:"
+    print_detail "Name" "$REPO_NAME"
+    print_detail "Owner" "$GH_USERNAME"
+    print_detail "Visibility" "$REPO_VISIBILITY"
+    [[ -n "$REPO_URL" ]] && print_detail "URL" "$REPO_URL"
+    [[ -n "$REPO_DESCRIPTION" ]] && print_detail "Description" "$REPO_DESCRIPTION"
+    [[ -n "$REPO_TOPICS" ]] && print_detail "Topics" "$REPO_TOPICS"
+    
+    print_section "Quick Commands:"
+    print_command_hint "Open in browser" "gh repo view --web"
+    print_command_hint "Edit settings" "gh repo edit"
+    print_command_hint "Add templates" "gc-init"
     echo ""
 }
 
@@ -581,16 +362,18 @@ show_summary() {
 # ============================================================================
 
 main() {
-    # Parse CLI args (e.g., --edit or --batch)
+    # Parse CLI args
     parse_args "$@"
 
     # If batch mode requested, delegate to batch handler
     if [[ "$BATCH_MODE" == "true" ]] || [[ ${#BATCH_DIRS[@]} -gt 0 ]]; then
+        check_prerequisites
+        get_git_credentials
         process_batch_create
         exit 0
     fi
 
-    print_header
+    print_header "Git-Control Repo Creator"
     check_prerequisites
     get_git_credentials
     load_gc_init_metadata
@@ -602,24 +385,8 @@ main() {
     fi
 
     collect_repo_info
-    
-    local REPO_OWNER_DISPLAY="${REPO_OWNER:-${ORG_NAME:-$GH_USERNAME}}"
-    echo -e "${BOLD}Ready to create:${NC}"
-    echo -e "  Repository: ${CYAN}$REPO_OWNER_DISPLAY/$REPO_NAME${NC}"
-    echo -e "  Visibility: ${CYAN}$REPO_VISIBILITY${NC}"
-    if [[ -n "$REPO_TOPICS" ]]; then
-        echo -e "  Topics:     ${CYAN}$REPO_TOPICS${NC}"
-    fi
-    echo ""
-    read -rp "Proceed? [Y/n]: " confirm
-    if [[ "$confirm" =~ ^[Nn] ]]; then
-        print_info "Cancelled."
-        exit 0
-    fi
-    
-    echo ""
-    
     init_local_git
+    create_initial_commit
     create_github_repo
     update_repo_topics
     show_summary

@@ -16,6 +16,8 @@
 #   ./containerise.sh                    # Uses current directory
 #   ./containerise.sh /path/to/project   # Uses specified path
 #
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2024-2026 xaoscience
 ################################################################################
 
 set -e
@@ -27,6 +29,7 @@ GIT_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
 # Source shared libraries
 source "$SCRIPT_DIR/lib/colors.sh"
 source "$SCRIPT_DIR/lib/print.sh"
+source "$SCRIPT_DIR/lib/validation.sh"
 
 ################################################################################
 # Functions
@@ -34,53 +37,40 @@ source "$SCRIPT_DIR/lib/print.sh"
 
 # Detect or prompt for project path
 detect_project_path() {
-    local provided_path="$1"
+    local path="${1:-}"
     
-    if [ -n "$provided_path" ]; then
-        if [ -d "$provided_path" ]; then
-            echo "$provided_path"
-            return 0
+    if [[ -n "$path" ]]; then
+        if is_directory "$path"; then
+            PROJECT_PATH=$(to_absolute_path "$path")
         else
-            print_error "Provided path does not exist: $provided_path"
+            print_error "Directory not found: $path"
             exit 1
         fi
-    fi
-    
-    # Use current working directory
-    local cwd
-    cwd=$(pwd)
-    
-    print_info "Detected project path: $cwd"
-    echo ""
-    read -p "Use this path? (Y/n): " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Nn]$ ]]; then
-        read -p "Enter project path: " custom_path
-        if [ ! -d "$custom_path" ]; then
-            print_error "Path does not exist: $custom_path"
-            exit 1
-        fi
-        echo "$custom_path"
     else
-        echo "$cwd"
+        PROJECT_PATH=$(pwd)
     fi
+    
+    print_info "Project path: ${CYAN}$PROJECT_PATH${NC}"
 }
 
 # Check if running in devcontainer
 is_in_devcontainer() {
-    [ -n "$DEVCONTAINER" ] || [ -n "$CODESPACES" ]
+    [[ -f "/.dockerenv" ]] || [[ -n "${REMOTE_CONTAINERS:-}" ]] || [[ -n "${CODESPACES:-}" ]]
 }
 
 # Check rootless podman availability
 check_podman() {
-    print_step "Checking for rootless podman..."
+    if ! command -v podman &>/dev/null; then
+        print_warning "Podman not found"
+        return 1
+    fi
     
-    if command -v podman &> /dev/null; then
-        local podman_version
-        podman_version=$(podman --version)
-        print_success "Podman found: $podman_version"
+    # Check if rootless
+    if podman info --format '{{.Host.Security.Rootless}}' 2>/dev/null | grep -q true; then
+        print_success "Rootless podman available"
         return 0
     else
+        print_warning "Podman not configured for rootless operation"
         return 1
     fi
 }
@@ -89,282 +79,175 @@ check_podman() {
 install_rootless_podman() {
     print_header "Installing Rootless Podman"
     
-    print_info "This requires sudo privileges for one-time setup"
-    echo ""
-    
-    # Update package lists
-    print_step "Updating package lists..."
+    print_info "Updating package lists..."
     sudo apt-get update -qq
     
-    # Install podman
-    print_step "Installing podman..."
-    sudo apt-get install -y -qq podman podman-docker uidmap slirp4netns
+    print_info "Installing podman..."
+    sudo apt-get install -y podman uidmap slirp4netns fuse-overlayfs
     
-    # Setup rootless podman (requires user interaction)
-    print_step "Setting up rootless mode..."
-    echo ""
-    print_info "You may be prompted to enter your password to configure user namespaces"
-    echo ""
+    print_info "Configuring rootless podman..."
     
+    # Enable user namespaces
+    if [[ ! -f /etc/subuid ]] || ! grep -q "^$(whoami):" /etc/subuid; then
+        sudo usermod --add-subuids 100000-165535 --add-subgids 100000-165535 "$(whoami)"
+    fi
+    
+    # Initialize rootless podman
     podman system migrate 2>/dev/null || true
     
-    # Enable lingering for systemd user session (keeps containers running)
-    print_step "Enabling user systemd session..."
-    sudo loginctl enable-linger "$(id -un)" 2>/dev/null || true
-    
-    print_success "Rootless podman setup complete"
-    echo ""
-    
-    # Verify installation
-    if podman run --rm --quiet alpine echo "Podman is working" &>/dev/null; then
-        print_success "Podman verification passed"
-        return 0
-    else
-        print_warning "Podman test failed - you may need to restart your session"
-        return 1
-    fi
+    print_success "Rootless podman installed and configured"
 }
 
 # Detect system paths needed for mounts
 detect_system_paths() {
-    local username="$1"
-    local home_dir="/home/$username"
+    local gnupg_path="${HOME}/.gnupg"
+    local ssh_path="${HOME}/.ssh"
+    local git_config="${HOME}/.gitconfig"
+    local podman_socket="/run/user/$(id -u)/podman/podman.sock"
     
-    # Detect GPG socket (standard location)
-    local gpg_socket
-    if [ -S "$home_dir/.gnupg/S.gpg-agent" ]; then
-        gpg_socket="$home_dir/.gnupg/S.gpg-agent"
-    elif [ -S "/run/user/1000/gnupg/S.gpg-agent" ]; then
-        gpg_socket="/run/user/1000/gnupg/S.gpg-agent"
+    # Check for XDG runtime dir
+    if [[ -n "${XDG_RUNTIME_DIR:-}" ]]; then
+        podman_socket="${XDG_RUNTIME_DIR}/podman/podman.sock"
     fi
     
-    # Detect podman socket (standard location)
-    local podman_socket
-    if [ -S "/run/user/1000/podman/podman.sock" ]; then
-        podman_socket="/run/user/1000/podman/podman.sock"
-    fi
-    
-    # Wrangler config location
-    local wrangler_config="$home_dir/.wrangler"
-    
-    # Output detected paths (JSON format for later use)
     cat <<EOF
 {
-  "gpg_socket": "${gpg_socket}",
-  "podman_socket": "${podman_socket}",
-  "wrangler_config": "${wrangler_config}",
-  "home_dir": "${home_dir}",
-  "username": "${username}"
+  "gnupg": "$gnupg_path",
+  "ssh": "$ssh_path",
+  "gitconfig": "$git_config",
+  "podman_socket": "$podman_socket"
 }
 EOF
 }
 
 # Generate devcontainer.json
 generate_devcontainer() {
-    local project_path="$1"
-    local devcontainer_dir="$project_path/.devcontainer"
+    local devcontainer_dir="$PROJECT_PATH/.devcontainer"
     local devcontainer_file="$devcontainer_dir/devcontainer.json"
     
-    # Get current user info
-    local current_user
-    current_user=$(whoami)
+    print_info "Generating devcontainer configuration..."
     
-    # Detect system paths
-    local paths_json
-    paths_json=$(detect_system_paths "$current_user")
-    
-    local gpg_socket
-    local podman_socket
-    local wrangler_config
-    
-    gpg_socket=$(echo "$paths_json" | jq -r '.gpg_socket')
-    podman_socket=$(echo "$paths_json" | jq -r '.podman_socket')
-    wrangler_config=$(echo "$paths_json" | jq -r '.wrangler_config')
-    
-    print_header "Generating Devcontainer Configuration"
-    print_info "Project path: $project_path"
-    print_info "Config location: $devcontainer_file"
-    echo ""
-
-    # Ask about enabling GPG commit signing (do NOT embed private key material)
-    local enable_signing="n"
-    read -p "Enable GPG commit signing in the devcontainer? (y/N): " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        enable_signing="y"
-    fi
-
-    signing_key=""
-    if [[ "$enable_signing" == "y" ]]; then
-        # Prompt user for a signing key ID (short or long). Do not attempt to read local secret keys.
-        read -p "Enter signing key ID to use in devcontainer (short or long, e.g., 31B0D171): " signing_key
-        if [ -z "$signing_key" ]; then
-            print_warning "No signing key provided; skipping signing setup."
-            enable_signing="n"
-        else
-            print_step "Configured signing key ID: $signing_key (no key material stored)"
-        fi
-    fi
-
-    # Create directory if needed
     mkdir -p "$devcontainer_dir"
-
-    # Build mounts array
-    local mounts_json="["
-
-    # GPG socket (if available)
-    if [ -n "$gpg_socket" ] && [ -S "$gpg_socket" ]; then
-        mounts_json+="
-    \"source=$gpg_socket,target=/run/user/1000/gnupg/S.gpg-agent,type=bind\"," 
-        print_step "Added GPG socket mount: $gpg_socket"
-    else
-        print_warning "GPG socket not found at $gpg_socket (optional)"
-    fi
-
-    # Podman socket (if available)
-    if [ -n "$podman_socket" ] && [ -S "$podman_socket" ]; then
-        mounts_json+="
-    \"source=$podman_socket,target=/var/run/docker.sock,type=bind\"," 
-        print_step "Added podman socket mount: $podman_socket"
-    else
-        print_warning "Podman socket not found at $podman_socket (optional, docker will be unavailable)"
-    fi
-
-    # Wrangler config (if exists)
-    if [ -d "$wrangler_config" ]; then
-        mounts_json+="
-    \"source=$wrangler_config,target=/home/codespace/.wrangler,type=bind,consistency=cached\""
-        print_step "Added Wrangler config mount: $wrangler_config"
-    else
-        # Remove trailing comma from previous mount if wrangler doesn't exist
-        mounts_json="${mounts_json%,}"
-    fi
-
-    mounts_json+="
-  ]"
     
-    # Create devcontainer.json
-    cat > "$devcontainer_file" <<'DEVCONTAINER_EOF'
+    # Get system paths
+    local paths
+    paths=$(detect_system_paths)
+    local gnupg_path ssh_path git_config podman_socket
+    gnupg_path=$(echo "$paths" | jq -r '.gnupg')
+    ssh_path=$(echo "$paths" | jq -r '.ssh')
+    git_config=$(echo "$paths" | jq -r '.gitconfig')
+    podman_socket=$(echo "$paths" | jq -r '.podman_socket')
+    
+    # Determine image based on project
+    local base_image="mcr.microsoft.com/devcontainers/base:ubuntu"
+    
+    # Detect project type
+    if [[ -f "$PROJECT_PATH/package.json" ]]; then
+        base_image="mcr.microsoft.com/devcontainers/javascript-node:22"
+    elif [[ -f "$PROJECT_PATH/requirements.txt" ]] || [[ -f "$PROJECT_PATH/pyproject.toml" ]]; then
+        base_image="mcr.microsoft.com/devcontainers/python:3.12"
+    elif [[ -f "$PROJECT_PATH/Cargo.toml" ]]; then
+        base_image="mcr.microsoft.com/devcontainers/rust:latest"
+    elif [[ -f "$PROJECT_PATH/go.mod" ]]; then
+        base_image="mcr.microsoft.com/devcontainers/go:latest"
+    fi
+    
+    cat > "$devcontainer_file" << DEVCONTAINER_EOF
 {
-  "name": "PROJECTS",
-  "image": "mcr.microsoft.com/devcontainers/universal:2",
-  "remoteUser": "codespace",
+  "name": "$(basename "$PROJECT_PATH")",
+  "image": "$base_image",
   "features": {
-    "ghcr.io/devcontainers/features/git:1": {}
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/git:1": {
+      "version": "latest",
+      "ppa": true
+    }
   },
-DEVCONTAINER_EOF
-    
-    # Add mounts
-    echo "  \"mounts\": $mounts_json," >> "$devcontainer_file"
-    
-    # Construct postCreateCommand dynamically (uses public Github GPG key to reproduce signin on container rebuild)
-    local post_create_cmd="sudo chown -R codespace:codespace /workspaces && sudo rm -f /etc/bash.bashrc.d/codespaces-motd.sh /etc/profile.d/codespaces-motd.sh /usr/local/etc/vscode-dev-containers/first-run-notice.txt && touch /home/codespace/.hushlogin && chmod 644 /home/codespace/.hushlogin && git config --global --add safe.directory \"/workspaces\" && git config --global --add safe.directory \"/workspaces/*\" && git config --global user.email 69734795+xaoscience@users.noreply.github.com && git config --global user.name xaoscience"
-
-    if [[ "$enable_signing" == "y" && -n "$signing_key" ]]; then
-        post_create_cmd+=" && git config --global commit.gpgsign true && git config --global user.signingkey $signing_key"
-    fi
-
-    post_create_cmd+=" && git config --global gpg.program gpg && sudo ln -sf /usr/bin/podman /usr/local/bin/docker"
-
-    # Add the rest (allow variable expansion)
-    cat >> "$devcontainer_file" <<DEVCONTAINER_EOF
+  "mounts": [
+    "source=$gnupg_path,target=/home/vscode/.gnupg,type=bind,consistency=cached",
+    "source=$ssh_path,target=/home/vscode/.ssh,type=bind,consistency=cached",
+    "source=$git_config,target=/home/vscode/.gitconfig,type=bind,consistency=cached"
+  ],
   "containerEnv": {
-    "GPG_TTY": "$(tty)",
-    "DOCKER_HOST": "unix:///var/run/docker.sock"
+    "GPG_TTY": "/dev/pts/0",
+    "GIT_TERMINAL_PROMPT": "1"
   },
-  "forwardPorts": [],
-  "postCreateCommand": "bash -c '$post_create_cmd'",
   "customizations": {
     "vscode": {
-      "extensions": []
+      "settings": {
+        "git.enableSmartCommit": true,
+        "git.autofetch": true,
+        "terminal.integrated.defaultProfile.linux": "bash"
+      },
+      "extensions": [
+        "github.copilot",
+        "github.copilot-chat",
+        "eamodio.gitlens",
+        "ms-azuretools.vscode-docker"
+      ]
     }
-  }
+  },
+  "postCreateCommand": "git config --global gpg.program $(which gpg) && echo 'Container ready!'",
+  "remoteUser": "vscode"
 }
 DEVCONTAINER_EOF
     
-    print_success "Generated $devcontainer_file"
-    echo ""
+    print_success "Created: $devcontainer_file"
 }
 
 # Show activation instructions
 show_activation_instructions() {
-    local project_path="$1"
+    print_header_success "Containerisation Complete!"
     
-    print_header "Next Steps: Activate Devcontainer in VSCode"
+    print_section "Next Steps:"
+    echo -e "  1. Open the project in VS Code: ${GREEN}code $PROJECT_PATH${NC}"
+    echo -e "  2. Press ${CYAN}F1${NC} and run: ${CYAN}Dev Containers: Reopen in Container${NC}"
+    echo ""
     
-    echo "To open your project in a devcontainer:"
+    print_section "Alternative:"
+    echo -e "  Use the Remote-Containers icon in the bottom-left corner"
     echo ""
-    echo "1. Open VSCode with your project:"
-    echo "   ${CYAN}code $project_path${NC}"
-    echo ""
-    echo "2. When prompted by VSCode:"
-    echo "   - Click 'Reopen in Container' or"
-    echo "   - Run command: ${CYAN}Dev Containers: Reopen in Container${NC}"
-    echo ""
-    echo "3. VSCode will:"
-    echo "   ✓ Build/pull the container image"
-    echo "   ✓ Mount your project and config directories"
-    echo "   ✓ Run postCreateCommand to set up git & GPG"
-    echo "   ✓ Connect all necessary services (docker, gpg, git)"
-    echo ""
-    echo "4. Verify container is working:"
-    echo "   - Terminal should show: ${CYAN}codespace@<container>:/workspaces$${NC}"
-    echo "   - Run: ${CYAN}podman --version${NC} to verify docker/podman"
-    echo "   - Run: ${CYAN}git config user.name${NC} to verify git config"
-    echo ""
-    echo "Configuration stored in:"
-    echo "  ${CYAN}$project_path/.devcontainer/devcontainer.json${NC}"
+    
+    print_section "Files Created:"
+    print_list_item ".devcontainer/devcontainer.json"
     echo ""
 }
 
 # Main execution
 main() {
-    local project_path
-    
-    print_header "Containerisation Setup"
+    print_header "Git-Control Containerisation"
     
     # Check if already in devcontainer
     if is_in_devcontainer; then
-        print_warning "Detected that you're already running in a devcontainer"
-        echo ""
-        read -p "Continue anyway? (y/N): " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            print_info "Cancelled"
-            return 0
-        fi
+        print_warning "Already running inside a devcontainer"
+        print_info "This script is meant to be run on the host machine"
+        exit 0
     fi
     
-    # Detect or prompt for project path
-    project_path=$(detect_project_path "$1")
-    echo ""
+    # Detect project path
+    detect_project_path "${1:-}"
     
-    # Check/install rootless podman
+    # Check/install podman
     if ! check_podman; then
-        echo ""
-        print_warning "Rootless podman not found"
-        echo ""
-        read -p "Install rootless podman now? (y/N): " -n 1 -r
-        echo
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
+        if confirm "Install rootless podman?"; then
             install_rootless_podman
         else
-            print_warning "Skipped podman installation"
-            print_info "Docker/podman features will be unavailable in the container"
-            echo ""
+            print_warning "Continuing without podman verification"
         fi
     fi
     
-    echo ""
-    
     # Generate devcontainer
-    generate_devcontainer "$project_path"
-    echo ""
+    if [[ -f "$PROJECT_PATH/.devcontainer/devcontainer.json" ]]; then
+        if confirm "Devcontainer config exists. Overwrite?"; then
+            generate_devcontainer
+        else
+            print_info "Keeping existing configuration"
+        fi
+    else
+        generate_devcontainer
+    fi
     
-    # Show activation instructions
-    show_activation_instructions "$project_path"
-    
-    print_success "Containerisation setup complete!"
+    show_activation_instructions
 }
 
 main "$@"

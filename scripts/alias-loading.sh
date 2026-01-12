@@ -5,6 +5,8 @@
 # 
 # This script creates a .bash_aliases file and modifies .bashrc to source it.
 #
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2024-2026 xaoscience
 
 set -e
 
@@ -30,27 +32,30 @@ BASHRC_MODIFIED="false"
 declare -a GC_ALIASES=(
     "# Git-Control shortcuts"
     "alias gc-control='${SCRIPT_DIR}/git-control.sh'"
+    "alias gc='${SCRIPT_DIR}/git-control.sh'"
     "alias gc-init='${SCRIPT_DIR}/template-loading.sh'"
     "alias gc-contain='${SCRIPT_DIR}/containerise.sh'"
     "alias gc-create='${SCRIPT_DIR}/create-repo.sh'"
+    "alias gc-repo='${SCRIPT_DIR}/create-repo.sh'"
     "alias gc-pr='${SCRIPT_DIR}/create-pr.sh'"
     "alias gc-mcp='${SCRIPT_DIR}/mcp-setup.sh'"
     "alias gc-modules='${SCRIPT_DIR}/module-nesting.sh'"
     "alias gc-fix='${SCRIPT_DIR}/fix-history.sh'"
     "alias gc-alias='${SCRIPT_DIR}/alias-loading.sh'"
+    "alias gc-aliases='${SCRIPT_DIR}/alias-loading.sh'"
     "alias gc-licenses='${SCRIPT_DIR}/licenses.sh'"
     "alias gc-lic='${SCRIPT_DIR}/licenses.sh'"
     "alias gca-alias='${SCRIPT_DIR}/alias-loading.sh <<< A && source ~/.bashrc && echo \"Changes applied (source ~/.bashrc already done)!\"'"
-    "alias gc-help='echo \"gc-control: Main menu for all git-control tools\"; echo \"gc-init: Initialise repo with templates\"; echo \"gc-create: Create GitHub repo from current folder\"; echo \"gc-pr: Create pull request from current branch\"; echo \"gc-modules: Manage git submodules\"; echo \"gc-licenses: Detect and audit licenses\"; echo \"gc-fix: Fix commit history interactively\"; echo \"gc-aliases: Reload alias installer\"'"
+    "alias gc-help='echo \"gc-control: Main menu for all git-control tools\"; echo \"gc-init: Initialise repo with templates\"; echo \"gc-repo: Create GitHub repo from current folder\"; echo \"gc-pr: Create pull request from current branch\"; echo \"gc-modules: Manage git submodules\"; echo \"gc-licenses: Detect and audit licenses\"; echo \"gc-fix: Fix commit history interactively\"; echo \"gc-aliases: Reload alias installer\"'"
 )
 
 # Git shortcuts
 declare -a GIT_ALIASES=(
     "# Git shortcuts"
-    "alias gs='git status'"
+    "alias gst='git status'"
     "alias ga='git add'"
     "alias gaa='git add .'"
-    "alias gc='git commit -m'"
+    "alias gcm='git commit -m'"
     "alias gca='git add . && git commit --amend --no-edit && git push --force-with-lease origin HEAD'"
     'gcda() { git add . "$@"; author_date=$(git show -s --format=%aD HEAD); GIT_COMMITTER_DATE="$author_date" git commit --amend --no-edit --date="$author_date"; git push --force-with-lease origin HEAD; }'
     "alias gp='git push'"
@@ -70,7 +75,7 @@ declare -a GIT_ALIASES=(
     "alias gm='git merge'"
     "alias gr='git rebase'"
     "alias gri='git rebase -i'"
-    "alias gst='git stash'"
+    "alias gstash='git stash'"
     "alias gstp='git stash pop'"
     "alias gstl='git stash list'"
     "alias gcl='git clone'"
@@ -133,10 +138,9 @@ declare -a NET_ALIASES=(
     "# Network utilities"
     "alias myip='curl -s ifconfig.me && echo'"
     "alias myip6='curl -s ifconfig.me/ip6 && echo'"
-    "alias localip='hostname -I | awk \"{print \\$1}\"'"
+    "alias localip='hostname -I | awk \"{print \\\$1}\"'"
     "alias ping='ping -c 5'"
     "alias fastping='ping -c 100 -i 0.2'"
-    "alias ports='netstat -tulanp 2>/dev/null || ss -tulanp'"
     "alias listening='lsof -i -P -n | grep LISTEN'"
     "alias connections='netstat -an | grep ESTABLISHED'"
     "alias wget='wget -c'"
@@ -223,17 +227,18 @@ create_backup() {
 # ============================================================================
 
 display_menu() {
-    echo -e "${BOLD}Select alias categories to install:${NC}\n"
-    echo -e "  ${CYAN}1)${NC} Git-Control Commands  - gc-init, gc-modules, gc-licenses..."
-    echo -e "  ${CYAN}2)${NC} Git Shortcuts         - gs, ga, gc, gp, gl, gco, gb..."
-    echo -e "  ${CYAN}3)${NC} Safety Nets           - rm -i, cp -i, mv -i..."
-    echo -e "  ${CYAN}4)${NC} System Monitoring     - ports, meminfo, disk, psg..."
-    echo -e "  ${CYAN}5)${NC} Directory Operations  - md, rd, ll, la, .., ......"
-    echo -e "  ${CYAN}6)${NC} Network Utilities     - myip, ping, listening..."
-    echo -e "  ${CYAN}7)${NC} Container Shortcuts   - dps, di, drm, dc, dcu..."
-    echo -e "  ${CYAN}8)${NC} Quick Edits           - bashrc, reload, path, now..."
-    echo -e "  ${CYAN}9)${NC} Archive/Compression   - untar, mktar, zip..."
-    echo -e "  ${CYAN}10)${NC} Search Utilities     - ff, fd, grep..."
+    print_section "Select alias categories to install:"
+    
+    print_menu_item "1" "Git-Control Commands  - gc-init, gc-modules, gc-licenses..."
+    print_menu_item "2" "Git Shortcuts         - gst, ga, gcm, gp, gl, gco, gb..."
+    print_menu_item "3" "Safety Nets           - rm -i, cp -i, mv -i..."
+    print_menu_item "4" "System Monitoring     - ports, meminfo, disk, psg..."
+    print_menu_item "5" "Directory Operations  - md, rd, ll, la, .., ...."
+    print_menu_item "6" "Network Utilities     - myip, ping, listening..."
+    print_menu_item "7" "Container Shortcuts   - dps, di, drm, dc, dcu..."
+    print_menu_item "8" "Quick Edits           - bashrc, reload, path, now..."
+    print_menu_item "9" "Archive/Compression   - untar, mktar, zip..."
+    print_menu_item "10" "Search Utilities     - ff, fd, grep..."
     echo ""
     echo -e "  ${GREEN}A)${NC} Install ALL categories"
     echo -e "  ${YELLOW}Q)${NC} Quit without installing"
@@ -295,50 +300,20 @@ EOF
     for sel in "${SELECTED[@]}"; do
         sel=$(echo "$sel" | tr -d ' ')
         case $sel in
-            1)
-                write_aliases "GIT-CONTROL COMMANDS" "${GC_ALIASES[@]}"
-                installed+=("Git-Control Commands")
-                ;;
-            2)
-                write_aliases "GIT SHORTCUTS" "${GIT_ALIASES[@]}"
-                installed+=("Git Shortcuts")
-                ;;
-            3)
-                write_aliases "SAFETY NETS" "${SAFE_ALIASES[@]}"
-                installed+=("Safety Nets")
-                ;;
-            4)
-                write_aliases "SYSTEM MONITORING" "${SYSMON_ALIASES[@]}"
-                installed+=("System Monitoring")
-                ;;
-            5)
-                write_aliases "DIRECTORY OPERATIONS" "${DIR_ALIASES[@]}"
-                installed+=("Directory Operations")
-                ;;
-            6)
-                write_aliases "NETWORK UTILITIES" "${NET_ALIASES[@]}"
-                installed+=("Network Utilities")
-                ;;
-            7)
-                write_aliases "CONTAINER SHORTCUTS" "${CONTAINER_ALIASES[@]}"
-                installed+=("Container Shortcuts")
-                ;;
-            8)
-                write_aliases "QUICK EDITS" "${EDIT_ALIASES[@]}"
-                installed+=("Quick Edits")
-                ;;
-            9)
-                write_aliases "ARCHIVE/COMPRESSION" "${ARCHIVE_ALIASES[@]}"
-                installed+=("Archive/Compression")
-                ;;
-            10)
-                write_aliases "SEARCH UTILITIES" "${SEARCH_ALIASES[@]}"
-                installed+=("Search Utilities")
-                ;;
+            1) write_aliases "GIT-CONTROL COMMANDS" "${GC_ALIASES[@]}"; installed+=("Git-Control Commands") ;;
+            2) write_aliases "GIT SHORTCUTS" "${GIT_ALIASES[@]}"; installed+=("Git Shortcuts") ;;
+            3) write_aliases "SAFETY NETS" "${SAFE_ALIASES[@]}"; installed+=("Safety Nets") ;;
+            4) write_aliases "SYSTEM MONITORING" "${SYSMON_ALIASES[@]}"; installed+=("System Monitoring") ;;
+            5) write_aliases "DIRECTORY OPERATIONS" "${DIR_ALIASES[@]}"; installed+=("Directory Operations") ;;
+            6) write_aliases "NETWORK UTILITIES" "${NET_ALIASES[@]}"; installed+=("Network Utilities") ;;
+            7) write_aliases "CONTAINER SHORTCUTS" "${CONTAINER_ALIASES[@]}"; installed+=("Container Shortcuts") ;;
+            8) write_aliases "QUICK EDITS" "${EDIT_ALIASES[@]}"; installed+=("Quick Edits") ;;
+            9) write_aliases "ARCHIVE/COMPRESSION" "${ARCHIVE_ALIASES[@]}"; installed+=("Archive/Compression") ;;
+            10) write_aliases "SEARCH UTILITIES" "${SEARCH_ALIASES[@]}"; installed+=("Search Utilities") ;;
         esac
     done
     
-    echo ""
+    echo "" >> "$BASH_ALIASES"
     echo "# vim: ft=bash" >> "$BASH_ALIASES"
     
     return 0
@@ -370,32 +345,32 @@ EOF
     
     BASHRC_MODIFIED="true"
     print_success "Modified ~/.bashrc to load ~/.bash_aliases"
-    echo -e "${YELLOW}[UNDO]${NC} To revert, edit ~/.bashrc and remove lines $line_number onwards"
-    echo -e "${YELLOW}[UNDO]${NC} Run: ${CYAN}nano ~/.bashrc${NC}"
+    print_warning "UNDO: To revert, edit ~/.bashrc and remove lines $line_number onwards"
 }
 
 show_summary() {
-    print_header "Installation Complete!"
+    print_header_success "Installation Complete!"
     
-    echo -e "${BOLD}Files modified:${NC}"
-    echo -e "  • ${CYAN}~/.bash_aliases${NC} - Updated with selected aliases"
+    print_section "Files modified:"
+    print_detail "~/.bash_aliases" "Updated with selected aliases"
     if [[ "$BASHRC_MODIFIED" == "true" ]]; then
-        echo -e "  • ${CYAN}~/.bashrc${NC} - Modified to source .bash_aliases"
+        print_detail "~/.bashrc" "Modified to source .bash_aliases"
     else
-        echo -e "  • ${CYAN}~/.bashrc${NC} - Already configured (no changes)"
+        print_detail "~/.bashrc" "Already configured (no changes)"
     fi
+    
+    print_section "Backup location:"
+    print_list_item "$BACKUP_DIR/"
+    
+    print_section "To apply changes now:"
+    print_command_hint "Reload config" "source ~/.bashrc"
+    print_command_hint "Or use alias" "reload"
     echo ""
-    echo -e "${BOLD}Backup location:${NC}"
-    echo -e "  • ${CYAN}$BACKUP_DIR/${NC}"
-    echo ""
-    echo -e "${BOLD}To apply changes now, run:${NC}"
-    echo -e "  ${GREEN}source ~/.bashrc${NC}  or  ${GREEN}reload${NC}  (after first install)"
-    echo ""
-    echo -e "${BOLD}Or simply open a new terminal.${NC}"
-    echo ""
-    echo -e "${BOLD}To reinstall or modify aliases later:${NC}"
-    echo -e "  ${GREEN}gc-aliases${NC}  (if git-control aliases installed)"
-    echo -e "  ${GREEN}$SCRIPT_DIR/alias-loading.sh${NC}"
+    echo -e "${DIM}Or simply open a new terminal.${NC}"
+    
+    print_section "To reinstall or modify aliases later:"
+    print_command_hint "Using alias" "gc-aliases"
+    print_command_hint "Direct path" "$SCRIPT_DIR/alias-loading.sh"
     echo ""
 }
 
@@ -406,8 +381,8 @@ show_summary() {
 main() {
     print_header "Git-Control Alias Installer"
     
-    print_info "Script directory: $SCRIPT_DIR"
-    print_info "Git-Control directory: $GIT_CONTROL_DIR"
+    print_kv "Script directory" "$SCRIPT_DIR"
+    print_kv "Git-Control directory" "$GIT_CONTROL_DIR"
     echo ""
     
     display_menu
@@ -446,7 +421,7 @@ main() {
     fi
     
     echo ""
-    print_info "Installing selected aliases..."
+    print_step "Installing selected aliases..."
     
     install_aliases "$selection"
     setup_bashrc
