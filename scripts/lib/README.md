@@ -1,228 +1,177 @@
 # Git-Control Shared Libraries
 
-This directory contains shared Bash libraries that provide common functionality
-across all git-control scripts. Using these libraries ensures consistency,
-reduces code duplication, and makes maintenance easier.
+This directory contains shared shell libraries that provide reusable functionality across all git-control scripts.
 
 ## Libraries
 
 ### colors.sh
-ANSI color code definitions for terminal output.
+ANSI color definitions for terminal output.
 
-```bash
-source "$SCRIPT_DIR/lib/colors.sh"
-echo -e "${GREEN}Success!${NC}"
-```
-
-**Exports:** `RED`, `GREEN`, `YELLOW`, `BLUE`, `CYAN`, `MAGENTA`, `WHITE`, `BOLD`, `DIM`, `NC`, `RESET`, background colors, etc.
+| Variable | Description |
+|----------|-------------|
+| `RED`, `GREEN`, `YELLOW`, `BLUE`, `CYAN` | Basic colors |
+| `BOLD`, `NC` | Bold and reset |
 
 ### print.sh
-Consistent print functions for headers, messages, and formatting.
+Consistent terminal output formatting.
 
-```bash
-source "$SCRIPT_DIR/lib/colors.sh"  # Required first
-source "$SCRIPT_DIR/lib/print.sh"
-
-print_header "My Tool"
-print_info "Starting..."
-print_success "Done!"
-print_header_success "Completed!"
-```
-
-**Functions:**
-- `print_header "title"` - Blue header box
-- `print_header_success "title"` - Green header box
-- `print_header_warning "title"` - Yellow header box
-- `print_info "msg"` - [INFO] message
-- `print_success "msg"` - [SUCCESS] message
-- `print_warning "msg"` - [WARNING] message
-- `print_error "msg"` - [ERROR] message (stderr)
-- `print_debug "msg"` - [DEBUG] message (if DEBUG=true)
-- `print_step "msg"` - Step indicator
-- `print_separator [width]` - Horizontal line
-- `print_kv "key" "value"` - Key-value pair
-- `print_section "title"` - Section header
-- `print_menu_item "num" "desc"` - Numbered menu item
-- `print_list_item "text"` - Bullet list item
-- `print_detail "label" "value"` - Indented detail
-- `print_command_hint "desc" "cmd"` - Command suggestion
-- `print_box "text"` - Simple box around text
-- `confirm "prompt" [default]` - Yes/no confirmation
-- `read_input "prompt" "default"` - Input with default
+| Function | Description |
+|----------|-------------|
+| `print_header "Title"` | Blue header box |
+| `print_header_success "Title"` | Green header box |
+| `print_header_warning "Title"` | Yellow header box |
+| `print_info "message"` | Info message |
+| `print_success "message"` | Success message |
+| `print_warning "message"` | Warning message |
+| `print_error "message"` | Error message (stderr) |
+| `print_debug "message"` | Debug message (if DEBUG=true) |
+| `print_step "Step"` | Step indicator |
+| `print_separator [width]` | Separator line |
+| `print_kv "Key" "Value"` | Key-value pair |
+| `print_list_item "Item"` | Bullet list item |
+| `print_detail "Label" "Value"` | Indented detail |
+| `print_menu_item "1" "Desc"` | Numbered menu item |
+| `print_section "Title"` | Section header |
+| `print_command_hint "desc" "cmd"` | Command hint |
+| `print_box "text"` | Simple box |
+| `confirm "Proceed?"` | Yes/no prompt |
+| `read_input "Prompt" "default"` | Input with default |
+| `run_with_spinner "cmd" "msg"` | Spinner animation |
 
 ### git-utils.sh
-Git repository utilities and checks.
+Git repository utilities and requirement checks.
 
-```bash
-source "$SCRIPT_DIR/lib/git-utils.sh"
-
-require_git_repo           # Exit if not in git repo
-require_gh_cli             # Exit if gh not installed/authenticated
-require_feature_branch     # Exit if on main/master
-
-branch=$(get_current_branch)
-owner=$(get_repo_owner)
-```
-
-**Functions:**
-- `is_git_repo [dir]` - Check if directory is a git repo
-- `in_git_worktree` - Check if in git worktree
-- `git_root` - Get repository root path
-- `require_git_repo` - Exit with error if not in repo
-- `require_clean_worktree` - Exit if uncommitted changes
-- `require_git` - Exit if git not installed
-- `require_gh_cli` - Exit if gh not installed/authenticated
-- `require_feature_branch` - Exit if on default branch
-- `get_remote_url [dir]` - Get origin URL
-- `parse_github_url "url"` - Extract owner/repo from URL
-- `get_repo_owner [dir]` - Get GitHub owner
-- `get_repo_name [dir]` - Get repository name
-- `get_current_branch` - Get current branch name
-- `get_default_branch` - Get main/master/Main
-- `branch_exists "name"` - Check if local branch exists
-- `remote_branch_exists "name"` - Check if remote branch exists
-- `has_uncommitted_changes` - Check for uncommitted changes
-- `has_staged_changes` - Check for staged changes
-- `has_untracked_files` - Check for untracked files
-- `list_submodules [dir]` - List all submodules
-- `get_short_hash "ref"` - Get short commit hash
-- `get_commit_subject "ref"` - Get commit message
-
-### config.sh
-Git-control metadata management via `gc-init.*` git config.
-
-```bash
-source "$SCRIPT_DIR/lib/config.sh"
-
-load_gc_metadata  # Sets PROJECT_NAME, REPO_SLUG, etc.
-save_gc_metadata "license-type" "MIT"
-```
-
-**Functions:**
-- `load_gc_metadata` - Load all gc-init.* values into variables
-- `save_gc_metadata "key" "value"` - Save single value
-- `save_all_gc_metadata` - Save all metadata variables
-- `clear_gc_metadata` - Remove all gc-init.* config
-- `get_gc_metadata "key"` - Get single value
-- `has_gc_metadata` - Check if any metadata exists
-- `show_gc_metadata` - Display all metadata
-
-### license.sh
-License detection and management.
-
-```bash
-source "$SCRIPT_DIR/lib/license.sh"
-
-license_info=$(detect_license "/path/to/repo")
-spdx=$(detect_spdx_from_content "/path/to/LICENSE")
-```
-
-**Functions:**
-- `find_license_file "dir"` - Find LICENSE file
-- `detect_spdx_from_content "file"` - Detect SPDX ID from content
-- `detect_local_license "dir"` - Detect license from local files
-- `detect_github_license "owner" "repo"` - Detect via GitHub API
-- `detect_license "dir"` - Full detection (local + remote)
-- `scan_submodule_licenses "dir" [recursive]` - Scan all submodules
-- `check_license_compatibility "target" "licenses..."` - Check compatibility
+| Function | Description |
+|----------|-------------|
+| `is_git_repo [dir]` | Check if directory is git repo |
+| `in_git_worktree` | Check if in git worktree |
+| `git_root` | Get repo root directory |
+| `require_git_repo` | Exit if not in git repo |
+| `require_clean_worktree` | Exit if uncommitted changes |
+| `require_gh_cli` | Exit if gh not installed |
+| `require_git` | Exit if git not installed |
+| `get_remote_url [dir]` | Get remote origin URL |
+| `parse_github_url "url"` | Extract owner/repo from URL |
+| `get_repo_owner [dir]` | Get owner from remote |
+| `get_repo_name [dir]` | Get repo name from remote |
+| `get_current_branch` | Get current branch name |
+| `get_default_branch` | Get default branch |
+| `branch_exists "branch"` | Check if local branch exists |
+| `remote_branch_exists "branch"` | Check if remote branch exists |
+| `require_feature_branch` | Exit if on default branch |
+| `has_uncommitted_changes` | Check for uncommitted changes |
+| `has_staged_changes` | Check for staged changes |
+| `has_untracked_files` | Check for untracked files |
+| `get_status_summary` | Get status counts |
+| `get_relative_path "parent" "child"` | Get relative path |
+| `list_submodules [dir]` | List submodules |
+| `is_submodule "path"` | Check if path is submodule |
+| `get_short_hash "ref"` | Get short commit hash |
+| `get_commit_subject "ref"` | Get commit subject |
+| `get_commit_author "ref"` | Get commit author |
+| `get_commit_date "ref"` | Get commit date |
 
 ### cli.sh
 CLI argument parsing and script utilities.
 
-```bash
-source "$SCRIPT_DIR/lib/cli.sh"
-
-SCRIPT_DIR=$(get_script_dir "${BASH_SOURCE[0]}")
-parse_common_flags "$@"
-
-if [[ "$SHOW_HELP" == "true" ]]; then
-    show_help
-    exit 0
-fi
-```
-
-**Functions:**
-- `resolve_script_path "path"` - Resolve symlinks
-- `get_script_dir "path"` - Get directory containing script
-- `is_flag "arg"` - Check if argument is a flag
-- `parse_common_flags "args..."` - Parse -h, -v, --debug, --dry-run
-- `dispatch_command "cmd" "args..."` - Run cmd_* function
-- `is_devcontainer` - Check if running in devcontainer
-- `is_interactive` - Check if running interactively
-- `version_gte "v1" "v2"` - Compare semantic versions
-- `git_version_at_least "version"` - Check git version
+| Function | Description |
+|----------|-------------|
+| `resolve_script_path "path"` | Resolve symlinks |
+| `get_script_dir "path"` | Get script directory |
+| `is_flag "arg"` | Check if argument is a flag |
+| `flag_has_value "next"` | Check if flag has value |
+| `parse_common_flags "$@"` | Parse -h, -v, -n, --debug |
+| `dispatch_command "cmd"` | Run cmd_* function |
+| `is_devcontainer` | Check if in devcontainer |
+| `is_interactive` | Check if interactive terminal |
+| `should_use_colors` | Check if colors enabled |
+| `version_gte "v1" "v2"` | Compare versions |
+| `get_git_version` | Get git version |
+| `git_version_at_least "v"` | Check git version |
 
 ### validation.sh
-Input validation helpers.
+Input validation and sanitization.
 
-```bash
-source "$SCRIPT_DIR/lib/validation.sh"
+| Function | Description |
+|----------|-------------|
+| `is_empty "string"` | Check if empty/whitespace |
+| `is_valid_identifier "str"` | Check valid identifier |
+| `is_valid_slug "str"` | Check valid slug |
+| `to_slug "string"` | Convert to slug |
+| `is_directory "path"` | Check if directory exists |
+| `is_file "path"` | Check if file exists |
+| `is_readable "path"` | Check if readable |
+| `is_writable "path"` | Check if writable |
+| `to_absolute_path "path"` | Resolve to absolute |
+| `is_url "string"` | Check if URL |
+| `is_git_url "string"` | Check if git URL |
+| `is_github_url "string"` | Check if GitHub URL |
+| `is_positive_integer "n"` | Check positive integer |
+| `is_non_negative_integer "n"` | Check non-negative |
+| `in_range "val" "min" "max"` | Check value in range |
+| `is_iso_date "str"` | Check ISO date format |
+| `is_iso_datetime "str"` | Check ISO datetime |
+| `require_var "name" "val"` | Exit if var empty |
+| `require_file "path"` | Exit if file missing |
+| `require_directory "path"` | Exit if dir missing |
+| `require_command "cmd"` | Exit if cmd missing |
 
-require_var "REPO_NAME" "$REPO_NAME"
-require_command "jq"
+### config.sh
+Configuration loading utilities.
 
-if is_valid_slug "my-repo"; then
-    echo "Valid!"
-fi
-```
+### license.sh
+License handling utilities.
 
-**Functions:**
-- `is_empty "str"` - Check if empty/whitespace
-- `is_valid_identifier "str"` - Check alphanumeric+underscore
-- `is_valid_slug "str"` - Check lowercase-with-hyphens
-- `to_slug "str"` - Convert to slug
-- `is_directory "path"` - Check if directory exists
-- `is_file "path"` - Check if file exists
-- `is_readable/is_writable "path"` - Check permissions
-- `to_absolute_path "path"` - Convert to absolute
-- `is_url/is_git_url/is_github_url "str"` - URL validation
-- `is_positive_integer "str"` - Number validation
-- `is_iso_date "str"` - Date validation
-- `require_var "name" "value"` - Exit if empty
-- `require_file "path"` - Exit if missing
-- `require_directory "path"` - Exit if missing
-- `require_command "cmd"` - Exit if not available
-
-## Usage Pattern
-
-All scripts should follow this pattern:
+## Usage
 
 ```bash
 #!/usr/bin/env bash
-set -e
-
-# Get script location
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-GIT_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
-
-# Source shared libraries
 source "$SCRIPT_DIR/lib/colors.sh"
 source "$SCRIPT_DIR/lib/print.sh"
-source "$SCRIPT_DIR/lib/git-utils.sh"  # Optional
+source "$SCRIPT_DIR/lib/git-utils.sh"
+source "$SCRIPT_DIR/lib/cli.sh"
+source "$SCRIPT_DIR/lib/validation.sh"
 
-# Your script code...
-main() {
-    print_header "My Tool"
-    require_git_repo
-    # ...
-    print_header_success "Complete!"
-}
-
-main "$@"
+# Now use shared functions
+require_git_repo
+print_header "My Script"
+if confirm "Continue?"; then
+    print_success "Done!"
+fi
 ```
 
-## Line Savings Estimate
+## Function Usage Statistics
 
-By using shared libraries, we eliminate redundant code across all scripts:
+After PR #4 refactoring:
 
-| Pattern | Occurrences | Lines Saved |
-|---------|-------------|-------------|
-| Hardcoded print_* functions | 3 scripts | ~60 lines |
-| Hardcoded header boxes | 10 occurrences | ~40 lines |
-| Git repo checks | 8 scripts | ~80 lines |
-| URL parsing | 5 scripts | ~50 lines |
-| Color definitions | Previously inline | ~40 lines |
-| Input validation | Various | ~30 lines |
-| **Total** | | **~300 lines** |
+| Function | Usage Count | Scripts |
+|----------|-------------|----------|
+| `print_header` | 15+ | All scripts |
+| `print_menu_item` | 40+ | All interactive scripts |
+| `print_section` | 25+ | All scripts |
+| `print_command_hint` | 20+ | Help functions |
+| `print_detail` | 30+ | fix-history, template-loading |
+| `confirm` | 10+ | Interactive scripts |
+| `require_git_repo` | 5 | create-pr, fix-history, etc. |
+| `is_file` / `is_directory` | 25+ | template-loading, module-nesting |
+| `is_empty` | 15+ | module-nesting, validation |
 
-More importantly, changes to common functionality now only need to be made in one place.
+## Estimated Line Savings
+
+| Pattern | Lines Saved |
+|---------|-------------|
+| Hardcoded print_* functions | ~100 lines |
+| Hardcoded header boxes | ~60 lines |
+| Git repo checks | ~100 lines |
+| Validation checks | ~80 lines |
+| Menu item formatting | ~50 lines |
+| **Total** | **~390+ lines** |
+
+## SPDX Compliance
+
+All libraries include SPDX headers:
+```bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2024-2026 xaoscience
+```
