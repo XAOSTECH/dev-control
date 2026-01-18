@@ -1294,11 +1294,7 @@ show_plan() {
 }
 
 show_summary() {
-    echo ""
-    echo -e "${BOLD}${GREEN}╔════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${BOLD}${GREEN}║${NC}                   ${CYAN}Processing Complete!${NC}                      ${BOLD}${GREEN}║${NC}"
-    echo -e "${BOLD}${GREEN}╚════════════════════════════════════════════════════════════╝${NC}"
-    echo ""
+    print_header_success "Processing Complete!" 60
     echo -e "${BOLD}Generated .gitmodules files for all nested repositories.${NC}"
     echo ""
     echo -e "${BOLD}Note:${NC} This script manages .gitmodules files only."
