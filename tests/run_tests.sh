@@ -13,17 +13,10 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-# Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-BOLD='\033[1m'
-NC='\033[0m'
-
-print_info() { echo -e "${BLUE}[INFO]${NC} $1"; }
-print_success() { echo -e "${GREEN}[PASS]${NC} $1"; }
-print_error() { echo -e "${RED}[FAIL]${NC} $1"; }
+# Source shared libraries
+LIB_DIR="$(cd "$SCRIPT_DIR/../scripts/lib" && pwd)"
+source "$LIB_DIR/colors.sh"
+source "$LIB_DIR/print.sh"
 
 # ============================================================================
 # SETUP
@@ -58,11 +51,7 @@ ensure_bats_installed() {
 run_tests() {
     local test_target="${1:-.}"
     
-    echo -e "${BOLD}${BLUE}"
-    echo "  ┌───────────────────────────────────────┐"
-    echo "  │       Git-Control Test Suite          │"
-    echo "  └───────────────────────────────────────┘"
-    echo -e "${NC}"
+    print_header "Git-Control Test Suite" 68
     
     ensure_bats_installed
     

@@ -1,1 +1,4 @@
 .tmp
+
+# Test dependencies (auto-downloaded by run_tests.sh)
+tests/test_helper/
