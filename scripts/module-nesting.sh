@@ -19,6 +19,9 @@
 
 set -e
 
+# Enable globbing for hidden files/directories (e.g., .devcontainer, .vscode)
+shopt -s dotglob
+
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GIT_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
@@ -47,7 +50,7 @@ is_git_repo() {
 }
 
 # Directories to skip (noisy or irrelevant)
-EXCLUDE_DIRS=(.tmp .devcontainer .vscode node_modules .cache)
+EXCLUDE_DIRS=(.bak .tmp node_modules .cache)
 
 # Added common build/output directories to avoid archiving transient build artifacts
 EXCLUDE_TEMP=(build CMakeFiles dist target bin obj out cmake-build-debug .git .wrangler)
