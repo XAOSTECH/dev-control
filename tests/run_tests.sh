@@ -41,6 +41,10 @@ ensure_bats_installed() {
     git clone --depth 1 https://github.com/bats-core/bats-support.git test_helper/bats-support
     git clone --depth 1 https://github.com/bats-core/bats-assert.git test_helper/bats-assert
     
+    rm -rf test_helper/bats/.git
+    rm -rf test_helper/bats-support/.git
+    rm -rf test_helper/bats-assert/.git
+    
     export PATH="$SCRIPT_DIR/test_helper/bats/bin:$PATH"
 }
 
