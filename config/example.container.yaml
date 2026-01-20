@@ -19,6 +19,10 @@ container-name: my-project
 # GitHub username or organisation slug
 github-user: your-username
 
+# GitHub user email (for git commits)
+# Leave empty to use {github-user}@users.noreply.github.com
+github-user-email: your-email@example.com
+
 # Public GPG signing key ID (for commit signing inside container)
 # Leave empty to disable GPG signing
 gpg-key-id: NNXNXNNNNNXNNNNN
