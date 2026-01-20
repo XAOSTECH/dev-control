@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 #
-# Git-Control Installer
+# Dev-Control Installer
 # Single-file installer for easy distribution
 #
 # Usage:
-#   curl -sSL https://raw.githubusercontent.com/xaoscience/git-control/Main/install.sh | bash
+#   curl -sSL https://raw.githubusercontent.com/xaoscience/dev-control/Main/install.sh | bash
 #   curl -sSL ... | bash -s -- --prefix=/custom/path
 #   curl -sSL ... | bash -s -- --uninstall
 #
@@ -14,9 +14,9 @@
 set -e
 
 # Configuration
-GC_REPO="xaoscience/git-control"
-GC_BRANCH="Main"
-DEFAULT_PREFIX="$HOME/.local/share/git-control"
+DC_REPO="xaoscience/dev-control"
+DC_BRANCH="Main"
+DEFAULT_PREFIX="$HOME/.local/share/dev-control"
 DEFAULT_BIN="$HOME/.local/bin"
 
 # Colors
@@ -47,16 +47,16 @@ QUIET=false
 
 show_help() {
     cat << EOF
-Git-Control Installer
+Dev-Control Installer
 
 USAGE:
-  curl -sSL https://raw.githubusercontent.com/$GC_REPO/$GC_BRANCH/install.sh | bash
+  curl -sSL https://raw.githubusercontent.com/$DC_REPO/$DC_BRANCH/install.sh | bash
   ./install.sh [OPTIONS]
 
 OPTIONS:
   --prefix=PATH     Installation directory (default: $DEFAULT_PREFIX)
-  --bin=PATH        Binary directory for 'gc' symlink (default: $DEFAULT_BIN)
-  --uninstall       Remove git-control
+  --bin=PATH        Binary directory for 'dc' symlink (default: $DEFAULT_BIN)
+  --uninstall       Remove dev-control
   --upgrade         Update existing installation
   --no-aliases      Skip bash aliases installation
   --quiet           Minimal output
@@ -64,10 +64,10 @@ OPTIONS:
 
 EXAMPLES:
   # Install to default location
-  curl -sSL https://raw.githubusercontent.com/$GC_REPO/$GC_BRANCH/install.sh | bash
+  curl -sSL https://raw.githubusercontent.com/$DC_REPO/$DC_BRANCH/install.sh | bash
 
   # Install to custom location
-  ./install.sh --prefix=/opt/git-control --bin=/usr/local/bin
+  ./install.sh --prefix=/opt/dev-control --bin=/usr/local/bin
 
   # Update existing installation
   ./install.sh --upgrade
@@ -121,8 +121,8 @@ check_prerequisites() {
 # INSTALLATION
 # ============================================================================
 
-install_git_control() {
-    print_info "Installing git-control to $PREFIX"
+install_dev_control() {
+    print_info "Installing dev-control to $PREFIX"
     
     # Create directories
     mkdir -p "$PREFIX"
@@ -133,29 +133,29 @@ install_git_control() {
         if [[ "$UPGRADE" == "true" ]]; then
             print_info "Updating existing installation..."
             git -C "$PREFIX" fetch origin
-            git -C "$PREFIX" reset --hard "origin/$GC_BRANCH"
+            git -C "$PREFIX" reset --hard "origin/$DC_BRANCH"
         else
-            print_error "git-control already installed at $PREFIX"
+            print_error "dev-control already installed at $PREFIX"
             print_info "Use --upgrade to update, or --uninstall first"
             exit 1
         fi
     else
         print_info "Cloning repository..."
-        git clone --depth 1 -b "$GC_BRANCH" "https://github.com/$GC_REPO.git" "$PREFIX"
+        git clone --depth 1 -b "$DC_BRANCH" "https://github.com/$DC_REPO.git" "$PREFIX"
     fi
     
     # Make scripts executable
     print_info "Setting permissions..."
-    chmod +x "$PREFIX/gc"
+    chmod +x "$PREFIX/dc"
     chmod +x "$PREFIX/scripts/"*.sh
     chmod +x "$PREFIX/commands/"*.sh 2>/dev/null || true
     
     # Create symlink
-    print_info "Creating symlink: $BIN_DIR/gc -> $PREFIX/gc"
-    ln -sf "$PREFIX/gc" "$BIN_DIR/gc"
+    print_info "Creating symlink: $BIN_DIR/dc -> $PREFIX/dc"
+    ln -sf "$PREFIX/dc" "$BIN_DIR/dc"
     
     # Create config directory
-    local config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/git-control"
+    local config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/dev-control"
     mkdir -p "$config_dir"
     
     # Copy example config if doesn't exist
@@ -171,7 +171,7 @@ install_git_control() {
         install_aliases
     fi
     
-    print_success "git-control installed successfully!"
+    print_success "dev-control installed successfully!"
 }
 
 install_aliases() {
@@ -179,28 +179,28 @@ install_aliases() {
     
     local bash_aliases="$HOME/.bash_aliases"
     local bashrc="$HOME/.bashrc"
-    local marker="# git-control aliases"
+    local marker="# dev-control aliases"
     
     # Check if already installed
     if grep -q "$marker" "$bash_aliases" 2>/dev/null; then
         print_info "Aliases already installed, updating..."
         # Remove old aliases
-        sed -i "/$marker/,/# end git-control/d" "$bash_aliases"
+        sed -i "/$marker/,/# end dev-control/d" "$bash_aliases"
     fi
     
     # Append aliases
     cat >> "$bash_aliases" << EOF
 $marker
-alias gc='$PREFIX/gc'
-alias gc-init='$PREFIX/gc init'
-alias gc-repo='$PREFIX/gc repo'
-alias gc-pr='$PREFIX/gc pr'
-alias gc-fix='$PREFIX/gc fix'
-alias gc-modules='$PREFIX/gc modules'
-alias gc-licenses='$PREFIX/gc licenses'
-alias gc-mcp='$PREFIX/gc mcp'
-alias gc-aliases='$PREFIX/gc aliases'
-# end git-control
+alias dc='$PREFIX/dc'
+alias dc-init='$PREFIX/dc init'
+alias dc-repo='$PREFIX/dc repo'
+alias dc-pr='$PREFIX/dc pr'
+alias dc-fix='$PREFIX/dc fix'
+alias dc-modules='$PREFIX/dc modules'
+alias dc-licenses='$PREFIX/dc licenses'
+alias dc-mcp='$PREFIX/dc mcp'
+alias dc-aliases='$PREFIX/dc aliases'
+# end dev-control
 EOF
     
     # Ensure .bashrc sources .bash_aliases
@@ -222,13 +222,13 @@ EOF
 # UNINSTALLATION
 # ============================================================================
 
-uninstall_git_control() {
-    print_info "Uninstalling git-control..."
+uninstall_dev_control() {
+    print_info "Uninstalling dev-control..."
     
     # Remove symlink
-    if [[ -L "$BIN_DIR/gc" ]]; then
-        rm "$BIN_DIR/gc"
-        print_info "Removed symlink: $BIN_DIR/gc"
+    if [[ -L "$BIN_DIR/dc" ]]; then
+        rm "$BIN_DIR/dc"
+        print_info "Removed symlink: $BIN_DIR/dc"
     fi
     
     # Remove installation
@@ -239,13 +239,13 @@ uninstall_git_control() {
     
     # Remove aliases
     local bash_aliases="$HOME/.bash_aliases"
-    if grep -q "# git-control aliases" "$bash_aliases" 2>/dev/null; then
-        sed -i '/# git-control aliases/,/# end git-control/d' "$bash_aliases"
+    if grep -q "# dev-control aliases" "$bash_aliases" 2>/dev/null; then
+        sed -i '/# dev-control aliases/,/# end dev-control/d' "$bash_aliases"
         print_info "Removed aliases from .bash_aliases"
     fi
     
-    print_success "git-control uninstalled"
-    print_info "Note: Configuration in ~/.config/git-control was preserved"
+    print_success "dev-control uninstalled"
+    print_info "Note: Configuration in ~/.config/dev-control was preserved"
 }
 
 # ============================================================================
@@ -258,25 +258,25 @@ show_post_install() {
     echo ""
     echo -e "${BOLD}Quick Start:${NC}"
     echo "  1. Reload your shell: source ~/.bashrc"
-    echo "  2. Run: gc --help"
+    echo "  2. Run: dc --help"
     echo ""
     echo -e "${BOLD}Available Commands:${NC}"
-    echo "  gc init       - Initialize repo with templates"
-    echo "  gc repo       - Create GitHub repository"
-    echo "  gc pr         - Create pull request"
-    echo "  gc fix        - Fix commit history"
-    echo "  gc modules    - Manage submodules"
-    echo "  gc licenses   - Audit licenses"
-    echo "  gc mcp        - Configure MCP servers"
-    echo "  gc config     - Manage configuration"
-    echo "  gc status     - Show status"
+    echo "  dc init       - Initialize repo with templates"
+    echo "  dc repo       - Create GitHub repository"
+    echo "  dc pr         - Create pull request"
+    echo "  dc fix        - Fix commit history"
+    echo "  dc modules    - Manage submodules"
+    echo "  dc licenses   - Audit licenses"
+    echo "  dc mcp        - Configure MCP servers"
+    echo "  dc config     - Manage configuration"
+    echo "  dc status     - Show status"
     echo ""
     echo -e "${BOLD}Configuration:${NC}"
-    echo "  Global:  ~/.config/git-control/config.yaml"
-    echo "  Project: .gc-init.yaml (in repo root)"
+    echo "  Global:  ~/.config/dev-control/config.yaml"
+    echo "  Project: .dc-init.yaml (in repo root)"
     echo ""
     echo -e "${BOLD}More Info:${NC}"
-    echo "  https://github.com/$GC_REPO"
+    echo "  https://github.com/$DC_REPO"
     echo ""
 }
 
@@ -289,17 +289,17 @@ main() {
     
     echo -e "${BOLD}${CYAN}"
     echo "  ╔═══════════════════════════════════════╗"
-    echo "  ║         Git-Control Installer         ║"
+    echo "  ║         Dev-Control Installer         ║"
     echo "  ╚═══════════════════════════════════════╝"
     echo -e "${NC}"
     
     if [[ "$UNINSTALL" == "true" ]]; then
-        uninstall_git_control
+        uninstall_dev_control
         exit 0
     fi
     
     check_prerequisites
-    install_git_control
+    install_dev_control
     
     if [[ "$QUIET" != "true" ]]; then
         show_post_install

@@ -1,5 +1,5 @@
-# git-control container configuration
-# Copy to ~/.config/git-control/container.yaml for global defaults
+# dev-control container configuration
+# Copy to ~/.config/dev-control/container.yaml for global defaults
 # or to your project root as .devcontainer.yaml for project-specific settings
 #
 # NOTE: You can enter custom values not listed in the interactive menus.
@@ -113,8 +113,8 @@ mount-docker-socket: true
 # Install GitHub CLI in container
 install-gh-cli: true
 
-# Install git-control in container
-install-git-control: true
+# Install dev-control in container
+install-dev-control: true
 
-# git-control version to install (tag or 'latest')
-git-control-version: latest
+# dev-control version to install (tag or 'latest')
+dev-control-version: latest

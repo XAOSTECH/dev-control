@@ -1,14 +1,21 @@
 # Changelog
 
-All notable changes to git-control will be documented in this file.
+All notable changes to dev-control will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+- Renamed project from git-control to dev-control
+- Main command changed from `gc` to `dc`
+- Config directory changed from `~/.config/git-control/` to `~/.config/dev-control/`
+- Project config file changed from `.gc-init.yaml` to `.dc-init.yaml`
+- All aliases now use `dc-` prefix instead of `gc-`
+
 ### Added
-- Modular CLI framework with `gc` entry point
+- Modular CLI framework with `dc` entry point
 - Hierarchical configuration system (global + project)
 - Plugin architecture with auto-discovery
 - Interactive TUI mode with gum/fzf support
@@ -27,7 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Initial release
-- git-control.sh - main orchestration script
+- dev-control.sh - main orchestration script
 - create-repo.sh - GitHub repository creation
 - create-pr.sh - Pull request automation
 - template-loading.sh - Template management
@@ -46,5 +53,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - GPG commit signing support
 - SSH key management
 
-[Unreleased]: https://github.com/xaoscience/git-control/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/xaoscience/git-control/releases/tag/v1.0.0
+[Unreleased]: https://github.com/xaoscience/dev-control/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/xaoscience/dev-control/releases/tag/v1.0.0
