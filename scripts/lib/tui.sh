@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Git-Control Shared Library: TUI (Terminal UI)
+# Dev-Control Shared Library: TUI (Terminal UI)
 # Rich interactive terminal UI using gum/fzf with fallbacks
 #
 # Features:

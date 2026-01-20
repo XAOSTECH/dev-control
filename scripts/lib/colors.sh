@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Git-Control Shared Library: Colors
+# Dev-Control Shared Library: Colors
 # Common color definitions for terminal output
 #
 # Usage:

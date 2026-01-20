@@ -28,8 +28,8 @@ set -e
 
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-GIT_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
-export GIT_CONTROL_DIR  # Used by sourced libraries
+DEV_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
+export DEV_CONTROL_DIR  # Used by sourced libraries
 
 # Source shared libraries
 source "$SCRIPT_DIR/lib/colors.sh"
@@ -101,7 +101,7 @@ declare -A SCOPE_PRESETS=(
 
 show_help() {
     cat << 'EOF'
-Git-Control MCP Setup - Configure Model Context Protocol servers
+Dev-Control MCP Setup - Configure Model Context Protocol servers
 
 USAGE:
   mcp-setup.sh [OPTIONS]
@@ -153,7 +153,7 @@ EXAMPLES:
   mcp-setup.sh --config-only # Just create config file
 
 ALIASES:
-  gc-mcp
+  dc-mcp
 
 EOF
 }
@@ -568,7 +568,7 @@ main() {
         esac
     done
     
-    print_header "Git-Control MCP Setup"
+    print_header "Dev-Control MCP Setup"
     
     case "$mode" in
         token)
@@ -637,7 +637,7 @@ main() {
                 if [[ "$stored_in_keyring" == "true" ]]; then
                     print_section "Token Storage:"
                     print_list_item "✓ Stored in system keyring (GNOME Keyring)"
-                    print_list_item "Retrieve anytime: ${CYAN}gc-mcp --show-token${NC}"
+                    print_list_item "Retrieve anytime: ${CYAN}dc-mcp --show-token${NC}"
                     print_list_item "Or: ${CYAN}secret-tool lookup vscode-github-mcp github-token${NC}"
                 else
                     print_section "Token Created:"
@@ -667,7 +667,7 @@ main() {
                 if [[ "$copied_to_clipboard" == "true" ]]; then
                     echo -e "     • Simply paste from clipboard (${CYAN}Ctrl+V${NC})"
                 elif [[ "$stored_in_keyring" == "true" ]]; then
-                    echo -e "     • Retrieve with: ${CYAN}gc-mcp --show-token${NC}"
+                    echo -e "     • Retrieve with: ${CYAN}dc-mcp --show-token${NC}"
                 else
                     echo -e "     • Enter: ${YELLOW}$token${NC}"
                 fi
@@ -720,7 +720,7 @@ main() {
             
             print_section "Token Configuration:"
             if detect_keyring_support; then
-                print_list_item "Option 1: Use ${CYAN}gc-mcp --create-pat${NC} to create and store in keyring"
+                print_list_item "Option 1: Use ${CYAN}dc-mcp --create-pat${NC} to create and store in keyring"
                 print_list_item "Option 2: Let VS Code prompt for token (recommended)"
             else
                 print_list_item "VS Code will prompt for your GitHub PAT on first use"
@@ -731,7 +731,7 @@ main() {
             echo -e "  2. VS Code will prompt for your GitHub PAT when you first use MCP"
             echo -e "  3. Generate PAT at: ${CYAN}https://github.com/settings/tokens${NC}"
             echo -e "     Required scopes: ${CYAN}repo, workflow, read:user${NC}"
-            echo -e "  4. Or run ${CYAN}gc-mcp --create-pat${NC} to create automatically"
+            echo -e "  4. Or run ${CYAN}dc-mcp --create-pat${NC} to create automatically"
             echo -e "  5. Start using MCP tools in Copilot Chat"
             echo ""
             ;;

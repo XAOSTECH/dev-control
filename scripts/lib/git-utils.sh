@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Git-Control Shared Library: Git Utilities
+# Dev-Control Shared Library: Git Utilities
 # Common git detection and URL parsing functions
 #
 # Usage:

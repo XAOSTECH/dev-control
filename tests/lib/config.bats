@@ -12,7 +12,7 @@ setup() {
     export XDG_CONFIG_HOME="$TEST_CONFIG_DIR"
     
     # Create test config structure
-    mkdir -p "$TEST_CONFIG_DIR/git-control"
+    mkdir -p "$TEST_CONFIG_DIR/dev-control"
     
     # Load the library
     source "$BATS_TEST_DIRNAME/../../scripts/lib/config.sh"
@@ -37,7 +37,7 @@ teardown() {
 }
 
 @test "gc_config reads from config file" {
-    cat > "$TEST_CONFIG_DIR/git-control/config.yaml" << 'EOF'
+    cat > "$TEST_CONFIG_DIR/dev-control/config.yaml" << 'EOF'
 defaults:
   author: "Test Author"
   license: MIT
@@ -98,14 +98,14 @@ EOF
 
 @test "project config overrides global config" {
     # Create global config
-    cat > "$TEST_CONFIG_DIR/git-control/config.yaml" << 'EOF'
+    cat > "$TEST_CONFIG_DIR/dev-control/config.yaml" << 'EOF'
 defaults:
   license: MIT
 EOF
     
     # Create project config in temp dir
     local project_dir=$(mktemp -d)
-    cat > "$project_dir/.gc-init.yaml" << 'EOF'
+    cat > "$project_dir/.dc-init.yaml" << 'EOF'
 defaults:
   license: GPL-3.0
 EOF

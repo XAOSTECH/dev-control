@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Dev-Control (dc) - Main Entry Point
-# Unified CLI for all dev-control tools
+# Unified CLI for all Dev-Control tools
 #
 # Usage:
 #   dc <command> [options]    # Run a specific command
@@ -90,7 +90,7 @@ declare -A COMMAND_DESC=(
     ["licenses"]="Audit and manage licenses across repo/submodules"
     ["mcp"]="Configure Model Context Protocol servers"
     ["container"]="Setup devcontainer for project"
-    ["aliases"]="Install bash aliases for dev-control"
+    ["aliases"]="Install bash aliases for Dev-Control"
     ["menu"]="Open interactive menu (default)"
 )
 
@@ -111,7 +111,7 @@ EOF
 
 show_help() {
     cat << EOF
-${BOLD}dev-control${NC} - Comprehensive Git workflow automation toolkit
+${BOLD}Dev-Control${NC} - Comprehensive Git workflow automation toolkit
 
 ${BOLD}USAGE${NC}
   dc <command> [options]

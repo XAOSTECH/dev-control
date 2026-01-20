@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Git-Control History Fixer
+# Dev-Control History Fixer
 # Interactive git commit history rewriting tool
 #
 # Allows you to:
@@ -17,7 +17,7 @@
 #   ./scripts/fix-history.sh                    # Interactive mode (edit last 10 commits)
 #   ./scripts/fix-history.sh --range HEAD=20 --dry-run   # Preview changes without applying
 #   ./scripts/fix-history.sh --sign --range HEAD=all -v  # Re-sign a branch (requires GPG)
-#   PRESERVE_TOPOLOGY=TRUE UPDATE_WORKTREES=true NO_EDIT_MODE=true AUTO_FIX_REBASE=true RECONSTRUCT_AUTO=true gc-fix --sign --range HEAD=all -v
+#   PRESERVE_TOPOLOGY=TRUE UPDATE_WORKTREES=true NO_EDIT_MODE=true AUTO_FIX_REBASE=true RECONSTRUCT_AUTO=true dc-fix --sign --range HEAD=all -v
 #
 # Cleaning and harness helpers:
 #   ./scripts/fix-history.sh --only-cleanup      # Only cleanup tmp/backup tags and branches
@@ -33,7 +33,7 @@ set -e
 
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-GIT_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
+DEV_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
 
 # Source shared libraries
 source "$SCRIPT_DIR/lib/colors.sh"
@@ -130,7 +130,7 @@ fi
 
 show_help() {
     cat << 'EOF'
-Git-Control History Fixer - Interactive commit history rewriting
+Dev-Control History Fixer - Interactive commit history rewriting
 
 Usage: fix-history.sh [OPTIONS]
 
@@ -3435,7 +3435,7 @@ cleanup_tmp_and_backup_refs() {
 }
 
 main() {
-    print_header "Git-Control History Fixer"
+    print_header "Dev-Control History Fixer"
     parse_args "$@"
     
     # If cleanup-only mode, run cleanup and exit

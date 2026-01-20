@@ -29,7 +29,7 @@ What actually happened instead.
 - **OS**: [e.g., Ubuntu 22.04, macOS 14.0]
 - **Shell**: [e.g., bash 5.1, zsh 5.9]
 - **Git version**: [e.g., 2.40.0]
-- **git-control version/commit**: [e.g., main branch, commit abc123]
+- **dev-control version/commit**: [e.g., main branch, commit abc123]
 
 ## 📸 Screenshots / Logs
 

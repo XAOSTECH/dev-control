@@ -18,13 +18,13 @@ setup() {
     run "$GC" --help
     assert_success
     assert_output --partial "Usage:"
-    assert_output --partial "git-control"
+    assert_output --partial "dev-control"
 }
 
 @test "gc --version shows version" {
     run "$GC" --version
     assert_success
-    assert_output --partial "git-control"
+    assert_output --partial "dev-control"
 }
 
 @test "gc with unknown command shows error" {

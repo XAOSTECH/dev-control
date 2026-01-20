@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to dev-control will be documented in this file.
+All notable changes to Dev-Control will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -8,11 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
-- Renamed project from git-control to dev-control
+- Renamed project from Git-Control to Dev-Control
 - Main command changed from `gc` to `dc`
 - Config directory changed from `~/.config/git-control/` to `~/.config/dev-control/`
 - Project config file changed from `.gc-init.yaml` to `.dc-init.yaml`
-- All aliases now use `dc-` prefix instead of `gc-`
+- All aliases now use `gc-` prefix instead of `dc-`
 
 ### Added
 - Modular CLI framework with `dc` entry point

@@ -1,4 +1,4 @@
-# ShellCheck configuration for git-control
+# ShellCheck configuration for Dev-Control
 # https://github.com/koalaman/shellcheck/wiki/Directive
 #
 # SPDX-License-Identifier: GPL-3.0-or-later

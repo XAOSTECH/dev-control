@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Git-Control Shared Library: Validation
+# Dev-Control Shared Library: Validation
 # Input validation and sanitization helpers
 #
 # Usage:

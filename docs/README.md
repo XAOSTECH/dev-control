@@ -1,41 +1,41 @@
-# Git-Control
+# Dev-Control
 
 <!-- Project Shields/Badges -->
 <p align="center">
-  <a href="https://github.com/xaoscience/git-control">
-    <img alt="GitHub repo" src="https://img.shields.io/badge/GitHub-xaoscience%2Fgit--control-181717?style=for-the-badge&logo=github">
+  <a href="https://github.com/xaoscience/dev-control">
+    <img alt="GitHub repo" src="https://img.shields.io/badge/GitHub-xaoscience%2Fdev--control-181717?style=for-the-badge&logo=github">
   </a>
-  <a href="https://github.com/xaoscience/git-control/releases">
-    <img alt="GitHub release" src="https://img.shields.io/github/v/release/xaoscience/git-control?style=for-the-badge&logo=semantic-release&color=blue">
+  <a href="https://github.com/xaoscience/dev-control/releases">
+    <img alt="GitHub release" src="https://img.shields.io/github/v/release/xaoscience/dev-control?style=for-the-badge&logo=semantic-release&color=blue">
   </a>
-  <a href="https://github.com/xaoscience/git-control/blob/main/LICENSE">
-    <img alt="License" src="https://img.shields.io/github/license/xaoscience/git-control?style=for-the-badge&color=green">
-  </a>
-</p>
-
-<p align="center">
-  <a href="https://github.com/xaoscience/git-control/actions/workflows/bash-lint.yml">
-    <img alt="CI Status" src="https://github.com/xaoscience/git-control/actions/workflows/bash-lint.yml/badge.svg?branch=Main">
-  </a>
-  <a href="https://github.com/xaoscience/git-control/issues">
-    <img alt="Issues" src="https://img.shields.io/github/issues/xaoscience/git-control?style=flat-square&logo=github&color=yellow">
-  </a>
-  <a href="https://github.com/xaoscience/git-control/pulls">
-    <img alt="Pull Requests" src="https://img.shields.io/github/issues-pr/xaoscience/git-control?style=flat-square&logo=github&color=purple">
-  </a>
-  <a href="https://github.com/xaoscience/git-control/stargazers">
-    <img alt="Stars" src="https://img.shields.io/github/stars/xaoscience/git-control?style=flat-square&logo=github&color=gold">
-  </a>
-  <a href="https://github.com/xaoscience/git-control/network/members">
-    <img alt="Forks" src="https://img.shields.io/github/forks/xaoscience/git-control?style=flat-square&logo=github">
+  <a href="https://github.com/xaoscience/dev-control/blob/main/LICENSE">
+    <img alt="License" src="https://img.shields.io/github/license/xaoscience/dev-control?style=for-the-badge&color=green">
   </a>
 </p>
 
 <p align="center">
-  <img alt="Last Commit" src="https://img.shields.io/github/last-commit/xaoscience/git-control?style=flat-square&logo=git&color=blue">
-  <img alt="Repo Size" src="https://img.shields.io/github/repo-size/xaoscience/git-control?style=flat-square&logo=files&color=teal">
-  <img alt="Code Size" src="https://img.shields.io/github/languages/code-size/xaoscience/git-control?style=flat-square&logo=files&color=orange">
-  <img alt="Contributors" src="https://img.shields.io/github/contributors/xaoscience/git-control?style=flat-square&logo=github&color=green">
+  <a href="https://github.com/xaoscience/dev-control/actions/workflows/bash-lint.yml">
+    <img alt="CI Status" src="https://github.com/xaoscience/dev-control/actions/workflows/bash-lint.yml/badge.svg?branch=Main">
+  </a>
+  <a href="https://github.com/xaoscience/dev-control/issues">
+    <img alt="Issues" src="https://img.shields.io/github/issues/xaoscience/dev-control?style=flat-square&logo=github&color=yellow">
+  </a>
+  <a href="https://github.com/xaoscience/dev-control/pulls">
+    <img alt="Pull Requests" src="https://img.shields.io/github/issues-pr/xaoscience/dev-control?style=flat-square&logo=github&color=purple">
+  </a>
+  <a href="https://github.com/xaoscience/dev-control/stargazers">
+    <img alt="Stars" src="https://img.shields.io/github/stars/xaoscience/dev-control?style=flat-square&logo=github&color=gold">
+  </a>
+  <a href="https://github.com/xaoscience/dev-control/network/members">
+    <img alt="Forks" src="https://img.shields.io/github/forks/xaoscience/dev-control?style=flat-square&logo=github">
+  </a>
+</p>
+
+<p align="center">
+  <img alt="Last Commit" src="https://img.shields.io/github/last-commit/xaoscience/dev-control?style=flat-square&logo=git&color=blue">
+  <img alt="Repo Size" src="https://img.shields.io/github/repo-size/xaoscience/dev-control?style=flat-square&logo=files&color=teal">
+  <img alt="Code Size" src="https://img.shields.io/github/languages/code-size/xaoscience/dev-control?style=flat-square&logo=files&color=orange">
+  <img alt="Contributors" src="https://img.shields.io/github/contributors/xaoscience/dev-control?style=flat-square&logo=github&color=green">
 </p>
 
 <p align="center">
@@ -69,16 +69,16 @@
 
 ## 🔍 Overview
 
-**Git-Control** is a comprehensive toolkit designed to enhance your Git and shell workflow. It provides:
+**Dev-Control** is a comprehensive toolkit designed to enhance your Git and shell workflow. It provides:
 
 - **Alias Management**: Interactive setup of productivity-boosting shell aliases
 - **Template Loading**: Quick initialisation of new repositories with standardised templates
 - **Module Nesting**: Automated management of Git submodules in complex project hierarchies
 - **Workflow Templates**: Pre-configured GitHub Actions for common automation tasks
 
-### Why git-control?
+### Why Dev-Control?
 
-Managing multiple repositories, nested submodules, and maintaining consistent configurations across projects is time-consuming and error-prone. Git-Control automates these tasks while remaining portable and easy to share across systems.
+Managing multiple repositories, nested submodules, and maintaining consistent configurations across projects is time-consuming and error-prone. Dev-Control automates these tasks while remaining portable and easy to share across systems.
 
 ---
 
@@ -109,8 +109,8 @@ Managing multiple repositories, nested submodules, and maintaining consistent co
 
 ```bash
 # Clone the repository
-git clone https://github.com/xaoscience/git-control.git
-cd git-control
+git clone https://github.com/xaoscience/dev-control.git
+cd dev-control
 
 # Run the interactive alias installer
 ./scripts/alias-loading.sh
@@ -124,7 +124,7 @@ cd git-control
 
 ```bash
 # Add to your .bashrc or .bash_profile
-source /path/to/git-control/scripts/alias-loading.sh --source-only
+source /path/to/dev-control/scripts/alias-loading.sh --source-only
 ```
 
 ---
@@ -133,19 +133,19 @@ source /path/to/git-control/scripts/alias-loading.sh --source-only
 
 ### Main Menu
 
-Use the main `git-control.sh` wrapper to access all tools via interactive menu:
+Use the main `dev-control.sh` wrapper to access all tools via interactive menu:
 
 ```bash
 # Interactive menu - choose any tool
-./scripts/git-control.sh
+./scripts/dev-control.sh
 
 # Or use the alias (after running alias-loading.sh)
-gc-control
+dc-control
 
 # Direct command mode - skip the menu
-./scripts/git-control.sh repo      # Create repository
-./scripts/git-control.sh pr        # Create pull request
-./scripts/git-control.sh fix       # Fix commit history
+./scripts/dev-control.sh repo      # Create repository
+./scripts/dev-control.sh pr        # Create pull request
+./scripts/dev-control.sh fix       # Fix commit history
 ```
 
 ### Alias Loading
@@ -156,7 +156,7 @@ gc-control
 ./scripts/alias-loading.sh && source ~/.bashrc
 
 # Reinstall all and automatically reload
-gc-aalias
+dc-aalias
 ```
 
 ### Alias Usage
@@ -165,7 +165,7 @@ gc-aalias
 
 | Category | Commands / Notes |
 | --- | --- |
-| **Git Control (gc-*)** | `gc-fix`, `gc-pr`, `gc-create`, `gc-mcp` |
+| **Git Control (dc-*)** | `dc-fix`, `dc-pr`, `dc-create`, `dc-mcp` |
 | **Git Shortcuts** | `gs`, `ga`, `gc`, `gp`, `gl` |
 | **Safety Nets** | `rm -i`, `cp -i`, `mv -i` under aliases of `rm`, `cp`, `mv`|
 | **System Monitoring** | `ports`, `meminfo`, `disk` |
@@ -195,11 +195,11 @@ gl
 
 Allows for creation of new $NAME-templates folders, which will be copied by default.
 
-**Note:** During interactive setup you can specify the repository owner (GitHub username or organisation). By default `gc-init` will use the detected org from the remote or your `gh` account, but you may override it.
+**Note:** During interactive setup you can specify the repository owner (GitHub username or organisation). By default `dc-init` will use the detected org from the remote or your `gh` account, but you may override it.
 
 ```bash
 # Interactive mode - initialise a new repo with templates
-gc-init
+dc-init
 
 # Or run directly
 ./scripts/template-loading.sh
@@ -217,7 +217,7 @@ gc-init
 
 ```bash
 # Interactive creation of new GitHub repository
-gc-create
+dc-create
 
 # Or run directly
 ./scripts/create-repo.sh
@@ -227,7 +227,7 @@ gc-create
 
 ```bash
 # Interactive creation of pull request from current branch
-gc-pr
+dc-pr
 
 # Or run directly
 ./scripts/create-pr.sh
@@ -237,7 +237,7 @@ gc-pr
 
 ```bash
 # Scan current directory for git repos and generate .gitmodules
-gc-modules
+dc-modules
 
 # Or run directly
 ./scripts/module-nesting.sh
@@ -364,7 +364,7 @@ Automatically configure GitHub MCP and additional MCP servers for VS Code with s
 
 ```bash
 # Full interactive setup - initialize MCP and configure servers
-gc-mcp
+dc-mcp
 
 # Or run directly
 ./scripts/mcp-setup.sh
@@ -405,7 +405,7 @@ Auto-configure rootless podman and generate optimised `.devcontainer/devcontaine
 
 ```bash
 # Interactive setup - detects project path or prompts for input
-gc-contain
+dc-contain
 
 # Or run directly
 ./scripts/containerise.sh
@@ -435,7 +435,7 @@ gc-contain
 
 | Script | Description |
 |--------|-------------|
-| [`git-control.sh`](../scripts/git-control.sh) | **Main entry point** - Interactive menu for all tools |
+| [`dev-control.sh`](../scripts/dev-control.sh) | **Main entry point** - Interactive menu for all tools |
 | [`alias-loading.sh`](../scripts/alias-loading.sh) | Interactive alias installer with category selection |
 | [`template-loading.sh`](../scripts/template-loading.sh) | Repository template initialisation tool |
 | [`create-repo.sh`](../scripts/create-repo.sh) | Interactive GitHub repository creator |
@@ -489,7 +489,7 @@ gc-contain
 
 ## 🔄 GitHub Actions Workflows
 
-In addition to initialising from local (gc-init), Git-Control provides two ways to initialise templates via GitHub Actions:
+In addition to initialising from local (dc-init), Dev-Control provides two ways to initialise templates via GitHub Actions:
 
 ### Option 1: Standalone Workflow (Recommended)
 
@@ -498,7 +498,7 @@ Copy `workflows-templates/init.yml` to your repo's `.github/workflows/` folder.
 ```bash
 # From your target repository
 mkdir -p .github/workflows
-curl -sL https://raw.githubusercontent.com/xaoscience/git-control/main/workflows-templates/init.yml \
+curl -sL https://raw.githubusercontent.com/xaoscience/dev-control/main/workflows-templates/init.yml \
   -o .github/workflows/init.yml
 git add .github/workflows/init.yml
 git commit -m "Add template initialisation workflow"
@@ -509,7 +509,7 @@ Then go to **Actions** → **Initialise Repository Templates** → **Run workflo
 
 ### Option 2: Reusable Workflow (Remote)
 
-Copy `workflows-templates/remote-init.yml` or call git-control's reusable workflow directly:
+Copy `workflows-templates/remote-init.yml` or call Dev-Control's reusable workflow directly:
 
 ```yaml
 # .github/workflows/remote-init.yml
@@ -524,7 +524,7 @@ permissions:
 
 jobs:
   init-templates:
-    uses: xaoscience/git-control/.github/workflows/central-loader.yml@main
+    uses: xaoscience/dev-control/.github/workflows/central-loader.yml@main
     with:
       project_name: 'My Project'
       short_description: 'A cool project'
@@ -583,14 +583,14 @@ See also: [Code of Conduct](CODE_OF_CONDUCT.md) | [Security Policy](SECURITY.md)
 - [ ] Plugin system for custom alias categories
 - [ ] Config file support for persistent preferences
 
-See the [open issues](https://github.com/xaoscience/git-control/issues) for a full list of proposed features and known issues.
+See the [open issues](https://github.com/xaoscience/dev-control/issues) for a full list of proposed features and known issues.
 
 ---
 
 ## 💬 Support
 
-- 💻 **Issues**: [GitHub Issues](https://github.com/xaoscience/git-control/issues)
-- 💬 **Discussions**: [GitHub Discussions](https://github.com/xaoscience/git-control/discussions)
+- 💻 **Issues**: [GitHub Issues](https://github.com/xaoscience/dev-control/issues)
+- 💬 **Discussions**: [GitHub Discussions](https://github.com/xaoscience/dev-control/discussions)
 
 ---
 
@@ -607,5 +607,5 @@ Distributed under the GPL-3.0 License. See [`LICENSE`](../LICENSE) for more info
 </p>
 
 <p align="center">
-  <a href="#git-control">⬆️ Back to Top</a>
+  <a href="#dev-control">⬆️ Back to Top</a>
 </p>

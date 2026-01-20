@@ -1,4 +1,4 @@
-# Contributing to git-control
+# Contributing to Dev-Control
 
 Thank you for your interest in contributing! This document provides guidelines and steps for contributing.
 
@@ -18,8 +18,8 @@ By participating in this project, you agree to abide by our [Code of Conduct](CO
 ## Getting Started
 
 1. Fork the repository
-2. Clone your fork: `git clone https://github.com/YOUR_USERNAME/git-control.git`
-3. Add upstream remote: `git remote add upstream https://github.com/xaoscience/git-control.git`
+2. Clone your fork: `git clone https://github.com/YOUR_USERNAME/dev-control.git`
+3. Add upstream remote: `git remote add upstream https://github.com/xaoscience/dev-control.git`
 4. Create a branch: `git checkout -b feature/your-feature-name`
 
 ## How to Contribute
@@ -49,24 +49,24 @@ By participating in this project, you agree to abide by our [Code of Conduct](CO
 
 ```bash
 # Clone your fork
-git clone https://github.com/YOUR_USERNAME/git-control.git
-cd git-control
+git clone https://github.com/YOUR_USERNAME/dev-control.git
+cd dev-control
 
 # Add upstream remote to stay in sync
-git remote add upstream https://github.com/xaoscience/git-control.git
+git remote add upstream https://github.com/xaoscience/dev-control.git
 git fetch upstream
 
 # Make scripts executable
 chmod +x scripts/*.sh
 ```
 
-### Using git-control Tools During Development
+### Using Dev-Control Tools During Development
 
 All tools are available during development:
 
 ```bash
 # Via main menu (interactive)
-./scripts/git-control.sh
+./scripts/dev-control.sh
 
 # Direct script access
 ./scripts/create-repo.sh        # Create repositories
@@ -76,10 +76,10 @@ All tools are available during development:
 ./scripts/module-nesting.sh     # Manage submodules
 
 # After alias setup, use shortcuts
-gc-control                      # Main menu
-gc-create                       # Repository creation
-gc-pr                          # Pull request creation
-gc-fix                         # Commit history fixing
+dc-control                      # Main menu
+dc-create                       # Repository creation
+dc-pr                          # Pull request creation
+dc-fix                         # Commit history fixing
 ```
 
 ## Pull Request Process
@@ -103,7 +103,7 @@ gc-fix                         # Commit history fixing
    
    **Option A: Interactive CLI**
    ```bash
-   gc-pr
+   dc-pr
    # or
    ./scripts/create-pr.sh
    ```
@@ -144,6 +144,6 @@ gc-fix                         # Commit history fixing
 
 ## Questions?
 
-Feel free to open a [Discussion](https://github.com/xaoscience/git-control/discussions) for questions or ideas.
+Feel free to open a [Discussion](https://github.com/xaoscience/dev-control/discussions) for questions or ideas.
 
 Thank you for contributing! 🙏

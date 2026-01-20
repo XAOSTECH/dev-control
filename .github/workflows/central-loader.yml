@@ -3,7 +3,7 @@
 # ============================================================================
 #
 # This is a reusable workflow that can be called from other repositories.
-# It loads templates from all *-templates folders in git-control:
+# It loads templates from all *-templates folders in Dev-Control:
 #   - docs-templates/     → copied to repo root (with placeholder replacement)
 #   - workflows-templates/ → copied to .github/workflows/
 #   - licenses-templates/  → copied to repo root (future)
@@ -13,7 +13,7 @@
 #
 #   jobs:
 #     init-templates:
-#       uses: xaoscience/git-control/.github/workflows/central-loader.yml@main
+#       uses: xaoscience/dev-control/.github/workflows/central-loader.yml@main
 #       with:
 #         project_name: 'My Project'
 #         short_description: 'A cool project'
@@ -40,7 +40,7 @@ on:
         description: 'Short project description'
         required: false
         type: string
-        default: 'A project powered by git-control templates'
+        default: 'A project powered by Dev-Control templates'
       license_type:
         description: 'License type (MIT, Apache-2.0, GPL-3.0, BSD-3-Clause)'
         required: false
@@ -83,11 +83,11 @@ jobs:
         with:
           fetch-depth: 0
       
-      - name: Checkout git-control templates
+      - name: Checkout Dev-Control templates
         uses: actions/checkout@v4
         with:
-          repository: xaoscience/git-control
-          path: .git-control-templates
+          repository: xaoscience/dev-control
+          path: .dev-control-templates
           sparse-checkout: |
             docs-templates
             workflows-templates
@@ -125,7 +125,7 @@ jobs:
         id: process
         run: |
           TEMPLATES="${{ inputs.templates }}"
-          GC_DIR=".git-control-templates"
+          DC_DIR=".dev-control-templates"
           INSTALLED=""
           
           # Function to process a file with placeholder replacement
@@ -147,7 +147,7 @@ jobs:
           }
           
           # Process docs-templates (to repo root)
-          if [[ -d "$GC_DIR/docs-templates" ]]; then
+          if [[ -d "$DC_DIR/docs-templates" ]]; then
             echo "📄 Processing docs-templates..."
             if [[ "$TEMPLATES" == "all" ]]; then
               DOC_TEMPLATES="readme,contributing,conduct,security"
@@ -159,10 +159,10 @@ jobs:
             for template in "${TEMPLATE_LIST[@]}"; do
               template=$(echo "$template" | tr -d ' ' | tr '[:upper:]' '[:lower:]')
               case "$template" in
-                readme) SRC="$GC_DIR/docs-templates/README.md"; DEST="README.md" ;;
-                contributing) SRC="$GC_DIR/docs-templates/CONTRIBUTING.md"; DEST="CONTRIBUTING.md" ;;
-                conduct|code_of_conduct) SRC="$GC_DIR/docs-templates/CODE_OF_CONDUCT.md"; DEST="CODE_OF_CONDUCT.md" ;;
-                security) SRC="$GC_DIR/docs-templates/SECURITY.md"; DEST="SECURITY.md" ;;
+                readme) SRC="$DC_DIR/docs-templates/README.md"; DEST="README.md" ;;
+                contributing) SRC="$DC_DIR/docs-templates/CONTRIBUTING.md"; DEST="CONTRIBUTING.md" ;;
+                conduct|code_of_conduct) SRC="$DC_DIR/docs-templates/CODE_OF_CONDUCT.md"; DEST="CODE_OF_CONDUCT.md" ;;
+                security) SRC="$DC_DIR/docs-templates/SECURITY.md"; DEST="SECURITY.md" ;;
                 *) continue ;;
               esac
               if [ -f "$SRC" ]; then
@@ -174,10 +174,10 @@ jobs:
           fi
           
           # Process workflows-templates (to .github/workflows/)
-          if [[ -d "$GC_DIR/workflows-templates" ]] && [[ "$TEMPLATES" == "all" || "$TEMPLATES" == *"workflows"* ]]; then
+          if [[ -d "$DC_DIR/workflows-templates" ]] && [[ "$TEMPLATES" == "all" || "$TEMPLATES" == *"workflows"* ]]; then
             echo "⚙️ Processing workflows-templates..."
             mkdir -p .github/workflows
-            for wf in "$GC_DIR/workflows-templates"/*.yml; do
+            for wf in "$DC_DIR/workflows-templates"/*.yml; do
               if [ -f "$wf" ]; then
                 wf_name=$(basename "$wf")
                 # Skip init.yml and remote-init.yml (those are for copying manually)
@@ -191,9 +191,9 @@ jobs:
           fi
           
           # Process licenses-templates (to repo root, direct copy)
-          if [[ -d "$GC_DIR/licenses-templates" ]] && [[ "$TEMPLATES" == "all" || "$TEMPLATES" == *"license"* ]]; then
+          if [[ -d "$DC_DIR/licenses-templates" ]] && [[ "$TEMPLATES" == "all" || "$TEMPLATES" == *"license"* ]]; then
             echo "📜 Processing licenses-templates..."
-            for lic in "$GC_DIR/licenses-templates"/*; do
+            for lic in "$DC_DIR/licenses-templates"/*; do
               if [ -f "$lic" ]; then
                 lic_name=$(basename "$lic")
                 process_file "$lic" "$lic_name"
@@ -204,7 +204,7 @@ jobs:
           fi
           
           # Process any other *-templates folders (future expansion)
-          for tpl_dir in "$GC_DIR"/*-templates; do
+          for tpl_dir in "$DC_DIR"/*-templates; do
             if [ -d "$tpl_dir" ]; then
               dir_name=$(basename "$tpl_dir")
               # Skip already processed
@@ -224,7 +224,7 @@ jobs:
           done
           
           # Cleanup
-          rm -rf .git-control-templates
+          rm -rf .dev-control-templates
           
           echo "installed=${INSTALLED%,}" >> $GITHUB_OUTPUT
       
@@ -234,7 +234,7 @@ jobs:
         uses: peter-evans/create-pull-request@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: 'docs: initialise repository templates via git-control'
+          commit-message: 'docs: initialise repository templates via Dev-Control'
           title: '📚 Initialise repository documentation'
           body: |
             ## Summary
@@ -252,7 +252,7 @@ jobs:
             | Stability | `${{ inputs.stability }}` |
             
             ---
-            *Generated by git-control reusable workflow*
+            *Generated by Dev-Control reusable workflow*
           branch: ${{ steps.vars.outputs.branch_name }}
           delete-branch: true
           labels: |
@@ -270,6 +270,6 @@ jobs:
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "docs: initialise repository templates via git-control"
+            git commit -m "docs: initialise repository templates via Dev-Control"
             git push
           fi

@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 #
-# Git-Control Main Wrapper
-# Central entry point for all Git-Control tools
+# Dev-Control Main Wrapper
+# Central entry point for all Dev-Control tools
 #
-# Provides an interactive menu to access all git-control scripts:
+# Provides an interactive menu to access all Dev-Control scripts:
 #   - Alias Loading
 #   - Template Loading
 #   - Repository Creation
@@ -15,9 +15,9 @@
 #   - Containerisation
 #
 # Usage:
-#   ./git-control.sh              # Interactive menu
-#   ./git-control.sh alias        # Run specific tool directly
-#   ./git-control.sh help         # Show available commands
+#   ./dev-control.sh              # Interactive menu
+#   ./dev-control.sh alias        # Run specific tool directly
+#   ./dev-control.sh help         # Show available commands
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2024-2026 xaoscience
@@ -26,8 +26,8 @@ set -e
 
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-GIT_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
-export GIT_CONTROL_DIR  # Used by sourced libraries
+DEV_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
+export DEV_CONTROL_DIR  # Used by sourced libraries
 
 # Source shared libraries
 source "$SCRIPT_DIR/lib/colors.sh"
@@ -56,45 +56,45 @@ check_script_exists() {
 
 show_help() {
     cat << 'EOF'
-Git-Control - Comprehensive Git workflow automation toolkit
+Dev-Control - Comprehensive Git workflow automation toolkit
 
 USAGE:
-  git-control.sh [COMMAND] [OPTIONS]
+  dev-control.sh [COMMAND] [OPTIONS]
 
 COMMANDS:
-  alias, aliases     Install bash aliases (gc-aliases)
-  init, template     Initialize repo with templates (gc-init)
-  repo, create       Create GitHub repository (gc-repo)
-  pr                 Create pull request (gc-pr)
-  modules, nest      Manage submodules (gc-modules)
-  fix, history       Fix commit history (gc-fix)
-  licenses, lic      Audit licenses (gc-licenses)
-  mcp                Setup MCP servers (gc-mcp)
-  container          Setup devcontainer (gc-container)
+  alias, aliases     Install bash aliases (dc-aliases)
+  init, template     Initialize repo with templates (dc-init)
+  repo, create       Create GitHub repository (dc-repo)
+  pr                 Create pull request (dc-pr)
+  modules, nest      Manage submodules (dc-modules)
+  fix, history       Fix commit history (dc-fix)
+  licenses, lic      Audit licenses (dc-licenses)
+  mcp                Setup MCP servers (dc-mcp)
+  container          Setup devcontainer (dc-container)
   help               Show this help message
 
 INTERACTIVE MODE:
   Run without arguments to use the interactive menu.
 
 EXAMPLES:
-  ./git-control.sh                   # Interactive menu
-  ./git-control.sh init              # Initialize templates
-  ./git-control.sh repo              # Create repository
-  ./git-control.sh pr                # Create pull request
-  ./git-control.sh fix --range HEAD=5  # Fix last 5 commits
-  ./git-control.sh licenses --deep   # Audit licenses recursively
+  ./dev-control.sh                   # Interactive menu
+  ./dev-control.sh init              # Initialize templates
+  ./dev-control.sh repo              # Create repository
+  ./dev-control.sh pr                # Create pull request
+  ./dev-control.sh fix --range HEAD=5  # Fix last 5 commits
+  ./dev-control.sh licenses --deep   # Audit licenses recursively
 
 ALIASES:
-  After running 'gc-aliases', these shortcuts are available:
-    gc          - Main git-control menu
-    gc-init     - Template loading
-    gc-repo     - Repository creation
-    gc-pr       - Pull request creation
-    gc-fix      - History fixing
-    gc-modules  - Module nesting
-    gc-aliases  - Alias loading
-    gc-licenses - License auditing
-    gc-mcp      - MCP setup
+  After running 'dc-aliases', these shortcuts are available:
+    gc          - Main Dev-Control menu
+    dc-init     - Template loading
+    dc-repo     - Repository creation
+    dc-pr       - Pull request creation
+    dc-fix      - History fixing
+    dc-modules  - Module nesting
+    dc-aliases  - Alias loading
+    dc-licenses - License auditing
+    dc-mcp      - MCP setup
 
 For detailed help on each tool, run the script directly:
   ./scripts/alias-loading.sh --help
@@ -109,17 +109,17 @@ EOF
 # ============================================================================
 
 display_menu() {
-    print_header "Git-Control"
+    print_header "Dev-Control"
     
-    print_menu_item "1" "Alias Loading (gc-aliases)       - Install bash aliases"
-    print_menu_item "2" "Template Loading (gc-init)       - Initialize repo templates"
-    print_menu_item "3" "Repository Creator (gc-repo)     - Create GitHub repository"
-    print_menu_item "4" "PR Creator (gc-pr)               - Create pull request"
-    print_menu_item "5" "Module Nesting (gc-modules)      - Manage submodules"
-    print_menu_item "6" "History Fixer (gc-fix)           - Fix commit history"
-    print_menu_item "7" "License Auditor (gc-licenses)    - Audit licenses"
-    print_menu_item "8" "MCP Setup (gc-mcp)               - Setup MCP servers"
-    print_menu_item "9" "Containerise (gc-container)      - Setup devcontainer"
+    print_menu_item "1" "Alias Loading (dc-aliases)       - Install bash aliases"
+    print_menu_item "2" "Template Loading (dc-init)       - Initialize repo templates"
+    print_menu_item "3" "Repository Creator (dc-repo)     - Create GitHub repository"
+    print_menu_item "4" "PR Creator (dc-pr)               - Create pull request"
+    print_menu_item "5" "Module Nesting (dc-modules)      - Manage submodules"
+    print_menu_item "6" "History Fixer (dc-fix)           - Fix commit history"
+    print_menu_item "7" "License Auditor (dc-licenses)    - Audit licenses"
+    print_menu_item "8" "MCP Setup (dc-mcp)               - Setup MCP servers"
+    print_menu_item "9" "Containerise (dc-container)      - Setup devcontainer"
     print_menu_item "0" "Exit"
     echo ""
 }

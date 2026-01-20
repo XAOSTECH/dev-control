@@ -46,9 +46,9 @@ show_json() {
     
     cat << EOF
 {
-  "version": "$GC_VERSION",
-  "date": "$GC_VERSION_DATE",
-  "repo": "$GC_REPO",
+  "version": "$DC_VERSION",
+  "date": "$DC_VERSION_DATE",
+  "repo": "$DC_REPO",
   "branch": "$branch",
   "commit": "$commit",
   "install_dir": "$install_dir"

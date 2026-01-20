@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Git-Control Shared Library: Print Helpers
+# Dev-Control Shared Library: Print Helpers
 # Common print functions for consistent terminal output
 #
 # Usage:

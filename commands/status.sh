@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
-# Git-Control Status Command
-# Show git-control and repository status
+# Dev-Control Status Command
+# Show Dev-Control and repository status
 #
 # Demonstrates --json, --quiet, --verbose output modes
 #
@@ -10,20 +10,20 @@
 
 set -e
 
-if [[ -z "$GC_ROOT" ]]; then
+if [[ -z "$DC_ROOT" ]]; then
     SCRIPT_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    GC_ROOT="$(dirname "$SCRIPT_PATH")"
+    DC_ROOT="$(dirname "$SCRIPT_PATH")"
 fi
 
-source "$GC_ROOT/scripts/lib/colors.sh"
-source "$GC_ROOT/scripts/lib/print.sh"
-source "$GC_ROOT/scripts/lib/git-utils.sh"
-source "$GC_ROOT/scripts/lib/output.sh"
-source "$GC_ROOT/scripts/lib/config.sh"
+source "$DC_ROOT/scripts/lib/colors.sh"
+source "$DC_ROOT/scripts/lib/print.sh"
+source "$DC_ROOT/scripts/lib/git-utils.sh"
+source "$DC_ROOT/scripts/lib/output.sh"
+source "$DC_ROOT/scripts/lib/config.sh"
 
 show_help() {
     cat << 'EOF'
-Git-Control Status - Show git-control and repository status
+Dev-Control Status - Show Dev-Control and repository status
 
 USAGE:
   gc status [options]
@@ -45,8 +45,8 @@ EOF
 # Gather status information
 gather_status() {
     # Git-control info
-    GC_VERSION="${GC_VERSION:-2.0.0}"
-    GC_LOCATION="$GC_ROOT"
+    DC_VERSION="${DC_VERSION:-2.0.0}"
+    DC_LOCATION="$DC_ROOT"
     
     # Git info
     IN_GIT_REPO=false
@@ -75,12 +75,12 @@ gather_status() {
     HAS_GLOBAL_CONFIG=false
     HAS_PROJECT_CONFIG=false
     
-    [[ -f "$GC_GLOBAL_CONFIG" ]] && HAS_GLOBAL_CONFIG=true
+    [[ -f "$DC_GLOBAL_CONFIG" ]] && HAS_GLOBAL_CONFIG=true
     
     if [[ "$IN_GIT_REPO" == "true" ]]; then
         local root
         root=$(git_root)
-        [[ -f "$root/$GC_PROJECT_CONFIG" ]] && HAS_PROJECT_CONFIG=true
+        [[ -f "$root/$DC_PROJECT_CONFIG" ]] && HAS_PROJECT_CONFIG=true
     fi
     
     # Tools
@@ -99,8 +99,8 @@ output_json() {
     cat << EOF
 {
   "gc": {
-    "version": "$GC_VERSION",
-    "location": "$GC_LOCATION"
+    "version": "$DC_VERSION",
+    "location": "$DC_LOCATION"
   },
   "git": {
     "inRepo": $IN_GIT_REPO,
@@ -127,11 +127,11 @@ EOF
 }
 
 output_text() {
-    out_header "Git-Control Status"
+    out_header "Dev-Control Status"
     
-    out_section "Git-Control"
-    out "  Version:  $GC_VERSION"
-    out "  Location: $GC_LOCATION"
+    out_section "Dev-Control"
+    out "  Version:  $DC_VERSION"
+    out "  Location: $DC_LOCATION"
     out ""
     
     out_section "Repository"

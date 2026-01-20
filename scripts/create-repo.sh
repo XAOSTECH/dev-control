@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Git-Control Repository Creator
+# Dev-Control Repository Creator
 # Create GitHub repos from current folder with tags in one command
 #
 # Requirements:
@@ -14,8 +14,8 @@ set -e
 
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-GIT_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
-export GIT_CONTROL_DIR  # Used by sourced libraries
+DEV_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
+export DEV_CONTROL_DIR  # Used by sourced libraries
 
 # Source shared libraries
 source "$SCRIPT_DIR/lib/colors.sh"
@@ -76,7 +76,7 @@ parse_args() {
 
 show_help() {
     cat << 'EOF'
-Git-Control Repository Creator - Create GitHub repos with ease
+Dev-Control Repository Creator - Create GitHub repos with ease
 
 USAGE:
   create-repo.sh [OPTIONS] [DIRECTORIES...]
@@ -93,7 +93,7 @@ EXAMPLES:
   create-repo.sh --batch dir1 dir2     # Create repos for multiple dirs
 
 ALIASES:
-  gc-repo, gc-create
+  dc-repo, dc-create
 
 EOF
 }
@@ -103,9 +103,9 @@ EOF
 # ============================================================================
 
 load_gc_init_metadata() {
-    # Try loading from gc-init config first
+    # Try loading from dc-init config first
     if load_gc_metadata; then
-        print_info "Loaded gc-init metadata from git config"
+        print_info "Loaded dc-init metadata from git config"
     fi
     
     # Fallback to folder name
@@ -354,7 +354,7 @@ show_summary() {
     print_section "Quick Commands:"
     print_command_hint "Open in browser" "gh repo view --web"
     print_command_hint "Edit settings" "gh repo edit"
-    print_command_hint "Add templates" "gc-init"
+    print_command_hint "Add templates" "dc-init"
     echo ""
 }
 
@@ -374,7 +374,7 @@ main() {
         exit 0
     fi
 
-    print_header "Git-Control Repo Creator"
+    print_header "Dev-Control Repo Creator"
     check_prerequisites
     get_git_credentials
     load_gc_init_metadata

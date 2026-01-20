@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Git-Control Module Nesting Script
+# Dev-Control Module Nesting Script
 # Automatically manage .gitmodules for nested Git repositories
 #
 # This script scans a directory hierarchy for Git repositories and generates
@@ -24,8 +24,8 @@ shopt -s dotglob
 
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-GIT_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
-export GIT_CONTROL_DIR  # Used by sourced libraries
+DEV_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
+export DEV_CONTROL_DIR  # Used by sourced libraries
 
 # Make sure ERR is traced in functions
 set -o errtrace

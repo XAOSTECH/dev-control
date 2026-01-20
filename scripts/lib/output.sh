@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Git-Control Shared Library: Output Formatting
+# Dev-Control Shared Library: Output Formatting
 # Provides --json, --quiet, --verbose output mode support
 #
 # Usage:
@@ -15,15 +15,15 @@
 # ============================================================================
 
 # Output modes (set via environment or --flags)
-# GC_QUIET, GC_VERBOSE, GC_JSON are set by gc entry point
+# DC_QUIET, DC_VERBOSE, DC_JSON are set by gc entry point
 # Scripts can also parse their own flags
 
 init_output_mode() {
     # Inherit from environment
-    OUTPUT_QUIET="${GC_QUIET:-false}"
-    OUTPUT_VERBOSE="${GC_VERBOSE:-false}"
-    OUTPUT_JSON="${GC_JSON:-false}"
-    OUTPUT_DEBUG="${GC_DEBUG:-false}"
+    OUTPUT_QUIET="${DC_QUIET:-false}"
+    OUTPUT_VERBOSE="${DC_VERBOSE:-false}"
+    OUTPUT_JSON="${DC_JSON:-false}"
+    OUTPUT_DEBUG="${DC_DEBUG:-false}"
     
     # If JSON mode, suppress normal output
     if [[ "$OUTPUT_JSON" == "true" ]]; then
@@ -38,7 +38,7 @@ init_output_mode() {
 # Output only if not in quiet mode
 # Usage: out "message"
 out() {
-    [[ "${OUTPUT_QUIET:-${GC_QUIET:-false}}" == "true" ]] && return 0
+    [[ "${OUTPUT_QUIET:-${DC_QUIET:-false}}" == "true" ]] && return 0
     echo "$*"
 }
 
@@ -229,23 +229,23 @@ parse_output_flags() {
         case "$1" in
             -q|--quiet)
                 OUTPUT_QUIET=true
-                GC_QUIET=true
+                DC_QUIET=true
                 shift
                 ;;
             --verbose)
                 OUTPUT_VERBOSE=true
-                GC_VERBOSE=true
+                DC_VERBOSE=true
                 shift
                 ;;
             --json)
                 OUTPUT_JSON=true
                 OUTPUT_QUIET=true
-                GC_JSON=true
+                DC_JSON=true
                 shift
                 ;;
             --debug)
                 OUTPUT_DEBUG=true
-                GC_DEBUG=true
+                DC_DEBUG=true
                 shift
                 ;;
             --no-color)

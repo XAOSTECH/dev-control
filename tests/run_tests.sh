@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Test runner for git-control
+# Test runner for dev-control
 #
 # Usage:
 #   ./run_tests.sh           # Run all tests
@@ -55,7 +55,7 @@ ensure_bats_installed() {
 run_tests() {
     local test_target="${1:-.}"
     
-    print_header "Git-Control Test Suite" 68
+    print_header "Dev-Control Test Suite" 68
     
     ensure_bats_installed
     

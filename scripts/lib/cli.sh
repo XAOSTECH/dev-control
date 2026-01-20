@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Git-Control Shared Library: CLI Utilities
+# Dev-Control Shared Library: CLI Utilities
 # Common argument parsing and CLI helper functions
 #
 # Usage:

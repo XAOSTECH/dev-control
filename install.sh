@@ -56,7 +56,7 @@ USAGE:
 OPTIONS:
   --prefix=PATH     Installation directory (default: $DEFAULT_PREFIX)
   --bin=PATH        Binary directory for 'dc' symlink (default: $DEFAULT_BIN)
-  --uninstall       Remove dev-control
+  --uninstall       Remove Dev-Control
   --upgrade         Update existing installation
   --no-aliases      Skip bash aliases installation
   --quiet           Minimal output
@@ -122,7 +122,7 @@ check_prerequisites() {
 # ============================================================================
 
 install_dev_control() {
-    print_info "Installing dev-control to $PREFIX"
+    print_info "Installing Dev-Control to $PREFIX"
     
     # Create directories
     mkdir -p "$PREFIX"
@@ -135,7 +135,7 @@ install_dev_control() {
             git -C "$PREFIX" fetch origin
             git -C "$PREFIX" reset --hard "origin/$DC_BRANCH"
         else
-            print_error "dev-control already installed at $PREFIX"
+            print_error "Dev-Control already installed at $PREFIX"
             print_info "Use --upgrade to update, or --uninstall first"
             exit 1
         fi
@@ -171,7 +171,7 @@ install_dev_control() {
         install_aliases
     fi
     
-    print_success "dev-control installed successfully!"
+    print_success "Dev-Control installed successfully!"
 }
 
 install_aliases() {
@@ -179,7 +179,7 @@ install_aliases() {
     
     local bash_aliases="$HOME/.bash_aliases"
     local bashrc="$HOME/.bashrc"
-    local marker="# dev-control aliases"
+    local marker="# Dev-Control aliases"
     
     # Check if already installed
     if grep -q "$marker" "$bash_aliases" 2>/dev/null; then
@@ -223,7 +223,7 @@ EOF
 # ============================================================================
 
 uninstall_dev_control() {
-    print_info "Uninstalling dev-control..."
+    print_info "Uninstalling Dev-Control..."
     
     # Remove symlink
     if [[ -L "$BIN_DIR/dc" ]]; then
@@ -244,7 +244,7 @@ uninstall_dev_control() {
         print_info "Removed aliases from .bash_aliases"
     fi
     
-    print_success "dev-control uninstalled"
+    print_success "Dev-Control uninstalled"
     print_info "Note: Configuration in ~/.config/dev-control was preserved"
 }
 

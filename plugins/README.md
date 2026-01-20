@@ -1,6 +1,6 @@
-# Git-Control Plugins
+# Dev-Control Plugins
 
-This directory contains plugins that extend git-control functionality.
+This directory contains plugins that extend dev-control functionality.
 
 ## Plugin Structure
 
@@ -22,9 +22,9 @@ name: my-plugin
 version: 1.0.0
 description: A plugin that does something useful
 author: Your Name
-url: https://github.com/user/gc-plugin-example
+url: https://github.com/user/dc-plugin-example
 
-# Required git-control version
+# Required dev-control version
 requires: ">=2.0.0"
 
 # Dependencies (other plugins)
@@ -49,12 +49,12 @@ commands:
 #!/usr/bin/env bash
 set -e
 
-# GC_ROOT is available - use it for shared libraries
-source "$GC_ROOT/scripts/lib/colors.sh"
-source "$GC_ROOT/scripts/lib/print.sh"
+# DC_ROOT is available - use it for shared libraries
+source "$DC_ROOT/scripts/lib/colors.sh"
+source "$DC_ROOT/scripts/lib/print.sh"
 
 # Respect global options
-[[ "$GC_QUIET" == "true" ]] && exec &>/dev/null
+[[ "$DC_QUIET" == "true" ]] && exec &>/dev/null
 
 # Support --help
 if [[ "$1" == "--help" || "$1" == "-h" ]]; then
@@ -77,7 +77,7 @@ print_info "Hello from my plugin!"
 
 ### From GitHub
 ```bash
-gc plugin install gh:user/gc-plugin-name
+gc plugin install gh:user/dc-plugin-name
 ```
 
 ### From Local Path

@@ -4,6 +4,6 @@
 # Each script becomes a command: commands/foo.sh -> gc foo
 #
 # Scripts should:
-# - Source shared libraries from $GC_ROOT/scripts/lib/
+# - Source shared libraries from $DC_ROOT/scripts/lib/
 # - Support --help flag
-# - Respect $GC_QUIET, $GC_VERBOSE, $GC_JSON environment variables
+# - Respect $DC_QUIET, $DC_VERBOSE, $DC_JSON environment variables

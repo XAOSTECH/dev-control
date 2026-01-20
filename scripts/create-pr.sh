@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Git-Control Pull Request Creator
+# Dev-Control Pull Request Creator
 # Create GitHub pull requests from current branch with interactive options
 #
 # Requirements:
@@ -15,8 +15,8 @@ set -e
 
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-GIT_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
-export GIT_CONTROL_DIR  # Used by sourced libraries
+DEV_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
+export DEV_CONTROL_DIR  # Used by sourced libraries
 
 # Source shared libraries
 source "$SCRIPT_DIR/lib/colors.sh"
@@ -215,7 +215,7 @@ show_summary() {
 # ============================================================================
 
 main() {
-    print_header "Git-Control PR Creator"
+    print_header "Dev-Control PR Creator"
     check_prerequisites
     check_git_status
     collect_pr_info

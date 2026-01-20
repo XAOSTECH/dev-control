@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 #
-# Git-Control Template Loading Script
+# Dev-Control Template Loading Script
 # Initialise repositories with standardised templates
 # 
-# This script copies template files from all *-templates folders in git-control:
+# This script copies template files from all *-templates folders in Dev-Control:
 #   - docs-templates/      → copied to repo root (with placeholder replacement)
 #   - workflows-templates/ → copied to .github/workflows/
 #   - licenses-templates/  → copied to repo root (future)
@@ -26,9 +26,9 @@ while [[ -L "$SCRIPT_PATH" ]]; do
     [[ "$SCRIPT_PATH" != /* ]] && SCRIPT_PATH="$SCRIPT_DIR/$SCRIPT_PATH"
 done
 SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
-GIT_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
-# Fallback if in git-control root
-[[ ! -d "$GIT_CONTROL_DIR/docs-templates" ]] && [[ -d "./docs-templates" ]] && GIT_CONTROL_DIR="$(pwd)"
+DEV_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
+# Fallback if in Dev-Control root
+[[ ! -d "$DEV_CONTROL_DIR/docs-templates" ]] && [[ -d "./docs-templates" ]] && DEV_CONTROL_DIR="$(pwd)"
 
 # Source shared libraries
 source "$SCRIPT_DIR/lib/colors.sh"
@@ -59,7 +59,7 @@ CREATE_QUEUE=()
 # ============================================================================
 
 show_help() {
-    echo -e "${BOLD}Git-Control Template Loader${NC}"
+    echo -e "${BOLD}Dev-Control Template Loader${NC}"
     echo ""
     echo "Usage: $(basename "$0") [OPTIONS]"
     echo ""
@@ -78,7 +78,7 @@ show_help() {
     echo "  $(basename "$0") -f LICENSE -o                      # Update license"
     echo ""
     echo "Available template files:"
-    for dir in "$GIT_CONTROL_DIR"/*-templates; do
+    for dir in "$DEV_CONTROL_DIR"/*-templates; do
         if [[ -d "$dir" ]]; then
             echo "  $(basename "$dir"):"
             for file in "$dir"/*; do
@@ -187,24 +187,24 @@ get_repo_info() {
         fi
     fi
 
-    # Load cached metadata from git config (set by previous gc-init runs)
+    # Load cached metadata from git config (set by previous dc-init runs)
     # Only load from LOCAL config if a local .git directory exists
     if [[ -d ".git" ]]; then
         local cached_license
-        cached_license=$(git config --local gc-init.license-type 2>/dev/null || echo "")
+        cached_license=$(git config --local dc-init.license-type 2>/dev/null || echo "")
         if [[ -n "$cached_license" ]]; then
             LICENSE_TYPE="$cached_license"
             print_info "Loaded licence from git config: $LICENSE_TYPE"
         fi
         
         local cached_org
-        cached_org=$(git config --local gc-init.org-name 2>/dev/null || echo "")
+        cached_org=$(git config --local dc-init.org-name 2>/dev/null || echo "")
         if [[ -n "$cached_org" ]]; then
             ORG_NAME="$cached_org"
         fi
         
         local cached_description
-        cached_description=$(git config --local gc-init.description 2>/dev/null || echo "")
+        cached_description=$(git config --local dc-init.description 2>/dev/null || echo "")
         if [[ -n "$cached_description" ]]; then
             SHORT_DESCRIPTION="$cached_description"
         fi
@@ -396,7 +396,7 @@ process_template() {
 
 discover_template_folders() {
     local folders=()
-    for dir in "$GIT_CONTROL_DIR"/*-templates; do
+    for dir in "$DEV_CONTROL_DIR"/*-templates; do
         if [[ -d "$dir" ]]; then
             folders+=("$dir")
         fi
@@ -423,7 +423,7 @@ select_templates() {
     declare -gA TEMPLATE_FOLDERS
     
     # docs-templates
-    if [[ -d "$GIT_CONTROL_DIR/docs-templates" ]]; then
+    if [[ -d "$DEV_CONTROL_DIR/docs-templates" ]]; then
         echo -e "  ${CYAN}$idx)${NC} Documentation       - README, CONTRIBUTING, CODE_OF_CONDUCT, SECURITY  (→ docs/)"
         echo -e "     ${YELLOW}Sub-options:${NC} A) README AX) README, BADGES ONLY B) CONTRIBUTING  C) CODE_OF_CONDUCT  D) SECURITY "
         TEMPLATE_FOLDERS[$idx]="docs"
@@ -431,28 +431,28 @@ select_templates() {
     fi
     
     # workflows-templates  
-    if [[ -d "$GIT_CONTROL_DIR/workflows-templates" ]]; then
+    if [[ -d "$DEV_CONTROL_DIR/workflows-templates" ]]; then
         echo -e "  ${CYAN}$idx)${NC} Workflows           - GitHub Actions (→ .github/workflows/)"
         TEMPLATE_FOLDERS[$idx]="workflows"
         ((idx++))
     fi
     
     # github-templates (issue templates, PR template)
-    if [[ -d "$GIT_CONTROL_DIR/github-templates" ]]; then
+    if [[ -d "$DEV_CONTROL_DIR/github-templates" ]]; then
         echo -e "  ${CYAN}$idx)${NC} GitHub Templates    - Issue & PR templates (→ .github/)"
         TEMPLATE_FOLDERS[$idx]="github"
         ((idx++))
     fi
     
     # license-templates (or licenses-templates)
-    if [[ -d "$GIT_CONTROL_DIR/license-templates" ]] || [[ -d "$GIT_CONTROL_DIR/licenses-templates" ]]; then
+    if [[ -d "$DEV_CONTROL_DIR/license-templates" ]] || [[ -d "$DEV_CONTROL_DIR/licenses-templates" ]]; then
         echo -e "  ${CYAN}$idx)${NC} Licenses            - LICENSE file"
         TEMPLATE_FOLDERS[$idx]="licenses"
         ((idx++))
     fi
     
     # Any other *-templates folders
-    for dir in "$GIT_CONTROL_DIR"/*-templates; do
+    for dir in "$DEV_CONTROL_DIR"/*-templates; do
         if [[ -d "$dir" ]]; then
             local name=$(basename "$dir")
             if [[ "$name" != "docs-templates" && "$name" != "workflows-templates" && "$name" != "license-templates" && "$name" != "licenses-templates" && "$name" != "github-templates" ]]; then
@@ -530,7 +530,7 @@ install_templates() {
             
             if [[ "${#docs_files[@]}" -gt 0 ]]; then
                 for f in "${docs_files[@]}"; do
-                    local tpl="$GIT_CONTROL_DIR/docs-templates/$f"
+                    local tpl="$DEV_CONTROL_DIR/docs-templates/$f"
                     if [[ -f "$tpl" ]]; then
                         process_template "$tpl" "$target_dir/$f"
                     else
@@ -566,7 +566,7 @@ install_templates() {
 
 install_docs_templates() {
     local target_dir="$1"
-    local docs_dir="$GIT_CONTROL_DIR/docs-templates"
+    local docs_dir="$DEV_CONTROL_DIR/docs-templates"
     
     print_info "Installing documentation templates..."
     
@@ -608,8 +608,8 @@ EOF
 
     # If README doesn't exist, create from template if available
     if [[ ! -f "$readme_path" ]]; then
-        if [[ -f "$GIT_CONTROL_DIR/docs-templates/README.md" ]]; then
-            process_template "$GIT_CONTROL_DIR/docs-templates/README.md" "$readme_path"
+        if [[ -f "$DEV_CONTROL_DIR/docs-templates/README.md" ]]; then
+            process_template "$DEV_CONTROL_DIR/docs-templates/README.md" "$readme_path"
         else
             echo -e "# $PROJECT_NAME\n" > "$readme_path"
         fi
@@ -633,7 +633,7 @@ EOF
 
 install_workflows_templates() {
     local target_dir="$1"
-    local wf_dir="$GIT_CONTROL_DIR/workflows-templates"
+    local wf_dir="$DEV_CONTROL_DIR/workflows-templates"
     
     print_info "Installing workflow templates to .github/workflows/..."
     mkdir -p "$target_dir/.github/workflows"
@@ -652,7 +652,7 @@ install_workflows_templates() {
 
 install_github_templates() {
     local target_dir="$1"
-    local gh_dir="$GIT_CONTROL_DIR/github-templates"
+    local gh_dir="$DEV_CONTROL_DIR/github-templates"
     
     if [[ ! -d "$gh_dir" ]]; then
         print_warning "github-templates folder not found"
@@ -696,10 +696,10 @@ install_licenses_templates() {
     local lic_dir=""
     
     # Check both folder names
-    if [[ -d "$GIT_CONTROL_DIR/license-templates" ]]; then
-        lic_dir="$GIT_CONTROL_DIR/license-templates"
-    elif [[ -d "$GIT_CONTROL_DIR/licenses-templates" ]]; then
-        lic_dir="$GIT_CONTROL_DIR/licenses-templates"
+    if [[ -d "$DEV_CONTROL_DIR/license-templates" ]]; then
+        lic_dir="$DEV_CONTROL_DIR/license-templates"
+    elif [[ -d "$DEV_CONTROL_DIR/licenses-templates" ]]; then
+        lic_dir="$DEV_CONTROL_DIR/licenses-templates"
     else
         print_warning "No license folder found (license-templates or licenses-templates)"
         return
@@ -752,7 +752,7 @@ install_licenses_templates() {
 install_generic_templates() {
     local target_dir="$1"
     local folder_type="$2"
-    local tpl_dir="$GIT_CONTROL_DIR/${folder_type}-templates"
+    local tpl_dir="$DEV_CONTROL_DIR/${folder_type}-templates"
     
     if [[ ! -d "$tpl_dir" ]]; then
         print_warning "${folder_type}-templates folder not found"
@@ -781,7 +781,7 @@ find_template_file() {
     base_filename=$(basename "$filename")
     
     # Search all *-templates folders for this file
-    for dir in "$GIT_CONTROL_DIR"/*-templates; do
+    for dir in "$DEV_CONTROL_DIR"/*-templates; do
         if [[ -d "$dir" ]]; then
             local filepath="$dir/$base_filename"
             if [[ -f "$filepath" ]]; then
@@ -889,7 +889,7 @@ run_batch_init() {
             pushd "${dirs[0]}" > /dev/null 2>&1 || true
             # Only check local git config, don't init or fetch from GitHub
             if git rev-parse --git-dir > /dev/null 2>&1; then
-                candidate_owner=$(git config --local gc-init.org-name 2>/dev/null || echo "")
+                candidate_owner=$(git config --local dc-init.org-name 2>/dev/null || echo "")
             fi
             popd > /dev/null 2>&1 || true
         fi
@@ -1006,7 +1006,7 @@ run_batch_init() {
         print_info "Installing templates: ${SELECTED_TEMPLATE_CHOICES}"
         install_templates "${SELECTED_TEMPLATE_CHOICES}"
 
-        # Save metadata for gc-create
+        # Save metadata for dc-create
         save_project_metadata
 
         # Show summary and auto-queue creation for batch mode (no per-repo prompts)
@@ -1034,7 +1034,7 @@ run_batch_init() {
             # Pass directories as relative paths
             cre_args+=("${CREATE_QUEUE[@]}")
             print_info "Launching create-repo for ${#CREATE_QUEUE[@]} repositories"
-            bash "$GIT_CONTROL_DIR/scripts/create-repo.sh" "${cre_args[@]}"
+            bash "$DEV_CONTROL_DIR/scripts/create-repo.sh" "${cre_args[@]}"
         else
             print_info "Queued repositories preserved; you can run: create-repo --batch <dirs...>"
         fi
@@ -1046,17 +1046,17 @@ run_batch_init() {
 # ============================================================================
 
 save_project_metadata() {
-    # Store collected metadata in LOCAL git config for gc-create to retrieve
+    # Store collected metadata in LOCAL git config for dc-create to retrieve
     # Only save if a local .git directory exists
     if [[ -d ".git" ]]; then
         print_info "Saving project metadata to git config..."
-        git config --local gc-init.project-name "$PROJECT_NAME" 2>/dev/null || true
-        git config --local gc-init.repo-slug "$REPO_SLUG" 2>/dev/null || true
-        git config --local gc-init.org-name "${REPO_OWNER:-$ORG_NAME}" 2>/dev/null || true
-        git config --local gc-init.repo-url "$REPO_URL" 2>/dev/null || true
-        git config --local gc-init.description "$SHORT_DESCRIPTION" 2>/dev/null || true
-        git config --local gc-init.long-description "$LONG_DESCRIPTION" 2>/dev/null || true
-        git config --local gc-init.license-type "$LICENSE_TYPE" 2>/dev/null || true
+        git config --local dc-init.project-name "$PROJECT_NAME" 2>/dev/null || true
+        git config --local dc-init.repo-slug "$REPO_SLUG" 2>/dev/null || true
+        git config --local dc-init.org-name "${REPO_OWNER:-$ORG_NAME}" 2>/dev/null || true
+        git config --local dc-init.repo-url "$REPO_URL" 2>/dev/null || true
+        git config --local dc-init.description "$SHORT_DESCRIPTION" 2>/dev/null || true
+        git config --local dc-init.long-description "$LONG_DESCRIPTION" 2>/dev/null || true
+        git config --local dc-init.license-type "$LICENSE_TYPE" 2>/dev/null || true
     fi
 }
 
@@ -1076,7 +1076,7 @@ show_summary() {
     
     # Offer to create GitHub repository
     echo -e "${BOLD}Create GitHub Repository?${NC}"
-    echo "gc-init can now launch create-repo to set up your GitHub repository"
+    echo "dc-init can now launch create-repo to set up your GitHub repository"
     echo "with the configuration we just collected."
     echo ""
 
@@ -1091,10 +1091,10 @@ show_summary() {
             print_info "Launching create-repo..."
             echo ""
             # Find and run create-repo script
-            if [[ -f "$GIT_CONTROL_DIR/scripts/create-repo.sh" ]]; then
-                bash "$GIT_CONTROL_DIR/scripts/create-repo.sh"
+            if [[ -f "$DEV_CONTROL_DIR/scripts/create-repo.sh" ]]; then
+                bash "$DEV_CONTROL_DIR/scripts/create-repo.sh"
             else
-                print_warning "create-repo.sh not found at $GIT_CONTROL_DIR/scripts/create-repo.sh"
+                print_warning "create-repo.sh not found at $DEV_CONTROL_DIR/scripts/create-repo.sh"
                 show_repo_instructions=true
             fi
         else
@@ -1103,7 +1103,7 @@ show_summary() {
     fi
 
     if [[ "$show_repo_instructions" == "true" ]]; then
-        echo -e "  3. Create repository: ${CYAN}gc-create${NC}"
+        echo -e "  3. Create repository: ${CYAN}dc-create${NC}"
         echo -e "  or"
         echo -e "  4. Create manually: ${CYAN}git init && git add . && git commit -m 'Add documentation'${NC}"
     fi
@@ -1122,7 +1122,7 @@ main() {
         exit 0
     fi
     
-    print_header "Git-Control Template Loader"
+    print_header "Dev-Control Template Loader"
     
     # Initialize git repo if needed and get user info early
     get_git_user_info
@@ -1132,7 +1132,7 @@ main() {
     template_folders=$(discover_template_folders)
     
     if [[ -z "$template_folders" ]]; then
-        print_error "No *-templates folders found in: $GIT_CONTROL_DIR"
+        print_error "No *-templates folders found in: $DEV_CONTROL_DIR"
         exit 1
     fi
     
@@ -1178,7 +1178,7 @@ main() {
         exit 0
     fi
 
-    print_info "Git-Control directory: $GIT_CONTROL_DIR"
+    print_info "Dev-Control directory: $DEV_CONTROL_DIR"
     print_info "Working directory: $(pwd)"
     print_info "Available template folders:"
     for dir in $template_folders; do
@@ -1201,7 +1201,7 @@ main() {
     print_info "Installing templates..."
     install_templates "$selection"
     
-    # Save metadata for gc-create to use
+    # Save metadata for dc-create to use
     save_project_metadata
     
     show_summary

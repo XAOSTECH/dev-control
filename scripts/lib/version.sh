@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Version management library for git-control
+# Version management library for Dev-Control
 #
 # Provides:
 #   - Version information
@@ -19,27 +19,27 @@ _VERSION_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # ============================================================================
 
 # Current version
-GC_VERSION="2.0.0"
-GC_VERSION_DATE="2025-01-20"
-GC_REPO="xaoscience/git-control"
-GC_BRANCH="Main"
+DC_VERSION="2.0.0"
+DC_VERSION_DATE="2025-01-20"
+DC_REPO="xaoscience/dev-control"
+DC_BRANCH="Main"
 
 # Get full version string
 # Usage: gc_version_string
 gc_version_string() {
-    echo "git-control v${GC_VERSION} (${GC_VERSION_DATE})"
+    echo "dev-control v${DC_VERSION} (${DC_VERSION_DATE})"
 }
 
 # Get version number only
 # Usage: gc_version
 gc_version() {
-    echo "$GC_VERSION"
+    echo "$DC_VERSION"
 }
 
 # Get installation info
 # Usage: gc_install_info
 gc_install_info() {
-    local install_dir="${GC_INSTALL_DIR:-$(cd "$_VERSION_LIB_DIR/../.." && pwd)}"
+    local install_dir="${DC_INSTALL_DIR:-$(cd "$_VERSION_LIB_DIR/../.." && pwd)}"
     
     if [[ -d "$install_dir/.git" ]]; then
         local commit
@@ -131,9 +131,9 @@ version_gt() {
 # Check for updates from GitHub
 # Usage: gc_check_update
 gc_check_update() {
-    local current="$GC_VERSION"
+    local current="$DC_VERSION"
     local latest
-    local update_url="https://api.github.com/repos/${GC_REPO}/releases/latest"
+    local update_url="https://api.github.com/repos/${DC_REPO}/releases/latest"
     
     # Try to get latest version
     if command -v curl &>/dev/null; then
@@ -160,17 +160,17 @@ gc_check_update() {
 # Perform update
 # Usage: gc_update
 gc_update() {
-    local install_dir="${GC_INSTALL_DIR:-$(cd "$_VERSION_LIB_DIR/../.." && pwd)}"
+    local install_dir="${DC_INSTALL_DIR:-$(cd "$_VERSION_LIB_DIR/../.." && pwd)}"
     
     if [[ ! -d "$install_dir/.git" ]]; then
         echo "Cannot update: not a git installation"
-        echo "Reinstall with: curl -sSL https://raw.githubusercontent.com/${GC_REPO}/${GC_BRANCH}/install.sh | bash"
+        echo "Reinstall with: curl -sSL https://raw.githubusercontent.com/${DC_REPO}/${DC_BRANCH}/install.sh | bash"
         return 1
     fi
     
-    echo "Updating git-control..."
+    echo "Updating Dev-Control..."
     git -C "$install_dir" fetch origin
-    git -C "$install_dir" reset --hard "origin/${GC_BRANCH}"
+    git -C "$install_dir" reset --hard "origin/${DC_BRANCH}"
     
     echo "Updated to: $(gc_version_string)"
 }
@@ -182,8 +182,8 @@ gc_update() {
 # Get changelog for version
 # Usage: gc_changelog [version]
 gc_changelog() {
-    local version="${1:-$GC_VERSION}"
-    local changelog_file="${GC_INSTALL_DIR:-$(cd "$_VERSION_LIB_DIR/../.." && pwd)}/CHANGELOG.md"
+    local version="${1:-$DC_VERSION}"
+    local changelog_file="${DC_INSTALL_DIR:-$(cd "$_VERSION_LIB_DIR/../.." && pwd)}/CHANGELOG.md"
     
     if [[ ! -f "$changelog_file" ]]; then
         echo "No changelog found"
@@ -204,7 +204,7 @@ gc_changelog() {
 # Usage: gc_recent_changes [count]
 gc_recent_changes() {
     local count="${1:-5}"
-    local changelog_file="${GC_INSTALL_DIR:-$(cd "$_VERSION_LIB_DIR/../.." && pwd)}/CHANGELOG.md"
+    local changelog_file="${DC_INSTALL_DIR:-$(cd "$_VERSION_LIB_DIR/../.." && pwd)}/CHANGELOG.md"
     
     if [[ ! -f "$changelog_file" ]]; then
         echo "No changelog found"

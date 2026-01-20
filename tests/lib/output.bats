@@ -16,23 +16,23 @@ setup() {
 
 @test "parse_output_flags sets quiet mode" {
     parse_output_flags --quiet
-    assert_equal "$GC_QUIET" "true"
+    assert_equal "$DC_QUIET" "true"
 }
 
 @test "parse_output_flags sets json mode" {
     parse_output_flags --json
-    assert_equal "$GC_JSON" "true"
+    assert_equal "$DC_JSON" "true"
 }
 
 @test "parse_output_flags sets verbose mode" {
     parse_output_flags --verbose
-    assert_equal "$GC_VERBOSE" "true"
+    assert_equal "$DC_VERBOSE" "true"
 }
 
 @test "parse_output_flags handles multiple flags" {
     parse_output_flags --verbose --json
-    assert_equal "$GC_VERBOSE" "true"
-    assert_equal "$GC_JSON" "true"
+    assert_equal "$DC_VERBOSE" "true"
+    assert_equal "$DC_JSON" "true"
 }
 
 # ============================================================================
@@ -40,25 +40,25 @@ setup() {
 # ============================================================================
 
 @test "out prints message in normal mode" {
-    GC_QUIET=false
+    DC_QUIET=false
     run out "test message"
     assert_output "test message"
 }
 
 @test "out suppresses output in quiet mode" {
-    GC_QUIET=true
+    DC_QUIET=true
     run out "test message"
     assert_output ""
 }
 
 @test "verbose prints in verbose mode" {
-    GC_VERBOSE=true
+    DC_VERBOSE=true
     run verbose "debug info"
     assert_output --partial "debug info"
 }
 
 @test "verbose suppresses in normal mode" {
-    GC_VERBOSE=false
+    DC_VERBOSE=false
     run verbose "debug info"
     assert_output ""
 }

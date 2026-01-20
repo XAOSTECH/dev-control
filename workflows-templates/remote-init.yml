@@ -1,12 +1,12 @@
 # ============================================================================
-# Example: How to use git-control's reusable template workflow
+# Example: How to use Dev-Control's reusable template workflow
 # ============================================================================
 #
 # Copy this file to any repository as .github/workflows/init-docs.yml
 # Then run it from the Actions tab
 #
-# This calls the reusable workflow from git-control, which means:
-# - Templates are always fetched from the latest git-control version
+# This calls the reusable workflow from Dev-Control, which means:
+# - Templates are always fetched from the latest Dev-Control version
 # - No need to update the workflow when templates change
 # - Single source of truth for all your repositories
 #
@@ -51,7 +51,7 @@ permissions:
 
 jobs:
   init-templates:
-    uses: xaoscience/git-control/.github/workflows/central-loader.yml@main
+    uses: xaoscience/dev-control/.github/workflows/central-loader.yml@main
     with:
       project_name: ${{ inputs.project_name }}
       short_description: ${{ inputs.description }}

@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 #
-# Git-Control Shared Library: Configuration
-# Manages git-control configuration from multiple sources
+# Dev-Control Shared Library: Configuration
+# Manages Dev-Control configuration from multiple sources
 #
 # Configuration hierarchy (highest priority first):
-#   1. Environment variables (GC_*)
-#   2. Project config (.gc-init.yaml in repo root)
-#   3. Global config (~/.config/git-control/config.yaml)
+#   1. Environment variables (DC_*)
+#   2. Project config (.dc-init.yaml in repo root)
+#   3. Global config (~/.config/dev-control/config.yaml)
 #   4. Built-in defaults
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
@@ -16,17 +16,17 @@
 # CONFIGURATION PATHS
 # ============================================================================
 
-GC_CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/git-control"
-GC_GLOBAL_CONFIG="$GC_CONFIG_DIR/config.yaml"
-GC_PROJECT_CONFIG=".gc-init.yaml"
-GC_LEGACY_PROJECT_CONFIG=".gc-init.yml"
-GC_CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/git-control"
+DC_CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/dev-control"
+DC_GLOBAL_CONFIG="$DC_CONFIG_DIR/config.yaml"
+DC_PROJECT_CONFIG=".dc-init.yaml"
+DC_LEGACY_PROJECT_CONFIG=".dc-init.yml"
+DC_CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/dev-control"
 
 # ============================================================================
 # DEFAULT VALUES
 # ============================================================================
 
-declare -A GC_DEFAULTS=(
+declare -A DC_DEFAULTS=(
     ["default_license"]="MIT"
     ["default_branch"]="main"
     ["auto_sign_commits"]="true"
@@ -83,22 +83,22 @@ load_gc_config() {
     local key value
     
     # Start with defaults
-    for key in "${!GC_DEFAULTS[@]}"; do
-        eval "GC_CONFIG_${key}=\"${GC_DEFAULTS[$key]}\""
+    for key in "${!DC_DEFAULTS[@]}"; do
+        eval "DC_CONFIG_${key}=\"${DC_DEFAULTS[$key]}\""
     done
     
     # Load global config
-    if [[ -f "$GC_GLOBAL_CONFIG" ]]; then
-        eval "$(parse_yaml "$GC_GLOBAL_CONFIG" "GC_CONFIG_")"
+    if [[ -f "$DC_GLOBAL_CONFIG" ]]; then
+        eval "$(parse_yaml "$DC_GLOBAL_CONFIG" "DC_CONFIG_")"
     fi
     
     # Find project root and load project config
     local project_root
     if project_root=$(git rev-parse --show-toplevel 2>/dev/null); then
-        if [[ -f "$project_root/$GC_PROJECT_CONFIG" ]]; then
-            eval "$(parse_yaml "$project_root/$GC_PROJECT_CONFIG" "GC_CONFIG_")"
-        elif [[ -f "$project_root/$GC_LEGACY_PROJECT_CONFIG" ]]; then
-            eval "$(parse_yaml "$project_root/$GC_LEGACY_PROJECT_CONFIG" "GC_CONFIG_")"
+        if [[ -f "$project_root/$DC_PROJECT_CONFIG" ]]; then
+            eval "$(parse_yaml "$project_root/$DC_PROJECT_CONFIG" "DC_CONFIG_")"
+        elif [[ -f "$project_root/$DC_LEGACY_PROJECT_CONFIG" ]]; then
+            eval "$(parse_yaml "$project_root/$DC_LEGACY_PROJECT_CONFIG" "DC_CONFIG_")"
         fi
     fi
     
@@ -111,7 +111,7 @@ gc_config() {
     local var_name
     
     # Replace dots and dashes with underscores for variable name
-    var_name="GC_CONFIG_${key//./_}"
+    var_name="DC_CONFIG_${key//./_}"
     var_name="${var_name//-/_}"
     
     if [[ -n "${!var_name+x}" ]]; then
@@ -129,20 +129,20 @@ gc_config_set() {
     local var_name
     
     # Replace dots and dashes with underscores for variable name
-    var_name="GC_CONFIG_${key//./_}"
+    var_name="DC_CONFIG_${key//./_}"
     var_name="${var_name//-/_}"
     
     if [[ "$scope" == "global" ]]; then
-        config_file="$GC_GLOBAL_CONFIG"
+        config_file="$DC_GLOBAL_CONFIG"
         mkdir -p "$(dirname "$config_file")"
     else
         local project_root
         project_root=$(git rev-parse --show-toplevel 2>/dev/null) || return 1
-        config_file="$project_root/$GC_PROJECT_CONFIG"
+        config_file="$project_root/$DC_PROJECT_CONFIG"
     fi
     
     if [[ ! -f "$config_file" ]]; then
-        echo "# git-control configuration" > "$config_file"
+        echo "# Dev-Control configuration" > "$config_file"
     fi
     
     if grep -q "^${key}:" "$config_file" 2>/dev/null; then
@@ -161,8 +161,8 @@ gc_config_show() {
     if [[ "$format" == "json" ]]; then
         echo "{"
         local first=true
-        for var in $(compgen -v | grep ^GC_CONFIG_ | sort); do
-            key="${var#GC_CONFIG_}"
+        for var in $(compgen -v | grep ^DC_CONFIG_ | sort); do
+            key="${var#DC_CONFIG_}"
             $first || echo ","
             first=false
             printf '  "%s": "%s"' "$key" "${!var}"
@@ -170,8 +170,8 @@ gc_config_show() {
         echo ""
         echo "}"
     else
-        for var in $(compgen -v | grep ^GC_CONFIG_ | sort); do
-            key="${var#GC_CONFIG_}"
+        for var in $(compgen -v | grep ^DC_CONFIG_ | sort); do
+            key="${var#DC_CONFIG_}"
             printf "%-25s %s\n" "${key}:" "${!var}"
         done
     fi
@@ -181,19 +181,19 @@ gc_config_show() {
 # LEGACY GC-INIT CONFIG
 # ============================================================================
 
-# Load git-control metadata from git config
+# Load Dev-Control metadata from git config
 # Note: These variables are intended for use by caller scripts
 load_gc_metadata() {
     git rev-parse --git-dir &>/dev/null || return 1
     
-    PROJECT_NAME=$(git config --local --get gc-init.project-name 2>/dev/null || echo "")
-    REPO_SLUG=$(git config --local --get gc-init.repo-slug 2>/dev/null || echo "")
-    LICENSE_TYPE=$(git config --local --get gc-init.license-type 2>/dev/null || echo "")
-    DESCRIPTION=$(git config --local --get gc-init.description 2>/dev/null || echo "")
-    ORG_NAME=$(git config --local --get gc-init.org-name 2>/dev/null || echo "")
-    TOPICS=$(git config --local --get gc-init.topics 2>/dev/null || echo "")
-    VISIBILITY=$(git config --local --get gc-init.visibility 2>/dev/null || echo "")
-    TEMPLATE_SET=$(git config --local --get gc-init.template-set 2>/dev/null || echo "")
+    PROJECT_NAME=$(git config --local --get dc-init.project-name 2>/dev/null || echo "")
+    REPO_SLUG=$(git config --local --get dc-init.repo-slug 2>/dev/null || echo "")
+    LICENSE_TYPE=$(git config --local --get dc-init.license-type 2>/dev/null || echo "")
+    DESCRIPTION=$(git config --local --get dc-init.description 2>/dev/null || echo "")
+    ORG_NAME=$(git config --local --get dc-init.org-name 2>/dev/null || echo "")
+    TOPICS=$(git config --local --get dc-init.topics 2>/dev/null || echo "")
+    VISIBILITY=$(git config --local --get dc-init.visibility 2>/dev/null || echo "")
+    TEMPLATE_SET=$(git config --local --get dc-init.template-set 2>/dev/null || echo "")
     
     return 0
 }
@@ -201,14 +201,14 @@ load_gc_metadata() {
 save_gc_metadata() {
     local key="$1"
     local value="$2"
-    git config --local "gc-init.${key}" "$value"
+    git config --local "dc-init.${key}" "$value"
 }
 
 has_gc_metadata() {
-    git config --local --get-regexp '^gc-init\.' &>/dev/null
+    git config --local --get-regexp '^dc-init\.' &>/dev/null
 }
 
 init_gc_config_dir() {
-    mkdir -p "$GC_CONFIG_DIR"
-    mkdir -p "$GC_CACHE_DIR"
+    mkdir -p "$DC_CONFIG_DIR"
+    mkdir -p "$DC_CACHE_DIR"
 }

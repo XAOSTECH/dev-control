@@ -2,7 +2,7 @@
 
 ## Overview
 
-git-control uses [bats-core](https://github.com/bats-core/bats-core) for testing. Tests are organized by component:
+Dev-Control uses [bats-core](https://github.com/bats-core/bats-core) for testing. Tests are organized by component:
 
 ```
 tests/
@@ -115,7 +115,7 @@ assert [ -d "$dir" ]     # Directory exists
     
     run "$GC" init
     assert_success
-    assert [ -f ".gc-init.yaml" ]
+    assert [ -f ".dc-init.yaml" ]
     
     rm -rf "$temp_dir"
 }

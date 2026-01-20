@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Git-Control Plugin Manager
+# Dev-Control Plugin Manager
 # Install, remove, and manage plugins
 #
 # Usage:
@@ -15,16 +15,16 @@
 
 set -e
 
-# Get GC_ROOT from environment or resolve
-if [[ -z "$GC_ROOT" ]]; then
+# Get DC_ROOT from environment or resolve
+if [[ -z "$DC_ROOT" ]]; then
     SCRIPT_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    GC_ROOT="$(dirname "$(dirname "$SCRIPT_PATH")")"
+    DC_ROOT="$(dirname "$(dirname "$SCRIPT_PATH")")"
 fi
 
-PLUGINS_DIR="$GC_ROOT/plugins"
+PLUGINS_DIR="$DC_ROOT/plugins"
 
-source "$GC_ROOT/scripts/lib/colors.sh"
-source "$GC_ROOT/scripts/lib/print.sh"
+source "$DC_ROOT/scripts/lib/colors.sh"
+source "$DC_ROOT/scripts/lib/print.sh"
 
 # ============================================================================
 # PLUGIN DISCOVERY
@@ -102,7 +102,7 @@ install_plugin() {
         local repo="${source#gh:}"
         local name
         name=$(basename "$repo")
-        name="${name#gc-plugin-}"  # Remove common prefix
+        name="${name#dc-plugin-}"  # Remove common prefix
         
         print_info "Installing plugin from GitHub: $repo"
         
@@ -189,7 +189,7 @@ update_plugin() {
 
 show_help() {
     cat << 'EOF'
-Git-Control Plugin Manager
+Dev-Control Plugin Manager
 
 USAGE:
   gc plugin <command> [args]
@@ -207,7 +207,7 @@ SOURCES:
 
 EXAMPLES:
   gc plugin list
-  gc plugin install gh:user/gc-plugin-example
+  gc plugin install gh:user/dc-plugin-example
   gc plugin remove example
   gc plugin info example
 
@@ -225,7 +225,7 @@ main() {
     case "$cmd" in
         list)
             print_section "Installed Plugins:"
-            list_plugins "${GC_JSON:+json}"
+            list_plugins "${DC_JSON:+json}"
             ;;
         install)
             install_plugin "$@"

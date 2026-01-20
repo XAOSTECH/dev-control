@@ -6,14 +6,14 @@
 |---------|--------|--------------|---------|
 | 1.0.0 | Prerelease | - | Current development |
 
-**Latest Release**: [git-control-v1.0.0](https://github.com/xaoscience/git-control/releases/tag/Main) (Prerelease)
+**Latest Release**: [dev-control-v1.0.0](https://github.com/xaoscience/dev-control/releases/tag/latest) (Prerelease)
 
 ## Reporting a Vulnerability
 
 We take security seriously. If you discover a security vulnerability, please follow these steps:
 
 1. **Do NOT** open a public issue
-2. Email details to the maintainers or use [GitHub Security Advisories](https://github.com/xaoscience/git-control/security/advisories/new)
+2. Email details to the maintainers or use [GitHub Security Advisories](https://github.com/xaoscience/dev-control/security/advisories/new)
 3. Include:
    - Description of the vulnerability
    - Steps to reproduce
@@ -47,4 +47,4 @@ We appreciate responsible disclosure and will acknowledge security researchers w
 
 ---
 
-For general bugs and feature requests, please use [GitHub Issues](https://github.com/xaoscience/git-control/issues).
+For general bugs and feature requests, please use [GitHub Issues](https://github.com/xaoscience/dev-control/issues).

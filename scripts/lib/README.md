@@ -1,7 +1,7 @@
-# Git-Control Shared Libraries
+# Dev-Control Shared Libraries
 
 This directory contains shared Bash libraries that provide common functionality
-across all git-control scripts. Using these libraries ensures consistency,
+across all Dev-Control scripts. Using these libraries ensures consistency,
 reduces code duplication, and makes maintenance easier.
 
 ## Libraries
@@ -89,7 +89,7 @@ owner=$(get_repo_owner)
 - `get_commit_subject "ref"` - Get commit message
 
 ### config.sh
-Git-control metadata management via `gc-init.*` git config.
+Git-control metadata management via `dc-init.*` git config.
 
 ```bash
 source "$SCRIPT_DIR/lib/config.sh"
@@ -99,10 +99,10 @@ save_gc_metadata "license-type" "MIT"
 ```
 
 **Functions:**
-- `load_gc_metadata` - Load all gc-init.* values into variables
+- `load_gc_metadata` - Load all dc-init.* values into variables
 - `save_gc_metadata "key" "value"` - Save single value
 - `save_all_gc_metadata` - Save all metadata variables
-- `clear_gc_metadata` - Remove all gc-init.* config
+- `clear_gc_metadata` - Remove all dc-init.* config
 - `get_gc_metadata "key"` - Get single value
 - `has_gc_metadata` - Check if any metadata exists
 - `show_gc_metadata` - Display all metadata
@@ -193,7 +193,7 @@ set -e
 
 # Get script location
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-GIT_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
+DEV_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
 
 # Source shared libraries
 source "$SCRIPT_DIR/lib/colors.sh"

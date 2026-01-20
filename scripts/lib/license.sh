@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Git-Control Shared Library: License Detection
+# Dev-Control Shared Library: License Detection
 # Comprehensive license detection and SPDX mapping
 #
 # Usage:
@@ -347,8 +347,8 @@ cache_license() {
     local source="$2"
     
     if [[ -d ".git" ]]; then
-        git config --local gc-init.license-type "$spdx_id"
-        git config --local gc-init.license-source "$source"
+        git config --local dc-init.license-type "$spdx_id"
+        git config --local dc-init.license-source "$source"
     fi
 }
 
@@ -356,5 +356,5 @@ cache_license() {
 # Usage: load_cached_license
 # Returns: SPDX ID or empty
 load_cached_license() {
-    git config --local gc-init.license-type 2>/dev/null || echo ""
+    git config --local dc-init.license-type 2>/dev/null || echo ""
 }

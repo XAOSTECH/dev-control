@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Git-Control License Auditor
+# Dev-Control License Auditor
 # Detect, display, and manage licenses across repositories and submodules
 #
 # Usage:
@@ -11,7 +11,7 @@
 #   ./licenses.sh --apply MIT         # Apply license template
 #   ./licenses.sh --help              # Show help
 #
-# Aliases: gc-licenses, gc-lic
+# Aliases: dc-licenses, dc-lic
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2024-2026 xaoscience
@@ -20,8 +20,8 @@ set -e
 
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-GIT_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
-export GIT_CONTROL_DIR  # Used by sourced libraries
+DEV_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
+export DEV_CONTROL_DIR  # Used by sourced libraries
 
 # Source shared libraries
 source "$SCRIPT_DIR/lib/colors.sh"
@@ -44,7 +44,7 @@ REFRESH=false
 
 show_help() {
     cat << 'EOF'
-Git-Control License Auditor - Detect and manage repository licenses
+Dev-Control License Auditor - Detect and manage repository licenses
 
 USAGE:
   licenses.sh [OPTIONS] [DIRECTORY]
@@ -78,7 +78,7 @@ SUPPORTED LICENSES:
   Unlicense, CC0-1.0, CC-BY-4.0, Zlib, WTFPL
 
 ALIASES:
-  gc-licenses, gc-lic
+  dc-licenses, dc-lic
 
 EOF
 }
@@ -128,7 +128,7 @@ parse_args() {
 # ============================================================================
 
 print_license_header() {
-    print_header "Git-Control License Auditor"
+    print_header "Dev-Control License Auditor"
 }
 
 print_license_table() {
@@ -231,7 +231,7 @@ print_compatibility_check() {
 apply_license_template() {
     local license="$1"
     local target="$TARGET_DIR"
-    local template_dir="$GIT_CONTROL_DIR/license-templates"
+    local template_dir="$DEV_CONTROL_DIR/license-templates"
     
     # Normalize license name
     local template_file="$template_dir/$license"
@@ -268,8 +268,8 @@ apply_license_template() {
     
     # Cache the license
     if [[ -d "$target/.git" ]]; then
-        git -C "$target" config --local gc-init.license-type "$license"
-        git -C "$target" config --local gc-init.license-source "file:LICENSE"
+        git -C "$target" config --local dc-init.license-type "$license"
+        git -C "$target" config --local dc-init.license-source "file:LICENSE"
         print_info "Cached license metadata in git config"
     fi
 }
