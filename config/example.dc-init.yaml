@@ -1,0 +1,18 @@
+# dev-control project configuration
+# Copy to your project root as .dc-init.yaml
+
+project-name: my-project
+repo-slug: my-project
+description: A short description
+
+default-license: MIT
+default-branch: main
+
+github-org: my-org
+visibility: public
+topics: cli,automation,bash
+
+template-set: default
+auto-sign-commits: true
+license-deep-scan: true
+auto-push-after-fix: false

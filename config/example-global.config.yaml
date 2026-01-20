@@ -1,5 +1,5 @@
-# git-control global configuration
-# Location: ~/.config/git-control/config.yaml
+# dev-control global configuration
+# Location: ~/.config/dev-control/config.yaml
 
 default-license: MIT
 default-branch: main
