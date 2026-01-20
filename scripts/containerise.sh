@@ -49,6 +49,7 @@ GC_PROJECT_CONTAINER_CONFIG=".devcontainer.yaml"
 declare -A CONTAINER_DEFAULTS=(
     ["container_name"]=""  # Will be set to folder name if empty
     ["github_user"]=""
+    ["github_user_email"]=""
     ["gpg_key_id"]=""
     ["timezone"]="UTC"
     ["locale"]="en_US.UTF-8"
@@ -203,6 +204,7 @@ parse_container_yaml() {
             case "$key" in
                 container_name)   CFG_CONTAINER_NAME="$value" ;;
                 github_user)      CFG_GITHUB_USER="$value" ;;
+                github_user_email) CFG_GITHUB_USER_EMAIL="$value" ;;
                 gpg_key_id)       CFG_GPG_KEY_ID="$value" ;;
                 timezone)         CFG_TIMEZONE="$value" ;;
                 locale)           CFG_LOCALE="$value" ;;
@@ -226,6 +228,7 @@ load_container_config() {
     # Start with defaults
     CFG_CONTAINER_NAME="${CONTAINER_DEFAULTS[container_name]}"
     CFG_GITHUB_USER="${CONTAINER_DEFAULTS[github_user]}"
+    CFG_GITHUB_USER_EMAIL="${CONTAINER_DEFAULTS[github_user_email]}"
     CFG_GPG_KEY_ID="${CONTAINER_DEFAULTS[gpg_key_id]}"
     CFG_TIMEZONE="${CONTAINER_DEFAULTS[timezone]}"
     CFG_LOCALE="${CONTAINER_DEFAULTS[locale]}"
@@ -279,6 +282,7 @@ save_container_config() {
 # User & Project Identification
 container-name: ${CFG_CONTAINER_NAME}
 github-user: ${CFG_GITHUB_USER}
+github-user-email: ${CFG_GITHUB_USER_EMAIL}
 gpg-key-id: ${CFG_GPG_KEY_ID}
 
 # System Locale & Timezone
@@ -663,6 +667,7 @@ RUN apt-get update && apt-get install -y \\
     curl \\
     ca-certificates \\
     gnupg \\
+    libsecret-tools \\
     && sed -i 's|http://archive.ubuntu.com/ubuntu|${CFG_UBUNTU_MIRROR}|g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || \\
        sed -i 's|http://archive.ubuntu.com/ubuntu|${CFG_UBUNTU_MIRROR}|g' /etc/apt/sources.list 2>/dev/null || true \\
     && sed -i '/${CFG_LOCALE%.*}/s/^# //g' /etc/locale.gen \\
@@ -725,35 +730,31 @@ DOCKERFILE_EOF
 
         # Add git-control installation if enabled
         if [[ "$CFG_INSTALL_GIT_CONTROL" == "true" ]]; then
-            local gc_version="$CFG_GIT_CONTROL_VERSION"
-            if [[ "$gc_version" == "latest" ]]; then
-                gc_version="v1.0.0"  # Default to stable version
-            fi
             cat >> "$dockerfile_path" << DOCKERFILE_EOF
 
 # Install git-control
-RUN curl -fsSL https://github.com/${CFG_GITHUB_USER:-xaoscience}/git-control/archive/refs/tags/${gc_version}.tar.gz | tar -xz && \\
+RUN curl -fsSL https://github.com/xaoscience/git-control/archive/refs/tags/latest.tar.gz | tar -xz && \\
     mv git-control-* ~/.git-control && \\
     bash -c 'bash ~/.git-control/scripts/alias-loading.sh <<< A' || true
 DOCKERFILE_EOF
         fi
 
         # Add git configuration if GPG key provided
-        if [[ -n "$CFG_GPG_KEY_ID" && -n "$CFG_GITHUB_USER" ]]; then
+        if [[ -n "$CFG_GPG_KEY_ID" && -n "$CFG_GITHUB_USER" && -n "$CFG_GITHUB_USER_EMAIL" ]]; then
             cat >> "$dockerfile_path" << DOCKERFILE_EOF
 
 # Configure git with GPG signing
-RUN git config --global user.email "${CFG_GITHUB_USER}@users.noreply.github.com" && \\
+RUN git config --global user.email "${CFG_GITHUB_USER_EMAIL}" && \\
     git config --global user.name "${CFG_GITHUB_USER}" && \\
     git config --global commit.gpgsign true && \\
     git config --global user.signingkey ${CFG_GPG_KEY_ID} && \\
     git config --global gpg.program gpg
 DOCKERFILE_EOF
-        elif [[ -n "$CFG_GITHUB_USER" ]]; then
+        elif [[ -n "$CFG_GITHUB_USER" && -n "$CFG_GITHUB_USER_EMAIL" ]]; then
             cat >> "$dockerfile_path" << DOCKERFILE_EOF
 
 # Configure git (without GPG signing)
-RUN git config --global user.email "${CFG_GITHUB_USER}@users.noreply.github.com" && \\
+RUN git config --global user.email "${CFG_GITHUB_USER_EMAIL}" && \\
     git config --global user.name "${CFG_GITHUB_USER}"
 DOCKERFILE_EOF
         fi
