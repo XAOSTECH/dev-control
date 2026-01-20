@@ -44,8 +44,10 @@ out() {
 
 # Output only if not in quiet mode (with formatting)
 # Usage: outf "format" args...
+# Note: Caller is responsible for format string safety
 outf() {
     [[ "$OUTPUT_QUIET" == "true" ]] && return 0
+    # shellcheck disable=SC2059
     printf "$@"
 }
 
@@ -247,7 +249,7 @@ parse_output_flags() {
                 shift
                 ;;
             --no-color)
-                # Disable colors
+                # Disable colors (these are used by sourcing scripts)
                 NC="" RED="" GREEN="" YELLOW="" BLUE="" CYAN="" MAGENTA="" BOLD="" DIM=""
                 shift
                 ;;

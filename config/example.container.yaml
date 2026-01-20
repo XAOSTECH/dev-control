@@ -1,0 +1,116 @@
+# git-control container configuration
+# Copy to ~/.config/git-control/container.yaml for global defaults
+# or to your project root as .devcontainer.yaml for project-specific settings
+#
+# NOTE: You can enter custom values not listed in the interactive menus.
+#       Any valid timezone, locale, or mirror URL will work.
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2024-2026 xaoscience
+
+# ============================================================================
+# User & Project Identification
+# ============================================================================
+
+# The name used for container, user, and project (single unified value)
+# Default: current folder name
+container-name: my-project
+
+# GitHub username or organisation slug
+github-user: your-username
+
+# Public GPG signing key ID (for commit signing inside container)
+# Leave empty to disable GPG signing
+gpg-key-id: NNXNXNNNNNXNNNNN
+
+# ============================================================================
+# System Locale & Timezone
+# ============================================================================
+
+# Timezone (TZ database name)
+# Common options: UTC, America/New_York, America/Los_Angeles, America/Sao_Paulo,
+#                 Europe/London, Europe/Paris, Asia/Tokyo, Asia/Shanghai,
+#                 Asia/Kolkata, Australia/Sydney, Africa/Johannesburg
+# You can use any valid TZ database name: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+# Default: UTC
+timezone: UTC
+
+# System locale
+# Common options: en_US.UTF-8, en_GB.UTF-8, pt_BR.UTF-8, es_ES.UTF-8,
+#                 fr_FR.UTF-8, de_DE.UTF-8, ja_JP.UTF-8, zh_CN.UTF-8,
+#                 hi_IN.UTF-8, ar_SA.UTF-8
+# You can use any valid locale available on Ubuntu
+# Default: en_GB.UTF-8
+locale: en_GB.UTF-8
+
+# ============================================================================
+# Ubuntu Mirror Selection
+# ============================================================================
+
+# Ubuntu archive mirror URL (without trailing slash)
+# Main continental servers:
+#   - http://archive.ubuntu.com/ubuntu (Main Archive - worldwide)
+#   - https://us.archive.ubuntu.com/ubuntu (North America)
+#   - https://br.archive.ubuntu.com/ubuntu (South America)
+#   - https://eu.archive.ubuntu.com/ubuntu (Europe)
+#   - https://asia.archive.ubuntu.com/ubuntu (Asia)
+#   - https://au.archive.ubuntu.com/ubuntu (Oceania)
+#   - https://za.archive.ubuntu.com/ubuntu (Africa)
+# You can use any mirror: https://launchpad.net/ubuntu/+archivemirrors
+# Default: http://archive.ubuntu.com/ubuntu
+ubuntu-mirror: http://archive.ubuntu.com/ubuntu
+
+# ============================================================================
+# Docker Base Image
+# ============================================================================
+
+# Base image for the devcontainer
+# Common options:
+#   - ubuntu:latest (Ubuntu latest, minimal)
+#   - ubuntu:noble (Ubuntu 24.04 LTS)
+#   - ubuntu:jammy (Ubuntu 22.04 LTS)
+#   - mcr.microsoft.com/devcontainers/universal:2-linux (Universal devcontainer)
+#   - mcr.microsoft.com/devcontainers/base:ubuntu (MS devcontainer base)
+#   - mcr.microsoft.com/devcontainers/python:3.12 (Python devcontainer)
+#   - mcr.microsoft.com/devcontainers/javascript-node:22 (Node.js devcontainer)
+#   - mcr.microsoft.com/devcontainers/rust:latest (Rust devcontainer)
+#   - mcr.microsoft.com/devcontainers/go:latest (Go devcontainer)
+# Default: ubuntu:latest
+base-image: ubuntu:latest
+
+# Whether to use hush-login (suppress MOTD on ubuntu base images)
+# Default: true
+hush-login: true
+
+# ============================================================================
+# VS Code Extensions
+# ============================================================================
+
+# VS Code extensions to install in the devcontainer (comma-separated)
+vscode-extensions: github.copilot,github.copilot-chat
+
+# ============================================================================
+# Mount Points
+# ============================================================================
+
+# Enable GPG socket mount (for commit signing)
+mount-gpg: true
+
+# Enable GitHub CLI config mount
+mount-gh-config: true
+
+# Enable Docker/Podman socket mount
+mount-docker-socket: true
+
+# ============================================================================
+# Additional Features
+# ============================================================================
+
+# Install GitHub CLI in container
+install-gh-cli: true
+
+# Install git-control in container
+install-git-control: true
+
+# git-control version to install (tag or 'latest')
+git-control-version: latest

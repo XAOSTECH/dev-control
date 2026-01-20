@@ -26,10 +26,10 @@ print_header() {
     local left_padding=$(( total_padding / 2 ))
     local right_padding=$(( total_padding - left_padding ))
     
-    echo -e "\n${BOLD}${BLUE}╔$(printf '═%.0s' $(seq 1 $width))╗${NC}"
-    printf "${BOLD}${BLUE}║${NC}%*s${CYAN}%s${NC}%*s${BOLD}${BLUE}║${NC}\n" \
-        "$left_padding" "" "$title" "$right_padding" ""
-    echo -e "${BOLD}${BLUE}╚$(printf '═%.0s' $(seq 1 $width))╝${NC}\n"
+    echo -e "\n${BOLD}${BLUE}╔$(printf '═%.0s' $(seq 1 "$width"))╗${NC}"
+    printf '%s%s%s%*s%s%s%s%*s%s%s%s\n' \
+        "${BOLD}" "${BLUE}" "║" "$left_padding" "" "${CYAN}" "$title" "${NC}" "$right_padding" "" "${BOLD}" "${BLUE}" "║${NC}"
+    echo -e "${BOLD}${BLUE}╚$(printf '═%.0s' $(seq 1 "$width"))╝${NC}\n"
 }
 
 # Print a success header box (green theme)
@@ -42,10 +42,10 @@ print_header_success() {
     local left_padding=$(( total_padding / 2 ))
     local right_padding=$(( total_padding - left_padding ))
     
-    echo -e "\n${BOLD}${GREEN}╔$(printf '═%.0s' $(seq 1 $width))╗${NC}"
-    printf "${BOLD}${GREEN}║${NC}%*s${CYAN}%s${NC}%*s${BOLD}${GREEN}║${NC}\n" \
-        "$left_padding" "" "$title" "$right_padding" ""
-    echo -e "${BOLD}${GREEN}╚$(printf '═%.0s' $(seq 1 $width))╝${NC}\n"
+    echo -e "\n${BOLD}${GREEN}╔$(printf '═%.0s' $(seq 1 "$width"))╗${NC}"
+    printf '%s%s%s%*s%s%s%s%*s%s%s%s\n' \
+        "${BOLD}" "${GREEN}" "║" "$left_padding" "" "${CYAN}" "$title" "${NC}" "$right_padding" "" "${BOLD}" "${GREEN}" "║${NC}"
+    echo -e "${BOLD}${GREEN}╚$(printf '═%.0s' $(seq 1 "$width"))╝${NC}\n"
 }
 
 # Print a warning header box (yellow theme)
@@ -58,10 +58,10 @@ print_header_warning() {
     local left_padding=$(( total_padding / 2 ))
     local right_padding=$(( total_padding - left_padding ))
     
-    echo -e "\n${BOLD}${YELLOW}╔$(printf '═%.0s' $(seq 1 $width))╗${NC}"
-    printf "${BOLD}${YELLOW}║${NC}%*s${CYAN}%s${NC}%*s${BOLD}${YELLOW}║${NC}\n" \
-        "$left_padding" "" "$title" "$right_padding" ""
-    echo -e "${BOLD}${YELLOW}╚$(printf '═%.0s' $(seq 1 $width))╝${NC}\n"
+    echo -e "\n${BOLD}${YELLOW}╔$(printf '═%.0s' $(seq 1 "$width"))╗${NC}"
+    printf '%s%s%s%*s%s%s%s%*s%s%s%s\n' \
+        "${BOLD}" "${YELLOW}" "║" "$left_padding" "" "${CYAN}" "$title" "${NC}" "$right_padding" "" "${BOLD}" "${YELLOW}" "║${NC}"
+    echo -e "${BOLD}${YELLOW}╚$(printf '═%.0s' $(seq 1 "$width"))╝${NC}\n"
 }
 
 # ============================================================================
@@ -114,7 +114,7 @@ print_step() {
 # Usage: print_separator [width]
 print_separator() {
     local width=${1:-60}
-    echo -e "${BLUE}$(printf '─%.0s' $(seq 1 $width))${NC}"
+    echo -e "${BLUE}$(printf '─%.0s' $(seq 1 "$width"))${NC}"
 }
 
 # Print a key-value pair
@@ -209,13 +209,13 @@ run_with_spinner() {
     
     while kill -0 $pid 2>/dev/null; do
         i=$(( (i+1) % 4 ))
-        printf "\r$msg ${spin:$i:1}"
+        printf "\r%s %s" "$msg" "${spin:$i:1}"
         sleep 0.1
     done
     
     wait $pid
     local status=$?
-    printf "\r$msg ";
+    printf "\r%s " "$msg"
     if [[ $status -eq 0 ]]; then
         echo -e "${GREEN}✓${NC}"
     else

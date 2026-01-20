@@ -1,0 +1,46 @@
+# ShellCheck configuration for git-control
+# https://github.com/koalaman/shellcheck/wiki/Directive
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2024-2026 xaoscience
+
+# Follow source directives (shellcheck -x) - required for multi-file projects
+external-sources=true
+
+# ============================================================================
+# Globally disabled checks (common patterns in this codebase)
+# ============================================================================
+
+# SC1091: Not following sourced files
+# We use dynamic paths that shellcheck can't resolve at lint time
+disable=SC1091
+
+# SC2034: Variable appears unused
+# Many variables are exported for use in sourced scripts or set for external use
+# (e.g., GIT_AUTHOR_NAME, GIT_COMMITTER_DATE for git filter-branch)
+disable=SC2034
+
+# SC2155: Declare and assign separately to avoid masking return values
+# While good practice, this pattern is used extensively and changing it
+# throughout would be disruptive. We handle errors via set -e where needed.
+disable=SC2155
+
+# SC2128: Expanding an array without an index only gives the first element
+# In many cases this is intentional (getting first element for display)
+disable=SC2128
+
+# SC2088: Tilde does not expand in quotes
+# These are often intentional for user-facing output/help text
+disable=SC2088
+
+# SC2188: Redirection without command
+# Used intentionally for file truncation: > file (equivalent to : > file)
+disable=SC2188
+
+# SC2178: Variable was used as an array but is now assigned a string
+# Sometimes we intentionally reassign variables with different types
+disable=SC2178
+
+# SC2221/SC2222: Pattern override warnings in case statements
+# These are optimisation hints for duplicate patterns, not errors
+disable=SC2221,SC2222

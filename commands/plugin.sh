@@ -110,11 +110,11 @@ install_plugin() {
             print_warning "Plugin already exists: $name"
             read -rp "Overwrite? [y/N]: " confirm
             [[ "$confirm" =~ ^[Yy] ]] || return 0
-            rm -rf "$PLUGINS_DIR/$name"
+            rm -rf "${PLUGINS_DIR:?}/$name"
         fi
         
         git clone --depth 1 "https://github.com/$repo.git" "$PLUGINS_DIR/$name"
-        rm -rf "$PLUGINS_DIR/$name/.git"
+        rm -rf "${PLUGINS_DIR:?}/$name/.git"
         
         print_success "Installed: $name"
         return 0

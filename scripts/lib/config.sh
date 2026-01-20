@@ -181,6 +181,8 @@ gc_config_show() {
 # LEGACY GC-INIT CONFIG
 # ============================================================================
 
+# Load git-control metadata from git config
+# Note: These variables are intended for use by caller scripts
 load_gc_metadata() {
     git rev-parse --git-dir &>/dev/null || return 1
     

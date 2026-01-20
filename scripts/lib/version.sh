@@ -77,8 +77,9 @@ version_compare() {
     local i
     local -a v1_parts
     local -a v2_parts
-    v1_parts=($v1)
-    v2_parts=($v2)
+    # SC2206: Use read -a or mapfile instead of word splitting
+    read -ra v1_parts <<< "$v1"
+    read -ra v2_parts <<< "$v2"
     
     # Fill empty positions with zeros
     for ((i=${#v1_parts[@]}; i<${#v2_parts[@]}; i++)); do

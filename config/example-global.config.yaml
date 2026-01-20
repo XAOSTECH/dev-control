@@ -9,5 +9,5 @@ license-deep-scan: false
 interactive-mode: true
 color-output: auto
 editor: nano
-github-org:
+github-org: my-org
 template-set: default

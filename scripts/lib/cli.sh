@@ -54,7 +54,9 @@ flag_has_value() {
 # Sets: SHOW_HELP, VERBOSE, DEBUG, DRY_RUN
 # Usage: parse_common_flags "$@"
 #        set -- "${REMAINING_ARGS[@]}"
+# Note: Sets SHOW_HELP, VERBOSE, DEBUG, DRY_RUN variables for caller scripts
 parse_common_flags() {
+    # These variables are used by caller scripts, not directly here
     SHOW_HELP=false
     VERBOSE=false
     DEBUG=false

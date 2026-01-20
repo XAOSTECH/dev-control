@@ -62,8 +62,8 @@ gather_status() {
         IN_GIT_REPO=true
         GIT_BRANCH=$(get_current_branch)
         GIT_REMOTE=$(get_remote_url)
-        GIT_OWNER=$(get_repo_owner)
-        GIT_REPO_NAME=$(get_repo_name)
+        GIT_OWNER=$(get_repo_owner "$GIT_REMOTE")
+        GIT_REPO_NAME=$(get_repo_name "$GIT_REMOTE")
         
         # Count changes
         GIT_UNCOMMITTED=$(git diff --numstat 2>/dev/null | wc -l)

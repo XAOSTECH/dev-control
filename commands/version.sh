@@ -18,7 +18,7 @@ show_version() {
     local verbose=false
     [[ "${1:-}" == "-v" || "${1:-}" == "--verbose" ]] && verbose=true
     
-    echo "$(gc_version_string)"
+    gc_version_string
     
     if [[ "$verbose" == "true" ]]; then
         echo ""

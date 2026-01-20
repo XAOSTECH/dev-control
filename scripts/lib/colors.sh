@@ -6,7 +6,6 @@
 # Usage:
 #   source "${SCRIPT_DIR}/lib/colors.sh"
 #
-# shellcheck disable=SC2034
 
 # Text colors
 RED='\033[0;31m'

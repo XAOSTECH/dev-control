@@ -25,6 +25,7 @@ shopt -s dotglob
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GIT_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
+export GIT_CONTROL_DIR  # Used by sourced libraries
 
 # Make sure ERR is traced in functions
 set -o errtrace
@@ -192,7 +193,7 @@ get_relative_path() {
     local parent="$1"
     local child="$2"
     
-    local relative="${child#$parent/}"
+    local relative="${child#"$parent"/}"
     
     echo "$relative"
 }
@@ -229,7 +230,8 @@ find_all_git_repos() {
     local repos=()
     
     while IFS= read -r -d '' git_dir; do
-        local repo_dir=$(dirname "$git_dir")
+        local repo_dir
+        repo_dir=$(dirname "$git_dir")
         repos+=("$repo_dir")
     done < <(find "$root_dir" -name ".git" -print0 2>/dev/null)
     
@@ -280,9 +282,10 @@ find_git_repos_for_parent() {
     
     # If this is a git repo, add it as a submodule
     if is_git_repo "$current_dir"; then
-        local rel_path=$(get_relative_path "$parent_repo" "$current_dir")
-        local name=$(get_submodule_name "$current_dir")
-        local url=$(get_remote_url "$current_dir")
+        local rel_path name url
+        rel_path=$(get_relative_path "$parent_repo" "$current_dir")
+        name=$(get_submodule_name "$current_dir")
+        url=$(get_remote_url "$current_dir")
         
         # If no remote URL, use relative path from root
         if [[ -z "$url" ]]; then
@@ -338,7 +341,7 @@ write_gitmodules() {
     fi
 
     print_debug "Writing .gitmodules to $gitmodules_path (content length: ${#content} chars)"
-    print_debug "First line of content: $(printf '%s' \"$content\" | sed -n '1p')"
+    print_debug "First line of content: $(printf '%s' "$content" | sed -n '1p')"
 
     if [[ "$DRY_RUN" == "true" ]]; then
         local line_count
@@ -750,6 +753,7 @@ copy_dirs() {
     # If in dry-run or DEBUG, list all matched directories for diagnosis
     if [[ "${DEBUG:-false}" == "true" || "$DRY_RUN" == "true" ]]; then
         print_info "Matched $dest_term directories (diagnostic: showing canonical paths)"
+        # shellcheck disable=SC2086
         while IFS= read -r -d '' d; do
             dcanon=$(realpath -m "$d" 2>/dev/null || echo "$d")
             if [[ "$dcanon" == "$dest_canon" || "$dcanon" == "$dest_canon"/* ]]; then
@@ -757,7 +761,7 @@ copy_dirs() {
             else
                 print_info "  $d  (canonical: $dcanon)"
             fi
-        done < <(if [[ ${#prune_args[@]} -gt 0 ]]; then find "$root_dir" \( "${prune_args[@]}" \) -prune -o -type d \( $find_pattern \) -print0 2>/dev/null; else find "$root_dir" -type d \( $find_pattern \) -print0 2>/dev/null; fi)
+        done < <(if [[ ${#prune_args[@]} -gt 0 ]]; then find "$root_dir" \( "${prune_args[@]}" \) -prune -o -type d \( "$find_pattern" \) -print0 2>/dev/null; else find "$root_dir" -type d \( "$find_pattern" \) -print0 2>/dev/null; fi)
     fi
 
     while IFS= read -r -d '' srcdir; do
@@ -768,8 +772,8 @@ copy_dirs() {
         if [[ "$src_canon" == "$dest_canon" || "$src_canon" == "$dest_canon"/* ]]; then
             skipped=$((skipped + 1))
             skipped_dest=$((skipped_dest + 1))
-            skipped_list+="$tempdir (destination)\n"
-            [[ "${DEBUG:-false}" == "true" ]] && print_debug "Skipped $tempdir (canonical: $temp_canon) because it is inside destination $dest_canon"
+            skipped_list+="$srcdir (destination)\\n"
+            [[ "${DEBUG:-false}" == "true" ]] && print_debug "Skipped $srcdir (canonical: $src_canon) because it is inside destination $dest_canon"
             continue
         fi
 
@@ -836,7 +840,7 @@ copy_dirs() {
         fi
 
         found=$((found + 1))
-    done < <(if [[ ${#prune_args[@]} -gt 0 ]]; then find "$root_dir" \( "${prune_args[@]}" \) -prune -o -type d \( $find_pattern \) -print0 2>/dev/null; else find "$root_dir" -type d \( $find_pattern \) -print0 2>/dev/null; fi)
+    done < <(if [[ ${#prune_args[@]} -gt 0 ]]; then find "$root_dir" \( "${prune_args[@]}" \) -prune -o -type d \( "$find_pattern" \) -print0 2>/dev/null; else find "$root_dir" -type d \( "$find_pattern" \) -print0 2>/dev/null; fi)
 
     if [[ $found -eq 0 && $skipped -eq 0 ]]; then
         print_info "No $dest_term dirs found to copy in $root_dir"
@@ -1010,7 +1014,7 @@ aggressive_replace() {
             else
                 print_info "  $d  (canonical: $dcanon)"
             fi
-        done < <(if [[ ${#prune_args[@]} -gt 0 ]]; then find "$root_dir" \( "${prune_args[@]}" \) -prune -o -type d \( $find_pattern \) -print0 2>/dev/null; else find "$root_dir" -type d \( $find_pattern \) -print0 2>/dev/null; fi)
+        done < <(if [[ ${#prune_args[@]} -gt 0 ]]; then find "$root_dir" \( "${prune_args[@]}" \) -prune -o -type d \( "$find_pattern" \) -print0 2>/dev/null; else find "$root_dir" -type d \( "$find_pattern" \) -print0 2>/dev/null; fi)
     fi
 
     while IFS= read -r -d '' srcdir; do
@@ -1145,7 +1149,7 @@ aggressive_replace() {
         fi
 
         found=$((found + 1))
-    done < <(if [[ ${#prune_args[@]} -gt 0 ]]; then find "$root_dir" \( "${prune_args[@]}" \) -prune -o -type d \( $find_pattern \) -print0 2>/dev/null; else find "$root_dir" -type d \( $find_pattern \) -print0 2>/dev/null; fi)
+    done < <(if [[ ${#prune_args[@]} -gt 0 ]]; then find "$root_dir" \( "${prune_args[@]}" \) -prune -o -type d \( "$find_pattern" \) -print0 2>/dev/null; else find "$root_dir" -type d \( "$find_pattern" \) -print0 2>/dev/null; fi)
 
     if [[ $found -eq 0 && $skipped -eq 0 ]]; then
         print_info "No $dest_term dirs found to aggressively replace in $root_dir"

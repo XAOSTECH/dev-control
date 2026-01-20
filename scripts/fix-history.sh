@@ -1422,7 +1422,7 @@ preserve_and_sign_topology_range_to_branch() {
         # Research confirmed: commit-tree -S can have root commit issues; rebase is more reliable
         GIT_AUTHOR_NAME="$author_name" GIT_AUTHOR_EMAIL="$author_email" \
         GIT_AUTHOR_DATE="$author_date" GIT_COMMITTER_DATE="$author_date" \
-        new_sha=$(echo "$commit_msg" | git commit-tree ${parent_args[@]} "$tree")
+        new_sha=$(echo "$commit_msg" | git commit-tree "${parent_args[@]}" "$tree")
 
         if [[ -z "$new_sha" ]]; then
             print_error "Failed to create commit-tree for $c"
@@ -1485,7 +1485,7 @@ preserve_topology_range_to_branch() {
         # CRITICAL: Create commits WITHOUT -S flag to preserve dates via environment variables
         # Signing will be applied afterward if needed, which preserves the dates we set here
         GIT_AUTHOR_NAME="$author_name" GIT_AUTHOR_EMAIL="$author_email" GIT_AUTHOR_DATE="$author_date" GIT_COMMITTER_DATE="$author_date" \
-        new_sha=$(echo "$commit_msg" | git commit-tree "$tree" ${parent_args[@]})
+        new_sha=$(echo "$commit_msg" | git commit-tree "$tree" "${parent_args[@]}")
 
         if [[ -z "$new_sha" ]]; then
             print_error "Failed to create commit-tree for $c"
@@ -2149,7 +2149,6 @@ sign_mode() {
                     git rebase --abort || true
                     exit 1
                 fi
-                rm -f "$sign_script"
             fi
         else
             if [[ "${PRESERVE_TOPOLOGY:-}" != [Tt][Rr][Uu][Ee] ]]; then
@@ -2174,8 +2173,6 @@ sign_mode() {
                     git rebase --abort || true
                     exit 1
                 fi
-                
-                rm -f "$sign_script"
             fi
         fi
     else
@@ -2208,7 +2205,8 @@ sign_mode() {
         print_info "CRITICAL VERIFICATION: Checking that signed commits have ORIGINAL dates (not current 2025-12-27 timestamp)..."
         
         # Sample the first, middle, and last commits from current branch
-        local sample_commits=($(git rev-list --reverse HEAD | awk 'NR==1 || NR==NF || NR%20==0'))
+        local sample_commits
+        mapfile -t sample_commits < <(git rev-list --reverse HEAD | awk 'NR==1 || NR==NF || NR%20==0')
         local sample_count=0
         local date_mismatch_count=0
         local sample_found=0
@@ -2348,7 +2346,7 @@ atomic_preserve_range_to_branch() {
         # Create unsigned commit with exact parents/tree and author dates
         GIT_AUTHOR_NAME="$author_name" GIT_AUTHOR_EMAIL="$author_email" GIT_AUTHOR_DATE="$author_date" \
         GIT_COMMITTER_DATE="$author_date" \
-        new_sha=$(echo "$commit_msg" | git commit-tree "$tree" ${parent_args[@]})
+        new_sha=$(echo "$commit_msg" | git commit-tree "$tree" "${parent_args[@]}")
 
         if [[ -z "$new_sha" ]]; then
             echo "[atomic] Failed to create commit-tree for $c" | tee -a "$logf"
@@ -2600,6 +2598,8 @@ auto_add_conflicted_files() {
 }
 
 # Prompt the user to push the currently checked-out branch (or an alternate branch)
+# Called without arguments to use current branch (default), or with branch name
+# shellcheck disable=SC2120  # Function intentionally uses default when no args passed
 prompt_and_push_branch() {
     local branch="${1:-$(git rev-parse --abbrev-ref HEAD)}"
     local detached=false
@@ -3683,7 +3683,8 @@ main() {
         print_info "Original date: ${CYAN}$original_target_author${NC}"
         
         # Get all commits after target with their original dates
-        local commits_after=($(git rev-list --reverse "${target_hash}..HEAD"))
+        local commits_after
+        mapfile -t commits_after < <(git rev-list --reverse "${target_hash}..HEAD")
         
         declare -A after_dates
         if [[ ${#commits_after[@]} -gt 0 ]]; then

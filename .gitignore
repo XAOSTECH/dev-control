@@ -1,4 +1,11 @@
+# Environment
 .tmp
+.devcontainer
 
 # Test dependencies (auto-downloaded by run_tests.sh)
 tests/test_helper/
+
+# User-specific configuration files (examples are tracked, real configs are not)
+config/container.yaml
+config/global.config.yaml
+.devcontainer.yaml
