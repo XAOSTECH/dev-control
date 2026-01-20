@@ -657,8 +657,8 @@ DOCKERFILE_EOF
     if [[ "$is_ubuntu_base" == true ]]; then
         cat >> "$dockerfile_path" << DOCKERFILE_EOF
 
-# Configure Ubuntu mirror and install base packages
-RUN apt-get update && apt-get install -y \\
+# Install tool development tools and dependencies
+RUN apt-get update && apt-get upgrade -y && apt-get install -y \\
     git \\
     build-essential \\
     sudo \\
@@ -723,19 +723,25 @@ DOCKERFILE_EOF
         if [[ "$CFG_HUSH_LOGIN" == "true" ]]; then
             cat >> "$dockerfile_path" << DOCKERFILE_EOF
 
-# Suppress login messages
 RUN touch ~/.hushlogin
 DOCKERFILE_EOF
         fi
 
-        # Add git-control installation if enabled
+        # Add nvm, Node.js, and git-control installation if enabled
         if [[ "$CFG_INSTALL_GIT_CONTROL" == "true" ]]; then
             cat >> "$dockerfile_path" << DOCKERFILE_EOF
 
-# Install git-control
-RUN curl -fsSL https://github.com/xaoscience/git-control/archive/refs/tags/latest.tar.gz | tar -xz && \\
+# Install nvm, Node.js, and git-control
+ENV BASH_ENV=/home/${CFG_CONTAINER_NAME}/.bashrc
+RUN export HOME=/home/${CFG_CONTAINER_NAME} NVM_DIR="\$HOME/.config/nvm" && \\
+    mkdir -p "\$NVM_DIR" && \\
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash && \\
+    echo 'export NVM_DIR="\$HOME/.config/nvm"' >> ~/.bashrc && \\
+    echo '[ -s "\$NVM_DIR/nvm.sh" ] && \\. "\$NVM_DIR/nvm.sh"' >> ~/.bashrc && \\
+    bash -c 'source \$NVM_DIR/nvm.sh && nvm install 25 && nvm alias default 25' && \\
+    curl -fsSL https://github.com/${CFG_GITHUB_USER}/git-control/archive/refs/tags/latest.tar.gz | tar -xz && \\
     mv git-control-* ~/.git-control && \\
-    bash -c 'bash ~/.git-control/scripts/alias-loading.sh <<< A' || true
+    bash -c 'bash ~/.git-control/scripts/alias-loading.sh <<< A'
 DOCKERFILE_EOF
         fi
 
@@ -743,9 +749,9 @@ DOCKERFILE_EOF
         if [[ -n "$CFG_GPG_KEY_ID" && -n "$CFG_GITHUB_USER" && -n "$CFG_GITHUB_USER_EMAIL" ]]; then
             cat >> "$dockerfile_path" << DOCKERFILE_EOF
 
-# Configure git with GPG signing
-RUN git config --global user.email "${CFG_GITHUB_USER_EMAIL}" && \\
-    git config --global user.name "${CFG_GITHUB_USER}" && \\
+# Bake user-specific git config into image
+RUN git config --global user.email ${CFG_GITHUB_USER_EMAIL} && \\
+    git config --global user.name ${CFG_GITHUB_USER} && \\
     git config --global commit.gpgsign true && \\
     git config --global user.signingkey ${CFG_GPG_KEY_ID} && \\
     git config --global gpg.program gpg
@@ -753,9 +759,9 @@ DOCKERFILE_EOF
         elif [[ -n "$CFG_GITHUB_USER" && -n "$CFG_GITHUB_USER_EMAIL" ]]; then
             cat >> "$dockerfile_path" << DOCKERFILE_EOF
 
-# Configure git (without GPG signing)
-RUN git config --global user.email "${CFG_GITHUB_USER_EMAIL}" && \\
-    git config --global user.name "${CFG_GITHUB_USER}"
+# Bake user-specific git config into image
+RUN git config --global user.email ${CFG_GITHUB_USER_EMAIL} && \\
+    git config --global user.name ${CFG_GITHUB_USER}
 DOCKERFILE_EOF
         fi
 
