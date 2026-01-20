@@ -42,13 +42,17 @@ detect_config_dir() {
     if in_git_worktree; then
         local root
         root=$(git_root)
-        if [[ -d "$root/.vscode" ]]; then
-            echo "$root/.vscode"
-            return
+        local vscode_dir="$root/.vscode"
+        # Create .vscode if it doesn't exist
+        if [[ ! -d "$vscode_dir" ]]; then
+            mkdir -p "$vscode_dir"
+            print_info "Created workspace .vscode directory"
         fi
+        echo "$vscode_dir"
+        return
     fi
     
-    # Fallback to user config
+    # Fallback to user config only if not in git repo
     local user_config="${HOME}/.config/Code/User"
     if [[ -d "$user_config" ]]; then
         echo "$user_config"
@@ -159,60 +163,93 @@ show_token_info() {
 create_mcp_config() {
     print_info "Creating MCP configuration..."
     
-    local token
-    if ! token=$(get_github_token); then
-        print_error "GitHub token required. Run: gh auth login"
-        exit 1
+    # Verify gh cli is available for initial token validation
+    if ! command -v gh &>/dev/null; then
+        print_warning "GitHub CLI (gh) not found - token validation skipped"
+        print_info "Install with: sudo apt install gh"
     fi
     
     mkdir -p "$MCP_CONFIG_DIR"
     
-    cat > "$MCP_CONFIG_FILE" << MCP_EOF
+    # Generate config with secure inputs
+    cat > "$MCP_CONFIG_FILE" << 'MCP_EOF'
 {
-  "mcpServers": {
+  "inputs": [
+    {
+      "type": "promptString",
+      "id": "github_mcp_pat",
+      "description": "GitHub Personal Access Token",
+      "password": true
+    },
+    {
+      "type": "promptString",
+      "id": "firecrawlApiKey",
+      "description": "Firecrawl API Key (optional)",
+      "password": true
+    }
+  ],
+  "servers": {
     "github": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-github"],
-      "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "$token"
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "headers": {
+        "Authorization": "Bearer ${input:github_mcp_pat}"
       }
     },
     "stackoverflow": {
-      "command": "npx",
-      "args": ["-y", "@nicholasrq/stackoverflow-mcp"]
+      "type": "http",
+      "url": "https://mcp.stackoverflow.com"
     },
     "firecrawl": {
       "command": "npx",
-      "args": ["-y", "firecrawl-mcp"]
+      "args": ["-y", "firecrawl-mcp"],
+      "env": {
+        "FIRECRAWL_API_KEY": "${input:firecrawlApiKey}"
+      },
+      "type": "stdio"
     }
   }
 }
 MCP_EOF
     
     print_success "Created: $MCP_CONFIG_FILE"
+    print_info "VS Code will prompt for tokens on first use"
 }
 
 test_mcp_connection() {
-    print_info "Testing MCP connection..."
+    print_info "Testing MCP configuration..."
     
-    if ! command -v npx &>/dev/null; then
-        print_error "npx not found. Install Node.js first."
-        exit 1
+    if [[ ! -f "$MCP_CONFIG_FILE" ]]; then
+        print_error "MCP config not found: $MCP_CONFIG_FILE"
+        return 1
     fi
     
-    local token
-    if ! token=$(get_github_token); then
-        print_error "No GitHub token. Run: gh auth login"
-        exit 1
-    fi
-    
-    # Quick test - just verify the server can start
-    export GITHUB_PERSONAL_ACCESS_TOKEN="$token"
-    
-    if timeout 10 npx -y @modelcontextprotocol/server-github --help &>/dev/null; then
-        print_success "GitHub MCP server is functional"
+    # Verify config is valid JSON
+    if ! command -v jq &>/dev/null; then
+        print_warning "jq not installed - skipping JSON validation"
     else
-        print_warning "Could not verify MCP server (may still work in VS Code)"
+        if jq empty "$MCP_CONFIG_FILE" 2>/dev/null; then
+            print_success "MCP config is valid JSON"
+        else
+            print_error "Invalid JSON in MCP config"
+            return 1
+        fi
+    fi
+    
+    # Test GitHub MCP endpoint accessibility
+    if command -v curl &>/dev/null; then
+        if curl -s -o /dev/null -w "%{http_code}" --max-time 5 "https://api.githubcopilot.com" | grep -q "[234][0-9][0-9]"; then
+            print_success "GitHub MCP endpoint is reachable"
+        else
+            print_warning "GitHub MCP endpoint test inconclusive (check network)"
+        fi
+    fi
+    
+    # Verify npx availability for Firecrawl (optional)
+    if command -v npx &>/dev/null; then
+        print_success "npx available for Firecrawl integration"
+    else
+        print_warning "npx not found - Firecrawl MCP will not work (install Node.js if needed)"
     fi
 }
 
@@ -262,7 +299,10 @@ main() {
             
             print_section "Next Steps:"
             echo -e "  1. Reload VS Code window (${CYAN}Ctrl+Shift+P${NC} -> ${CYAN}Reload Window${NC})"
-            echo -e "  2. Start using MCP tools in Copilot Chat"
+            echo -e "  2. VS Code will prompt for your GitHub PAT when you first use MCP"
+            echo -e "  3. Generate PAT at: ${CYAN}https://github.com/settings/tokens${NC}"
+            echo -e "     Required scopes: ${CYAN}repo, workflow, read:user${NC}"
+            echo -e "  4. Start using MCP tools in Copilot Chat"
             echo ""
             ;;
     esac

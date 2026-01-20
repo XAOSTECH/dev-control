@@ -1,5 +1,6 @@
 # Environment
 .tmp
+.vscode
 .devcontainer
 
 # Test dependencies (auto-downloaded by run_tests.sh)
