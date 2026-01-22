@@ -153,6 +153,14 @@ collect_repo_info() {
     read -rp "Repository name [$REPO_NAME]: " input
     REPO_NAME="${input:-$REPO_NAME}"
     
+    # Repository owner (user/org slug)
+    if [[ -n "$REPO_OWNER" ]]; then
+        read -rp "Repository owner (user/org) [$REPO_OWNER]: " input
+        REPO_OWNER="${input:-$REPO_OWNER}"
+    else
+        read -rp "Repository owner (user/org): " REPO_OWNER
+    fi
+    
     # Description (prefill from dc-init metadata)
     if [[ -n "$REPO_DESCRIPTION" ]]; then
         read -rp "Description [$REPO_DESCRIPTION]: " input
@@ -250,7 +258,14 @@ create_github_repo() {
     print_info "Creating GitHub repository..."
     
     local gh_args=("repo" "create")
-    gh_args+=("$REPO_NAME")
+    
+    # Use owner/repo format if owner is specified
+    if [[ -n "$REPO_OWNER" ]]; then
+        gh_args+=("$REPO_OWNER/$REPO_NAME")
+    else
+        gh_args+=("$REPO_NAME")
+    fi
+    
     gh_args+=("--source=.")
     gh_args+=("--push")
     gh_args+=("--$REPO_VISIBILITY")
@@ -284,6 +299,15 @@ update_repo_topics() {
             gh repo edit --add-topic "$topic" 2>/dev/null || true
         done
         print_success "Topics added"
+    fi
+}
+
+save_repo_metadata() {
+    # Save collected metadata to git config for future use
+    if [[ -d ".git" ]]; then
+        [[ -n "$REPO_OWNER" ]] && git config --local dc-init.org-name "$REPO_OWNER" 2>/dev/null || true
+        [[ -n "$REPO_DESCRIPTION" ]] && git config --local dc-init.description "$REPO_DESCRIPTION" 2>/dev/null || true
+        [[ -n "$REPO_WEBSITE" ]] && git config --local dc-init.website-url "$REPO_WEBSITE" 2>/dev/null || true
     fi
 }
 
@@ -359,6 +383,7 @@ process_batch_create() {
         create_initial_commit
         create_github_repo
         update_repo_topics
+        save_repo_metadata
         show_summary
         
         popd > /dev/null || true
@@ -420,6 +445,7 @@ main() {
     create_initial_commit
     create_github_repo
     update_repo_topics
+    save_repo_metadata
     show_summary
 }
 
