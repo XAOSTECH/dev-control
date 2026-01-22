@@ -668,6 +668,7 @@ RUN apt-get update && apt-get upgrade -y && apt-get install -y \\
     ca-certificates \\
     gnupg \\
     libsecret-tools \\
+    nano \\
     && sed -i 's|http://archive.ubuntu.com/ubuntu|${CFG_UBUNTU_MIRROR}|g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || \\
        sed -i 's|http://archive.ubuntu.com/ubuntu|${CFG_UBUNTU_MIRROR}|g' /etc/apt/sources.list 2>/dev/null || true \\
     && sed -i '/${CFG_LOCALE%.*}/s/^# //g' /etc/locale.gen \\
@@ -678,7 +679,8 @@ RUN apt-get update && apt-get upgrade -y && apt-get install -y \\
 # Set locale and timezone
 ENV LANG=${CFG_LOCALE} \\
     LC_ALL=${CFG_LOCALE} \\
-    TZ=${CFG_TIMEZONE}
+    TZ=${CFG_TIMEZONE} \\
+    EDITOR=nano
 
 # Configure timezone
 RUN ln -snf /usr/share/zoneinfo/\${TZ} /etc/localtime && echo \${TZ} > /etc/timezone
@@ -745,23 +747,19 @@ RUN export HOME=/home/${CFG_CONTAINER_NAME} NVM_DIR="\$HOME/.config/nvm" && \\
 DOCKERFILE_EOF
         fi
 
-        # Add git configuration if GPG key provided
-        if [[ -n "$CFG_GPG_KEY_ID" && -n "$CFG_GITHUB_USER" && -n "$CFG_GITHUB_USER_EMAIL" ]]; then
+        # Add git configuration if user provided
+        if [[ -n "$CFG_GITHUB_USER" && -n "$CFG_GITHUB_USER_EMAIL" ]]; then
+            local git_config_cmd="git config --global user.email ${CFG_GITHUB_USER_EMAIL} && \\\n    git config --global user.name ${CFG_GITHUB_USER}"
+            
+            # Add GPG config if key provided
+            if [[ -n "$CFG_GPG_KEY_ID" ]]; then
+                git_config_cmd="$git_config_cmd && \\\n    git config --global commit.gpgsign true && \\\n    git config --global user.signingkey ${CFG_GPG_KEY_ID} && \\\n    git config --global gpg.program gpg"
+            fi
+            
             cat >> "$dockerfile_path" << DOCKERFILE_EOF
 
 # Bake user-specific git config into image
-RUN git config --global user.email ${CFG_GITHUB_USER_EMAIL} && \\
-    git config --global user.name ${CFG_GITHUB_USER} && \\
-    git config --global commit.gpgsign true && \\
-    git config --global user.signingkey ${CFG_GPG_KEY_ID} && \\
-    git config --global gpg.program gpg
-DOCKERFILE_EOF
-        elif [[ -n "$CFG_GITHUB_USER" && -n "$CFG_GITHUB_USER_EMAIL" ]]; then
-            cat >> "$dockerfile_path" << DOCKERFILE_EOF
-
-# Bake user-specific git config into image
-RUN git config --global user.email ${CFG_GITHUB_USER_EMAIL} && \\
-    git config --global user.name ${CFG_GITHUB_USER}
+RUN $git_config_cmd
 DOCKERFILE_EOF
         fi
 
