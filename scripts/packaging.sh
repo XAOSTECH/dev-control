@@ -20,6 +20,7 @@
 #   ./packaging.sh --debian                  # Build Debian package
 #   ./packaging.sh --docker                  # Build Docker image
 #   ./packaging.sh --init                    # Initialize packaging config
+#   ./packaging.sh --theme matrix            # Set theme (matrix/hacker/cyber)
 #
 # Aliases: dc-package, dc-pkg
 #
@@ -36,6 +37,14 @@ export DEV_CONTROL_DIR
 # Source shared libraries
 source "$SCRIPT_DIR/lib/colors.sh"
 source "$SCRIPT_DIR/lib/print.sh"
+
+# Source TUI library if available (Gum-based theming)
+if [[ -f "$SCRIPT_DIR/lib/tui.sh" ]]; then
+    source "$SCRIPT_DIR/lib/tui.sh"
+    TUI_AVAILABLE=true
+else
+    TUI_AVAILABLE=false
+fi
 
 # ============================================================================
 # CONFIGURATION
@@ -68,6 +77,7 @@ BUILD_ALL=false
 INIT_CONFIG=false
 DRY_RUN=false
 VERBOSE=false
+SELECTED_THEME=""
 
 # ============================================================================
 # CLI ARGUMENT PARSING
@@ -89,6 +99,7 @@ OPTIONS:
   --debian              Build Debian package (.deb)
   --nix                 Generate Nix flake
   --docker              Build Docker image with ttyd web interface
+  --theme THEME         Set UI theme (matrix, hacker, cyber)
   -o, --output DIR      Output directory (default: ./dist)
   -c, --config FILE     Config file path (default: .dc-package.yaml)
   -v, --version VER     Override version
@@ -96,12 +107,18 @@ OPTIONS:
   --verbose             Enable verbose output
   -h, --help            Show this help message
 
+THEMES:
+  matrix                Green fluorescent terminal aesthetic
+  hacker                Orange/amber retro hacker style
+  cyber                 Blue cyberpunk neon look
+
 EXAMPLES:
   packaging.sh --init                    # Create config file
   packaging.sh --tarball --homebrew      # Build tarball + Homebrew
   packaging.sh --all                     # Build everything
   packaging.sh --snap --verbose          # Build snap with details
   packaging.sh --docker                  # Build Docker image
+  packaging.sh --theme cyber --all       # Build all with cyber theme
 
 CONFIG FILE (.dc-package.yaml):
   name: my-tool
@@ -111,6 +128,7 @@ CONFIG FILE (.dc-package.yaml):
   license: MIT
   maintainer: "Name <email@example.com>"
   entry_point: ./main.sh
+  theme: matrix
   include:
     - scripts/
     - lib/
@@ -161,6 +179,10 @@ parse_args() {
                 BUILD_DOCKER=true
                 shift
                 ;;
+            --theme)
+                SELECTED_THEME="$2"
+                shift 2
+                ;;
             -o|--output)
                 PKG_OUTPUT_DIR="$2"
                 shift 2
@@ -201,6 +223,11 @@ parse_args() {
         BUILD_DEBIAN=true
         BUILD_NIX=true
         BUILD_DOCKER=true
+    fi
+    
+    # Apply theme if specified
+    if [[ -n "$SELECTED_THEME" && "$TUI_AVAILABLE" == "true" ]]; then
+        tui_set_theme "$SELECTED_THEME"
     fi
 }
 
@@ -269,6 +296,7 @@ load_config() {
                 license) [[ -z "$PKG_LICENSE" ]] && PKG_LICENSE="$value" ;;
                 maintainer) [[ -z "$PKG_MAINTAINER" ]] && PKG_MAINTAINER="$value" ;;
                 entry_point) [[ -z "$PKG_ENTRY_POINT" ]] && PKG_ENTRY_POINT="$value" ;;
+                theme) [[ -z "$SELECTED_THEME" ]] && SELECTED_THEME="$value" ;;
             esac
         done < <(grep -v '^#' "$PKG_CONFIG_FILE" | grep -v '^$' | grep -v '^  -')
         
@@ -277,6 +305,11 @@ load_config() {
         
         # Parse dependencies list
         PKG_DEPENDENCIES=$(grep -A 100 '^dependencies:' "$PKG_CONFIG_FILE" 2>/dev/null | grep '^  -' | sed 's/^  - //' | tr '\n' ' ' || echo "")
+        
+        # Apply theme from config if not set via CLI
+        if [[ -n "$SELECTED_THEME" && "$TUI_AVAILABLE" == "true" ]]; then
+            tui_set_theme "$SELECTED_THEME"
+        fi
     else
         print_warning "No config file found. Using auto-detection."
     fi
@@ -290,42 +323,74 @@ load_config() {
 # ============================================================================
 
 init_config() {
-    print_header "Package Configuration Setup"
+    if [[ "$TUI_AVAILABLE" == "true" ]]; then
+        tui_banner "Package Configuration Setup" "Initialize your project packaging"
+    else
+        print_header "Package Configuration Setup"
+    fi
     
     detect_package_info
     
     echo -e "${BOLD}Package Information${NC}"
     
-    read -rp "Package name [$PKG_NAME]: " input
-    PKG_NAME="${input:-$PKG_NAME}"
-    
-    read -rp "Version [$PKG_VERSION]: " input
-    PKG_VERSION="${input:-$PKG_VERSION}"
-    
-    read -rp "Description [$PKG_DESCRIPTION]: " input
-    PKG_DESCRIPTION="${input:-$PKG_DESCRIPTION}"
-    
-    read -rp "Homepage [$PKG_HOMEPAGE]: " input
-    PKG_HOMEPAGE="${input:-$PKG_HOMEPAGE}"
-    
-    read -rp "License [$PKG_LICENSE]: " input
-    PKG_LICENSE="${input:-$PKG_LICENSE}"
-    
-    read -rp "Maintainer [$PKG_MAINTAINER]: " input
-    PKG_MAINTAINER="${input:-$PKG_MAINTAINER}"
-    
-    read -rp "Entry point script [./dc or ./main.sh]: " input
-    PKG_ENTRY_POINT="${input:-./dc}"
-    
-    echo ""
-    echo "Directories/files to include (comma-separated):"
-    read -rp "Include [scripts/,docs/,README.md,LICENSE]: " input
-    PKG_INCLUDE_DIRS="${input:-scripts/,docs/,README.md,LICENSE}"
-    
-    echo ""
-    echo "Runtime dependencies (comma-separated):"
-    read -rp "Dependencies [git,gh,jq]: " input
-    PKG_DEPENDENCIES="${input:-git,gh,jq}"
+    if [[ "$TUI_AVAILABLE" == "true" ]]; then
+        PKG_NAME=$(tui_input "Package name" "$PKG_NAME")
+        PKG_VERSION=$(tui_input "Version" "$PKG_VERSION")
+        PKG_DESCRIPTION=$(tui_input "Description" "$PKG_DESCRIPTION")
+        PKG_HOMEPAGE=$(tui_input "Homepage" "$PKG_HOMEPAGE")
+        PKG_LICENSE=$(tui_input "License" "$PKG_LICENSE")
+        PKG_MAINTAINER=$(tui_input "Maintainer" "$PKG_MAINTAINER")
+        PKG_ENTRY_POINT=$(tui_input "Entry point script" "./dc")
+        
+        # Theme selection with glamorous chooser
+        SELECTED_THEME=$(tui_choose "Select default theme" "matrix" "hacker" "cyber")
+        
+        PKG_INCLUDE_DIRS=$(tui_input "Directories/files to include" "scripts/,config/,docs/,README.md,LICENSE")
+        PKG_DEPENDENCIES=$(tui_input "Runtime dependencies" "git,gh,jq,gum")
+    else
+        read -rp "Package name [$PKG_NAME]: " input
+        PKG_NAME="${input:-$PKG_NAME}"
+        
+        read -rp "Version [$PKG_VERSION]: " input
+        PKG_VERSION="${input:-$PKG_VERSION}"
+        
+        read -rp "Description [$PKG_DESCRIPTION]: " input
+        PKG_DESCRIPTION="${input:-$PKG_DESCRIPTION}"
+        
+        read -rp "Homepage [$PKG_HOMEPAGE]: " input
+        PKG_HOMEPAGE="${input:-$PKG_HOMEPAGE}"
+        
+        read -rp "License [$PKG_LICENSE]: " input
+        PKG_LICENSE="${input:-$PKG_LICENSE}"
+        
+        read -rp "Maintainer [$PKG_MAINTAINER]: " input
+        PKG_MAINTAINER="${input:-$PKG_MAINTAINER}"
+        
+        read -rp "Entry point script [./dc or ./main.sh]: " input
+        PKG_ENTRY_POINT="${input:-./dc}"
+        
+        echo ""
+        echo "Select default theme:"
+        echo "  1) matrix  - Green fluorescent terminal"
+        echo "  2) hacker  - Orange/amber retro"
+        echo "  3) cyber   - Blue cyberpunk neon"
+        read -rp "Theme [1]: " theme_choice
+        case "$theme_choice" in
+            2) SELECTED_THEME="hacker" ;;
+            3) SELECTED_THEME="cyber" ;;
+            *) SELECTED_THEME="matrix" ;;
+        esac
+        
+        echo ""
+        echo "Directories/files to include (comma-separated):"
+        read -rp "Include [scripts/,config/,docs/,README.md,LICENSE]: " input
+        PKG_INCLUDE_DIRS="${input:-scripts/,config/,docs/,README.md,LICENSE}"
+        
+        echo ""
+        echo "Runtime dependencies (comma-separated):"
+        read -rp "Dependencies [git,gh,jq,gum]: " input
+        PKG_DEPENDENCIES="${input:-git,gh,jq,gum}"
+    fi
     
     # Generate config file
     cat > "$PKG_CONFIG_FILE" << EOF
@@ -340,11 +405,14 @@ license: $PKG_LICENSE
 maintainer: "$PKG_MAINTAINER"
 entry_point: $PKG_ENTRY_POINT
 
+# UI Theme (matrix, hacker, cyber)
+theme: $SELECTED_THEME
+
 # Files and directories to include in packages
 include:
 $(echo "$PKG_INCLUDE_DIRS" | tr ',' '\n' | sed 's/^/  - /')
 
-# Runtime dependencies
+# Runtime dependencies (including gum for TUI)
 dependencies:
 $(echo "$PKG_DEPENDENCIES" | tr ',' '\n' | sed 's/^/  - /')
 
@@ -356,6 +424,7 @@ $(echo "$PKG_DEPENDENCIES" | tr ',' '\n' | sed 's/^/  - /')
 # docker:
 #   base_image: ubuntu:22.04
 #   port: 8080
+#   theme: matrix
 EOF
     
     print_success "Created $PKG_CONFIG_FILE"
@@ -400,6 +469,13 @@ build_tarball() {
         cp "$PKG_ENTRY_POINT" "$temp_dir/$tarball_name/"
     fi
     
+    # Bundle theme configuration
+    if [[ -f "config/theme.yaml" ]]; then
+        mkdir -p "$temp_dir/$tarball_name/config"
+        cp "config/theme.yaml" "$temp_dir/$tarball_name/config/"
+        [[ "$VERBOSE" == "true" ]] && print_info "  Added: config/theme.yaml"
+    fi
+    
     # Create install script if not exists
     if [[ ! -f "$temp_dir/$tarball_name/install.sh" ]]; then
         create_install_script "$temp_dir/$tarball_name/install.sh"
@@ -431,6 +507,13 @@ BIN_DIR="${BIN_DIR:-$HOME/.local/bin}"
 
 echo "Installing PKG_NAME_PLACEHOLDER to $INSTALL_DIR..."
 
+# Check for Gum (optional but recommended for TUI)
+if ! command -v gum &>/dev/null; then
+    echo "Note: Install 'gum' for enhanced terminal UI"
+    echo "  brew install gum  (macOS/Linux with Homebrew)"
+    echo "  or visit: https://github.com/charmbracelet/gum"
+fi
+
 mkdir -p "$INSTALL_DIR" "$BIN_DIR"
 
 # Copy files
@@ -441,6 +524,8 @@ ln -sf "$INSTALL_DIR/ENTRY_POINT_PLACEHOLDER" "$BIN_DIR/PKG_NAME_PLACEHOLDER"
 
 echo "Installation complete!"
 echo "Make sure $BIN_DIR is in your PATH"
+echo ""
+echo "Set your theme: export DC_THEME=matrix|hacker|cyber"
 INSTALL_EOF
     
     # Replace placeholders
@@ -500,15 +585,28 @@ EOF
         echo "  depends_on \"$dep\"" >> "$formula_file"
     done
     
+    # Add gum for TUI theming
+    echo "  depends_on \"gum\"  # For glamorous TUI" >> "$formula_file"
+    
     cat >> "$formula_file" << EOF
 
   def install
     # Install scripts directory
     prefix.install Dir["scripts"]
+    prefix.install Dir["config"]
     prefix.install Dir["*-templates"] if Dir.exist?("docs-templates")
     
     # Install main entry point
     bin.install "$(basename "$PKG_ENTRY_POINT")" => "$PKG_NAME"
+  end
+
+  def caveats
+    <<~EOS
+      Set your theme with:
+        export DC_THEME=matrix   # Green fluorescent
+        export DC_THEME=hacker   # Orange/amber retro
+        export DC_THEME=cyber    # Blue cyberpunk
+    EOS
   end
 
   test do
@@ -545,6 +643,13 @@ summary: $PKG_DESCRIPTION
 description: |
   $PKG_DESCRIPTION
   
+  Features glamorous terminal UI with 3 themes:
+  - matrix: Green fluorescent terminal aesthetic
+  - hacker: Orange/amber retro hacker style  
+  - cyber: Blue cyberpunk neon look
+  
+  Set theme: export DC_THEME=matrix|hacker|cyber
+  
   Generated by Dev-Control Packaging (dc-package)
 
 base: core22
@@ -556,13 +661,22 @@ apps:
     command: bin/$(basename "$PKG_ENTRY_POINT")
     environment:
       PATH: \$SNAP/usr/bin:\$SNAP/bin:\$PATH
+      DC_THEME: ${SELECTED_THEME:-matrix}
 
 parts:
+  gum:
+    plugin: nil
+    override-build: |
+      # Install Gum for TUI theming
+      curl -fsSL https://github.com/charmbracelet/gum/releases/download/v0.14.0/gum_0.14.0_Linux_x86_64.tar.gz | tar xz -C \$CRAFT_PART_INSTALL/bin gum
+
   $PKG_NAME:
     plugin: dump
     source: .
+    after: [gum]
     organize:
       scripts: bin/scripts
+      config: bin/config
       $(basename "$PKG_ENTRY_POINT"): bin/$(basename "$PKG_ENTRY_POINT")
     stage-packages:
 EOF
@@ -570,7 +684,7 @@ EOF
     # Add dependencies as stage-packages
     for dep in $PKG_DEPENDENCIES; do
         dep=$(echo "$dep" | tr -d ',')
-        echo "      - $dep" >> "$snapcraft_file"
+        [[ "$dep" != "gum" ]] && echo "      - $dep" >> "$snapcraft_file"
     done
     
     print_success "Snap config created: $snapcraft_file"
@@ -610,8 +724,11 @@ Section: utils
 Priority: optional
 Architecture: all
 Depends: bash (>= 4.0), $(echo "$PKG_DEPENDENCIES" | tr ' ' ',' | sed 's/,,*/,/g')
+Recommends: gum
 Maintainer: $PKG_MAINTAINER
 Description: $PKG_DESCRIPTION
+ Features glamorous terminal UI with theme support.
+ Set theme: export DC_THEME=matrix|hacker|cyber
  Generated by Dev-Control Packaging (dc-package)
 Homepage: $PKG_HOMEPAGE
 EOF
@@ -621,7 +738,20 @@ EOF
 #!/bin/bash
 set -e
 ln -sf /usr/share/PKG_NAME/ENTRY_POINT /usr/bin/PKG_NAME
+
+# Offer to install Gum for TUI
+if ! command -v gum &>/dev/null; then
+    echo ""
+    echo "For enhanced terminal UI, install Gum:"
+    echo "  sudo mkdir -p /etc/apt/keyrings"
+    echo "  curl -fsSL https://repo.charm.sh/apt/gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/charm.gpg"
+    echo "  echo 'deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *' | sudo tee /etc/apt/sources.list.d/charm.list"
+    echo "  sudo apt update && sudo apt install gum"
+fi
+
+echo ""
 echo "PKG_NAME installed successfully!"
+echo "Set your theme: export DC_THEME=matrix|hacker|cyber"
 EOF
     sed -i "s|PKG_NAME|$PKG_NAME|g" "$deb_dir/DEBIAN/postinst"
     sed -i "s|ENTRY_POINT|$(basename "$PKG_ENTRY_POINT")|g" "$deb_dir/DEBIAN/postinst"
@@ -634,6 +764,12 @@ EOF
             cp -r "$item" "$deb_dir/usr/share/$PKG_NAME/"
         fi
     done
+    
+    # Copy theme config
+    if [[ -f "config/theme.yaml" ]]; then
+        mkdir -p "$deb_dir/usr/share/$PKG_NAME/config"
+        cp "config/theme.yaml" "$deb_dir/usr/share/$PKG_NAME/config/"
+    fi
     
     # Copy entry point
     if [[ -n "$PKG_ENTRY_POINT" && -f "$PKG_ENTRY_POINT" ]]; then
@@ -680,6 +816,9 @@ build_nix() {
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.\${system};
+        
+        # Gum for glamorous TUI
+        gum = pkgs.gum;
       in
       {
         packages.default = pkgs.stdenv.mkDerivation {
@@ -692,16 +831,19 @@ build_nix() {
           
           buildInputs = with pkgs; [
             bash
-            $(echo "$PKG_DEPENDENCIES" | tr ',' ' ' | tr ' ' '\n' | sort -u | tr '\n' ' ')
+            gum
+            $(echo "$PKG_DEPENDENCIES" | tr ',' ' ' | tr ' ' '\n' | grep -v gum | sort -u | tr '\n' ' ')
           ];
           
           installPhase = ''
             mkdir -p \$out/share/$PKG_NAME \$out/bin
             cp -r scripts \$out/share/$PKG_NAME/
+            cp -r config \$out/share/$PKG_NAME/ 2>/dev/null || true
             cp $(basename "$PKG_ENTRY_POINT") \$out/share/$PKG_NAME/
             
             makeWrapper \$out/share/$PKG_NAME/$(basename "$PKG_ENTRY_POINT") \$out/bin/$PKG_NAME \\
-              --prefix PATH : \${pkgs.lib.makeBinPath (with pkgs; [ bash git gh jq ])}
+              --prefix PATH : \${pkgs.lib.makeBinPath (with pkgs; [ bash git gh jq gum ])} \\
+              --set DC_THEME "${SELECTED_THEME:-matrix}"
           '';
           
           meta = with pkgs.lib; {
@@ -715,8 +857,14 @@ build_nix() {
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
             bash
-            $(echo "$PKG_DEPENDENCIES" | tr ',' ' ' | tr ' ' '\n' | sort -u | tr '\n' ' ')
+            gum
+            $(echo "$PKG_DEPENDENCIES" | tr ',' ' ' | tr ' ' '\n' | grep -v gum | sort -u | tr '\n' ' ')
           ];
+          
+          shellHook = ''
+            export DC_THEME="${SELECTED_THEME:-matrix}"
+            echo "Theme set to: \$DC_THEME (matrix|hacker|cyber)"
+          '';
         };
       }
     );
@@ -750,12 +898,14 @@ build_docker() {
     mkdir -p "$docker_dir"
     
     cat > "$dockerfile" << EOF
-# Dockerfile for $PKG_NAME with web terminal (ttyd)
+# Dockerfile for $PKG_NAME with web terminal (ttyd) and Gum TUI
 # Generated by Dev-Control Packaging (dc-package)
 #
 # Build: docker build -t $PKG_NAME .
-# Run:   docker run -p 8080:8080 $PKG_NAME
+# Run:   docker run -p 8080:8080 -e DC_THEME=matrix $PKG_NAME
 # Access: http://localhost:8080
+#
+# Themes: matrix (green), hacker (orange), cyber (blue)
 
 FROM ubuntu:22.04
 
@@ -779,27 +929,40 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | d
     && apt-get install -y gh \\
     && rm -rf /var/lib/apt/lists/*
 
+# Install Gum for glamorous TUI
+RUN curl -fsSL https://github.com/charmbracelet/gum/releases/download/v0.14.0/gum_0.14.0_Linux_x86_64.tar.gz | tar xz -C /usr/local/bin gum
+
 # Create app directory
 WORKDIR /app
 
 # Copy application files
 COPY scripts/ /app/scripts/
+COPY config/ /app/config/
 COPY $(basename "$PKG_ENTRY_POINT") /app/
 
 # Make scripts executable
-RUN chmod +x /app/$(basename "$PKG_ENTRY_POINT") /app/scripts/*.sh
+RUN chmod +x /app/$(basename "$PKG_ENTRY_POINT") /app/scripts/*.sh 2>/dev/null || true
+RUN chmod +x /app/scripts/lib/*.sh 2>/dev/null || true
 
 # Add to PATH
 ENV PATH="/app:\$PATH"
+
+# Set default theme (can be overridden with -e DC_THEME=hacker)
+ENV DC_THEME="${SELECTED_THEME:-matrix}"
+
+# Terminal settings for rich output
+ENV TERM="xterm-256color"
+ENV COLORTERM="truecolor"
 
 # Expose ttyd port
 EXPOSE 8080
 
 # Start ttyd with the main script
-CMD ["ttyd", "-p", "8080", "-W", "/app/$(basename "$PKG_ENTRY_POINT")"]
+# Theme-aware terminal colors based on DC_THEME
+CMD ["sh", "-c", "ttyd -p 8080 -W -t fontSize=14 -t fontFamily='JetBrains Mono, Fira Code, monospace' /app/$(basename "$PKG_ENTRY_POINT")"]
 EOF
     
-    # Create docker-compose.yml
+    # Create docker-compose.yml with theme selection
     cat > "${docker_dir}/docker-compose.yml" << EOF
 version: '3.8'
 
@@ -812,7 +975,34 @@ services:
       - ./workspace:/workspace
     environment:
       - TERM=xterm-256color
+      - COLORTERM=truecolor
+      - DC_THEME=\${DC_THEME:-matrix}
     restart: unless-stopped
+
+  # Alternative themed instances
+  $PKG_NAME-matrix:
+    build: .
+    ports:
+      - "8081:8080"
+    environment:
+      - DC_THEME=matrix
+    profiles: ["themed"]
+
+  $PKG_NAME-hacker:
+    build: .
+    ports:
+      - "8082:8080"
+    environment:
+      - DC_THEME=hacker
+    profiles: ["themed"]
+
+  $PKG_NAME-cyber:
+    build: .
+    ports:
+      - "8083:8080"
+    environment:
+      - DC_THEME=cyber
+    profiles: ["themed"]
 EOF
     
     print_success "Docker files created: $docker_dir"
@@ -820,12 +1010,18 @@ EOF
     echo "To build and run:"
     echo "  cd $docker_dir"
     echo "  docker build -t $PKG_NAME ."
-    echo "  docker run -p 8080:8080 $PKG_NAME"
+    echo "  docker run -p 8080:8080 -e DC_THEME=matrix $PKG_NAME"
     echo ""
     echo "Or with docker-compose:"
-    echo "  docker-compose up --build"
+    echo "  DC_THEME=cyber docker-compose up --build"
+    echo ""
+    echo "Run all themed instances:"
+    echo "  docker-compose --profile themed up --build"
     echo ""
     echo "Access web terminal at: http://localhost:8080"
+    echo "  Matrix theme: http://localhost:8081"
+    echo "  Hacker theme: http://localhost:8082"
+    echo "  Cyber theme:  http://localhost:8083"
 }
 
 # ============================================================================
@@ -833,9 +1029,12 @@ EOF
 # ============================================================================
 
 display_menu() {
-    print_header "Package Builder"
-    
-    echo -e "${BOLD}Package: ${CYAN}$PKG_NAME${NC} v${PKG_VERSION}"
+    if [[ "$TUI_AVAILABLE" == "true" ]]; then
+        tui_banner "Package Builder" "$PKG_NAME v$PKG_VERSION"
+    else
+        print_header "Package Builder"
+        echo -e "${BOLD}Package: ${CYAN}$PKG_NAME${NC} v${PKG_VERSION}"
+    fi
     echo ""
     
     echo -e "${BOLD}Build Options${NC}"
@@ -847,6 +1046,7 @@ display_menu() {
     print_menu_item "6" "Docker Image             - Web terminal (ttyd)"
     echo ""
     print_menu_item "A" "Build ALL packages"
+    print_menu_item "T" "Change theme (current: ${SELECTED_THEME:-matrix})"
     print_menu_item "I" "Initialize/update config"
     print_menu_item "0" "Exit"
     echo ""
@@ -855,7 +1055,13 @@ display_menu() {
 run_interactive() {
     while true; do
         display_menu
-        read -rp "Select option: " choice
+        
+        local choice
+        if [[ "$TUI_AVAILABLE" == "true" ]]; then
+            choice=$(tui_choose "Select option" "1" "2" "3" "4" "5" "6" "A" "T" "I" "0")
+        else
+            read -rp "Select option: " choice
+        fi
         echo ""
         
         case "$choice" in
@@ -873,6 +1079,24 @@ run_interactive() {
                 build_nix
                 build_docker
                 ;;
+            [Tt])
+                if [[ "$TUI_AVAILABLE" == "true" ]]; then
+                    SELECTED_THEME=$(tui_choose "Select theme" "matrix" "hacker" "cyber")
+                    tui_set_theme "$SELECTED_THEME"
+                else
+                    echo "Select theme:"
+                    echo "  1) matrix  - Green fluorescent"
+                    echo "  2) hacker  - Orange/amber"
+                    echo "  3) cyber   - Blue cyberpunk"
+                    read -rp "Theme [1-3]: " theme_choice
+                    case "$theme_choice" in
+                        2) SELECTED_THEME="hacker" ;;
+                        3) SELECTED_THEME="cyber" ;;
+                        *) SELECTED_THEME="matrix" ;;
+                    esac
+                fi
+                print_success "Theme set to: $SELECTED_THEME"
+                ;;
             [Ii]) init_config ;;
             0|q|Q) 
                 print_info "Goodbye!"
@@ -884,7 +1108,11 @@ run_interactive() {
         esac
         
         echo ""
-        read -rp "Press Enter to continue..."
+        if [[ "$TUI_AVAILABLE" == "true" ]]; then
+            tui_confirm "Continue?" && continue || exit 0
+        else
+            read -rp "Press Enter to continue..."
+        fi
     done
 }
 
@@ -893,11 +1121,16 @@ run_interactive() {
 # ============================================================================
 
 show_build_summary() {
-    print_header_success "Build Complete!"
+    if [[ "$TUI_AVAILABLE" == "true" ]]; then
+        tui_banner "Build Complete!" "Theme: ${SELECTED_THEME:-matrix}"
+    else
+        print_header_success "Build Complete!"
+    fi
     
     print_section "Package Info:"
     print_detail "Name" "$PKG_NAME"
     print_detail "Version" "$PKG_VERSION"
+    print_detail "Theme" "${SELECTED_THEME:-matrix}"
     print_detail "Output" "$PKG_OUTPUT_DIR"
     
     echo ""
@@ -936,7 +1169,11 @@ main() {
         exit 0
     fi
     
-    print_header "Dev-Control Package Builder"
+    if [[ "$TUI_AVAILABLE" == "true" ]]; then
+        tui_banner "Dev-Control Package Builder" "Theme: ${SELECTED_THEME:-matrix}"
+    else
+        print_header "Dev-Control Package Builder"
+    fi
     
     print_info "Building packages for: ${CYAN}$PKG_NAME${NC} v${PKG_VERSION}"
     echo ""
