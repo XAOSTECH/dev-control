@@ -386,6 +386,17 @@ detect_npx_path() {
     fi
 }
 
+detect_node_bin_dir() {
+    # Detect the bin directory containing node/npx for PATH configuration
+    if command -v node &>/dev/null; then
+        local node_path
+        node_path=$(which node 2>/dev/null || command -v node)
+        dirname "$node_path"
+    else
+        echo ""
+    fi
+}
+
 require_gh_cli() {
     if ! command -v gh &>/dev/null; then
         print_error "GitHub CLI (gh) is required but not installed"
@@ -413,6 +424,16 @@ create_mcp_config() {
     # Detect npx path for VS Code extension host compatibility
     local npx_cmd
     npx_cmd=$(detect_npx_path)
+    
+    # Detect node bin directory for PATH
+    local node_bin_dir
+    node_bin_dir=$(detect_node_bin_dir)
+    
+    # Build PATH for firecrawl env (include node bin dir if detected)
+    local firecrawl_path="\${env:PATH}"
+    if [[ -n "$node_bin_dir" ]]; then
+        firecrawl_path="$node_bin_dir:\${env:PATH}"
+    fi
     
     # Generate config with secure inputs
     cat > "$MCP_CONFIG_FILE" << MCP_EOF
@@ -447,7 +468,8 @@ create_mcp_config() {
       "command": "$npx_cmd",
       "args": ["-y", "firecrawl-mcp"],
       "env": {
-        "FIRECRAWL_API_KEY": "\${input:firecrawlApiKey}"
+        "FIRECRAWL_API_KEY": "\${input:firecrawlApiKey}",
+        "PATH": "$firecrawl_path"
       },
       "type": "stdio"
     }
@@ -458,6 +480,9 @@ MCP_EOF
     print_success "Created: $MCP_CONFIG_FILE"
     if [[ "$npx_cmd" != "npx" ]]; then
         print_info "Using npx at: ${CYAN}$npx_cmd${NC}"
+    fi
+    if [[ -n "$node_bin_dir" ]]; then
+        print_info "Node.js bin dir: ${CYAN}$node_bin_dir${NC}"
     fi
     print_info "VS Code will prompt for tokens on first use"
 }
@@ -474,6 +499,16 @@ create_mcp_config_with_token() {
     # Detect npx path for VS Code extension host compatibility
     local npx_cmd
     npx_cmd=$(detect_npx_path)
+    
+    # Detect node bin directory for PATH
+    local node_bin_dir
+    node_bin_dir=$(detect_node_bin_dir)
+    
+    # Build PATH for firecrawl env (include node bin dir if detected)
+    local firecrawl_path="\${env:PATH}"
+    if [[ -n "$node_bin_dir" ]]; then
+        firecrawl_path="$node_bin_dir:\${env:PATH}"
+    fi
     
     # Create config with token embedded in Authorization header
     cat > "$MCP_CONFIG_FILE" << EOF
@@ -502,7 +537,8 @@ create_mcp_config_with_token() {
       "command": "$npx_cmd",
       "args": ["-y", "firecrawl-mcp"],
       "env": {
-        "FIRECRAWL_API_KEY": "\${input:firecrawlApiKey}"
+        "FIRECRAWL_API_KEY": "\${input:firecrawlApiKey}",
+        "PATH": "$firecrawl_path"
       },
       "type": "stdio"
     }
@@ -513,6 +549,9 @@ EOF
     print_success "Created: $MCP_CONFIG_FILE"
     if [[ "$npx_cmd" != "npx" ]]; then
         print_info "Using npx at: ${CYAN}$npx_cmd${NC}"
+    fi
+    if [[ -n "$node_bin_dir" ]]; then
+        print_info "Node.js bin dir: ${CYAN}$node_bin_dir${NC}"
     fi
     print_info "Token embedded in config (secure file permissions recommended)"
     chmod 600 "$MCP_CONFIG_FILE" 2>/dev/null || true
