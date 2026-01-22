@@ -155,6 +155,7 @@ Options:
   --harness-no-cleanup       Keep temporary branch after running the harness for inspection
   --no-cleanup               Skip cleanup prompt at end of operation; do not offer to delete tmp/backup refs
   --only-cleanup             Only cleanup tmp/backup tags and branches (no other operations)
+  --cleanup-merged           Also offer to cleanup merged branches (safe to delete)
   --auto-resolve <mode>      Auto-resolve conflicts during automated rebase/drop. Modes: ${CYAN}ours${NC}, ${CYAN}theirs${NC}
                              If provided, conflicting files will be auto-added (checkout --ours/--theirs)
                              before running ${CYAN}git rebase --continue${NC}.
@@ -216,6 +217,10 @@ parse_args() {
             --only-cleanup)
                 CLEANUP_ONLY=true
                 NO_CLEANUP=false
+                shift
+                ;;
+            --cleanup-merged)
+                CLEANUP_MERGED=true
                 shift
                 ;;
             --sign)
@@ -3453,55 +3458,141 @@ cleanup_tmp_and_backup_refs() {
     
     if [[ $local_tag_count -eq 0 && $local_branch_count -eq 0 && $remote_tag_count -eq 0 && $remote_branch_count -eq 0 ]]; then
         print_success "No temporary or backup references found"
+    else
+        echo ""
+        if [[ $local_tag_count -gt 0 ]]; then
+            echo "Found $local_tag_count local backup/tmp tags:"
+            echo "$local_tags" | sed 's/^/  - /'
+        fi
+        if [[ $local_branch_count -gt 0 ]]; then
+            echo "Found $local_branch_count local backup/tmp branches:"
+            echo "$local_branches" | sed 's/^/  - /'
+        fi
+        if [[ $remote_tag_count -gt 0 ]]; then
+            echo "Found $remote_tag_count remote backup/tmp tags:"
+            echo "$remote_tags" | sed 's/^/  - /'
+        fi
+        if [[ $remote_branch_count -gt 0 ]]; then
+            echo "Found $remote_branch_count remote backup/tmp branches:"
+            echo "$remote_branches" | sed 's/^/  - /'
+        fi
+        echo ""
+        
+        read -u 3 -rp "Delete these tmp/backup references? [y/N]: " confirm_cleanup
+        if [[ "$confirm_cleanup" =~ ^[Yy] ]]; then
+            # Delete local tags
+            if [[ $local_tag_count -gt 0 ]]; then
+                echo "$local_tags" | xargs -r git tag -d 2>/dev/null || true
+                print_success "Deleted $local_tag_count local tags"
+            fi
+            
+            # Delete local branches
+            if [[ $local_branch_count -gt 0 ]]; then
+                echo "$local_branches" | xargs -r -I{} git branch -D {} 2>/dev/null || true
+                print_success "Deleted $local_branch_count local branches"
+            fi
+            
+            # Delete remote tags (only those that actually exist remotely)
+            if [[ $remote_tag_count -gt 0 ]]; then
+                echo "$remote_tags" | xargs -r -I{} git push origin --delete refs/tags/{} 2>/dev/null || true
+                print_success "Deleted $remote_tag_count remote tags"
+            fi
+            
+            # Delete remote branches (only those that actually exist remotely)
+            if [[ $remote_branch_count -gt 0 ]]; then
+                echo "$remote_branches" | xargs -r -I{} git push origin --delete {} 2>/dev/null || true
+                print_success "Deleted $remote_branch_count remote branches"
+            fi
+        else
+            print_info "Tmp/backup cleanup cancelled"
+        fi
+    fi
+    
+    # Cleanup merged branches if flag is set
+    if [[ "$CLEANUP_MERGED" == "true" ]]; then
+        cleanup_merged_branches
+    fi
+}
+
+cleanup_merged_branches() {
+    print_info "Scanning for merged branches..."
+    
+    # Get current branch
+    local current_branch
+    current_branch=$(git rev-parse --abbrev-ref HEAD)
+    
+    # Determine the base branch to check against (Main, main, master, or develop)
+    local base_branch=""
+    for candidate in Main main master develop; do
+        if git show-ref --verify --quiet "refs/heads/$candidate"; then
+            base_branch="$candidate"
+            break
+        fi
+    done
+    
+    if [[ -z "$base_branch" ]]; then
+        print_info "No base branch (Main/main/master/develop) found, skipping merged branch cleanup"
+        return 0
+    fi
+    
+    print_info "Using base branch: $base_branch"
+    
+    # Get local merged branches (excluding current, base, and tmp/backup patterns)
+    local merged_local_branches
+    merged_local_branches=$(git branch --merged "$base_branch" | \
+        sed 's/^[* ]*//' | \
+        grep -vE "^($current_branch|$base_branch|Main|main|master|develop)$" | \
+        grep -viE 'tmp|backup|restore' || true)
+    
+    # Get remote merged branches (excluding base and tmp/backup patterns)
+    local merged_remote_branches
+    merged_remote_branches=$(git branch -r --merged "$base_branch" | \
+        grep 'origin/' | \
+        sed 's/.*origin\///' | \
+        grep -vE "^($base_branch|Main|main|master|develop|HEAD)$" | \
+        grep -viE 'tmp|backup|restore' || true)
+    
+    # Count merged branches
+    local merged_local_count=0 merged_remote_count=0
+    [[ -n "$merged_local_branches" ]] && merged_local_count=$(echo "$merged_local_branches" | wc -l)
+    [[ -n "$merged_remote_branches" ]] && merged_remote_count=$(echo "$merged_remote_branches" | wc -l)
+    
+    if [[ $merged_local_count -eq 0 && $merged_remote_count -eq 0 ]]; then
+        print_success "No merged branches found (all clean!)"
         return 0
     fi
     
     echo ""
-    if [[ $local_tag_count -gt 0 ]]; then
-        echo "Found $local_tag_count local backup/tmp tags:"
-        echo "$local_tags" | sed 's/^/  - /'
+    echo -e "${BOLD}Found branches fully merged into ${CYAN}$base_branch${NC}${BOLD}:${NC}"
+    if [[ $merged_local_count -gt 0 ]]; then
+        echo ""
+        echo -e "${BOLD}Local merged branches ($merged_local_count):${NC}"
+        echo "$merged_local_branches" | sed 's/^/  - /'
     fi
-    if [[ $local_branch_count -gt 0 ]]; then
-        echo "Found $local_branch_count local backup/tmp branches:"
-        echo "$local_branches" | sed 's/^/  - /'
-    fi
-    if [[ $remote_tag_count -gt 0 ]]; then
-        echo "Found $remote_tag_count remote backup/tmp tags:"
-        echo "$remote_tags" | sed 's/^/  - /'
-    fi
-    if [[ $remote_branch_count -gt 0 ]]; then
-        echo "Found $remote_branch_count remote backup/tmp branches:"
-        echo "$remote_branches" | sed 's/^/  - /'
+    if [[ $merged_remote_count -gt 0 ]]; then
+        echo ""
+        echo -e "${BOLD}Remote merged branches ($merged_remote_count):${NC}"
+        echo "$merged_remote_branches" | sed 's/^/  - /'
     fi
     echo ""
+    echo -e "${YELLOW}Note: These branches have been fully merged and are safe to delete${NC}"
+    echo ""
     
-    read -u 3 -rp "Delete these references? [y/N]: " confirm_cleanup
-    if [[ "$confirm_cleanup" =~ ^[Yy] ]]; then
-        # Delete local tags
-        if [[ $local_tag_count -gt 0 ]]; then
-            echo "$local_tags" | xargs -r git tag -d 2>/dev/null || true
-            print_success "Deleted $local_tag_count local tags"
+    read -u 3 -rp "Delete merged branches? [y/N]: " confirm_merged_cleanup
+    if [[ "$confirm_merged_cleanup" =~ ^[Yy] ]]; then
+        # Delete local merged branches
+        if [[ $merged_local_count -gt 0 ]]; then
+            echo "$merged_local_branches" | xargs -r -I{} git branch -d {} 2>/dev/null || true
+            print_success "Deleted $merged_local_count local merged branches"
         fi
         
-        # Delete local branches
-        if [[ $local_branch_count -gt 0 ]]; then
-            echo "$local_branches" | xargs -r -I{} git branch -D {} 2>/dev/null || true
-            print_success "Deleted $local_branch_count local branches"
-        fi
-        
-        # Delete remote tags (only those that actually exist remotely)
-        if [[ $remote_tag_count -gt 0 ]]; then
-            echo "$remote_tags" | xargs -r -I{} git push origin --delete refs/tags/{} 2>/dev/null || true
-            print_success "Deleted $remote_tag_count remote tags"
-        fi
-        
-        # Delete remote branches (only those that actually exist remotely)
-        if [[ $remote_branch_count -gt 0 ]]; then
-            echo "$remote_branches" | xargs -r -I{} git push origin --delete {} 2>/dev/null || true
-            print_success "Deleted $remote_branch_count remote branches"
+        # Delete remote merged branches
+        if [[ $merged_remote_count -gt 0 ]]; then
+            echo "$merged_remote_branches" | xargs -r -I{} git push origin --delete {} 2>/dev/null || true
+            print_success "Deleted $merged_remote_count remote merged branches"
         fi
     else
-        print_info "Cleanup cancelled"
+        print_info "Merged branch cleanup cancelled"
     fi
 }
 
