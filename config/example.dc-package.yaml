@@ -1,0 +1,29 @@
+# Dev-Control Packaging Configuration
+
+name: dev-control
+version: 0.2.0
+description: "Git workflow automation toolkit with glamorous TUI"
+homepage: https://github.com/xaoscience/dev-control
+license: GPL-3.0-or-later
+maintainer: "xaoscience <69734795+xaoscience@users.noreply.github.com>"
+entry_point: ./dc
+
+# UI Theme (matrix, hacker, cyber)
+theme: matrix
+
+# Files and directories to include in packages
+include:
+  - scripts/
+  - config/
+  - docs/
+  - plugins/
+  - README.md
+  - LICENSE
+  - install.sh
+
+# Runtime dependencies
+dependencies:
+  - git
+  - gh
+  - jq
+  - gum
