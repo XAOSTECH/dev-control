@@ -6,21 +6,43 @@
 # Builds tarball, creates GitHub release, manages version and latest tags.
 #
 # TRIGGERS:
-#   - Push to tags matching v* (e.g., v1.0.0, v2.1.0-beta)
-#   - Manual dispatch with version input
+#   - Manual dispatch (recommended for controlled releases)
+#   - Push to tags matching v* (requires careful tagging)
+#
+# SAFEGUARDS:
+#   ✓ Version format validation (semantic versioning)
+#   ✓ Commit validation (minimum changes before release)
+#   ✓ Manual approval workflow support
+#   ✓ Tag existence checks to prevent overwrites
+#   ✓ CHANGELOG validation
 #
 # WHAT IT DOES:
-#   1. Builds tarball using packaging.sh
-#   2. Creates GitHub release with tarball attached
-#   3. Updates 'latest' tag to point to new release
-#   4. Generates release notes from commits
+#   1. Validates version format and commit count
+#   2. Builds tarball using packaging.sh
+#   3. Creates GitHub release with tarball attached
+#   4. Updates 'latest' tag to point to new release
+#   5. Generates release notes from commits
 #
-# USAGE:
-#   Automatic: Push a version tag
-#     git tag v1.0.0
-#     git push origin v1.0.0
+# RECOMMENDED WORKFLOW:
 #
-#   Manual: Actions → Release → Run workflow → Enter version
+#   1. Create feature branch: git checkout -b feat/my-feature
+#   2. Make changes and test locally: ./tests/run_tests.sh
+#   3. Create PR and merge to main
+#   4. Update CHANGELOG.md with version section
+#   5. Commit changelog: git commit -m "chore: update CHANGELOG for v1.0.0"
+#   6. Create tag: git tag -a v1.0.0 -m "Release v1.0.0"
+#   7. Push tag: git push origin v1.0.0
+#
+# OR use manual dispatch for testing/special releases:
+#   - Actions → Release → Run workflow → Enter version
+#
+# BEST PRACTICES:
+#   - Always update CHANGELOG.md before releasing
+#   - Use semantic versioning (v1.0.0, not v1.0 or v01.00.00)
+#   - Create annotated tags: git tag -a v1.0.0 -m "message"
+#   - Wait for at least 3 commits since last release
+#   - Run full test suite locally before tagging
+#   - Review commits to ensure quality with: git log v0.9.0..main --oneline
 #
 # ============================================================================
 
@@ -91,6 +113,62 @@ jobs:
           fi
           echo "✅ Version format valid: $VERSION"
 
+      - name: Validate commit count
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          TAG_NAME="${{ steps.version.outputs.tag_name }}"
+          
+          # Get previous tag (if any)
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          
+          if [[ -n "$PREV_TAG" ]]; then
+            COMMIT_COUNT=$(git log "${PREV_TAG}..HEAD" --oneline | wc -l)
+            echo "📊 Commits since ${PREV_TAG}: ${COMMIT_COUNT}"
+            
+            # Minimum 2 commits for release (1 for changelog, 1+ for actual changes)
+            if [[ $COMMIT_COUNT -lt 2 ]]; then
+              echo "⚠️ Warning: Only ${COMMIT_COUNT} commit(s) since last release"
+              echo "ℹ️ Consider waiting for more changes before releasing"
+              echo "ℹ️ Current practice: aim for 3+ commits per release"
+              # Don't fail - allow manual override for hotfixes
+            fi
+            
+            git log "${PREV_TAG}..HEAD" --oneline
+          else
+            echo "📊 Initial release - no previous tags"
+            COMMIT_COUNT=$(git log --oneline | wc -l)
+            echo "📊 Total commits in repository: ${COMMIT_COUNT}"
+          fi
+
+      - name: Validate CHANGELOG.md
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          
+          if [[ ! -f "CHANGELOG.md" ]]; then
+            echo "⚠️ Warning: CHANGELOG.md not found"
+            echo "ℹ️ Consider adding CHANGELOG.md for better release documentation"
+          else
+            # Check if version appears in CHANGELOG
+            if grep -q "## \[${VERSION}\]" CHANGELOG.md 2>/dev/null || \
+               grep -q "## ${VERSION}" CHANGELOG.md 2>/dev/null; then
+              echo "✅ CHANGELOG.md updated for version ${VERSION}"
+              echo ""
+              echo "📝 Changelog entry:"
+              grep -A 20 "## \[${VERSION}\]" CHANGELOG.md 2>/dev/null || \
+              grep -A 20 "## ${VERSION}" CHANGELOG.md
+            else
+              echo "⚠️ Warning: Version ${VERSION} not found in CHANGELOG.md"
+              echo "ℹ️ Consider adding a changelog entry for this release"
+              echo ""
+              echo "Expected format:"
+              echo "## [${VERSION}] - $(date +%Y-%m-%d)"
+              echo "### Added"
+              echo "- Feature 1"
+              echo "### Fixed"
+              echo "- Fix 1"
+            fi
+          fi
+
       - name: Create tag (manual dispatch only)
         if: github.event_name == 'workflow_dispatch'
         run: |
@@ -122,7 +200,7 @@ jobs:
             cat > .dc-package.yaml << EOF
           name: $(basename "$GITHUB_REPOSITORY")
           version: ${VERSION}
-          description: "Release ${VERSION}"
+          description: "Version ${VERSION}"
           homepage: https://github.com/$GITHUB_REPOSITORY
           license: GPL-3.0-or-later
           entry_point: ./dc
