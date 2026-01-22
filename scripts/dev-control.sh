@@ -13,6 +13,7 @@
 #   - License Auditing
 #   - MCP Setup
 #   - Containerisation
+#   - Packaging
 #
 # Usage:
 #   ./dev-control.sh              # Interactive menu
@@ -70,6 +71,7 @@ COMMANDS:
   modules, nest      Manage submodules (dc-modules)
   fix, history       Fix commit history (dc-fix)
   licenses, lic      Audit licenses (dc-licenses)
+  package, pkg       Build multi-platform packages (dc-package)
   mcp                Setup MCP servers (dc-mcp)
   container          Setup devcontainer (dc-container)
   help               Show this help message
@@ -84,10 +86,11 @@ EXAMPLES:
   ./dev-control.sh pr                # Create pull request
   ./dev-control.sh fix --range HEAD=5  # Fix last 5 commits
   ./dev-control.sh licenses --deep   # Audit licenses recursively
+  ./dev-control.sh package --all     # Build all package types
 
 ALIASES:
   After running 'dc-aliases', these shortcuts are available:
-    gc          - Main Dev-Control menu
+    dc          - Main Dev-Control menu
     dc-git      - Git services submenu
     dc-init     - Template loading
     dc-repo     - Repository creation
@@ -96,11 +99,13 @@ ALIASES:
     dc-modules  - Module nesting
     dc-aliases  - Alias loading
     dc-licenses - License auditing
+    dc-package  - Package builder
     dc-mcp      - MCP setup
 
 For detailed help on each tool, run the script directly:
   ./scripts/alias-loading.sh --help
   ./scripts/template-loading.sh --help
+  ./scripts/packaging.sh --help
   etc.
 
 EOF
@@ -128,7 +133,11 @@ display_menu() {
     echo -e "${BOLD}Maintenance & Tools${NC}"
     print_menu_item "7" "History Fixer (dc-fix)           - Fix commit history"
     print_menu_item "8" "License Auditor (dc-licenses)    - Audit licenses"
-    print_menu_item "9" "MCP Setup (dc-mcp)               - Setup MCP servers"
+    print_menu_item "9" "Package Builder (dc-package)     - Build release packages"
+    echo ""
+    
+    echo -e "${BOLD}Environment${NC}"
+    print_menu_item "m" "MCP Setup (dc-mcp)               - Setup MCP servers"
     print_menu_item "c" "Containerise (dc-container)      - Setup devcontainer"
     print_menu_item "0" "Exit"
     echo ""
@@ -171,7 +180,11 @@ run_tool() {
             check_script_exists "licenses.sh" && \
                 bash "$SCRIPT_DIR/licenses.sh" "$@"
             ;;
-        9|mcp)
+        9|package|pkg)
+            check_script_exists "packaging.sh" && \
+                bash "$SCRIPT_DIR/packaging.sh" "$@"
+            ;;
+        m|M|mcp)
             check_script_exists "mcp-setup.sh" && \
                 bash "$SCRIPT_DIR/mcp-setup.sh" "$@"
             ;;
