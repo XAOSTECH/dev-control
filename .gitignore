@@ -10,3 +10,5 @@ tests/test_helper/
 config/container.yaml
 config/global.config.yaml
 .devcontainer.yaml
+# Build output
+dist/

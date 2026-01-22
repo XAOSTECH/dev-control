@@ -54,6 +54,9 @@ fi
 PKG_CONFIG_FILE=".dc-package.yaml"
 PKG_OUTPUT_DIR="./dist"
 
+# Dependency versions (for submodule/download references)
+GUM_VERSION="${GUM_VERSION:-0.17.0}"
+
 # Package info (loaded from config or detected)
 PKG_NAME=""
 PKG_VERSION=""
@@ -668,7 +671,7 @@ parts:
     plugin: nil
     override-build: |
       # Install Gum for TUI theming
-      curl -fsSL https://github.com/charmbracelet/gum/releases/download/v0.14.0/gum_0.14.0_Linux_x86_64.tar.gz | tar xz -C \$CRAFT_PART_INSTALL/bin gum
+      curl -fsSL https://github.com/charmbracelet/gum/releases/download/v${GUM_VERSION}/gum_${GUM_VERSION}_Linux_x86_64.tar.gz | tar xz -C \$CRAFT_PART_INSTALL/bin gum
 
   $PKG_NAME:
     plugin: dump
@@ -930,7 +933,7 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | d
     && rm -rf /var/lib/apt/lists/*
 
 # Install Gum for glamorous TUI
-RUN curl -fsSL https://github.com/charmbracelet/gum/releases/download/v0.14.0/gum_0.14.0_Linux_x86_64.tar.gz | tar xz -C /usr/local/bin gum
+RUN curl -fsSL https://github.com/charmbracelet/gum/releases/download/v${GUM_VERSION}/gum_${GUM_VERSION}_Linux_x86_64.tar.gz | tar xz -C /usr/local/bin gum
 
 # Create app directory
 WORKDIR /app

@@ -466,6 +466,6 @@ tui_banner() {
 # INITIALIZATION
 # ============================================================================
 
-# Auto-initialize on source
-check_gum
+# Auto-initialize on source (use || true to prevent set -e from exiting)
+check_gum || true
 tui_set_theme "${DC_THEME:-matrix}"
