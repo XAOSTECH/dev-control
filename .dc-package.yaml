@@ -1,0 +1,53 @@
+# Dev-Control Packaging Configuration
+# Configuration for dc-package (packaging.sh)
+#
+# This file defines how to package dev-control for various platforms.
+# Edit this file to customize the packaging process.
+
+name: dev-control
+version: 1.0.0
+description: "Git workflow automation toolkit - templates, repos, PRs, history fixing"
+homepage: https://github.com/xaoscience/dev-control
+license: GPL-3.0-or-later
+maintainer: "xaoscience <xaos@xaostech.io>"
+entry_point: ./dc
+
+# Files and directories to include in packages
+include:
+  - dc
+  - scripts/
+  - commands/
+  - config/
+  - docs/
+  - docs-templates/
+  - github-templates/
+  - license-templates/
+  - workflows-templates/
+  - plugins/
+  - install.sh
+  - README.md
+  - LICENSE
+  - CHANGELOG.md
+
+# Runtime dependencies
+dependencies:
+  - git
+  - gh
+  - jq
+  - bash
+
+# Platform-specific settings
+homebrew:
+  tap: xaoscience/dev-control
+  
+snap:
+  confinement: classic
+  grade: stable
+  
+docker:
+  base_image: ubuntu:22.04
+  port: 8080
+  enable_ttyd: true
+
+nix:
+  flake: true
