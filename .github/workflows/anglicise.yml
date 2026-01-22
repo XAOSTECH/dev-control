@@ -309,6 +309,7 @@ jobs:
             ! -path "./node_modules/*" \
             ! -path "./vendor/*" \
             ! -path "./.github/workflows/*" \
+            ! -path "./workflows-templates/*" \
             ! -path "./license-templates/*" \
             2>/dev/null | sort)
 
