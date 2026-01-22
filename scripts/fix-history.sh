@@ -51,6 +51,7 @@ NO_EDIT_MODE=false
 NO_CLEANUP=false
 CLEANUP_ONLY=false
 SIGN_MODE=false
+TIMED_SIGN_MODE=false  # Space out PR signing by minute boundaries
 DROP_COMMIT=""
 # Auto-resolve strategy: empty|ours|theirs
 # Can be set via environment (AUTO_RESOLVE=ours|theirs) or via --auto-resolve <mode>
@@ -219,6 +220,12 @@ parse_args() {
                 ;;
             --sign)
                 SIGN_MODE=true
+                shift
+                ;;
+            --timed-sign)
+                SIGN_MODE=true
+                TIMED_SIGN_MODE=true
+                export TIMED_SIGN_MODE
                 shift
                 ;;
             --drop)
@@ -1458,15 +1465,51 @@ preserve_topology_range_to_branch() {
 
     declare -A sha_map
     local last_new
+    local last_merge_seen=""
+    local current_pr_timestamp=""
+    local TIMED_SIGN_MODE="${TIMED_SIGN_MODE:-false}"
 
     for c in $(git rev-list --topo-order --reverse "$range"); do
+        # Check if this is a merge commit (has multiple parents)
+        local parent_count
+        parent_count=$(git rev-list --parents -n 1 "$c" | wc -w)
+        parent_count=$((parent_count - 1))  # Subtract the commit itself
+        
+        local is_merge="false"
+        [[ "$parent_count" -gt 1 ]] && is_merge="true"
+        
+        # TIMED_SIGN_MODE: After a merge commit, wait for next minute before processing next PR
+        if [[ "$TIMED_SIGN_MODE" == "true" && "$last_merge_seen" == "true" && "$is_merge" == "false" ]]; then
+            print_info "TIMED_SIGN: Detected new PR after merge. Waiting for next minute boundary..."
+            # Poll each second until minute boundary crosses
+            local last_minute
+            last_minute=$(date -u +%M)
+            while [[ $(date -u +%M) == "$last_minute" ]]; do
+                sleep 1
+            done
+            current_pr_timestamp=$(date -u +%Y-%m-%dT%H:%M:%S+00:00)
+            print_info "TIMED_SIGN: New timestamp for this PR: $current_pr_timestamp"
+            last_merge_seen="false"
+        fi
+        
+        # Initialize timestamp for first commit or after wait
+        if [[ -z "$current_pr_timestamp" ]]; then
+            current_pr_timestamp=$(date -u +%Y-%m-%dT%H:%M:%S+00:00)
+            [[ "$TIMED_SIGN_MODE" == "true" ]] && print_info "TIMED_SIGN: Starting with timestamp: $current_pr_timestamp"
+        fi
+        
         print_info "Recreating commit: $c"
         local tree
         tree=$(git rev-parse "$c^{tree}")
         local author_name author_email author_date commit_msg
         author_name=$(git show -s --format='%an' "$c")
         author_email=$(git show -s --format='%ae' "$c")
-        author_date=$(git show -s --format='%aI' "$c")
+        # Use current_pr_timestamp in TIMED_SIGN_MODE, otherwise original date
+        if [[ "$TIMED_SIGN_MODE" == "true" ]]; then
+            author_date="$current_pr_timestamp"
+        else
+            author_date=$(git show -s --format='%aI' "$c")
+        fi
         commit_msg=$(git log -1 --format=%B "$c")
 
         parent_args=()
@@ -1490,6 +1533,9 @@ preserve_topology_range_to_branch() {
 
         sha_map[$c]="$new_sha"
         last_new="$new_sha"
+        
+        # Track if this was a merge commit for TIMED_SIGN_MODE
+        [[ "$is_merge" == "true" ]] && last_merge_seen="true"
     done
 
     if [[ -n "$last_new" ]]; then
