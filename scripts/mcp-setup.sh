@@ -64,7 +64,7 @@ detect_config_dir() {
             # Create .vscode if it doesn't exist
             if [[ ! -d "$vscode_dir" ]]; then
                 mkdir -p "$vscode_dir"
-                print_info "Created workspace .vscode directory"
+                print_info "Created workspace .vscode directory" >&2
             fi
             echo "$vscode_dir"
             return
