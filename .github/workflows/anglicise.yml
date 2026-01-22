@@ -1,0 +1,355 @@
+name: British English Spelling Check
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - develop
+    paths:
+      - '**.md'
+      - '**.sh'
+      - '**.yaml'
+      - '**.yml'
+      - '**.txt'
+      - 'docs/**'
+  pull_request:
+    branches:
+      - main
+      - master
+      - develop
+    paths:
+      - '**.md'
+      - '**.sh'
+      - '**.yaml'
+      - '**.yml'
+      - '**.txt'
+      - 'docs/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  anglicise:
+    name: Check British English Spelling
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for American spellings
+        id: check
+        run: |
+          # British English Spelling Checker
+          # Flags American spellings that should be converted to British equivalents
+          #
+          # Patterns checked:
+          #   -ize → -ise (organize → organise)
+          #   -ization → -isation (organization → organisation)
+          #   -or → -our (color → colour)
+          #   -er → -re (center → centre)
+          #   -og → -ogue (catalog → catalogue)
+          #   -ense → -ence (defense → defence)
+          #   -l- → -ll- (canceled → cancelled)
+          #   Other common differences (gray → grey, etc.)
+
+          ISSUES_FOUND=0
+          ISSUE_OUTPUT=""
+
+          # American words to check (case-insensitive matching)
+          # Each line: american_word|british_word|pattern_category
+          read -r -d '' WORD_PAIRS << 'WORDLIST' || true
+          organize|organise|-ize → -ise
+          organizes|organises|-ize → -ise
+          organized|organised|-ize → -ise
+          organizing|organising|-ize → -ise
+          organization|organisation|-ization → -isation
+          organizations|organisations|-ization → -isation
+          organizational|organisational|-ization → -isation
+          recognize|recognise|-ize → -ise
+          recognizes|recognises|-ize → -ise
+          recognized|recognised|-ize → -ise
+          recognizing|recognising|-ize → -ise
+          customize|customise|-ize → -ise
+          customizes|customises|-ize → -ise
+          customized|customised|-ize → -ise
+          customizing|customising|-ize → -ise
+          customization|customisation|-ization → -isation
+          optimize|optimise|-ize → -ise
+          optimizes|optimises|-ize → -ise
+          optimized|optimised|-ize → -ise
+          optimizing|optimising|-ize → -ise
+          optimization|optimisation|-ization → -isation
+          optimizations|optimisations|-ization → -isation
+          initialize|initialise|-ize → -ise
+          initializes|initialises|-ize → -ise
+          initialized|initialised|-ize → -ise
+          initializing|initialising|-ize → -ise
+          initialization|initialisation|-ization → -isation
+          synchronize|synchronise|-ize → -ise
+          synchronizes|synchronises|-ize → -ise
+          synchronized|synchronised|-ize → -ise
+          synchronizing|synchronising|-ize → -ise
+          synchronization|synchronisation|-ization → -isation
+          authorize|authorise|-ize → -ise
+          authorizes|authorises|-ize → -ise
+          authorized|authorised|-ize → -ise
+          authorizing|authorising|-ize → -ise
+          authorization|authorisation|-ization → -isation
+          normalize|normalise|-ize → -ise
+          normalizes|normalises|-ize → -ise
+          normalized|normalised|-ize → -ise
+          normalizing|normalising|-ize → -ise
+          normalization|normalisation|-ization → -isation
+          visualize|visualise|-ize → -ise
+          visualizes|visualises|-ize → -ise
+          visualized|visualised|-ize → -ise
+          visualizing|visualising|-ize → -ise
+          visualization|visualisation|-ization → -isation
+          utilize|utilise|-ize → -ise
+          utilizes|utilises|-ize → -ise
+          utilized|utilised|-ize → -ise
+          utilizing|utilising|-ize → -ise
+          utilization|utilisation|-ization → -isation
+          finalize|finalise|-ize → -ise
+          finalizes|finalises|-ize → -ise
+          finalized|finalised|-ize → -ise
+          finalizing|finalising|-ize → -ise
+          localize|localise|-ize → -ise
+          localizes|localises|-ize → -ise
+          localized|localised|-ize → -ise
+          localizing|localising|-ize → -ise
+          localization|localisation|-ization → -isation
+          prioritize|prioritise|-ize → -ise
+          prioritizes|prioritises|-ize → -ise
+          prioritized|prioritised|-ize → -ise
+          prioritizing|prioritising|-ize → -ise
+          summarize|summarise|-ize → -ise
+          summarizes|summarises|-ize → -ise
+          summarized|summarised|-ize → -ise
+          summarizing|summarising|-ize → -ise
+          minimize|minimise|-ize → -ise
+          minimizes|minimises|-ize → -ise
+          minimized|minimised|-ize → -ise
+          minimizing|minimising|-ize → -ise
+          maximize|maximise|-ize → -ise
+          maximizes|maximises|-ize → -ise
+          maximized|maximised|-ize → -ise
+          maximizing|maximising|-ize → -ise
+          categorize|categorise|-ize → -ise
+          categorizes|categorises|-ize → -ise
+          categorized|categorised|-ize → -ise
+          categorizing|categorising|-ize → -ise
+          analyze|analyse|-ize → -ise
+          analyzes|analyses|-ize → -ise
+          analyzed|analysed|-ize → -ise
+          analyzing|analysing|-ize → -ise
+          analyzer|analyser|-ize → -ise
+          apologize|apologise|-ize → -ise
+          apologizes|apologises|-ize → -ise
+          apologized|apologised|-ize → -ise
+          apologizing|apologising|-ize → -ise
+          realize|realise|-ize → -ise
+          realizes|realises|-ize → -ise
+          realized|realised|-ize → -ise
+          realizing|realising|-ize → -ise
+          specialize|specialise|-ize → -ise
+          specializes|specialises|-ize → -ise
+          specialized|specialised|-ize → -ise
+          specializing|specialising|-ize → -ise
+          specialization|specialisation|-ization → -isation
+          standardize|standardise|-ize → -ise
+          standardizes|standardises|-ize → -ise
+          standardized|standardised|-ize → -ise
+          standardizing|standardising|-ize → -ise
+          standardization|standardisation|-ization → -isation
+          color|colour|-or → -our
+          colors|colours|-or → -our
+          colored|coloured|-or → -our
+          coloring|colouring|-or → -our
+          colorful|colourful|-or → -our
+          favor|favour|-or → -our
+          favors|favours|-or → -our
+          favored|favoured|-or → -our
+          favoring|favouring|-or → -our
+          favorable|favourable|-or → -our
+          favorite|favourite|-or → -our
+          favorites|favourites|-or → -our
+          honor|honour|-or → -our
+          honors|honours|-or → -our
+          honored|honoured|-or → -our
+          honoring|honouring|-or → -our
+          honorable|honourable|-or → -our
+          humor|humour|-or → -our
+          humors|humours|-or → -our
+          humored|humoured|-or → -our
+          humoring|humouring|-or → -our
+          humorous|humourous|-or → -our
+          labor|labour|-or → -our
+          labors|labours|-or → -our
+          labored|laboured|-or → -our
+          laboring|labouring|-or → -our
+          neighbor|neighbour|-or → -our
+          neighbors|neighbours|-or → -our
+          neighboring|neighbouring|-or → -our
+          neighborhood|neighbourhood|-or → -our
+          behavior|behaviour|-or → -our
+          behaviors|behaviours|-or → -our
+          behavioral|behavioural|-or → -our
+          flavor|flavour|-or → -our
+          flavors|flavours|-or → -our
+          flavored|flavoured|-or → -our
+          flavoring|flavouring|-or → -our
+          odor|odour|-or → -our
+          odors|odours|-or → -our
+          rumor|rumour|-or → -our
+          rumors|rumours|-or → -our
+          vapor|vapour|-or → -our
+          vapors|vapours|-or → -our
+          vigor|vigour|-or → -our
+          vigorous|vigourous|-or → -our
+          rigor|rigour|-or → -our
+          rigorous|rigourous|-or → -our
+          harbor|harbour|-or → -our
+          harbors|harbours|-or → -our
+          harbored|harboured|-or → -our
+          harboring|harbouring|-or → -our
+          savior|saviour|-or → -our
+          endeavor|endeavour|-or → -our
+          endeavors|endeavours|-or → -our
+          endeavored|endeavoured|-or → -our
+          endeavoring|endeavouring|-or → -our
+          center|centre|-er → -re
+          centers|centres|-er → -re
+          centered|centred|-er → -re
+          centering|centring|-er → -re
+          liter|litre|-er → -re
+          liters|litres|-er → -re
+          meter|metre|-er → -re
+          meters|metres|-er → -re
+          theater|theatre|-er → -re
+          theaters|theatres|-er → -re
+          fiber|fibre|-er → -re
+          fibers|fibres|-er → -re
+          caliber|calibre|-er → -re
+          specter|spectre|-er → -re
+          specters|spectres|-er → -re
+          scepter|sceptre|-er → -re
+          somber|sombre|-er → -re
+          defense|defence|-ense → -ence
+          defenses|defences|-ense → -ence
+          offense|offence|-ense → -ence
+          offenses|offences|-ense → -ence
+          pretense|pretence|-ense → -ence
+          analog|analogue|-og → -ogue
+          analogs|analogues|-og → -ogue
+          catalog|catalogue|-og → -ogue
+          catalogs|catalogues|-og → -ogue
+          cataloged|catalogued|-og → -ogue
+          cataloging|cataloguing|-og → -ogue
+          dialog|dialogue|-og → -ogue
+          dialogs|dialogues|-og → -ogue
+          prolog|prologue|-og → -ogue
+          epilog|epilogue|-og → -ogue
+          canceled|cancelled|-l- → -ll-
+          canceling|cancelling|-l- → -ll-
+          traveled|travelled|-l- → -ll-
+          traveling|travelling|-l- → -ll-
+          traveler|traveller|-l- → -ll-
+          travelers|travellers|-l- → -ll-
+          modeled|modelled|-l- → -ll-
+          modeling|modelling|-l- → -ll-
+          labeled|labelled|-l- → -ll-
+          labeling|labelling|-l- → -ll-
+          leveled|levelled|-l- → -ll-
+          leveling|levelling|-l- → -ll-
+          signaled|signalled|-l- → -ll-
+          signaling|signalling|-l- → -ll-
+          fueled|fuelled|-l- → -ll-
+          fueling|fuelling|-l- → -ll-
+          counseled|counselled|-l- → -ll-
+          counseling|counselling|-l- → -ll-
+          counselor|counsellor|-l- → -ll-
+          counselors|counsellors|-l- → -ll-
+          gray|grey|gray → grey
+          grays|greys|gray → grey
+          grayish|greyish|gray → grey
+          aging|ageing|aging → ageing
+          judgment|judgement|judgment → judgement
+          judgments|judgements|judgment → judgement
+          acknowledgment|acknowledgement|acknowledgment → acknowledgement
+          acknowledgments|acknowledgements|acknowledgment → acknowledgement
+          fulfill|fulfil|fulfill → fulfil
+          fulfills|fulfils|fulfill → fulfil
+          fulfilled|fulfilled|fulfill → fulfil
+          fulfilling|fulfilling|fulfill → fulfil
+          fulfillment|fulfilment|fulfillment → fulfilment
+          skillful|skilful|skillful → skilful
+          skillfully|skilfully|skillful → skilful
+          willful|wilful|willful → wilful
+          willfully|wilfully|willful → wilful
+          enroll|enrol|enroll → enrol
+          enrolls|enrols|enroll → enrol
+          enrolled|enrolled|enroll → enrol
+          enrolling|enrolling|enroll → enrol
+          enrollment|enrolment|enrollment → enrolment
+          installment|instalment|installment → instalment
+          installments|instalments|installment → instalment
+          plow|plough|plow → plough
+          plows|ploughs|plow → plough
+          plowed|ploughed|plow → plough
+          plowing|ploughing|plow → plough
+          WORDLIST
+
+          # Find files to check
+          FILES=$(find . -type f \( -name "*.md" -o -name "*.sh" -o -name "*.yaml" -o -name "*.yml" -o -name "*.txt" \) \
+            ! -path "./.git/*" \
+            ! -path "./node_modules/*" \
+            ! -path "./vendor/*" \
+            ! -path "./.github/workflows/*" \
+            ! -path "./license-templates/*" \
+            2>/dev/null | sort)
+
+          echo "## British English Spelling Check" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Process each word pair
+          while IFS='|' read -r american british pattern; do
+            [[ -z "$american" ]] && continue
+            
+            # Search for word (case-insensitive, whole word)
+            while IFS= read -r file; do
+              [[ -z "$file" ]] && continue
+              
+              # Find matches, excluding file paths and URLs
+              MATCHES=$(grep -inw "$american" "$file" 2>/dev/null | \
+                grep -vE '(/[a-zA-Z0-9_.-]+\.[a-z]{1,4}|https?://|file://)' || true)
+              
+              if [[ -n "$MATCHES" ]]; then
+                while IFS= read -r match; do
+                  [[ -z "$match" ]] && continue
+                  LINE_NUM=$(echo "$match" | cut -d: -f1)
+                  LINE_CONTENT=$(echo "$match" | cut -d: -f2- | sed 's/^[[:space:]]*//' | head -c 100)
+                  
+                  ISSUE_OUTPUT+="| \`$file:$LINE_NUM\` | $american | $british | $pattern |"$'\n'
+                  ISSUES_FOUND=$((ISSUES_FOUND + 1))
+                done <<< "$MATCHES"
+              fi
+            done <<< "$FILES"
+          done <<< "$WORD_PAIRS"
+
+          # Output results
+          if [[ $ISSUES_FOUND -gt 0 ]]; then
+            echo "❌ **Found $ISSUES_FOUND American spelling(s) to convert**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Location | American 🇺🇸 | British 🇬🇧 | Pattern |" >> $GITHUB_STEP_SUMMARY
+            echo "|----------|-------------|------------|---------|" >> $GITHUB_STEP_SUMMARY
+            echo "$ISSUE_OUTPUT" >> $GITHUB_STEP_SUMMARY
+            
+            echo "::error::Found $ISSUES_FOUND American spelling(s). Please convert to British English."
+            exit 1
+          else
+            echo "✅ **All spellings conform to British English standards.**" >> $GITHUB_STEP_SUMMARY
+          fi
