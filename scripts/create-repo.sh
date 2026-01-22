@@ -106,11 +106,23 @@ load_gc_init_metadata() {
     # Try loading from dc-init config first
     if load_gc_metadata; then
         print_info "Loaded dc-init metadata from git config"
+        # Map loaded variables to create-repo naming convention
+        REPO_DESCRIPTION="${DESCRIPTION:-}"
+        REPO_OWNER="${ORG_NAME:-}"
+        REPO_WEBSITE="${WEBSITE_URL:-}"
     fi
     
     # Fallback to folder name
     if [[ -z "$REPO_NAME" ]]; then
         REPO_NAME=$(basename "$(pwd)")
+    fi
+    
+    # Try to detect website URL from repo name if not set
+    if [[ -z "$REPO_WEBSITE" ]]; then
+        # Check if repo name looks like a domain (contains dots)
+        if [[ "$REPO_NAME" =~ \. ]]; then
+            REPO_WEBSITE="https://$REPO_NAME"
+        fi
     fi
 }
 
@@ -141,8 +153,21 @@ collect_repo_info() {
     read -rp "Repository name [$REPO_NAME]: " input
     REPO_NAME="${input:-$REPO_NAME}"
     
-    # Description
-    read -rp "Description: " REPO_DESCRIPTION
+    # Description (prefill from dc-init metadata)
+    if [[ -n "$REPO_DESCRIPTION" ]]; then
+        read -rp "Description [$REPO_DESCRIPTION]: " input
+        REPO_DESCRIPTION="${input:-$REPO_DESCRIPTION}"
+    else
+        read -rp "Description: " REPO_DESCRIPTION
+    fi
+    
+    # Website URL (auto-detected from domain-like repo names)
+    if [[ -n "$REPO_WEBSITE" ]]; then
+        read -rp "Website URL [$REPO_WEBSITE]: " input
+        REPO_WEBSITE="${input:-$REPO_WEBSITE}"
+    else
+        read -rp "Website URL (optional): " REPO_WEBSITE
+    fi
     
     # Visibility
     echo ""
@@ -232,6 +257,10 @@ create_github_repo() {
     
     if [[ -n "$REPO_DESCRIPTION" ]]; then
         gh_args+=("--description" "$REPO_DESCRIPTION")
+    fi
+    
+    if [[ -n "$REPO_WEBSITE" ]]; then
+        gh_args+=("--homepage" "$REPO_WEBSITE")
     fi
     
     if gh "${gh_args[@]}"; then
@@ -348,6 +377,7 @@ show_summary() {
     print_detail "Owner" "$GH_USERNAME"
     print_detail "Visibility" "$REPO_VISIBILITY"
     [[ -n "$REPO_URL" ]] && print_detail "URL" "$REPO_URL"
+    [[ -n "$REPO_WEBSITE" ]] && print_detail "Website" "$REPO_WEBSITE"
     [[ -n "$REPO_DESCRIPTION" ]] && print_detail "Description" "$REPO_DESCRIPTION"
     [[ -n "$REPO_TOPICS" ]] && print_detail "Topics" "$REPO_TOPICS"
     

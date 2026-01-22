@@ -208,6 +208,13 @@ get_repo_info() {
         if [[ -n "$cached_description" ]]; then
             SHORT_DESCRIPTION="$cached_description"
         fi
+        
+        local cached_website
+        cached_website=$(git config --local dc-init.website-url 2>/dev/null || echo "")
+        if [[ -n "$cached_website" ]]; then
+            WEBSITE_URL="$cached_website"
+            print_info "Loaded website URL from git config: $WEBSITE_URL"
+        fi
     fi
 
     # If we have an org and repo slug, try to fetch repo metadata from GitHub (only if not cached)
@@ -291,6 +298,21 @@ collect_project_info() {
     REPO_URL="https://github.com/$REPO_OWNER/$REPO_SLUG"
     read -rp "Repository URL [$REPO_URL]: " input
     REPO_URL="${input:-$REPO_URL}"
+    
+    # Website URL — auto-detect from domain-like repo slugs
+    if [[ -z "$WEBSITE_URL" ]]; then
+        # Check if repo slug looks like a domain (contains dots)
+        if [[ "$REPO_SLUG" =~ \. ]]; then
+            WEBSITE_URL="https://$REPO_SLUG"
+            print_info "Detected website URL from repo slug: $WEBSITE_URL"
+        fi
+    fi
+    if [[ -n "$WEBSITE_URL" ]]; then
+        read -rp "Website URL [$WEBSITE_URL]: " input
+        WEBSITE_URL="${input:-$WEBSITE_URL}"
+    else
+        read -rp "Website URL (optional): " WEBSITE_URL
+    fi
     
     # Short description — ALWAYS asked per-repo, never shared in batch mode
     # Prefill from THIS repo's cached config (loaded by get_repo_info)
@@ -947,6 +969,7 @@ run_batch_init() {
         REPO_SLUG=""
         REPO_URL=""
         ORG_NAME=""
+        WEBSITE_URL=""
 
         # Attempt to detect repo info (may set ORG_NAME if remote present)
         # This will load from THIS repo's local git config
@@ -1057,6 +1080,7 @@ save_project_metadata() {
         git config --local dc-init.description "$SHORT_DESCRIPTION" 2>/dev/null || true
         git config --local dc-init.long-description "$LONG_DESCRIPTION" 2>/dev/null || true
         git config --local dc-init.license-type "$LICENSE_TYPE" 2>/dev/null || true
+        [[ -n "$WEBSITE_URL" ]] && git config --local dc-init.website-url "$WEBSITE_URL" 2>/dev/null || true
     fi
 }
 

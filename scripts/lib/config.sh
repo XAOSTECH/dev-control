@@ -194,6 +194,7 @@ load_gc_metadata() {
     TOPICS=$(git config --local --get dc-init.topics 2>/dev/null || echo "")
     VISIBILITY=$(git config --local --get dc-init.visibility 2>/dev/null || echo "")
     TEMPLATE_SET=$(git config --local --get dc-init.template-set 2>/dev/null || echo "")
+    WEBSITE_URL=$(git config --local --get dc-init.website-url 2>/dev/null || echo "")
     
     return 0
 }
