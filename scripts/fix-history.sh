@@ -38,6 +38,8 @@ DEV_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
 # Source shared libraries
 source "$SCRIPT_DIR/lib/colors.sh"
 source "$SCRIPT_DIR/lib/print.sh"
+source "$SCRIPT_DIR/lib/git/cleanup.sh"
+source "$SCRIPT_DIR/lib/git/worktree.sh"
 
 # Configuration
 RANGE="HEAD=10"
@@ -1272,88 +1274,8 @@ show_reconstruction_state() {
     print_info "You can inspect '$branch' and resolve conflicts, then 'git cherry-pick --continue' to proceed."
 }
 
-# Find worktree paths which have the given branch checked out
-find_worktree_paths_for_branch() {
-    local branch="$1"
-    # Use git worktree list --porcelain to find branches
-    local out
-    out=$(git worktree list --porcelain 2>/dev/null || true)
-    local paths=()
-    if [[ -z "$out" ]]; then
-        # No worktrees known
-        echo ""
-        return 0
-    fi
-
-    local path=""
-    while IFS= read -r line; do
-        if [[ "$line" == worktree* ]]; then
-            path="${line#worktree }"
-        elif [[ "$line" == branch* ]]; then
-            local bref=${line#branch }
-            # Normalize to refs/heads/<branch>
-            if [[ "$bref" == "refs/heads/$branch" || "$bref" == "$branch" ]]; then
-                paths+=("$path")
-            fi
-        fi
-    done <<< "$out"
-
-    # Print newline-separated paths
-    (for p in "${paths[@]}"; do echo "$p"; done)
-}
-
-# Update worktrees which have the branch checked out to match origin/branch
-update_worktrees_to_remote() {
-    local branch="$1"
-    local ts
-    ts=$(date -u +%Y%m%dT%H%M%SZ)
-
-    local paths
-    paths=$(find_worktree_paths_for_branch "$branch")
-    if [[ -z "$paths" ]]; then
-        print_info "No worktrees found using branch: $branch"
-        return 0
-    fi
-
-    print_info "Found worktrees using '$branch', updating them to origin/$branch"
-    for p in $paths; do
-        print_info "Updating worktree at: $p"
-        # Make a bundle backup of the branch as it appears in the worktree
-        local bundle="/tmp/git-fix-worktree-backup-${branch//\//-}-${ts}.bundle"
-        git -C "$p" bundle create "$bundle" "refs/heads/$branch" || print_warning "Failed to create worktree bundle for $p"
-
-        # Fetch origin
-        git -C "$p" fetch origin || print_warning "Failed to fetch in $p"
-
-        if ! git -C "$p" show-ref --verify --quiet "refs/remotes/origin/$branch"; then
-            print_warning "origin/$branch not found; skipping update for $p"
-            continue
-        fi
-
-        # Determine current branch in that worktree
-        local curr_branch
-        curr_branch=$(git -C "$p" symbolic-ref --quiet --short HEAD 2>/dev/null || true)
-
-        if [[ "$curr_branch" == "$branch" ]]; then
-            # Detach HEAD so we can safely update the branch ref even though it was checked out
-            print_info "Branch $branch is currently checked out in $p; detaching HEAD, forcing update, and re-checking out"
-            git -C "$p" checkout --detach HEAD || print_warning "Failed to detach HEAD in $p"
-
-            # Force the branch to origin/<branch>
-            git -C "$p" branch -f "$branch" "origin/$branch" || print_warning "Failed to force-update branch $branch in $p"
-
-            # Re-checkout branch (now matches origin)
-            git -C "$p" checkout "$branch" || print_warning "Failed to checkout $branch in $p"
-
-            print_success "Safely updated checked-out branch $branch in worktree: $p (backup: $bundle)"
-        else
-            # Branch not checked out in this worktree: update local ref to match origin
-            git -C "$p" update-ref "refs/heads/$branch" "refs/remotes/origin/$branch" || print_warning "Failed to update local ref for $branch in $p"
-            print_success "Updated branch ref $branch in worktree: $p (backup: $bundle)"
-        fi
-    done
-}
-
+# Note: find_worktree_paths_for_branch() and update_worktrees_to_remote()
+# are now provided by lib/git/worktree.sh
 
 # Helper: linearise a range into a single-parent branch (UK spelling: linearise)
 linearise_range_to_branch() {
@@ -3431,168 +3353,12 @@ amend_mode() {
 
 # Cleanup function: removes tmp and backup branches/tags at end of run
 cleanup_tmp_and_backup_refs() {
-    print_info "Scanning for temporary and backup references..."
-    
-    # Get local tags matching tmp/backup patterns
-    local local_tags
-    local_tags=$(git tag -l | grep -iE 'tmp|backup|restore' || true)
-    
-    # Get local branches (excluding current branch)
-    local local_branches
-    local_branches=$(git branch --list | grep -iE 'tmp|backup|restore' | sed 's/^[* ]*//' || true)
-    
-    # Get remote branches (strip 'origin/' prefix)
-    local remote_branches
-    remote_branches=$(git branch -r | grep -iE 'tmp|backup|restore' | grep 'origin/' | sed 's/.*origin\///' || true)
-    
-    # Get remote tags
-    local remote_tags
-    remote_tags=$(git ls-remote --tags origin 2>/dev/null | grep -iE 'tmp|backup|restore' | sed 's/.*refs\/tags\///' | sed 's/\^{}//' | sort -u || true)
-    
-    # Count items (handle empty strings properly)
-    local local_tag_count=0 local_branch_count=0 remote_tag_count=0 remote_branch_count=0
-    [[ -n "$local_tags" ]] && local_tag_count=$(echo "$local_tags" | wc -l)
-    [[ -n "$local_branches" ]] && local_branch_count=$(echo "$local_branches" | wc -l)
-    [[ -n "$remote_tags" ]] && remote_tag_count=$(echo "$remote_tags" | wc -l)
-    [[ -n "$remote_branches" ]] && remote_branch_count=$(echo "$remote_branches" | wc -l)
-    
-    if [[ $local_tag_count -eq 0 && $local_branch_count -eq 0 && $remote_tag_count -eq 0 && $remote_branch_count -eq 0 ]]; then
-        print_success "No temporary or backup references found"
-    else
-        echo ""
-        if [[ $local_tag_count -gt 0 ]]; then
-            echo "Found $local_tag_count local backup/tmp tags:"
-            echo "$local_tags" | sed 's/^/  - /'
-        fi
-        if [[ $local_branch_count -gt 0 ]]; then
-            echo "Found $local_branch_count local backup/tmp branches:"
-            echo "$local_branches" | sed 's/^/  - /'
-        fi
-        if [[ $remote_tag_count -gt 0 ]]; then
-            echo "Found $remote_tag_count remote backup/tmp tags:"
-            echo "$remote_tags" | sed 's/^/  - /'
-        fi
-        if [[ $remote_branch_count -gt 0 ]]; then
-            echo "Found $remote_branch_count remote backup/tmp branches:"
-            echo "$remote_branches" | sed 's/^/  - /'
-        fi
-        echo ""
-        
-        read -u 3 -rp "Delete these tmp/backup references? [y/N]: " confirm_cleanup
-        if [[ "$confirm_cleanup" =~ ^[Yy] ]]; then
-            # Delete local tags
-            if [[ $local_tag_count -gt 0 ]]; then
-                echo "$local_tags" | xargs -r git tag -d 2>/dev/null || true
-                print_success "Deleted $local_tag_count local tags"
-            fi
-            
-            # Delete local branches
-            if [[ $local_branch_count -gt 0 ]]; then
-                echo "$local_branches" | xargs -r -I{} git branch -D {} 2>/dev/null || true
-                print_success "Deleted $local_branch_count local branches"
-            fi
-            
-            # Delete remote tags (only those that actually exist remotely)
-            if [[ $remote_tag_count -gt 0 ]]; then
-                echo "$remote_tags" | xargs -r -I{} git push origin --delete refs/tags/{} 2>/dev/null || true
-                print_success "Deleted $remote_tag_count remote tags"
-            fi
-            
-            # Delete remote branches (only those that actually exist remotely)
-            if [[ $remote_branch_count -gt 0 ]]; then
-                echo "$remote_branches" | xargs -r -I{} git push origin --delete {} 2>/dev/null || true
-                print_success "Deleted $remote_branch_count remote branches"
-            fi
-        else
-            print_info "Tmp/backup cleanup cancelled"
-        fi
-    fi
+    # Delegate to shared library (uses fd 3 for input)
+    cleanup_tmp_backup_refs 3
     
     # Cleanup merged branches if flag is set
     if [[ "$CLEANUP_MERGED" == "true" ]]; then
-        cleanup_merged_branches
-    fi
-}
-
-cleanup_merged_branches() {
-    print_info "Scanning for merged branches..."
-    
-    # Get current branch
-    local current_branch
-    current_branch=$(git rev-parse --abbrev-ref HEAD)
-    
-    # Determine the base branch to check against (Main, main, master, or develop)
-    local base_branch=""
-    for candidate in Main main master develop; do
-        if git show-ref --verify --quiet "refs/heads/$candidate"; then
-            base_branch="$candidate"
-            break
-        fi
-    done
-    
-    if [[ -z "$base_branch" ]]; then
-        print_info "No base branch (Main/main/master/develop) found, skipping merged branch cleanup"
-        return 0
-    fi
-    
-    print_info "Using base branch: $base_branch"
-    
-    # Get local merged branches (excluding current, base, and tmp/backup patterns)
-    local merged_local_branches
-    merged_local_branches=$(git branch --merged "$base_branch" | \
-        sed 's/^[* ]*//' | \
-        grep -vE "^($current_branch|$base_branch|Main|main|master|develop)$" | \
-        grep -viE 'tmp|backup|restore' || true)
-    
-    # Get remote merged branches (excluding base and tmp/backup patterns)
-    local merged_remote_branches
-    merged_remote_branches=$(git branch -r --merged "$base_branch" | \
-        grep 'origin/' | \
-        sed 's/.*origin\///' | \
-        grep -vE "^($base_branch|Main|main|master|develop|HEAD)$" | \
-        grep -viE 'tmp|backup|restore' || true)
-    
-    # Count merged branches
-    local merged_local_count=0 merged_remote_count=0
-    [[ -n "$merged_local_branches" ]] && merged_local_count=$(echo "$merged_local_branches" | wc -l)
-    [[ -n "$merged_remote_branches" ]] && merged_remote_count=$(echo "$merged_remote_branches" | wc -l)
-    
-    if [[ $merged_local_count -eq 0 && $merged_remote_count -eq 0 ]]; then
-        print_success "No merged branches found (all clean!)"
-        return 0
-    fi
-    
-    echo ""
-    echo -e "${BOLD}Found branches fully merged into ${CYAN}$base_branch${NC}${BOLD}:${NC}"
-    if [[ $merged_local_count -gt 0 ]]; then
-        echo ""
-        echo -e "${BOLD}Local merged branches ($merged_local_count):${NC}"
-        echo "$merged_local_branches" | sed 's/^/  - /'
-    fi
-    if [[ $merged_remote_count -gt 0 ]]; then
-        echo ""
-        echo -e "${BOLD}Remote merged branches ($merged_remote_count):${NC}"
-        echo "$merged_remote_branches" | sed 's/^/  - /'
-    fi
-    echo ""
-    echo -e "${YELLOW}Note: These branches have been fully merged and are safe to delete${NC}"
-    echo ""
-    
-    read -u 3 -rp "Delete merged branches? [y/N]: " confirm_merged_cleanup
-    if [[ "$confirm_merged_cleanup" =~ ^[Yy] ]]; then
-        # Delete local merged branches
-        if [[ $merged_local_count -gt 0 ]]; then
-            echo "$merged_local_branches" | xargs -r -I{} git branch -d {} 2>/dev/null || true
-            print_success "Deleted $merged_local_count local merged branches"
-        fi
-        
-        # Delete remote merged branches
-        if [[ $merged_remote_count -gt 0 ]]; then
-            echo "$merged_remote_branches" | xargs -r -I{} git push origin --delete {} 2>/dev/null || true
-            print_success "Deleted $merged_remote_count remote merged branches"
-        fi
-    else
-        print_info "Merged branch cleanup cancelled"
+        cleanup_merged_branches_interactive 3
     fi
 }
 

@@ -33,6 +33,7 @@ set -o errtrace
 # Source shared libraries
 source "$SCRIPT_DIR/lib/colors.sh"
 source "$SCRIPT_DIR/lib/print.sh"
+source "$SCRIPT_DIR/lib/git/utils.sh"
 
 # Trap errors and print useful context
 
@@ -40,15 +41,7 @@ source "$SCRIPT_DIR/lib/print.sh"
 # HELPER FUNCTIONS
 # ============================================================================
 
-# ============================================================================
-# GIT DETECTION FUNCTIONS
-# ============================================================================
-
-# Check if a directory is a git repository (has .git folder or file)
-is_git_repo() {
-    local dir="$1"
-    [[ -d "$dir/.git" ]] || [[ -f "$dir/.git" ]]
-}
+# Note: is_git_repo() and get_remote_url() are provided by git-utils.sh
 
 # Directories to skip (noisy or irrelevant)
 EXCLUDE_DIRS=(.bak .tmp node_modules .cache)
@@ -165,17 +158,7 @@ is_git_worktree_root() {
     return 1
 }
 
-# Get the remote origin URL for a git repository
-get_remote_url() {
-    local dir="$1"
-    local url=""
-    
-    if is_git_repo "$dir"; then
-        url=$(git -C "$dir" config --get remote.origin.url 2>/dev/null || echo "")
-    fi
-    
-    echo "$url"
-}
+# Note: get_remote_url() is provided by git-utils.sh
 
 get_submodule_name() {
     local path="$1"

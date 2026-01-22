@@ -734,9 +734,9 @@ DOCKERFILE_EOF
             cat >> "$dockerfile_path" << DOCKERFILE_EOF
 
 # Install nvm, Node.js, and Dev-Control
+ENV NVM_DIR=/home/${CFG_CONTAINER_NAME}/.config/nvm
 ENV BASH_ENV=/home/${CFG_CONTAINER_NAME}/.bashrc
-RUN export HOME=/home/${CFG_CONTAINER_NAME} NVM_DIR="\$HOME/.config/nvm" && \\
-    mkdir -p "\$NVM_DIR" && \\
+RUN mkdir -p "\$NVM_DIR" && \\
     curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash && \\
     echo 'export NVM_DIR="\$HOME/.config/nvm"' >> ~/.bashrc && \\
     echo '[ -s "\$NVM_DIR/nvm.sh" ] && \\. "\$NVM_DIR/nvm.sh"' >> ~/.bashrc && \\
@@ -744,6 +744,9 @@ RUN export HOME=/home/${CFG_CONTAINER_NAME} NVM_DIR="\$HOME/.config/nvm" && \\
     curl -fsSL https://github.com/${CFG_GITHUB_USER}/dev-control/archive/refs/tags/latest.tar.gz | tar -xz && \\
     mv dev-control-* ~/.dev-control && \\
     bash -c 'bash ~/.dev-control/scripts/alias-loading.sh <<< A'
+
+# Add node/npm/npx to PATH for VS Code extension host discovery
+ENV PATH=\$NVM_DIR/versions/node/v25.4.0/bin:\$PATH
 DOCKERFILE_EOF
         fi
 
