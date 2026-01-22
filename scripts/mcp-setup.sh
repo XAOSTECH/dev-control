@@ -377,6 +377,15 @@ show_token_info() {
 # HELPER FUNCTIONS
 # ============================================================================
 
+detect_npx_path() {
+    # Detect absolute path to npx for VS Code extension host compatibility
+    if command -v npx &>/dev/null; then
+        which npx 2>/dev/null || command -v npx
+    else
+        echo "npx"  # Fallback to bare command if not found
+    fi
+}
+
 require_gh_cli() {
     if ! command -v gh &>/dev/null; then
         print_error "GitHub CLI (gh) is required but not installed"
@@ -401,8 +410,12 @@ create_mcp_config() {
     
     mkdir -p "$MCP_CONFIG_DIR"
     
+    # Detect npx path for VS Code extension host compatibility
+    local npx_cmd
+    npx_cmd=$(detect_npx_path)
+    
     # Generate config with secure inputs
-    cat > "$MCP_CONFIG_FILE" << 'MCP_EOF'
+    cat > "$MCP_CONFIG_FILE" << MCP_EOF
 {
   "inputs": [
     {
@@ -423,7 +436,7 @@ create_mcp_config() {
       "type": "http",
       "url": "https://api.githubcopilot.com/mcp/",
       "headers": {
-        "Authorization": "Bearer ${input:github_mcp_pat}"
+        "Authorization": "Bearer \${input:github_mcp_pat}"
       }
     },
     "stackoverflow": {
@@ -431,10 +444,10 @@ create_mcp_config() {
       "url": "https://mcp.stackoverflow.com"
     },
     "firecrawl": {
-      "command": "npx",
+      "command": "$npx_cmd",
       "args": ["-y", "firecrawl-mcp"],
       "env": {
-        "FIRECRAWL_API_KEY": "${input:firecrawlApiKey}"
+        "FIRECRAWL_API_KEY": "\${input:firecrawlApiKey}"
       },
       "type": "stdio"
     }
@@ -443,6 +456,9 @@ create_mcp_config() {
 MCP_EOF
     
     print_success "Created: $MCP_CONFIG_FILE"
+    if [[ "$npx_cmd" != "npx" ]]; then
+        print_info "Using npx at: ${CYAN}$npx_cmd${NC}"
+    fi
     print_info "VS Code will prompt for tokens on first use"
 }
 
@@ -454,6 +470,10 @@ create_mcp_config_with_token() {
     
     # Ensure directory exists
     mkdir -p "$MCP_CONFIG_DIR"
+    
+    # Detect npx path for VS Code extension host compatibility
+    local npx_cmd
+    npx_cmd=$(detect_npx_path)
     
     # Create config with token embedded in Authorization header
     cat > "$MCP_CONFIG_FILE" << EOF
@@ -479,7 +499,7 @@ create_mcp_config_with_token() {
       "url": "https://mcp.stackoverflow.com"
     },
     "firecrawl": {
-      "command": "npx",
+      "command": "$npx_cmd",
       "args": ["-y", "firecrawl-mcp"],
       "env": {
         "FIRECRAWL_API_KEY": "\${input:firecrawlApiKey}"
@@ -491,6 +511,9 @@ create_mcp_config_with_token() {
 EOF
     
     print_success "Created: $MCP_CONFIG_FILE"
+    if [[ "$npx_cmd" != "npx" ]]; then
+        print_info "Using npx at: ${CYAN}$npx_cmd${NC}"
+    fi
     print_info "Token embedded in config (secure file permissions recommended)"
     chmod 600 "$MCP_CONFIG_FILE" 2>/dev/null || true
 }
