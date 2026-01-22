@@ -3426,46 +3426,79 @@ amend_mode() {
 
 # Cleanup function: removes tmp and backup branches/tags at end of run
 cleanup_tmp_and_backup_refs() {
-    local backup_tags backup_branches
-    
     print_info "Scanning for temporary and backup references..."
     
-    backup_tags=$(git tag -l | grep -i 'tmp\|backup' || true)
-    # Get both local and remote branches (strip 'remotes/origin/' prefix from remote branches)
-    backup_branches=$(git branch -a | grep -i 'tmp\|backup' | sed 's/^[[:space:]]*remotes\/origin\///' | sed 's/^[[:space:]]*//' || true)
+    # Get local tags matching tmp/backup patterns
+    local local_tags
+    local_tags=$(git tag -l | grep -iE 'tmp|backup|restore' || true)
     
-    local tag_count=$(echo "$backup_tags" | grep -c . || true)
-    local branch_count=$(echo "$backup_branches" | grep -c . || true)
+    # Get local branches (excluding current branch)
+    local local_branches
+    local_branches=$(git branch --list | grep -iE 'tmp|backup|restore' | sed 's/^[* ]*//' || true)
     
-    if [[ $tag_count -eq 0 && $branch_count -eq 0 ]]; then
+    # Get remote branches (strip 'origin/' prefix)
+    local remote_branches
+    remote_branches=$(git branch -r | grep -iE 'tmp|backup|restore' | grep 'origin/' | sed 's/.*origin\///' || true)
+    
+    # Get remote tags
+    local remote_tags
+    remote_tags=$(git ls-remote --tags origin 2>/dev/null | grep -iE 'tmp|backup|restore' | sed 's/.*refs\/tags\///' | sed 's/\^{}//' | sort -u || true)
+    
+    # Count items (handle empty strings properly)
+    local local_tag_count=0 local_branch_count=0 remote_tag_count=0 remote_branch_count=0
+    [[ -n "$local_tags" ]] && local_tag_count=$(echo "$local_tags" | wc -l)
+    [[ -n "$local_branches" ]] && local_branch_count=$(echo "$local_branches" | wc -l)
+    [[ -n "$remote_tags" ]] && remote_tag_count=$(echo "$remote_tags" | wc -l)
+    [[ -n "$remote_branches" ]] && remote_branch_count=$(echo "$remote_branches" | wc -l)
+    
+    if [[ $local_tag_count -eq 0 && $local_branch_count -eq 0 && $remote_tag_count -eq 0 && $remote_branch_count -eq 0 ]]; then
         print_success "No temporary or backup references found"
         return 0
     fi
     
     echo ""
-    if [[ $tag_count -gt 0 ]]; then
-        echo "Found $tag_count backup/tmp tags:"
-        echo "$backup_tags" | sed 's/^/  - /'
+    if [[ $local_tag_count -gt 0 ]]; then
+        echo "Found $local_tag_count local backup/tmp tags:"
+        echo "$local_tags" | sed 's/^/  - /'
     fi
-    if [[ $branch_count -gt 0 ]]; then
-        echo "Found $branch_count backup/tmp branches:"
-        echo "$backup_branches" | sed 's/^/  - /'
+    if [[ $local_branch_count -gt 0 ]]; then
+        echo "Found $local_branch_count local backup/tmp branches:"
+        echo "$local_branches" | sed 's/^/  - /'
+    fi
+    if [[ $remote_tag_count -gt 0 ]]; then
+        echo "Found $remote_tag_count remote backup/tmp tags:"
+        echo "$remote_tags" | sed 's/^/  - /'
+    fi
+    if [[ $remote_branch_count -gt 0 ]]; then
+        echo "Found $remote_branch_count remote backup/tmp branches:"
+        echo "$remote_branches" | sed 's/^/  - /'
     fi
     echo ""
     
     read -u 3 -rp "Delete these references? [y/N]: " confirm_cleanup
     if [[ "$confirm_cleanup" =~ ^[Yy] ]]; then
-        if [[ $tag_count -gt 0 ]]; then
-            echo "$backup_tags" | xargs -r git tag -d 2>/dev/null || true
-            echo "$backup_tags" | xargs -r git push origin --delete
-            print_success "Deleted $tag_count tags from local and remote"
+        # Delete local tags
+        if [[ $local_tag_count -gt 0 ]]; then
+            echo "$local_tags" | xargs -r git tag -d 2>/dev/null || true
+            print_success "Deleted $local_tag_count local tags"
         fi
-        if [[ $branch_count -gt 0 ]]; then
-            # Try to delete locally if they exist, but don't fail if they're remote-only
-            echo "$backup_branches" | xargs -r git branch -D 2>/dev/null || true
-            # Delete from remote (primary deletion for remote-only branches)
-            echo "$backup_branches" | xargs -r git push origin --delete
-            print_success "Deleted $branch_count branches from local and remote"
+        
+        # Delete local branches
+        if [[ $local_branch_count -gt 0 ]]; then
+            echo "$local_branches" | xargs -r -I{} git branch -D {} 2>/dev/null || true
+            print_success "Deleted $local_branch_count local branches"
+        fi
+        
+        # Delete remote tags (only those that actually exist remotely)
+        if [[ $remote_tag_count -gt 0 ]]; then
+            echo "$remote_tags" | xargs -r -I{} git push origin --delete refs/tags/{} 2>/dev/null || true
+            print_success "Deleted $remote_tag_count remote tags"
+        fi
+        
+        # Delete remote branches (only those that actually exist remotely)
+        if [[ $remote_branch_count -gt 0 ]]; then
+            echo "$remote_branches" | xargs -r -I{} git push origin --delete {} 2>/dev/null || true
+            print_success "Deleted $remote_branch_count remote branches"
         fi
     else
         print_info "Cleanup cancelled"
