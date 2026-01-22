@@ -40,7 +40,7 @@
 
 <p align="center">
   <img alt="Stability" src="https://img.shields.io/badge/stability-experimental-orange?style=flat-square">
-  <img alt="Maintenance" src="https://img.shields.io/maintenance/yes/2025?style=flat-square">
+  <img alt="Maintenance" src="https://img.shields.io/maintenance/yes/2026?style=flat-square">
   <img alt="Shell" src="https://img.shields.io/badge/shell-bash-4EAA25?style=flat-square&logo=gnu-bash&logoColor=white">
 </p>
 
@@ -93,6 +93,9 @@ Managing multiple repositories, nested submodules, and maintaining consistent co
 - 🌐 **Network Utilities** - IP checking, port monitoring, and connectivity tools
 - 📁 **Directory Operations** - Enhanced navigation and file management
 - 🤖 **GitHub MCP Setup** - Automated GitHub MCP server configuration for VS Code with secure token management
+- 📦 **Multi-Platform Packaging** - Build tarballs, Homebrew, Snap, Debian, Nix, and Docker packages
+- 🎨 **Glamorous TUI Theming** - Charmbracelet Gum integration with matrix/hacker/cyber themes
+- 🌐 **Web Terminal** - Docker packages with ttyd for browser-based access
 - 🐳 **Devcontainer Setup** - Auto-configure rootless podman and generate optimised devcontainer.json with secure mounts
 
 ---
@@ -429,6 +432,132 @@ dc-contain
 - ✅ Guides VS Code reopening with devcontainer activation
 - ✅ Ensures configurations persist and work across sessions
 
+### Multi-Platform Packaging
+
+Build and distribute dev-control (or any bash CLI tool) across multiple platforms with glamorous TUI theming:
+
+```bash
+# Interactive mode - menu-driven package selection
+dc-package
+
+# Or run directly
+./scripts/packaging.sh
+
+# Initialize packaging configuration
+./scripts/packaging.sh --init
+
+# Build specific package types
+./scripts/packaging.sh --tarball              # Release archive (.tar.gz)
+./scripts/packaging.sh --homebrew             # Homebrew formula
+./scripts/packaging.sh --snap                 # Snap package
+./scripts/packaging.sh --debian               # Debian package (.deb)
+./scripts/packaging.sh --nix                  # Nix flake
+./scripts/packaging.sh --docker               # Docker image with ttyd web terminal
+
+# Build all packages at once
+./scripts/packaging.sh --all
+
+# Build with specific theme
+./scripts/packaging.sh --theme cyber --all
+
+# Options:
+#   --init              Create .dc-package.yaml configuration
+#   --all               Build all package types
+#   --tarball           Build release tarball with SHA256
+#   --homebrew          Generate Homebrew formula
+#   --snap              Generate Snap package config
+#   --debian            Build Debian package structure
+#   --nix               Generate Nix flake
+#   --docker            Build Docker image with ttyd web interface
+#   --theme THEME       Set UI theme (matrix, hacker, cyber)
+#   -o, --output DIR    Output directory (default: ./dist)
+#   --dry-run           Preview without building
+#   --verbose           Show detailed output
+#   --help              Show help message
+```
+
+#### Supported Package Formats
+
+| Format | Output | Install Method |
+|--------|--------|----------------|
+| **Tarball** | `.tar.gz` + SHA256 | `./install.sh` |
+| **Homebrew** | Ruby formula | `brew install` |
+| **Snap** | `snapcraft.yaml` | `snap install` |
+| **Debian** | `.deb` structure | `dpkg -i` / `apt install` |
+| **Nix** | `flake.nix` | `nix build` / `nix develop` |
+| **Docker** | `Dockerfile` + compose | `docker run` with web terminal |
+
+#### TUI Theming
+
+Packaging integrates with [Charmbracelet Gum](https://github.com/charmbracelet/gum) (see [license](https://github.com/charmbracelet/gum/blob/6045525ab92f75c169d3c69596844d8748437e37/LICENSE)) for glamorous terminal UI with 3 built-in themes:
+
+| Theme | Style | Colour |
+|-------|-------|--------|
+| **matrix** | Green fluorescent terminal | 🟢 `#00ff00` |
+| **hacker** | Orange/amber retro | 🟠 `#ff8c00` |
+| **cyber** | Blue cyberpunk neon | 🔵 `#00d4ff` |
+
+Set theme via environment variable or CLI:
+
+```bash
+# Environment variable (persists for session)
+export DC_THEME=matrix
+
+# CLI flag (per-command)
+./scripts/packaging.sh --theme hacker --docker
+
+# Docker with theme
+docker run -p 8080:8080 -e DC_THEME=cyber dev-control
+```
+
+#### Configuration File
+
+Run `--init` to create `.dc-package.yaml`:
+
+```yaml
+# .dc-package.yaml
+name: my-tool
+version: 1.0.0
+description: "My awesome CLI tool"
+homepage: https://github.com/user/repo
+license: MIT
+maintainer: "Name <email@example.com>"
+entry_point: ./main.sh
+theme: matrix
+
+include:
+  - scripts/
+  - config/
+  - docs/
+  - README.md
+  - LICENSE
+
+dependencies:
+  - git
+  - gh
+  - jq
+  - gum
+```
+
+#### Docker Web Terminal
+
+The Docker package includes [ttyd](https://github.com/tsl0922/ttyd) for browser-based terminal access:
+
+```bash
+# Build and run
+cd dist/docker
+docker build -t dev-control .
+docker run -p 8080:8080 -e DC_THEME=matrix dev-control
+
+# Access at http://localhost:8080
+
+# Or run all themed instances with docker-compose
+docker-compose --profile themed up --build
+# Matrix: http://localhost:8081
+# Hacker: http://localhost:8082
+# Cyber:  http://localhost:8083
+```
+
 ---
 
 ## 📜 Scripts
@@ -444,6 +573,19 @@ dc-contain
 | [`fix-history.sh`](../scripts/fix-history.sh) | Interactive commit history rewriting tool |
 | [`mcp-setup.sh`](../scripts/mcp-setup.sh) | GitHub & additional MCP server setup for VS Code with token management |
 | [`containerise.sh`](../scripts/containerise.sh) | Rootless podman setup and devcontainer.json generator with mount configuration |
+| [`packaging.sh`](../scripts/packaging.sh) | Multi-platform package builder with TUI theming (tarball, Homebrew, Snap, Debian, Nix, Docker) |
+| [`git-control.sh`](../scripts/git-control.sh) | Unified git operations wrapper (staging, committing, pushing, PRs) |
+
+### Shared Libraries
+
+| Library | Description |
+|---------|-------------|
+| [`lib/tui.sh`](../scripts/lib/tui.sh) | Gum-based TUI wrapper with 3 themes (matrix, hacker, cyber) and fallback support |
+| [`lib/colors.sh`](../scripts/lib/colors.sh) | ANSI colour definitions for terminal output |
+| [`lib/print.sh`](../scripts/lib/print.sh) | Formatted print functions (headers, info, success, errors) |
+| [`lib/config.sh`](../scripts/lib/config.sh) | Configuration file loading and validation |
+| [`lib/git-utils.sh`](../scripts/lib/git-utils.sh) | Git helper functions (branch detection, remote parsing) |
+| [`lib/validation.sh`](../scripts/lib/validation.sh) | Input validation utilities |
 
 ### Doc Templates
 
@@ -577,11 +719,14 @@ See also: [Code of Conduct](CODE_OF_CONDUCT.md) | [Security Policy](SECURITY.md)
 - [x] Dependabot automerge workflow
 - [x] GitHub Actions workflow for remote template initialisation
 - [x] Reusable workflow for cross-repo template loading
+- [x] Config file support for persistent preferences
+- [x] Multi-platform packaging (tarball, Homebrew, Snap, Debian, Nix, Docker)
+- [x] Glamorous TUI theming with Charmbracelet Gum
+- [x] Web terminal support via ttyd in Docker packages
 - [ ] Zsh compatibility layer
 - [ ] Fish shell support
-- [ ] GUI wrapper (optional)
+- [ ] GUI wrapper / desktop app (Tauri, Wails, or Bubble Tea)
 - [ ] Plugin system for custom alias categories
-- [ ] Config file support for persistent preferences
 
 See the [open issues](https://github.com/xaoscience/dev-control/issues) for a full list of proposed features and known issues.
 
