@@ -43,6 +43,7 @@ source "$SCRIPT_DIR/lib/git/worktree.sh"
 source "$SCRIPT_DIR/lib/git/dates.sh"
 source "$SCRIPT_DIR/lib/git/topology.sh"
 source "$SCRIPT_DIR/lib/git/harness.sh"
+source "$SCRIPT_DIR/lib/git/rewrite.sh"
 
 # Configuration
 RANGE="HEAD=10"
@@ -1792,58 +1793,8 @@ sign_mode() {
 # Drop a single commit (non-last) from history using rebase -i
 # ---------------------------------------------------------------------------
 
-# Attempt to automatically add conflicted files and continue rebase
-# mode: 'ours' or 'theirs'
-auto_add_conflicted_files() {
-    local mode="$1"
-
-    local conflict_files
-    conflict_files=$(git diff --name-only --diff-filter=U || true)
-    if [[ -z "$conflict_files" ]]; then
-        print_warning "No conflicted files found to auto-resolve"
-        return 1
-    fi
-
-    print_info "Auto-resolving ${mode} for conflicted files..."
-    for f in $conflict_files; do
-        # If file was deleted in one side, determine whether to rm or checkout
-        if [[ "$mode" == "theirs" ]]; then
-            git checkout --theirs -- "$f" 2>/dev/null || true
-        else
-            git checkout --ours -- "$f" 2>/dev/null || true
-        fi
-
-        # If the file no longer exists in the working tree, remove it, else add
-        if [[ -f "$f" || -d "$f" ]]; then
-            git add -- "$f"
-        else
-            # If file is absent, it likely should be removed
-            git rm --quiet -- "$f" 2>/dev/null || true
-        fi
-        print_info "Staged resolution for: $f"
-    done
-
-    # Try to continue rebase
-    # Use NO_EDIT_MODE to avoid editor prompts when continuing
-    if [[ "$NO_EDIT_MODE" == "true" ]]; then
-        print_info "NO_EDIT_MODE enabled: using GIT_EDITOR=':' for git rebase --continue"
-        if GIT_EDITOR=':' git rebase --continue; then
-            print_success "Rebase continued after auto-resolution"
-            return 0
-        else
-            print_warning "git rebase --continue did not finish; there may be more conflicts"
-            return 1
-        fi
-    else
-        if git rebase --continue; then
-            print_success "Rebase continued after auto-resolution"
-            return 0
-        else
-            print_warning "git rebase --continue did not finish; there may be more conflicts"
-            return 1
-        fi
-    fi
-}
+# Conflict resolution functions moved to lib/git/rewrite.sh:
+#   auto_add_conflicted_files(), auto_resolve_all_conflicts()
 
 # Prompt the user to push the currently checked-out branch (or an alternate branch)
 # Called without arguments to use current branch (default), or with branch name
@@ -1933,36 +1884,8 @@ prompt_and_push_branch() {
     fi
 }
 
-# Repeatedly attempt auto-resolution until rebase finishes or we hit an error
-auto_resolve_all_conflicts() {
-    local mode="$1"
-    local attempts=0
+# auto_resolve_all_conflicts() moved to lib/git/rewrite.sh
 
-    while true; do
-        attempts=$((attempts+1))
-        if auto_add_conflicted_files "$mode"; then
-            # git rebase --continue succeeded and rebase finished
-            return 0
-        fi
-
-        # If there are still conflicts, and attempts are within reasonable limit, continue
-        local conflicts
-        conflicts=$(git diff --name-only --diff-filter=U || true)
-        if [[ -z "$conflicts" ]]; then
-            # no conflicts remain but continuation failed => abort
-            print_error "No conflicts found but rebase did not continue cleanly"
-            return 1
-        fi
-
-        if (( attempts > 15 )); then
-            print_error "Too many auto-resolve attempts; aborting"
-            return 1
-        fi
-
-        print_info "Auto-resolve attempt $attempts complete; re-checking for new conflicts..."
-        # loop and attempt resolution of new conflicts
-    done
-}
 drop_single_commit() {
     local target_hash="$1"
     check_git_repo
