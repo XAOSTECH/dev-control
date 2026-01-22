@@ -46,10 +46,9 @@ declare -a DC_ALIASES=(
     "alias dc-aliases='${SCRIPT_DIR}/alias-loading.sh'"
     "alias dc-licenses='${SCRIPT_DIR}/licenses.sh'"
     "alias dc-lic='${SCRIPT_DIR}/licenses.sh'"
-    "alias dc-package='${SCRIPT_DIR}/packaging.sh'"
     "alias dc-pkg='${SCRIPT_DIR}/packaging.sh'"
     "alias gca-alias='${SCRIPT_DIR}/alias-loading.sh <<< A && source ~/.bashrc && echo \"Changes applied (source ~/.bashrc already done)!\"'"
-    "alias dc-help='echo \"dc-control: Main menu for all Dev-Control tools\"; echo \"dc-git: Unified git services menu\"; echo \"dc-init: Initialise repo with templates\"; echo \"dc-repo: Create GitHub repo from current folder\"; echo \"dc-pr: Create pull request from current branch\"; echo \"dc-modules: Manage git submodules\"; echo \"dc-licenses: Detect and audit licenses\"; echo \"dc-fix: Fix commit history interactively\"; echo \"dc-package: Build multi-platform packages\"; echo \"dc-aliases: Reload alias installer\"'"
+    "alias dc-help='echo \"dc-control: Main menu for all Dev-Control tools\"; echo \"dc-git: Unified git services menu\"; echo \"dc-init: Initialise repo with templates\"; echo \"dc-repo: Create GitHub repo from current folder\"; echo \"dc-pr: Create pull request from current branch\"; echo \"dc-modules: Manage git submodules\"; echo \"dc-licenses: Detect and audit licenses\"; echo \"dc-fix: Fix commit history interactively\"; echo \"dc-pkg: Build multi-platform packages\"; echo \"dc-aliases: Reload alias installer\"'"
 )
 
 # Git shortcuts
