@@ -1,0 +1,43 @@
+# Dev-Control Theme Configuration
+# Select your preferred terminal aesthetic
+#
+# Available themes:
+#   matrix  - 🟢 Green fluorescent glow (classic hacker)
+#   hacker  - 🟠 Amber/orange terminal (retro computing)
+#   cyber   - 🔵 Blue neon (cyberpunk aesthetic)
+#
+# Set theme via environment variable:
+#   export DC_THEME=matrix
+#
+# Or in this config file:
+theme: matrix
+
+# Theme customizations (override individual colors)
+# Uncomment and modify to create your own theme variant
+#
+# custom:
+#   primary: "#00ff00"
+#   secondary: "#00cc00"
+#   accent: "#39ff14"
+#   background: "#0d0d0d"
+#   foreground: "#00ff00"
+#   border: "#00ff00"
+#   cursor: "#39ff14"
+#   error: "#ff0000"
+#   success: "#00ff00"
+#   warning: "#ffff00"
+#   info: "#00ffff"
+#   prompt_indicator: "▶"
+#   border_style: "rounded"  # rounded, thick, double, normal, hidden
+
+# Gum installation preference
+# Set to true to auto-prompt for Gum installation if missing
+auto_install_gum: false
+
+# ASCII art banner style (for headers)
+# Options: box, minimal, ascii, none
+banner_style: box
+
+# Animation settings
+# Set to false to disable spinners and animations (for slower terminals)
+animations: true
