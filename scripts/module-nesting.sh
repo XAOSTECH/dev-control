@@ -33,7 +33,7 @@ set -o errtrace
 # Source shared libraries
 source "$SCRIPT_DIR/lib/colors.sh"
 source "$SCRIPT_DIR/lib/print.sh"
-source "$SCRIPT_DIR/lib/git-utils.sh"
+source "$SCRIPT_DIR/lib/git/utils.sh"
 
 # Trap errors and print useful context
 

@@ -4,7 +4,7 @@
 # Functions for cleaning up temporary branches, tags, and merged branches
 #
 # Usage:
-#   source "${SCRIPT_DIR}/lib/git-cleanup.sh"
+#   source "${SCRIPT_DIR}/lib/git/cleanup.sh"
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2024-2026 xaoscience

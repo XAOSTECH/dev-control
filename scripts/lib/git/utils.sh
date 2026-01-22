@@ -4,7 +4,7 @@
 # Common git detection and URL parsing functions
 #
 # Usage:
-#   source "${SCRIPT_DIR}/lib/git-utils.sh"
+#   source "${SCRIPT_DIR}/lib/git/utils.sh"
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2024-2026 xaoscience

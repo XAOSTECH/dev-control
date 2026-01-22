@@ -38,7 +38,7 @@ DEV_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
 # Source shared libraries
 source "$SCRIPT_DIR/lib/colors.sh"
 source "$SCRIPT_DIR/lib/print.sh"
-source "$SCRIPT_DIR/lib/git-cleanup.sh"
+source "$SCRIPT_DIR/lib/git/cleanup.sh"
 
 # Configuration
 RANGE="HEAD=10"
