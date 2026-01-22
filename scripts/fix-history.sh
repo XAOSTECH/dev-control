@@ -730,11 +730,7 @@ apply_changes() {
 # ============================================================================
 
 show_summary() {
-    echo ""
-    echo -e "${BOLD}${GREEN}╔════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${BOLD}${GREEN}║${NC}                  ${CYAN}History Fixed!${NC}                             ${BOLD}${GREEN}║${NC}"
-    echo -e "${BOLD}${GREEN}╚════════════════════════════════════════════════════════════╝${NC}"
-    echo ""
+    print_header_success "History Fixed!"
     echo -e "${BOLD}Next Steps:${NC}"
     echo -e "  1. Review changes: ${CYAN}git log --oneline -10${NC}"
     echo -e "  2. Push to remote: ${CYAN}git push --force-with-lease${NC}"
@@ -3356,11 +3352,7 @@ amend_mode() {
     # Step 3: Recreate history with all original dates
     recreate_history_with_dates
     
-    echo ""
-    echo -e "${BOLD}${GREEN}╔════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${BOLD}${GREEN}║${NC}                  ${CYAN}Complete!${NC}                             ${BOLD}${GREEN}║${NC}"
-    echo -e "${BOLD}${GREEN}╚════════════════════════════════════════════════════════════╝${NC}"
-    echo ""
+    print_header_success "Complete!"
     
     echo -e "History recreated as if nothing happened."
     echo -e "Backup available: ${CYAN}$TEMP_BACKUP${NC}"
@@ -3750,9 +3742,7 @@ REBASE_EOF
             print_success "All commits re-applied"
         fi
         
-        echo ""
-        echo -e "${BOLD}${GREEN}✓ Complete!${NC}"
-        echo ""
+        print_header_success "Complete!"
         
         # Show final history
         echo -e "${BOLD}Final history:${NC}"

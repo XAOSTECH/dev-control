@@ -1085,11 +1085,7 @@ save_project_metadata() {
 }
 
 show_summary() {
-    echo ""
-    echo -e "${BOLD}${GREEN}╔════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${BOLD}${GREEN}║${NC}                   ${CYAN}Templates Installed!${NC}                     ${BOLD}${GREEN}║${NC}"
-    echo -e "${BOLD}${GREEN}╚════════════════════════════════════════════════════════════╝${NC}"
-    echo ""
+    print_header_success "Templates Installed!"
     echo -e "${BOLD}Project:${NC} $PROJECT_NAME"
     echo -e "${BOLD}Repository:${NC} $REPO_URL"
     echo ""

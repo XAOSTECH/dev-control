@@ -63,6 +63,7 @@ USAGE:
 
 COMMANDS:
   alias, aliases     Install bash aliases (dc-aliases)
+  git                Git services menu (dc-git) - unified git workflows
   init, template     Initialize repo with templates (dc-init)
   repo, create       Create GitHub repository (dc-repo)
   pr                 Create pull request (dc-pr)
@@ -87,6 +88,7 @@ EXAMPLES:
 ALIASES:
   After running 'dc-aliases', these shortcuts are available:
     gc          - Main Dev-Control menu
+    dc-git      - Git services submenu
     dc-init     - Template loading
     dc-repo     - Repository creation
     dc-pr       - Pull request creation
@@ -111,15 +113,23 @@ EOF
 display_menu() {
     print_header "Dev-Control"
     
+    echo -e "${BOLD}Setup & Configuration${NC}"
     print_menu_item "1" "Alias Loading (dc-aliases)       - Install bash aliases"
-    print_menu_item "2" "Template Loading (dc-init)       - Initialize repo templates"
-    print_menu_item "3" "Repository Creator (dc-repo)     - Create GitHub repository"
-    print_menu_item "4" "PR Creator (dc-pr)               - Create pull request"
-    print_menu_item "5" "Module Nesting (dc-modules)      - Manage submodules"
-    print_menu_item "6" "History Fixer (dc-fix)           - Fix commit history"
-    print_menu_item "7" "License Auditor (dc-licenses)    - Audit licenses"
-    print_menu_item "8" "MCP Setup (dc-mcp)               - Setup MCP servers"
-    print_menu_item "9" "Containerise (dc-container)      - Setup devcontainer"
+    print_menu_item "2" "Git Services (dc-git)            - Unified git workflow tools"
+    echo ""
+    
+    echo -e "${BOLD}Repository Management${NC}"
+    print_menu_item "3" "Template Loading (dc-init)       - Initialize repo templates"
+    print_menu_item "4" "Repository Creator (dc-repo)     - Create GitHub repository"
+    print_menu_item "5" "PR Creator (dc-pr)               - Create pull request"
+    print_menu_item "6" "Module Nesting (dc-modules)      - Manage submodules"
+    echo ""
+    
+    echo -e "${BOLD}Maintenance & Tools${NC}"
+    print_menu_item "7" "History Fixer (dc-fix)           - Fix commit history"
+    print_menu_item "8" "License Auditor (dc-licenses)    - Audit licenses"
+    print_menu_item "9" "MCP Setup (dc-mcp)               - Setup MCP servers"
+    print_menu_item "c" "Containerise (dc-container)      - Setup devcontainer"
     print_menu_item "0" "Exit"
     echo ""
 }
@@ -133,35 +143,39 @@ run_tool() {
             check_script_exists "alias-loading.sh" && \
                 bash "$SCRIPT_DIR/alias-loading.sh" "$@"
             ;;
-        2|init|template|templates)
+        2|git|git-control)
+            check_script_exists "git-control.sh" && \
+                bash "$SCRIPT_DIR/git-control.sh" "$@"
+            ;;
+        3|init|template|templates)
             check_script_exists "template-loading.sh" && \
                 bash "$SCRIPT_DIR/template-loading.sh" "$@"
             ;;
-        3|repo|create)
+        4|repo|create)
             check_script_exists "create-repo.sh" && \
                 bash "$SCRIPT_DIR/create-repo.sh" "$@"
             ;;
-        4|pr)
+        5|pr)
             check_script_exists "create-pr.sh" && \
                 bash "$SCRIPT_DIR/create-pr.sh" "$@"
             ;;
-        5|modules|nest|nesting)
+        6|modules|nest|nesting)
             check_script_exists "module-nesting.sh" && \
                 bash "$SCRIPT_DIR/module-nesting.sh" "$@"
             ;;
-        6|fix|history)
+        7|fix|history)
             check_script_exists "fix-history.sh" && \
                 bash "$SCRIPT_DIR/fix-history.sh" "$@"
             ;;
-        7|licenses|lic)
+        8|licenses|lic)
             check_script_exists "licenses.sh" && \
                 bash "$SCRIPT_DIR/licenses.sh" "$@"
             ;;
-        8|mcp)
+        9|mcp)
             check_script_exists "mcp-setup.sh" && \
                 bash "$SCRIPT_DIR/mcp-setup.sh" "$@"
             ;;
-        9|container|containerise)
+        c|C|container|containerise)
             check_script_exists "containerise.sh" && \
                 bash "$SCRIPT_DIR/containerise.sh" "$@"
             ;;
