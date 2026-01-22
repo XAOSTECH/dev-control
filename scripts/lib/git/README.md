@@ -10,6 +10,10 @@ lib/git/
 ├── cleanup.sh    # Branch/tag cleanup utilities
 ├── worktree.sh   # Worktree discovery and sync
 ├── backup.sh     # Bundle creation and restoration
+├── dates.sh      # Date capture/restoration for history rewriting
+├── topology.sh   # Topology preservation and signing
+├── harness.sh    # Test harness for safe operations
+├── rewrite.sh    # Conflict resolution utilities
 └── README.md     # This file
 ```
 
@@ -57,6 +61,43 @@ Git bundle creation and restoration utilities.
 - `create_backup_tag()` - Tag current state
 - `push_backup_tag()` - Push tag to remote
 
+### dates.sh
+Date capture and restoration utilities for history rewriting operations. Preserves original commit timestamps when rebasing or amending commits.
+
+- `capture_all_dates()` - Capture dates from start ref to HEAD
+- `capture_dates_for_range()` - Capture dates for arbitrary git range
+- `get_commit_date()` - Get author date for single commit
+- `get_commit_dates()` - Get dates for commit range
+- `display_and_edit_dates()` - Interactive date editing UI
+- `generate_apply_dates_helper_file()` - Generate rebase exec helper script
+- `cleanup_date_helpers()` - Remove generated helper files
+- `apply_dates_from_preserve_map()` - Apply dates using topology map
+- `verify_commit_date()` - Verify date was applied correctly
+
+### topology.sh
+Git topology preservation and signing utilities. Used for recreating commit history while preserving merge structure and parent relationships.
+
+- `linearise_range_to_branch()` - Create linear branch from range (no merges)
+- `preserve_topology_range_to_branch()` - Recreate commits preserving merges
+- `preserve_and_sign_topology_range_to_branch()` - Preserve topology + prepare signing
+- `sign_commits_preserving_dates()` - Sign commits via filter-branch
+- `sign_preserved_topology_branch()` - Sign preserved branch via rebase
+- `atomic_preserve_range_to_branch()` - Deterministic preserve with immediate signing
+
+### harness.sh
+Test harness utilities for running safe git operations in temporary branches with automatic backup and verification.
+
+- `harness_post_checks()` - Verify operation results (commit absent, clean tree)
+- `harness_finish_success()` - Cleanup after successful harness run
+- `harness_restore_backup()` - Restore repository from backup bundle
+- `harness_run()` - Main harness execution entry point
+
+### rewrite.sh
+Conflict resolution utilities for automated history rewriting operations.
+
+- `auto_add_conflicted_files()` - Resolve conflicts automatically (ours/theirs)
+- `auto_resolve_all_conflicts()` - Repeatedly attempt auto-resolution until done
+
 ## Usage
 
 ```bash
@@ -70,6 +111,12 @@ source "$SCRIPT_DIR/lib/git/utils.sh"
 source "$SCRIPT_DIR/lib/git/cleanup.sh"  # depends on print.sh
 source "$SCRIPT_DIR/lib/git/worktree.sh" # depends on print.sh
 source "$SCRIPT_DIR/lib/git/backup.sh"   # depends on print.sh
+
+# For history rewriting operations (used by fix-history.sh):
+source "$SCRIPT_DIR/lib/git/dates.sh"    # depends on print.sh, colors.sh
+source "$SCRIPT_DIR/lib/git/topology.sh" # depends on print.sh
+source "$SCRIPT_DIR/lib/git/harness.sh"  # depends on print.sh
+source "$SCRIPT_DIR/lib/git/rewrite.sh"  # depends on print.sh
 ```
 
 ## Dependencies
