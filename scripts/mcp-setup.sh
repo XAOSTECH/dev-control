@@ -397,14 +397,7 @@ detect_node_bin_dir() {
     fi
 }
 
-require_gh_cli() {
-    if ! command -v gh &>/dev/null; then
-        print_error "GitHub CLI (gh) is required but not installed"
-        print_info "Install with: ${CYAN}sudo apt install gh${NC}"
-        print_info "Or visit: ${CYAN}https://cli.github.com${NC}"
-        exit 1
-    fi
-}
+# Note: require_gh_cli() is provided by sourced git-utils.sh (with auth check)
 
 # ============================================================================
 # MCP CONFIGURATION
