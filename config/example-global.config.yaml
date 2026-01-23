@@ -7,7 +7,7 @@ auto-sign-commits: true
 auto-push-after-fix: false
 license-deep-scan: false
 interactive-mode: true
-color-output: auto
+colour-output: auto
 editor: nano
 github-org: my-org
 template-set: default

@@ -685,7 +685,7 @@ copy_dirs() {
 
     # In dry-run mode we do not create the destination folders in the workspace,
     # but we do create an ephemeral COPIED_RECORD in /tmp so we can preview --prune
-    # without writing files into the repository. This keeps preview behavior
+    # without writing files into the repository. This keeps preview behaviour
     # comprehensive while remaining non-destructive.
     if [[ "$DRY_RUN" == "true" ]]; then
         # Print the workspace-level preview message only once

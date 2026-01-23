@@ -273,7 +273,7 @@ Use the action flags below to manage per-module temporary folders after module-n
 `$ROOT/.tmp/<parent>`, removes original temp folders, replaces them with directory symlinks, and appends entries to the nearest `.gitignore` (except for folders named `.tmp`).
   - Preview: `./scripts/module-nesting.sh --aggressive --dry-run /path/to/project` (reports merges, removals, and `.gitignore` changes; reports `already contains` when no change is needed)
 
-- `--dry-run` behavior
+- `--dry-run` behaviour
   - Use `--dry-run` with any flow to preview actions without modifying your workspace.
   - `.gitmodules` generation now respects `--dry-run` and will report file writes/removals; enable `DEBUG=true` to preview content snippets during a dry-run.
 
@@ -366,7 +366,7 @@ PRESERVE_TOPOLOGY=TRUE UPDATE_WORKTREES=true NO_EDIT_MODE=true AUTO_FIX_REBASE=t
 Automatically configure GitHub MCP and additional MCP servers for VS Code with secure token management:
 
 ```bash
-# Full interactive setup - initialize MCP and configure servers
+# Full interactive setup - initialise MCP and configure servers
 dc-mcp
 
 # Or run directly
@@ -382,7 +382,7 @@ dc-mcp
 ./scripts/mcp-setup.sh --show-token
 
 # Options:
-#   (no args)           Initialize MCP and select servers to install (DEFAULT)
+#   (no args)           Initialise MCP and select servers to install (DEFAULT)
 #   --config-only       Only generate MCP base configuration
 #   --test              Test GitHub MCP connection
 #   --show-token        Display current token info (masked)
@@ -443,7 +443,7 @@ dc-package
 # Or run directly
 ./scripts/packaging.sh
 
-# Initialize packaging configuration
+# Initialise packaging configuration
 ./scripts/packaging.sh --init
 
 # Build specific package types

@@ -202,9 +202,9 @@ collect_repo_info() {
 
 init_local_git() {
     if [[ ! -d ".git" ]]; then
-        print_info "Initializing local git repository..."
+        print_info "Initialising local git repository..."
         git init
-        print_success "Git initialized"
+        print_success "Git initialised"
     else
         print_info "Git repository already exists"
     fi

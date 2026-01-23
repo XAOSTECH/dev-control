@@ -151,7 +151,7 @@ harness_run() {
     git bundle create "$BUNDLE" --all
     echo "Backup bundle: $BUNDLE" | tee -a "$REPORT_FILE"
 
-    # Honor global DRY_RUN
+    # Honour global DRY_RUN
     PREV_DRY_RUN="$DRY_RUN"
     if [[ "$DRY_RUN" == "true" ]]; then
         echo "Running harness in DRY-RUN mode" | tee -a "$REPORT_FILE"

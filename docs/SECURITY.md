@@ -41,7 +41,7 @@ This security policy applies to:
 - Official releases
 - Documentation
 
-## Acknowledgments
+## Acknowledgements
 
 We appreciate responsible disclosure and will acknowledge security researchers who report valid vulnerabilities.
 

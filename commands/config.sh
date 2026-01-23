@@ -28,14 +28,14 @@ USAGE:
   gc config set <key> <value>  Set a value (project scope)
   gc config set --global <key> <value>  Set globally
   gc config edit               Open config in editor
-  gc config init               Initialize project config
+  gc config init               Initialise project config
 
 KEYS:
   default-license       Default license (MIT, GPL-3.0, etc.)
   default-branch        Default branch name
   auto-sign-commits     Sign commits with GPG (true/false)
   auto-push-after-fix   Push after history fix (true/false)
-  github-org            Default GitHub organization
+  github-org            Default GitHub organisation
   template-set          Template set (default/minimal/full)
 
 EXAMPLES:
@@ -156,7 +156,7 @@ cmd_init() {
     
     project_name=$(tui_input "Project name:" "$(basename "$project_root")")
     license=$(tui_choose "Default license:" "MIT" "Apache-2.0" "GPL-3.0" "BSD-3-Clause" "LGPL-3.0" "Unlicense")
-    github_org=$(tui_input "GitHub organization (leave empty for personal):" "")
+    github_org=$(tui_input "GitHub organisation (leave empty for personal):" "")
     
     cat > "$config_file" << EOF
 # Dev-Control project configuration

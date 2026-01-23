@@ -322,12 +322,12 @@ load_config() {
 }
 
 # ============================================================================
-# CONFIG INITIALIZATION
+# CONFIG INITIALISATION
 # ============================================================================
 
 init_config() {
     if [[ "$TUI_AVAILABLE" == "true" ]]; then
-        tui_banner "Package Configuration Setup" "Initialize your project packaging"
+        tui_banner "Package Configuration Setup" "Initialise your project packaging"
     else
         print_header "Package Configuration Setup"
     fi
@@ -677,7 +677,7 @@ parts:
     plugin: dump
     source: .
     after: [gum]
-    organize:
+    organise:
       scripts: bin/scripts
       config: bin/config
       $(basename "$PKG_ENTRY_POINT"): bin/$(basename "$PKG_ENTRY_POINT")
@@ -961,7 +961,7 @@ ENV COLORTERM="truecolor"
 EXPOSE 8080
 
 # Start ttyd with the main script
-# Theme-aware terminal colors based on DC_THEME
+# Theme-aware terminal colours based on DC_THEME
 CMD ["sh", "-c", "ttyd -p 8080 -W -t fontSize=14 -t fontFamily='JetBrains Mono, Fira Code, monospace' /app/$(basename "$PKG_ENTRY_POINT")"]
 EOF
     
@@ -1050,7 +1050,7 @@ display_menu() {
     echo ""
     print_menu_item "A" "Build ALL packages"
     print_menu_item "T" "Change theme (current: ${SELECTED_THEME:-matrix})"
-    print_menu_item "I" "Initialize/update config"
+    print_menu_item "I" "Initialise/update config"
     print_menu_item "0" "Exit"
     echo ""
 }
@@ -1155,7 +1155,7 @@ show_build_summary() {
 main() {
     parse_args "$@"
     
-    # Initialize config mode
+    # Initialise config mode
     if [[ "$INIT_CONFIG" == "true" ]]; then
         init_config
         exit 0

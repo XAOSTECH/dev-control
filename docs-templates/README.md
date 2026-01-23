@@ -64,7 +64,7 @@
 - [Roadmap](#-roadmap)
 - [Support](#-support)
 - [License](#-license)
-- [Acknowledgments](#-acknowledgments)
+- [Acknowledgements](#-acknowledgements)
 
 ---
 
@@ -234,7 +234,7 @@ Distributed under the {{LICENSE_TYPE}} License. See [`LICENSE`](LICENSE) for mor
 
 ---
 
-## 🙏 Acknowledgments
+## 🙏 Acknowledgements
 
 - {{ACKNOWLEDGMENT_1}}
 - {{ACKNOWLEDGMENT_2}}

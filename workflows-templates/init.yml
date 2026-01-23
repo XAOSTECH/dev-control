@@ -101,7 +101,7 @@ jobs:
           fi
           echo "project_name=$PROJECT_NAME" >> $GITHUB_OUTPUT
           
-          # Stability color mapping
+          # Stability colour mapping
           case "${{ inputs.stability }}" in
             experimental) echo "stability_color=orange" >> $GITHUB_OUTPUT ;;
             beta) echo "stability_color=yellow" >> $GITHUB_OUTPUT ;;

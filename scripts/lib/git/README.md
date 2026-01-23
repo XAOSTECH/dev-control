@@ -1,6 +1,6 @@
 # Git Library Modules
 
-This directory contains modular bash libraries for git operations, organized by functionality.
+This directory contains modular bash libraries for git operations, organised by functionality.
 
 ## Structure
 
@@ -41,7 +41,7 @@ Functions for cleaning up temporary branches, tags, and merged branches.
 - `cleanup_merged_branches_interactive()` - Merged branch cleanup
 
 ### worktree.sh
-Git worktree discovery and synchronization.
+Git worktree discovery and synchronisation.
 
 - `find_worktree_paths_for_branch()` - Find worktrees using branch
 - `list_all_worktrees()` - List all worktree paths

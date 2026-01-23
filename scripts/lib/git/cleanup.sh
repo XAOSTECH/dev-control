@@ -272,7 +272,7 @@ cleanup_merged_branches_interactive() {
         return 0
     fi
     
-    # Colors (use defaults if not set)
+    # Colours (use defaults if not set)
     local BOLD="${BOLD:-\033[1m}"
     local CYAN="${CYAN:-\033[36m}"
     local YELLOW="${YELLOW:-\033[33m}"
