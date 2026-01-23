@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 #
-# Dev-Control Shared Library: Colors
-# Common color definitions for terminal output
+# Dev-Control Shared Library: Colours
+# Common colour definitions for terminal output
 #
 # Usage:
 #   source "${SCRIPT_DIR}/lib/colors.sh"
 #
 
-# Text colors
+# Text colours
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -24,10 +24,10 @@ BLINK='\033[5m'
 REVERSE='\033[7m'
 
 # Reset
-NC='\033[0m'  # No Color / Reset
+NC='\033[0m'  # No Colour / Reset
 RESET='\033[0m'
 
-# Background colors
+# Background colours
 BG_RED='\033[41m'
 BG_GREEN='\033[42m'
 BG_YELLOW='\033[43m'
@@ -36,7 +36,7 @@ BG_MAGENTA='\033[45m'
 BG_CYAN='\033[46m'
 BG_WHITE='\033[47m'
 
-# High intensity colors
+# High intensity colours
 HI_RED='\033[0;91m'
 HI_GREEN='\033[0;92m'
 HI_YELLOW='\033[0;93m'

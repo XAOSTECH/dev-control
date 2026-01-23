@@ -65,7 +65,7 @@ USAGE:
 COMMANDS:
   alias, aliases     Install bash aliases (dc-aliases)
   git                Git services menu (dc-git) - unified git workflows
-  init, template     Initialize repo with templates (dc-init)
+  init, template     Initialise repo with templates (dc-init)
   repo, create       Create GitHub repository (dc-repo)
   pr                 Create pull request (dc-pr)
   modules, nest      Manage submodules (dc-modules)
@@ -124,7 +124,7 @@ display_menu() {
     echo ""
     
     echo -e "${BOLD}Repository Management${NC}"
-    print_menu_item "3" "Template Loading (dc-init)       - Initialize repo templates"
+    print_menu_item "3" "Template Loading (dc-init)       - Initialise repo templates"
     print_menu_item "4" "Repository Creator (dc-repo)     - Create GitHub repository"
     print_menu_item "5" "PR Creator (dc-pr)               - Create pull request"
     print_menu_item "6" "Module Nesting (dc-modules)      - Manage submodules"

@@ -1,7 +1,7 @@
 # {{PROJECT_NAME}}
 
 <!-- Project Shields/Badges -->
-<p align="center">
+<p align="centre">
   <a href="{{REPO_URL}}">
     <img alt="GitHub repo" src="https://img.shields.io/badge/GitHub-{{ORG_NAME}}%2F-{{REPO_SLUG}}-181717?style=for-the-badge&logo=github">
   </a>
@@ -13,7 +13,7 @@
   </a>
 </p>
 
-<p align="center">
+<p align="centre">
   <a href="{{REPO_URL}}/actions">
     <img alt="CI Status" src="https://github.com/{{ORG_NAME}}/{{REPO_SLUG}}/actions/workflows/bash-lint.yml/badge.svg?branch=Main>
   </a>
@@ -31,7 +31,7 @@
   </a>
 </p>
 
-<p align="center">
+<p align="centre">
   <img alt="Last Commit" src="https://img.shields.io/github/last-commit/{{ORG_NAME}}/{{REPO_SLUG}}?style=flat-square&logo=git&color=blue">
   <img alt="Repo Size" src="https://img.shields.io/github/repo-size/{{ORG_NAME}}/{{REPO_SLUG}}?style=flat-square&logo=files&color=teal">
   <img alt="Code Size" src="https://img.shields.io/github/languages/code-size/{{ORG_NAME}}/{{REPO_SLUG}}?style=flat-square&logo=files&color=orange">
@@ -39,14 +39,14 @@
 </p>
 
 <!-- Optional: Stability/Maturity Badge -->
-<p align="center">
+<p align="centre">
   <img alt="Stability" src="https://img.shields.io/badge/stability-{{STABILITY}}-{{STABILITY_COLOR}}?style=flat-square">
   <img alt="Maintenance" src="https://img.shields.io/maintenance/yes/{{CURRENT_YEAR}}?style=flat-square">
 </p>
 
 ---
 
-<p align="center">
+<p align="centre">
   <b>{{SHORT_DESCRIPTION}}</b>
 </p>
 
@@ -64,7 +64,7 @@
 - [Roadmap](#-roadmap)
 - [Support](#-support)
 - [License](#-license)
-- [Acknowledgments](#-acknowledgments)
+- [Acknowledgements](#-acknowledgements)
 
 ---
 
@@ -234,7 +234,7 @@ Distributed under the {{LICENSE_TYPE}} License. See [`LICENSE`](LICENSE) for mor
 
 ---
 
-## 🙏 Acknowledgments
+## 🙏 Acknowledgements
 
 - {{ACKNOWLEDGMENT_1}}
 - {{ACKNOWLEDGMENT_2}}
@@ -242,12 +242,12 @@ Distributed under the {{LICENSE_TYPE}} License. See [`LICENSE`](LICENSE) for mor
 
 ---
 
-<p align="center">
+<p align="centre">
   <a href="https://github.com/{{ORG_NAME}}">
     <img src="https://img.shields.io/badge/Made%20with%20%E2%9D%A4%EF%B8%8F%20by-{{ORG_NAME}}-red?style=for-the-badge">
   </a>
 </p>
 
-<p align="center">
+<p align="centre">
   <a href="#{{REPO_SLUG}}">⬆️ Back to Top</a>
 </p>

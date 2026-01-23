@@ -19,7 +19,7 @@ DC_BRANCH="Main"
 DEFAULT_PREFIX="$HOME/.local/share/dev-control"
 DEFAULT_BIN="$HOME/.local/bin"
 
-# Colors
+# Colours
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -261,7 +261,7 @@ show_post_install() {
     echo "  2. Run: dc --help"
     echo ""
     echo -e "${BOLD}Available Commands:${NC}"
-    echo "  dc init       - Initialize repo with templates"
+    echo "  dc init       - Initialise repo with templates"
     echo "  dc repo       - Create GitHub repository"
     echo "  dc pr         - Create pull request"
     echo "  dc fix        - Fix commit history"

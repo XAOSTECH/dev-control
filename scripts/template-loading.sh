@@ -141,11 +141,11 @@ parse_args() {
 check_git_repo() {
     # Check for local .git directory (not inherited from parent)
     if [[ ! -d ".git" ]]; then
-        print_warning "No local .git directory. Initializing..."
+        print_warning "No local .git directory. Initialising..."
         git init
         git config user.email "${GIT_EMAIL:-noreply@github.com}" 2>/dev/null || true
         git config user.name "${GIT_NAME:-User}" 2>/dev/null || true
-        print_success "Repository initialized"
+        print_success "Repository initialised"
         echo ""
     fi
 }
@@ -609,7 +609,7 @@ add_badges_after_title() {
     local badges
     badges=$(cat <<'EOF'
 
-<p align="center">
+<p align="centre">
   <a href="{{REPO_URL}}">
     <img alt="GitHub repo" src="https://img.shields.io/badge/GitHub-{{ORG_NAME}}%2F-{{REPO_SLUG}}-181717?style=for-the-badge&logo=github">
   </a>
@@ -1144,7 +1144,7 @@ main() {
     
     print_header "Dev-Control Template Loader"
     
-    # Initialize git repo if needed and get user info early
+    # Initialise git repo if needed and get user info early
     get_git_user_info
     check_git_repo
     

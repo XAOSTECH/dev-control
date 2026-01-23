@@ -4,7 +4,7 @@
 # Unified interface for all git-related workflow tools
 #
 # Provides a single entry point for:
-#   - Repository initialization (templates, licenses)
+#   - Repository initialisation (templates, licenses)
 #   - Repository creation (GitHub)
 #   - Pull request creation
 #   - History fixing and rewriting
@@ -65,7 +65,7 @@ USAGE:
   git-control.sh [COMMAND] [OPTIONS]
 
 COMMANDS:
-  init, template      Initialize repository with templates (dc-init)
+  init, template      Initialise repository with templates (dc-init)
                       Copy standardised documentation, workflows, and licenses
 
   repo, create        Create GitHub repository (dc-repo)
@@ -86,7 +86,7 @@ INTERACTIVE MODE:
   Run without arguments to use the interactive menu.
 
 WORKFLOW EXAMPLE:
-  1. Initialize templates:     git-control init
+  1. Initialise templates:     git-control init
   2. Create GitHub repo:       git-control repo
   3. Make changes and commit
   4. Create pull request:      git-control pr
@@ -126,7 +126,7 @@ display_menu() {
     print_header "Git Control"
     
     echo -e "${BOLD}Repository Setup${NC}"
-    print_menu_item "1" "Initialize Templates (dc-init)   - Copy docs, workflows, licenses"
+    print_menu_item "1" "Initialise Templates (dc-init)   - Copy docs, workflows, licenses"
     print_menu_item "2" "Create Repository (dc-repo)      - Create GitHub repository"
     echo ""
     
@@ -201,7 +201,7 @@ run_subcommand() {
 show_quick_tips() {
     echo ""
     print_section "Quick Commands:"
-    print_command_hint "Initialize repo" "dc-git init"
+    print_command_hint "Initialise repo" "dc-git init"
     print_command_hint "Create GitHub repo" "dc-git repo"
     print_command_hint "Create PR" "dc-git pr"
     print_command_hint "Fix history" "dc-git fix"

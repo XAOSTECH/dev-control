@@ -203,9 +203,9 @@ declare -a SEARCH_ALIASES=(
     "# Search and find utilities"
     "alias ff='find . -type f -name'"
     "alias fd='find . -type d -name'"
-    "alias grep='grep --color=auto'"
-    "alias egrep='egrep --color=auto'"
-    "alias fgrep='fgrep --color=auto'"
+    "alias grep='grep --colour=auto'"
+    "alias egrep='egrep --colour=auto'"
+    "alias fgrep='fgrep --colour=auto'"
     "alias rg='rg --smart-case'"
     "alias ag='ag --smart-case'"
 )

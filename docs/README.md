@@ -1,7 +1,7 @@
 # Dev-Control
 
 <!-- Project Shields/Badges -->
-<p align="center">
+<p align="centre">
   <a href="https://github.com/xaoscience/dev-control">
     <img alt="GitHub repo" src="https://img.shields.io/badge/GitHub-xaoscience%2Fdev--control-181717?style=for-the-badge&logo=github">
   </a>
@@ -13,7 +13,7 @@
   </a>
 </p>
 
-<p align="center">
+<p align="centre">
   <a href="https://github.com/xaoscience/dev-control/actions/workflows/bash-lint.yml">
     <img alt="CI Status" src="https://github.com/xaoscience/dev-control/actions/workflows/bash-lint.yml/badge.svg?branch=Main">
   </a>
@@ -31,14 +31,14 @@
   </a>
 </p>
 
-<p align="center">
+<p align="centre">
   <img alt="Last Commit" src="https://img.shields.io/github/last-commit/xaoscience/dev-control?style=flat-square&logo=git&color=blue">
   <img alt="Repo Size" src="https://img.shields.io/github/repo-size/xaoscience/dev-control?style=flat-square&logo=files&color=teal">
   <img alt="Code Size" src="https://img.shields.io/github/languages/code-size/xaoscience/dev-control?style=flat-square&logo=files&color=orange">
   <img alt="Contributors" src="https://img.shields.io/github/contributors/xaoscience/dev-control?style=flat-square&logo=github&color=green">
 </p>
 
-<p align="center">
+<p align="centre">
   <img alt="Stability" src="https://img.shields.io/badge/stability-experimental-orange?style=flat-square">
   <img alt="Maintenance" src="https://img.shields.io/maintenance/yes/2026?style=flat-square">
   <img alt="Shell" src="https://img.shields.io/badge/shell-bash-4EAA25?style=flat-square&logo=gnu-bash&logoColor=white">
@@ -46,7 +46,7 @@
 
 ---
 
-<p align="center">
+<p align="centre">
   <b>🛠️ A collection of powerful CLI tools and scripts for streamlined Git workflow, repository management, and shell productivity.</b>
 </p>
 
@@ -273,7 +273,7 @@ Use the action flags below to manage per-module temporary folders after module-n
 `$ROOT/.tmp/<parent>`, removes original temp folders, replaces them with directory symlinks, and appends entries to the nearest `.gitignore` (except for folders named `.tmp`).
   - Preview: `./scripts/module-nesting.sh --aggressive --dry-run /path/to/project` (reports merges, removals, and `.gitignore` changes; reports `already contains` when no change is needed)
 
-- `--dry-run` behavior
+- `--dry-run` behaviour
   - Use `--dry-run` with any flow to preview actions without modifying your workspace.
   - `.gitmodules` generation now respects `--dry-run` and will report file writes/removals; enable `DEBUG=true` to preview content snippets during a dry-run.
 
@@ -366,7 +366,7 @@ PRESERVE_TOPOLOGY=TRUE UPDATE_WORKTREES=true NO_EDIT_MODE=true AUTO_FIX_REBASE=t
 Automatically configure GitHub MCP and additional MCP servers for VS Code with secure token management:
 
 ```bash
-# Full interactive setup - initialize MCP and configure servers
+# Full interactive setup - initialise MCP and configure servers
 dc-mcp
 
 # Or run directly
@@ -382,7 +382,7 @@ dc-mcp
 ./scripts/mcp-setup.sh --show-token
 
 # Options:
-#   (no args)           Initialize MCP and select servers to install (DEFAULT)
+#   (no args)           Initialise MCP and select servers to install (DEFAULT)
 #   --config-only       Only generate MCP base configuration
 #   --test              Test GitHub MCP connection
 #   --show-token        Display current token info (masked)
@@ -443,7 +443,7 @@ dc-package
 # Or run directly
 ./scripts/packaging.sh
 
-# Initialize packaging configuration
+# Initialise packaging configuration
 ./scripts/packaging.sh --init
 
 # Build specific package types
@@ -745,12 +745,12 @@ Distributed under the GPL-3.0 License. See [`LICENSE`](../LICENSE) for more info
 
 ---
 
-<p align="center">
+<p align="centre">
   <a href="https://github.com/xaoscience">
     <img src="https://img.shields.io/badge/Made%20with%20%E2%9D%A4%EF%B8%8F%20by-xaoscience-red?style=for-the-badge">
   </a>
 </p>
 
-<p align="center">
+<p align="centre">
   <a href="#dev-control">⬆️ Back to Top</a>
 </p>
