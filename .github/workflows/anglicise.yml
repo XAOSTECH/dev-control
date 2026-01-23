@@ -397,6 +397,45 @@ jobs:
           
           FIXED_COUNT=0
           
+          # Case-preserving replacement function
+          # Replaces american with british while preserving the original case pattern
+          case_preserve_replace() {
+            local file="$1"
+            local american="$2"
+            local british="$3"
+            
+            # Create temp file
+            local tmpfile=$(mktemp)
+            
+            # Process line by line to preserve case and skip file references
+            while IFS= read -r line || [[ -n "$line" ]]; do
+              # Skip lines with file references (source, import, require, path patterns)
+              if echo "$line" | grep -qE '(source\s+|^\s*\.\s+|import\s+|require\s*\(|from\s+['\''"]|/[a-zA-Z0-9_-]+\.[a-z]+)'; then
+                echo "$line"
+              else
+                # Apply case-preserving replacement using perl
+                echo "$line" | perl -pe "
+                  s/\\b${american}\\b/
+                    my \$match = \$&;
+                    my \$repl = '${british}';
+                    if (\$match =~ \/^[A-Z]+\$\/) {
+                      # ALL CAPS
+                      uc(\$repl);
+                    } elsif (\$match =~ \/^[A-Z]\/) {
+                      # Title Case
+                      ucfirst(\$repl);
+                    } else {
+                      # lowercase
+                      \$repl;
+                    }
+                  /gei"
+              fi
+            done < "$file" > "$tmpfile"
+            
+            # Replace original file
+            mv "$tmpfile" "$file"
+          }
+          
           # Apply replacements
           while IFS='|' read -r american british pattern; do
             [[ -z "$american" ]] && continue
@@ -405,10 +444,9 @@ jobs:
               [[ -z "$file" ]] && continue
               
               # Check if file contains the word (case-insensitive, whole word)
-              if grep -qinw "$american" "$file" 2>/dev/null; then
-                # Apply sed replacement (case-insensitive, whole word)
-                # Use word boundaries and case-insensitive matching
-                sed -i "s/\\b${american}\\b/${british}/gI" "$file"
+              # Exclude lines with file references
+              if grep -inw "$american" "$file" 2>/dev/null | grep -qvE '(source\s+|^\s*\.\s+|import\s+|require\s*\(|from\s+['\''"]|/[a-zA-Z0-9_-]+\.[a-z]+)'; then
+                case_preserve_replace "$file" "$american" "$british"
                 echo "  ✓ Fixed in: $file"
                 FIXED_COUNT=$((FIXED_COUNT + 1))
               fi
