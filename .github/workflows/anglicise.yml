@@ -28,7 +28,8 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
+  pull-requests: write
 
 jobs:
   anglicise:
@@ -38,6 +39,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Check for American spellings
         id: check
@@ -309,16 +312,23 @@ jobs:
             ! -path "./node_modules/*" \
             ! -path "./vendor/*" \
             ! -path "./.github/workflows/*" \
-            ! -path "./workflows-templates/*" \
+            ! -path "./workflows-templates/anglicise.yml" \
             ! -path "./license-templates/*" \
             2>/dev/null | sort)
 
           echo "## British English Spelling Check" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🔍 Checking $(echo "$FILES" | wc -l) files for American spellings..." | tee -a $GITHUB_STEP_SUMMARY
+          echo ""
+
+          # Track files needing fixes
+          declare -A FILES_TO_FIX
 
           # Process each word pair
           while IFS='|' read -r american british pattern; do
             [[ -z "$american" ]] && continue
+            
+            echo "📝 Checking for: $american → $british"
             
             # Search for word (case-insensitive, whole word)
             while IFS= read -r file; do
@@ -329,11 +339,13 @@ jobs:
                 grep -vE '(/[a-zA-Z0-9_.-]+\.[a-z]{1,4}|https?://|file://)' || true)
               
               if [[ -n "$MATCHES" ]]; then
+                FILES_TO_FIX["$file"]=1
                 while IFS= read -r match; do
                   [[ -z "$match" ]] && continue
                   LINE_NUM=$(echo "$match" | cut -d: -f1)
                   LINE_CONTENT=$(echo "$match" | cut -d: -f2- | sed 's/^[[:space:]]*//' | head -c 100)
                   
+                  echo "  ❌ $file:$LINE_NUM - '$american' → '$british'"
                   ISSUE_OUTPUT+="| \`$file:$LINE_NUM\` | $american | $british | $pattern |"$'\n'
                   ISSUES_FOUND=$((ISSUES_FOUND + 1))
                 done <<< "$MATCHES"
@@ -341,16 +353,117 @@ jobs:
             done <<< "$FILES"
           done <<< "$WORD_PAIRS"
 
+          # Save word pairs for fixing step
+          echo "$WORD_PAIRS" > /tmp/word_pairs.txt
+
           # Output results
+          echo ""
           if [[ $ISSUES_FOUND -gt 0 ]]; then
+            echo "❌ Found $ISSUES_FOUND American spelling(s) in ${#FILES_TO_FIX[@]} file(s)"
+            echo "" >> $GITHUB_STEP_SUMMARY
             echo "❌ **Found $ISSUES_FOUND American spelling(s) to convert**" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "| Location | American 🇺🇸 | British 🇬🇧 | Pattern |" >> $GITHUB_STEP_SUMMARY
             echo "|----------|-------------|------------|---------|" >> $GITHUB_STEP_SUMMARY
             echo "$ISSUE_OUTPUT" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "🔧 **A pull request will be created with automatic fixes.**" >> $GITHUB_STEP_SUMMARY
             
-            echo "::error::Found $ISSUES_FOUND American spelling(s). Please convert to British English."
-            exit 1
+            echo "needs_fix=true" >> $GITHUB_OUTPUT
           else
+            echo "✅ All spellings conform to British English standards."
+            echo "" >> $GITHUB_STEP_SUMMARY
             echo "✅ **All spellings conform to British English standards.**" >> $GITHUB_STEP_SUMMARY
+            echo "needs_fix=false" >> $GITHUB_OUTPUT
           fi
+
+      - name: Apply British English fixes
+        if: steps.check.outputs.needs_fix == 'true'
+        run: |
+          echo "🔧 Applying British English conversions..."
+          
+          # Read word pairs
+          WORD_PAIRS=$(cat /tmp/word_pairs.txt)
+          
+          # Find files to fix (same criteria as check)
+          FILES=$(find . -type f \( -name "*.md" -o -name "*.sh" -o -name "*.yaml" -o -name "*.yml" -o -name "*.txt" \) \
+            ! -path "./.git/*" \
+            ! -path "./node_modules/*" \
+            ! -path "./vendor/*" \
+            ! -path "./.github/workflows/*" \
+            ! -path "./workflows-templates/anglicise.yml" \
+            ! -path "./license-templates/*" \
+            2>/dev/null)
+          
+          FIXED_COUNT=0
+          
+          # Apply replacements
+          while IFS='|' read -r american british pattern; do
+            [[ -z "$american" ]] && continue
+            
+            while IFS= read -r file; do
+              [[ -z "$file" ]] && continue
+              
+              # Check if file contains the word (case-insensitive, whole word)
+              if grep -qinw "$american" "$file" 2>/dev/null; then
+                # Apply sed replacement (case-insensitive, whole word)
+                # Use word boundaries and case-insensitive matching
+                sed -i "s/\\b${american}\\b/${british}/gI" "$file"
+                echo "  ✓ Fixed in: $file"
+                FIXED_COUNT=$((FIXED_COUNT + 1))
+              fi
+            done <<< "$FILES"
+          done <<< "$WORD_PAIRS"
+          
+          echo "✅ Applied fixes to $FIXED_COUNT file(s)"
+
+      - name: Create Pull Request
+        if: steps.check.outputs.needs_fix == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Create branch
+          BRANCH_NAME="anglicise/$(date +%Y%m%d-%H%M%S)"
+          git checkout -b "$BRANCH_NAME"
+          
+          # Stage changes
+          git add -A
+          
+          # Commit
+          git commit -m "chore: convert American spellings to British English" -m "Automated conversion of American spellings to British equivalents:" -m "- -ize → -ise (organize → organise)" -m "- -or → -our (color → colour)" -m "- -er → -re (center → centre)" -m "- -og → -ogue (catalog → catalogue)" -m "- -ense → -ence (defense → defence)" -m "- -l- → -ll- (canceled → cancelled)" -m "- gray → grey, aging → ageing, etc."
+          
+          # Push branch
+          git push origin "$BRANCH_NAME"
+          
+          # Create PR
+          gh pr create \
+            --title "chore: Convert American spellings to British English" \
+            --body "## Automated British English Conversion
+            
+            This PR automatically converts American spellings to British English equivalents.
+            
+            ### Patterns converted:
+            - \`-ize\` → \`-ise\` (organize → organise)
+            - \`-ization\` → \`-isation\` (organization → organisation)
+            - \`-or\` → \`-our\` (color → colour)
+            - \`-er\` → \`-re\` (center → centre)
+            - \`-og\` → \`-ogue\` (catalog → catalogue)
+            - \`-ense\` → \`-ence\` (defense → defence)
+            - \`-l-\` → \`-ll-\` (canceled → cancelled)
+            - Other common differences (gray → grey, aging → ageing, etc.)
+            
+            ### Review notes:
+            - All replacements use case-insensitive whole-word matching
+            - File paths, URLs, and code identifiers are preserved
+            - Please review the changes to ensure no false positives
+            
+            ---
+            *Generated by [British English Spelling Check workflow](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})*" \
+            --base "${{ github.ref_name }}" \
+            --head "$BRANCH_NAME"
+          
+          echo "✅ Pull request created successfully"
