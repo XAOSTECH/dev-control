@@ -4,10 +4,10 @@
 # Common print functions for consistent terminal output
 #
 # Usage:
-#   source "${SCRIPT_DIR}/lib/colors.sh"
+#   source "${SCRIPT_DIR}/lib/colours.sh"
 #   source "${SCRIPT_DIR}/lib/print.sh"
 #
-# Note: colors.sh must be sourced first for colors to be available
+# Note: colours.sh must be sourced first for colours to be available
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2024-2026 xaoscience
@@ -147,16 +147,16 @@ print_menu_item() {
 }
 
 # Print a simple box around text
-# Usage: print_box "text" [color]
+# Usage: print_box "text" [colour]
 print_box() {
     local text="$1"
-    local color="${2:-$CYAN}"
+    local colour="${2:-$CYAN}"
     local len=${#text}
     local width=$((len + 4))
     
-    echo -e "${color}┌$(printf '─%.0s' $(seq 1 $((width-2))))┐${NC}"
-    echo -e "${color}│${NC} $text ${color}│${NC}"
-    echo -e "${color}└$(printf '─%.0s' $(seq 1 $((width-2))))┘${NC}"
+    echo -e "${colour}┌$(printf '─%.0s' $(seq 1 $((width-2))))┐${NC}"
+    echo -e "${colour}│${NC} $text ${colour}│${NC}"
+    echo -e "${colour}└$(printf '─%.0s' $(seq 1 $((width-2))))┘${NC}"
 }
 
 # ============================================================================

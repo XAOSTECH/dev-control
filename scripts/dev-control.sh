@@ -31,7 +31,7 @@ DEV_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
 export DEV_CONTROL_DIR  # Used by sourced libraries
 
 # Source shared libraries
-source "$SCRIPT_DIR/lib/colors.sh"
+source "$SCRIPT_DIR/lib/colours.sh"
 source "$SCRIPT_DIR/lib/print.sh"
 
 # ============================================================================
@@ -65,7 +65,7 @@ USAGE:
 COMMANDS:
   alias, aliases     Install bash aliases (dc-aliases)
   git                Git services menu (dc-git) - unified git workflows
-  init, template     Initialize repo with templates (dc-init)
+  init, template     initialise repo with templates (dc-init)
   repo, create       Create GitHub repository (dc-repo)
   pr                 Create pull request (dc-pr)
   modules, nest      Manage submodules (dc-modules)
@@ -81,7 +81,7 @@ INTERACTIVE MODE:
 
 EXAMPLES:
   ./dev-control.sh                   # Interactive menu
-  ./dev-control.sh init              # Initialize templates
+  ./dev-control.sh init              # initialise templates
   ./dev-control.sh repo              # Create repository
   ./dev-control.sh pr                # Create pull request
   ./dev-control.sh fix --range HEAD=5  # Fix last 5 commits
@@ -124,7 +124,7 @@ display_menu() {
     echo ""
     
     echo -e "${BOLD}Repository Management${NC}"
-    print_menu_item "3" "Template Loading (dc-init)       - Initialize repo templates"
+    print_menu_item "3" "Template Loading (dc-init)       - initialise repo templates"
     print_menu_item "4" "Repository Creator (dc-repo)     - Create GitHub repository"
     print_menu_item "5" "PR Creator (dc-pr)               - Create pull request"
     print_menu_item "6" "Module Nesting (dc-modules)      - Manage submodules"

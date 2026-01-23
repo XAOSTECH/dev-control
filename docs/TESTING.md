@@ -2,7 +2,7 @@
 
 ## Overview
 
-Dev-Control uses [bats-core](https://github.com/bats-core/bats-core) for testing. Tests are organized by component:
+Dev-Control uses [bats-core](https://github.com/bats-core/bats-core) for testing. Tests are organised by component:
 
 ```
 tests/
@@ -143,7 +143,7 @@ jobs:
 ## Best Practices
 
 1. **Isolate tests**: Use temp directories, reset globals
-2. **Test one thing**: Each test should verify a single behavior
+2. **Test one thing**: Each test should verify a single behaviour
 3. **Use descriptive names**: `@test "gc init with --license creates LICENSE"`
 4. **Clean up**: Always remove temp files in teardown
 5. **Test edge cases**: Empty inputs, missing files, invalid args

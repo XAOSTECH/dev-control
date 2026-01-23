@@ -388,7 +388,7 @@ _edit_dates_interactive() {
     
     echo ""
     echo -e "${BOLD}Edit timestamps:${NC}"
-    echo -e "${GRAY}(Accept formats: 2025-12-18, 2025-12-18 14:30, 2025-12-18T14:30:00+01:00, or empty to skip)${NC}"
+    echo -e "${grey}(Accept formats: 2025-12-18, 2025-12-18 14:30, 2025-12-18T14:30:00+01:00, or empty to skip)${NC}"
     echo ""
     
     local commit_idx=0

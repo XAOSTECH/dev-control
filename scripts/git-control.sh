@@ -4,7 +4,7 @@
 # Unified interface for all git-related workflow tools
 #
 # Provides a single entry point for:
-#   - Repository initialization (templates, licenses)
+#   - Repository initialisation (templates, licenses)
 #   - Repository creation (GitHub)
 #   - Pull request creation
 #   - History fixing and rewriting
@@ -12,7 +12,7 @@
 #
 # Usage:
 #   ./git-control.sh                    # Interactive menu
-#   ./git-control.sh init               # Initialize repo templates
+#   ./git-control.sh init               # initialise repo templates
 #   ./git-control.sh repo               # Create GitHub repository
 #   ./git-control.sh pr                 # Create pull request
 #   ./git-control.sh fix [OPTIONS]      # Fix commit history
@@ -32,7 +32,7 @@ DEV_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
 export DEV_CONTROL_DIR  # Used by sourced libraries
 
 # Source shared libraries
-source "$SCRIPT_DIR/lib/colors.sh"
+source "$SCRIPT_DIR/lib/colours.sh"
 source "$SCRIPT_DIR/lib/print.sh"
 
 # ============================================================================
@@ -65,7 +65,7 @@ USAGE:
   git-control.sh [COMMAND] [OPTIONS]
 
 COMMANDS:
-  init, template      Initialize repository with templates (dc-init)
+  init, template      initialise repository with templates (dc-init)
                       Copy standardised documentation, workflows, and licenses
 
   repo, create        Create GitHub repository (dc-repo)
@@ -86,14 +86,14 @@ INTERACTIVE MODE:
   Run without arguments to use the interactive menu.
 
 WORKFLOW EXAMPLE:
-  1. Initialize templates:     git-control init
+  1. initialise templates:     git-control init
   2. Create GitHub repo:       git-control repo
   3. Make changes and commit
   4. Create pull request:      git-control pr
 
 EXAMPLES:
   git-control.sh                         # Interactive menu
-  git-control.sh init                    # Initialize templates
+  git-control.sh init                    # initialise templates
   git-control.sh init --batch -y         # Batch init multiple repos
   git-control.sh repo                    # Create repository
   git-control.sh pr                      # Create pull request
@@ -126,7 +126,7 @@ display_menu() {
     print_header "Git Control"
     
     echo -e "${BOLD}Repository Setup${NC}"
-    print_menu_item "1" "Initialize Templates (dc-init)   - Copy docs, workflows, licenses"
+    print_menu_item "1" "initialise Templates (dc-init)   - Copy docs, workflows, licenses"
     print_menu_item "2" "Create Repository (dc-repo)      - Create GitHub repository"
     echo ""
     
@@ -201,7 +201,7 @@ run_subcommand() {
 show_quick_tips() {
     echo ""
     print_section "Quick Commands:"
-    print_command_hint "Initialize repo" "dc-git init"
+    print_command_hint "initialise repo" "dc-git init"
     print_command_hint "Create GitHub repo" "dc-git repo"
     print_command_hint "Create PR" "dc-git pr"
     print_command_hint "Fix history" "dc-git fix"

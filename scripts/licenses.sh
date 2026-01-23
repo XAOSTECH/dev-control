@@ -24,7 +24,7 @@ DEV_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
 export DEV_CONTROL_DIR  # Used by sourced libraries
 
 # Source shared libraries
-source "$SCRIPT_DIR/lib/colors.sh"
+source "$SCRIPT_DIR/lib/colours.sh"
 source "$SCRIPT_DIR/lib/print.sh"
 source "$SCRIPT_DIR/lib/license.sh"
 source "$SCRIPT_DIR/lib/git/utils.sh"
@@ -145,11 +145,11 @@ print_license_table() {
     root_source=$(echo "$root_license" | jq -r '.source' 2>/dev/null)
     root_category=$(echo "$root_license" | jq -r '.category' 2>/dev/null)
     
-    local color="$GREEN"
-    [[ "$root_category" == "copyleft-strong" ]] && color="$YELLOW"
-    [[ "$root_spdx" == "NOASSERTION" ]] && color="$RED"
+    local colour="$GREEN"
+    [[ "$root_category" == "copyleft-strong" ]] && colour="$YELLOW"
+    [[ "$root_spdx" == "NOASSERTION" ]] && colour="$RED"
     
-    printf "%-40s ${color}%-15s${NC} %-18s %-15s\n" \
+    printf "%-40s ${colour}%-15s${NC} %-18s %-15s\n" \
         "$(basename "$TARGET_DIR") (root)" "$root_spdx" "$root_source" "$root_category"
     
     # Submodules
@@ -233,7 +233,7 @@ apply_license_template() {
     local target="$TARGET_DIR"
     local template_dir="$DEV_CONTROL_DIR/license-templates"
     
-    # Normalize license name
+    # normalise license name
     local template_file="$template_dir/$license"
     
     if [[ ! -f "$template_file" ]]; then
@@ -286,7 +286,7 @@ main() {
         exit 0
     fi
     
-    # Normalize target directory
+    # normalise target directory
     TARGET_DIR=$(cd "$TARGET_DIR" 2>/dev/null && pwd)
     
     if [[ ! -d "$TARGET_DIR" ]]; then

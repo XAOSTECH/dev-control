@@ -36,7 +36,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEV_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
 
 # Source shared libraries
-source "$SCRIPT_DIR/lib/colors.sh"
+source "$SCRIPT_DIR/lib/colours.sh"
 source "$SCRIPT_DIR/lib/print.sh"
 source "$SCRIPT_DIR/lib/git/cleanup.sh"
 source "$SCRIPT_DIR/lib/git/worktree.sh"
@@ -157,7 +157,7 @@ Options:
   --harness-drop <commit>    Run a minimal harness that drops a commit in a temporary branch,
                              creates a backup bundle and performs post-checks (safe wrapper)
   --harness-sign <range>     Run a minimal harness that re-signs commits in a range (requires GPG)
-                             (Honors global ${CYAN}--dry-run${NC} flag)
+                             (honours global ${CYAN}--dry-run${NC} flag)
   --harness-no-cleanup       Keep temporary branch after running the harness for inspection
   --no-cleanup               Skip cleanup prompt at end of operation; do not offer to delete tmp/backup refs
   --only-cleanup             Only cleanup tmp/backup tags and branches (no other operations)
@@ -170,7 +170,7 @@ Options:
   --update-worktrees         When replacing a branch, detect and safely update any local worktrees that have
                              the branch checked out (creates a bundle backup first)
   --restore                  List backup bundles and tags and interactively restore a chosen ref to a branch
-                             (Creates a restore branch and optionally resets the target branch) ${CYAN}(Honors global --dry-run flag)${NC}
+                             (Creates a restore branch and optionally resets the target branch) ${CYAN}(honours global --dry-run flag)${NC}
 
   -d, --dry-run              Show what would be changed without applying
   -s, --stash NUM            Apply specific files from stash to a commit
@@ -940,7 +940,7 @@ date="\$(echo \"\${line}\" | cut -d'|' -f2-)"
         return 0
     fi
 
-    # Fallback: dummy-edit (existing behavior) - only for non-preserved-topology runs
+    # Fallback: dummy-edit (existing behaviour) - only for non-preserved-topology runs
     print_info "Performing fallback dummy-edit date restore for HEAD"
 
     local head_new_date
@@ -960,7 +960,7 @@ date="\$(echo \"\${line}\" | cut -d'|' -f2-)"
     GIT_COMMITTER_DATE="$head_new_date" \
     git commit --amend --no-edit || { print_error "Failed to amend HEAD for date restoration"; rm -f "$dummy_file"; return 1; }
 
-    print_info "Step 3/3: Removing dummy file and finalizing amend"
+    print_info "Step 3/3: Removing dummy file and finalising amend"
     rm -f "$dummy_file"
     git rm -f "$dummy_file" 2>/dev/null || true
     GIT_AUTHOR_DATE="$head_new_date" \
@@ -1481,7 +1481,7 @@ sign_mode() {
 
     echo -e "${BOLD}Sign Mode${NC}"
     echo -e "Range: ${CYAN}$RANGE${NC}"
-    # Normalize simple ranges like HEAD=5 into HEAD=5..HEAD for clarity
+    # normalise simple ranges like HEAD=5 into HEAD=5..HEAD for clarity
     if [[ "$RANGE" != *".."* ]]; then
         RANGE="$RANGE..HEAD"
     fi
@@ -1525,7 +1525,7 @@ sign_mode() {
             print_info "PRESERVE_TOPOLOGY=true; retaining merge topology and signing directly via rebase"
             
             # DEFAULT: Skip leading signed commits, rebase from first unsigned onwards
-            # This minimizes history rewriting by not touching already-signed commits
+            # This minimises history rewriting by not touching already-signed commits
             local commit_info
             commit_info=$(git log --reverse --format="%h %G?" "$RANGE" 2>/dev/null)
             
@@ -2141,7 +2141,7 @@ restore_candidate() {
         return 0
     fi
 
-    print_error "Candidate not recognized or missing: $candidate"
+    print_error "Candidate not recognised or missing: $candidate"
     return 1
 }
 
@@ -2399,7 +2399,7 @@ main() {
         exit 0
     fi
 
-    # Normalize RANGE syntax EARLY: support 'HEAD=all' and 'HEAD=N' forms
+    # normalise RANGE syntax EARLY: support 'HEAD=all' and 'HEAD=N' forms
     # This must happen before any function (like sign_mode) uses RANGE
     if [[ -n "$RANGE" ]]; then
         # If user used HEAD=all or HEAD~all (case-insensitive), map to full history
@@ -2407,10 +2407,10 @@ main() {
             ROOT_COMMIT=$(git rev-list --max-parents=0 HEAD 2>/dev/null || true)
             if [[ -n "$ROOT_COMMIT" ]]; then
                 RANGE="$ROOT_COMMIT..HEAD"
-                print_info "Normalized RANGE to full history: $RANGE"
+                print_info "normalised RANGE to full history: $RANGE"
             fi
         else
-            # Convert HEAD=N (digits) to HEAD~N to preserve existing behavior
+            # Convert HEAD=N (digits) to HEAD~N to preserve existing behaviour
             if [[ "$RANGE" =~ ^HEAD=([0-9]+)$ ]]; then
                 RANGE="HEAD~${BASH_REMATCH[1]}"
             fi
@@ -2537,7 +2537,7 @@ main() {
             fi
 
             # Fallback: interactive list
-            print_info "Argument '$RESTORE_ARG' not recognized; showing interactive list"
+            print_info "Argument '$RESTORE_ARG' not recognised; showing interactive list"
             list_backups_and_restore
             exit 0
         else

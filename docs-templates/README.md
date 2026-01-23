@@ -1,52 +1,52 @@
 # {{PROJECT_NAME}}
 
 <!-- Project Shields/Badges -->
-<p align="center">
+<p align="centre">
   <a href="{{REPO_URL}}">
     <img alt="GitHub repo" src="https://img.shields.io/badge/GitHub-{{ORG_NAME}}%2F-{{REPO_SLUG}}-181717?style=for-the-badge&logo=github">
   </a>
   <a href="{{REPO_URL}}/releases">
-    <img alt="GitHub release" src="https://img.shields.io/github/v/release/{{ORG_NAME}}/{{REPO_SLUG}}?style=for-the-badge&logo=semantic-release&color=blue">
+    <img alt="GitHub release" src="https://img.shields.io/github/v/release/{{ORG_NAME}}/{{REPO_SLUG}}?style=for-the-badge&logo=semantic-release&colour=blue">
   </a>
   <a href="{{REPO_URL}}/blob/main/LICENSE">
-    <img alt="License" src="https://img.shields.io/github/license/{{ORG_NAME}}/{{REPO_SLUG}}?style=for-the-badge&color=green">
+    <img alt="License" src="https://img.shields.io/github/license/{{ORG_NAME}}/{{REPO_SLUG}}?style=for-the-badge&colour=green">
   </a>
 </p>
 
-<p align="center">
+<p align="centre">
   <a href="{{REPO_URL}}/actions">
     <img alt="CI Status" src="https://github.com/{{ORG_NAME}}/{{REPO_SLUG}}/actions/workflows/bash-lint.yml/badge.svg?branch=Main>
   </a>
   <a href="{{REPO_URL}}/issues">
-    <img alt="Issues" src="https://img.shields.io/github/issues/{{ORG_NAME}}/{{REPO_SLUG}}?style=flat-square&logo=github&color=yellow">
+    <img alt="Issues" src="https://img.shields.io/github/issues/{{ORG_NAME}}/{{REPO_SLUG}}?style=flat-square&logo=github&colour=yellow">
   </a>
   <a href="{{REPO_URL}}/pulls">
-    <img alt="Pull Requests" src="https://img.shields.io/github/issues-pr/{{ORG_NAME}}/{{REPO_SLUG}}?style=flat-square&logo=github&color=purple">
+    <img alt="Pull Requests" src="https://img.shields.io/github/issues-pr/{{ORG_NAME}}/{{REPO_SLUG}}?style=flat-square&logo=github&colour=purple">
   </a>
   <a href="{{REPO_URL}}/stargazers">
-    <img alt="Stars" src="https://img.shields.io/github/stars/{{ORG_NAME}}/{{REPO_SLUG}}?style=flat-square&logo=github&color=gold">
+    <img alt="Stars" src="https://img.shields.io/github/stars/{{ORG_NAME}}/{{REPO_SLUG}}?style=flat-square&logo=github&colour=gold">
   </a>
   <a href="{{REPO_URL}}/network/members">
     <img alt="Forks" src="https://img.shields.io/github/forks/{{ORG_NAME}}/{{REPO_SLUG}}?style=flat-square&logo=github">
   </a>
 </p>
 
-<p align="center">
-  <img alt="Last Commit" src="https://img.shields.io/github/last-commit/{{ORG_NAME}}/{{REPO_SLUG}}?style=flat-square&logo=git&color=blue">
-  <img alt="Repo Size" src="https://img.shields.io/github/repo-size/{{ORG_NAME}}/{{REPO_SLUG}}?style=flat-square&logo=files&color=teal">
-  <img alt="Code Size" src="https://img.shields.io/github/languages/code-size/{{ORG_NAME}}/{{REPO_SLUG}}?style=flat-square&logo=files&color=orange">
-  <img alt="Contributors" src="https://img.shields.io/github/contributors/{{ORG_NAME}}/{{REPO_SLUG}}?style=flat-square&logo=github&color=green">
+<p align="centre">
+  <img alt="Last Commit" src="https://img.shields.io/github/last-commit/{{ORG_NAME}}/{{REPO_SLUG}}?style=flat-square&logo=git&colour=blue">
+  <img alt="Repo Size" src="https://img.shields.io/github/repo-size/{{ORG_NAME}}/{{REPO_SLUG}}?style=flat-square&logo=files&colour=teal">
+  <img alt="Code Size" src="https://img.shields.io/github/languages/code-size/{{ORG_NAME}}/{{REPO_SLUG}}?style=flat-square&logo=files&colour=orange">
+  <img alt="Contributors" src="https://img.shields.io/github/contributors/{{ORG_NAME}}/{{REPO_SLUG}}?style=flat-square&logo=github&colour=green">
 </p>
 
 <!-- Optional: Stability/Maturity Badge -->
-<p align="center">
+<p align="centre">
   <img alt="Stability" src="https://img.shields.io/badge/stability-{{STABILITY}}-{{STABILITY_COLOR}}?style=flat-square">
   <img alt="Maintenance" src="https://img.shields.io/maintenance/yes/{{CURRENT_YEAR}}?style=flat-square">
 </p>
 
 ---
 
-<p align="center">
+<p align="centre">
   <b>{{SHORT_DESCRIPTION}}</b>
 </p>
 
@@ -64,7 +64,7 @@
 - [Roadmap](#-roadmap)
 - [Support](#-support)
 - [License](#-license)
-- [Acknowledgments](#-acknowledgments)
+- [acknowledgements](#-acknowledgements)
 
 ---
 
@@ -234,7 +234,7 @@ Distributed under the {{LICENSE_TYPE}} License. See [`LICENSE`](LICENSE) for mor
 
 ---
 
-## 🙏 Acknowledgments
+## 🙏 acknowledgements
 
 - {{ACKNOWLEDGMENT_1}}
 - {{ACKNOWLEDGMENT_2}}
@@ -242,12 +242,12 @@ Distributed under the {{LICENSE_TYPE}} License. See [`LICENSE`](LICENSE) for mor
 
 ---
 
-<p align="center">
+<p align="centre">
   <a href="https://github.com/{{ORG_NAME}}">
     <img src="https://img.shields.io/badge/Made%20with%20%E2%9D%A4%EF%B8%8F%20by-{{ORG_NAME}}-red?style=for-the-badge">
   </a>
 </p>
 
-<p align="center">
+<p align="centre">
   <a href="#{{REPO_SLUG}}">⬆️ Back to Top</a>
 </p>

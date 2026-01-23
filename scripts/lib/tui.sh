@@ -76,7 +76,7 @@ declare -A THEME_CYBER=(
     [border_style]="double"
 )
 
-# Current active theme colors (populated by tui_set_theme)
+# Current active theme colours (populated by tui_set_theme)
 declare -A CURRENT_THEME
 
 # ============================================================================
@@ -350,17 +350,17 @@ tui_multiselect() {
 # OUTPUT FUNCTIONS
 # ============================================================================
 
-# Styled echo with theme colors
+# Styled echo with theme colours
 # Usage: tui_echo "Message" "style"  # style: info, success, error, warning, primary
 tui_echo() {
     local message="$1"
     local style="${2:-primary}"
     
-    local color="${CURRENT_THEME[$style]}"
-    [[ -z "$color" ]] && color="${CURRENT_THEME[foreground]}"
+    local colour="${CURRENT_THEME[$style]}"
+    [[ -z "$colour" ]] && colour="${CURRENT_THEME[foreground]}"
     
     if [[ "$GUM_AVAILABLE" == "true" ]]; then
-        gum style --foreground "$color" "$message"
+        gum style --foreground "$colour" "$message"
     else
         echo "$message"
     fi
@@ -445,7 +445,7 @@ tui_banner() {
             --border-foreground "${CURRENT_THEME[border]}" \
             --foreground "${CURRENT_THEME[primary]}" \
             --bold \
-            --align center \
+            --align centre \
             --width 60 \
             --padding "1 4"
     else
@@ -463,9 +463,9 @@ tui_banner() {
 }
 
 # ============================================================================
-# INITIALIZATION
+# initialisation
 # ============================================================================
 
-# Auto-initialize on source (use || true to prevent set -e from exiting)
+# Auto-initialise on source (use || true to prevent set -e from exiting)
 check_gum || true
 tui_set_theme "${DC_THEME:-matrix}"

@@ -248,8 +248,8 @@ parse_output_flags() {
                 DC_DEBUG=true
                 shift
                 ;;
-            --no-color)
-                # Disable colors (these are used by sourcing scripts)
+            --no-colour)
+                # Disable colours (these are used by sourcing scripts)
                 NC="" RED="" GREEN="" YELLOW="" BLUE="" CYAN="" MAGENTA="" BOLD="" DIM=""
                 shift
                 ;;
@@ -262,8 +262,8 @@ parse_output_flags() {
 }
 
 # ============================================================================
-# INITIALIZATION
+# initialisation
 # ============================================================================
 
-# Auto-initialize if environment is set
+# Auto-initialise if environment is set
 init_output_mode

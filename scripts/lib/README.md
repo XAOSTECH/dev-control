@@ -6,21 +6,21 @@ reduces code duplication, and makes maintenance easier.
 
 ## Libraries
 
-### colors.sh
-ANSI color code definitions for terminal output.
+### colours.sh
+ANSI colour code definitions for terminal output.
 
 ```bash
-source "$SCRIPT_DIR/lib/colors.sh"
+source "$SCRIPT_DIR/lib/colours.sh"
 echo -e "${GREEN}Success!${NC}"
 ```
 
-**Exports:** `RED`, `GREEN`, `YELLOW`, `BLUE`, `CYAN`, `MAGENTA`, `WHITE`, `BOLD`, `DIM`, `NC`, `RESET`, background colors, etc.
+**Exports:** `RED`, `GREEN`, `YELLOW`, `BLUE`, `CYAN`, `MAGENTA`, `WHITE`, `BOLD`, `DIM`, `NC`, `RESET`, background colours, etc.
 
 ### print.sh
 Consistent print functions for headers, messages, and formatting.
 
 ```bash
-source "$SCRIPT_DIR/lib/colors.sh"  # Required first
+source "$SCRIPT_DIR/lib/colours.sh"  # Required first
 source "$SCRIPT_DIR/lib/print.sh"
 
 print_header "My Tool"
@@ -196,7 +196,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEV_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
 
 # Source shared libraries
-source "$SCRIPT_DIR/lib/colors.sh"
+source "$SCRIPT_DIR/lib/colours.sh"
 source "$SCRIPT_DIR/lib/print.sh"
 source "$SCRIPT_DIR/lib/git-utils.sh"  # Optional
 
@@ -221,7 +221,7 @@ By using shared libraries, we eliminate redundant code across all scripts:
 | Hardcoded header boxes | 10 occurrences | ~40 lines |
 | Git repo checks | 8 scripts | ~80 lines |
 | URL parsing | 5 scripts | ~50 lines |
-| Color definitions | Previously inline | ~40 lines |
+| colour definitions | Previously inline | ~40 lines |
 | Input validation | Various | ~30 lines |
 | **Total** | | **~300 lines** |
 

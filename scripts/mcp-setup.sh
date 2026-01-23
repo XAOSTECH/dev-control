@@ -14,8 +14,8 @@
 # Usage:
 #   ./mcp-setup.sh [--config-only] [--test] [--show-token] [--help]
 #   
-#   (no args)           Initialize MCP and configure servers (DEFAULT)
-#   --config-only       Initialize MCP config only
+#   (no args)           initialise MCP and configure servers (DEFAULT)
+#   --config-only       initialise MCP config only
 #   --test              Test GitHub MCP connection only
 #   --show-token        Display current GitHub token info (masked)
 #   --help              Show this help message
@@ -32,7 +32,7 @@ DEV_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
 export DEV_CONTROL_DIR  # Used by sourced libraries
 
 # Source shared libraries
-source "$SCRIPT_DIR/lib/colors.sh"
+source "$SCRIPT_DIR/lib/colours.sh"
 source "$SCRIPT_DIR/lib/print.sh"
 source "$SCRIPT_DIR/lib/git/utils.sh"
 
@@ -107,7 +107,7 @@ USAGE:
   mcp-setup.sh [OPTIONS]
 
 OPTIONS:
-  --config-only     Initialize MCP config only (no server installs)
+  --config-only     initialise MCP config only (no server installs)
   --create-pat      Create GitHub PAT and store in keyring (recommended)
   --test            Test GitHub MCP connection only
   --show-token      Display current GitHub token info (masked)
@@ -344,7 +344,7 @@ get_github_token() {
     # Try to extract from mcp.json (if it was embedded)
     if [[ -f "$MCP_CONFIG_FILE" ]] && command -v grep &>/dev/null; then
         local embedded_token
-        embedded_token=$(grep -oP '"Authorization":\s*"Bearer\s+\K[^"]+' "$MCP_CONFIG_FILE" 2>/dev/null || echo "")
+        embedded_token=$(grep -oP '"authorisation":\s*"Bearer\s+\K[^"]+' "$MCP_CONFIG_FILE" 2>/dev/null || echo "")
         # Check if it's an actual token (not a variable reference or spurious output)
         if [[ -n "$embedded_token" && "$embedded_token" != *'${'* && "$embedded_token" != *'[INFO]'* && "$embedded_token" != *'[ERROR]'* ]]; then
             echo "$embedded_token"
@@ -450,7 +450,7 @@ create_mcp_config() {
       "type": "http",
       "url": "https://api.githubcopilot.com/mcp/",
       "headers": {
-        "Authorization": "Bearer \${input:github_mcp_pat}"
+        "authorisation": "Bearer \${input:github_mcp_pat}"
       }
     },
     "stackoverflow": {
@@ -503,7 +503,7 @@ create_mcp_config_with_token() {
         firecrawl_path="$node_bin_dir:\${env:PATH}"
     fi
     
-    # Create config with token embedded in Authorization header
+    # Create config with token embedded in authorisation header
     cat > "$MCP_CONFIG_FILE" << EOF
 {
   "inputs": [
@@ -519,7 +519,7 @@ create_mcp_config_with_token() {
       "type": "http",
       "url": "https://api.githubcopilot.com/mcp/",
       "headers": {
-        "Authorization": "Bearer $token"
+        "authorisation": "Bearer $token"
       }
     },
     "stackoverflow": {

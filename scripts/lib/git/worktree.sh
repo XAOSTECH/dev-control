@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Dev-Control Shared Library: Git Worktree Utilities
-# Functions for managing and synchronizing git worktrees
+# Functions for managing and synchronising git worktrees
 #
 # Usage:
 #   source "${SCRIPT_DIR}/lib/git/worktree.sh"
@@ -36,7 +36,7 @@ find_worktree_paths_for_branch() {
             path="${line#worktree }"
         elif [[ "$line" == branch* ]]; then
             local bref=${line#branch }
-            # Normalize to refs/heads/<branch>
+            # normalise to refs/heads/<branch>
             if [[ "$bref" == "refs/heads/$branch" || "$bref" == "$branch" ]]; then
                 paths+=("$path")
             fi
@@ -83,7 +83,7 @@ get_worktree_branch() {
 }
 
 # ============================================================================
-# WORKTREE SYNCHRONIZATION
+# WORKTREE synchronisation
 # ============================================================================
 
 # Update worktrees which have the branch checked out to match origin/branch

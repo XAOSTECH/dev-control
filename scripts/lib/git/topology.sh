@@ -182,7 +182,7 @@ preserve_topology_range_to_branch() {
             last_merge_seen="false"
         fi
         
-        # Initialize timestamp for first commit or after wait
+        # initialise timestamp for first commit or after wait
         if [[ -z "$current_pr_timestamp" ]]; then
             current_pr_timestamp=$(date -u +%Y-%m-%dT%H:%M:%S+00:00)
             [[ "$TIMED_SIGN_MODE" == "true" ]] && print_info "TIMED_SIGN: Starting with timestamp: $current_pr_timestamp"

@@ -40,7 +40,7 @@ This security policy applies to:
 - Official releases
 - Documentation
 
-## Acknowledgments
+## acknowledgements
 
 We appreciate responsible disclosure and will acknowledge security researchers who report valid vulnerabilities.
 

@@ -32,7 +32,7 @@ DEV_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
 export DEV_CONTROL_DIR  # Export to avoid SC2034 warning
 
 # Source shared libraries
-source "$SCRIPT_DIR/lib/colors.sh"
+source "$SCRIPT_DIR/lib/colours.sh"
 source "$SCRIPT_DIR/lib/print.sh"
 source "$SCRIPT_DIR/lib/validation.sh"
 
@@ -566,7 +566,7 @@ install_rootless_podman() {
         sudo usermod --add-subuids 100000-165535 --add-subgids 100000-165535 "$(whoami)"
     fi
     
-    # Initialize rootless podman
+    # initialise rootless podman
     podman system migrate 2>/dev/null || true
     
     print_success "Rootless podman installed and configured"
