@@ -407,10 +407,13 @@ jobs:
             # Create temp file
             local tmpfile=$(mktemp)
             
-            # Process line by line to preserve case and skip file references
+            # Process line by line to preserve case and skip certain patterns
             while IFS= read -r line || [[ -n "$line" ]]; do
-              # Skip lines containing any filename with extension (e.g., colors.sh, config.yaml)
-              if echo "$line" | grep -qE '[a-zA-Z0-9_-]+\.[a-zA-Z]{1,4}\b'; then
+              # Skip lines containing:
+              # - Filenames with extensions (colors.sh, config.yaml)
+              # - HTML attributes (align="center", style="color:")
+              # - CLI flags (--color, --center)
+              if echo "$line" | grep -qE '([a-zA-Z0-9_-]+\.[a-zA-Z]{1,4}\b|=["'\''](center|color)|--color|--center)'; then
                 echo "$line"
               else
                 # Apply case-preserving replacement using perl
@@ -444,8 +447,8 @@ jobs:
               [[ -z "$file" ]] && continue
               
               # Check if file contains the word (case-insensitive, whole word)
-              # Exclude lines containing filenames with extensions
-              if grep -inw "$american" "$file" 2>/dev/null | grep -qvE '[a-zA-Z0-9_-]+\.[a-zA-Z]{1,4}\b'; then
+              # Exclude lines containing filenames, HTML attributes, or CLI flags
+              if grep -inw "$american" "$file" 2>/dev/null | grep -qvE '([a-zA-Z0-9_-]+\.[a-zA-Z]{1,4}\b|=["'\''](center|color)|--color|--center)'; then
                 case_preserve_replace "$file" "$american" "$british"
                 echo "  ✓ Fixed in: $file"
                 FIXED_COUNT=$((FIXED_COUNT + 1))
