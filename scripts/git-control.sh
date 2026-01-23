@@ -80,6 +80,9 @@ COMMANDS:
   licenses, lic       Audit repository licenses (dc-licenses)
                       Detect and manage licenses across submodules
 
+  rename              Rename default branch across repos (dc-rename)
+                      Batch rename Main → main for all repositories
+
   help                Show this help message
 
 INTERACTIVE MODE:
@@ -137,6 +140,7 @@ display_menu() {
     echo -e "${BOLD}Maintenance${NC}"
     print_menu_item "4" "Fix History (dc-fix)             - Rewrite commit history"
     print_menu_item "5" "License Auditor (dc-licenses)    - Audit and manage licenses"
+    print_menu_item "6" "Rename Branches (dc-rename)      - Batch rename Main → main"
     echo ""
     
     print_menu_item "h" "Help"
@@ -173,6 +177,10 @@ run_subcommand() {
             check_script_exists "licenses.sh" && \
                 bash "$SCRIPT_DIR/licenses.sh" "$@"
             ;;
+        6|rename|rename-branches|rename-branch)
+            check_script_exists "lib/git/rename.sh" && \
+                bash "$SCRIPT_DIR/lib/git/rename.sh" "$@"
+            ;;
         h|help|-h|--help)
             show_help
             ;;
@@ -206,6 +214,7 @@ show_quick_tips() {
     print_command_hint "Create PR" "dc-git pr"
     print_command_hint "Fix history" "dc-git fix"
     print_command_hint "Audit licenses" "dc-git lic"
+    print_command_hint "Rename branches" "dc-git rename"
     echo ""
 }
 
