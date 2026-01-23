@@ -203,10 +203,15 @@ collect_repo_info() {
 init_local_git() {
     if [[ ! -d ".git" ]]; then
         print_info "Initialising local git repository..."
-        git init
-        print_success "Git initialised"
+        git init -b main
+        print_success "Git initialised with main branch"
     else
         print_info "Git repository already exists"
+        # Ensure existing repo uses main branch
+        if [[ "$(git symbolic-ref --short HEAD 2>/dev/null)" == "master" ]]; then
+            git branch -m master main
+            print_info "Renamed master to main"
+        fi
     fi
 }
 

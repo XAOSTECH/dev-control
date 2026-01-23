@@ -752,7 +752,7 @@ DOCKERFILE_EOF
 
         # Add git configuration if user provided
         if [[ -n "$CFG_GITHUB_USER" && -n "$CFG_GITHUB_USER_EMAIL" ]]; then
-            local git_config_cmd="git config --global user.email ${CFG_GITHUB_USER_EMAIL} && \\\n    git config --global user.name ${CFG_GITHUB_USER}"
+            local git_config_cmd="git config --global user.email ${CFG_GITHUB_USER_EMAIL} && \\\n    git config --global user.name ${CFG_GITHUB_USER} && \\\n    git config --global init.defaultBranch main"
             
             # Add GPG config if key provided
             if [[ -n "$CFG_GPG_KEY_ID" ]]; then
