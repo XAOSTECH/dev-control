@@ -7,14 +7,14 @@ reduces code duplication, and makes maintenance easier.
 ## Libraries
 
 ### colors.sh
-ANSI color code definitions for terminal output.
+ANSI colour code definitions for terminal output.
 
 ```bash
 source "$SCRIPT_DIR/lib/colors.sh"
 echo -e "${GREEN}Success!${NC}"
 ```
 
-**Exports:** `RED`, `GREEN`, `YELLOW`, `BLUE`, `CYAN`, `MAGENTA`, `WHITE`, `BOLD`, `DIM`, `NC`, `RESET`, background colors, etc.
+**Exports:** `RED`, `GREEN`, `YELLOW`, `BLUE`, `CYAN`, `MAGENTA`, `WHITE`, `BOLD`, `DIM`, `NC`, `RESET`, background colours, etc.
 
 ### print.sh
 Consistent print functions for headers, messages, and formatting.
@@ -221,7 +221,7 @@ By using shared libraries, we eliminate redundant code across all scripts:
 | Hardcoded header boxes | 10 occurrences | ~40 lines |
 | Git repo checks | 8 scripts | ~80 lines |
 | URL parsing | 5 scripts | ~50 lines |
-| Color definitions | Previously inline | ~40 lines |
+| Colour definitions | Previously inline | ~40 lines |
 | Input validation | Various | ~30 lines |
 | **Total** | | **~300 lines** |
 

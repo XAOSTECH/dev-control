@@ -147,16 +147,16 @@ print_menu_item() {
 }
 
 # Print a simple box around text
-# Usage: print_box "text" [color]
+# Usage: print_box "text" [colour]
 print_box() {
     local text="$1"
-    local color="${2:-$CYAN}"
+    local colour="${2:-$CYAN}"
     local len=${#text}
     local width=$((len + 4))
     
-    echo -e "${color}┌$(printf '─%.0s' $(seq 1 $((width-2))))┐${NC}"
-    echo -e "${color}│${NC} $text ${color}│${NC}"
-    echo -e "${color}└$(printf '─%.0s' $(seq 1 $((width-2))))┘${NC}"
+    echo -e "${colour}┌$(printf '─%.0s' $(seq 1 $((width-2))))┐${NC}"
+    echo -e "${colour}│${NC} $text ${colour}│${NC}"
+    echo -e "${colour}└$(printf '─%.0s' $(seq 1 $((width-2))))┘${NC}"
 }
 
 # ============================================================================

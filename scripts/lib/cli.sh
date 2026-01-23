@@ -131,7 +131,7 @@ is_interactive() {
     [[ -t 0 && -t 1 ]]
 }
 
-# Check if colors should be enabled
+# Check if colours should be enabled
 # Usage: if should_use_colors; then source colors.sh
 should_use_colors() {
     [[ -t 1 ]] && [[ "${NO_COLOR:-}" != "1" ]] && [[ "${TERM:-}" != "dumb" ]]

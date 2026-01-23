@@ -2,7 +2,7 @@
 # Configuration for dc-package (packaging.sh)
 #
 # This file defines how to package dev-control for various platforms.
-# Edit this file to customize the packaging process.
+# Edit this file to customise the packaging process.
 
 name: dev-control
 version: 1.0.0

@@ -16,11 +16,11 @@ A clear and concise description of what the bug is.
 2. Run command '...'
 3. See error
 
-## ✅ Expected Behavior
+## ✅ Expected Behaviour
 
 A clear and concise description of what you expected to happen.
 
-## ❌ Actual Behavior
+## ❌ Actual Behaviour
 
 What actually happened instead.
 
