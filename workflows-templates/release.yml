@@ -285,56 +285,33 @@ jobs:
           cp LICENSE "$LIB_DIR/"
           
           # Create quick-start README
-          cat > "$LIB_DIR/INSTALL.md" << 'LIBEOF'
-# Dev-Control Library - Quick Start
-
-This is a lightweight standalone library package containing shared Bash utilities
-for TUI, terminal formatting, colors, and validation.
-
-## Installation
-
-Extract the tarball to your preferred location:
-
-```bash
-tar xzf dev-control-lib-*.tar.gz -C /usr/local/share/
-# Or to a local directory
-tar xzf dev-control-lib-*.tar.gz -C ~/.local/share/
-```
-
-## Usage
-
-In your Bash scripts:
-
-```bash
-#!/usr/bin/env bash
-
-# Set your lib path
-DC_LIB="/usr/local/share/dev-control-lib"
-
-# Source the libraries you need
-source "$DC_LIB/colors.sh"
-source "$DC_LIB/print.sh"
-
-# Now use them!
-print_header "My Script"
-print_info "Starting..."
-print_success "Done!"
-```
-
-## Available Libraries
-
-| Library | Description |
-|---------|-------------|
-| colors.sh | ANSI colour codes (RED, GREEN, BOLD, etc.) |
-| print.sh | Print functions (print_header, print_info, print_error, etc.) |
-| tui.sh | TUI helpers with Gum integration (optional gum dependency) |
-| output.sh | Output formatting (JSON, quiet, verbose modes) |
-| validation.sh | Input validation (require_var, is_valid_slug, etc.) |
-| cli.sh | CLI argument parsing helpers |
-| version.sh | Semantic version comparison utilities |
-
-See README.md for full documentation.
-LIBEOF
+          {
+            echo "# Dev-Control Library - Quick Start"
+            echo ""
+            echo "Lightweight standalone library for TUI, terminal formatting, colors, and validation."
+            echo ""
+            echo "## Installation"
+            echo ""
+            echo "    tar xzf dev-control-lib-*.tar.gz -C /usr/local/share/"
+            echo ""
+            echo "## Usage"
+            echo ""
+            echo "    source /usr/local/share/dev-control-lib-VERSION/colors.sh"
+            echo "    source /usr/local/share/dev-control-lib-VERSION/print.sh"
+            echo "    print_header \"My Script\""
+            echo ""
+            echo "## Libraries"
+            echo ""
+            echo "- colors.sh: ANSI colour codes"
+            echo "- print.sh: Print functions (print_header, print_info, etc.)"
+            echo "- tui.sh: TUI helpers with Gum integration"
+            echo "- output.sh: Output formatting"
+            echo "- validation.sh: Input validation helpers"
+            echo "- cli.sh: CLI argument parsing helpers"
+            echo "- version.sh: Version comparison utilities"
+            echo ""
+            echo "See README.md for full documentation."
+          } > "$LIB_DIR/INSTALL.md"
           
           # Create version file
           echo "${VERSION}" > "$LIB_DIR/VERSION"
