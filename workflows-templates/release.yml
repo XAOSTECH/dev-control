@@ -12,7 +12,7 @@
 #
 # RELEASE TYPES:
 #   1. Full Release (v*): Complete dev-control with CLI, scripts, plugins
-#   2. Library Release (lib-v*): Lightweight lib-only package (tui, print, colors)
+#   2. Library Release (lib-v*): Lightweight lib-only package (tui, print, colours)
 #
 # SAFEGUARDS:
 #   ✓ Version format validation (semantic versioning)
@@ -395,7 +395,7 @@ jobs:
   # Library-Only Release Job
   # ============================================================================
   # Builds and releases a lightweight lib-only package containing just the
-  # shared Bash utilities (colors, print, tui, validation, etc.) without
+  # shared Bash utilities (colours, print, tui, validation, etc.) without
   # the full dev-control CLI, git integration, or plugins.
   #
   # TRIGGERS:
@@ -403,7 +403,7 @@ jobs:
   #   - Manual dispatch with include_lib=true or lib_only=true
   #
   # USE CASE:
-  #   Projects that want to use dev-control's TUI/print/color libraries
+  #   Projects that want to use dev-control's TUI/print/colour libraries
   #   for consistent terminal output without the entire toolkit.
   # ============================================================================
 
@@ -481,7 +481,7 @@ jobs:
           # Dev-Control Library - Quick Start
           
           This is a lightweight standalone library package containing shared Bash utilities
-          for TUI, terminal formatting, colors, and validation.
+          for TUI, terminal formatting, colours, and validation.
           
           ## Installation
           
