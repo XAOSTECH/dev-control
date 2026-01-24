@@ -8,11 +8,11 @@
 # TRIGGERS:
 #   - Manual dispatch (recommended for controlled releases)
 #   - Push to tags matching v* (requires careful tagging)
-#   - Push to tags matching lib-v* (library-only release)
 #
-# RELEASE TYPES:
-#   1. Full Release (v*): Complete dev-control with CLI, scripts, plugins
-#   2. Library Release (lib-v*): Lightweight lib-only package (tui, print, colors)
+# ARTIFACTS:
+#   Each release includes two tarballs:
+#   1. dev-control-X.Y.Z.tar.gz     - Full toolkit (~180KB)
+#   2. dev-control-lib-X.Y.Z.tar.gz - Lib-only (~27KB)
 #
 # SAFEGUARDS:
 #   ✓ Version format validation (semantic versioning)
@@ -23,24 +23,22 @@
 #
 # WHAT IT DOES:
 #   1. Validates version format and commit count
-#   2. Builds tarball using packaging.sh
-#   3. Creates GitHub release with tarball attached
-#   4. Updates 'latest' tag to point to new release
-#   5. Generates release notes from commits
-#   6. (Optional) Builds and releases lib-only package
+#   2. Builds full tarball using packaging.sh
+#   3. Builds lightweight lib-only tarball
+#   4. Creates GitHub release with both tarballs attached
+#   5. Updates 'latest' tag to point to new release
+#   6. Generates release notes from commits
 #
-# LIBRARY-ONLY RELEASE:
-#   The lib release creates a lightweight package containing only:
+# LIB-ONLY TARBALL:
+#   A lightweight package containing only shared Bash utilities:
 #   - colors.sh, print.sh, tui.sh, output.sh, validation.sh, cli.sh, version.sh
 #   
 #   Use cases:
 #   - Projects wanting TUI/print utilities without full toolkit
 #   - Consistent terminal formatting without git/gh dependencies
 #   
-#   Trigger methods:
-#   - Push tag: git tag -a lib-v1.0.0 -m "Lib release v1.0.0" && git push origin lib-v1.0.0
-#   - Manual: Run workflow with include_lib=true (both releases)
-#   - Manual: Run workflow with lib_only=true (lib only)
+#   Installation:
+#   curl -fsSL https://github.com/.../releases/download/vX.Y.Z/dev-control-lib-X.Y.Z.tar.gz | tar xz
 #
 # RECOMMENDED WORKFLOW:
 #
@@ -71,7 +69,6 @@ on:
   push:
     tags:
       - 'v*'
-      - 'lib-v*'
   workflow_dispatch:
     inputs:
       version:
@@ -88,13 +85,8 @@ on:
         required: false
         type: boolean
         default: false
-      include_lib:
-        description: 'Also release standalone lib package (dev-control-lib)'
-        required: false
-        type: boolean
-        default: false
-      lib_only:
-        description: 'Release ONLY the lib package (skip main release)'
+      skip_lib:
+        description: 'Skip building lib-only tarball'
         required: false
         type: boolean
         default: false
@@ -108,8 +100,6 @@ env:
 jobs:
   release:
     runs-on: ubuntu-latest
-    # Skip main release if lib_only is set
-    if: ${{ github.event.inputs.lib_only != 'true' && !startsWith(github.ref, 'refs/tags/lib-') }}
     
     steps:
       - name: Checkout repository
@@ -260,27 +250,131 @@ jobs:
           sudo mv /tmp/gum /usr/local/bin/
           echo "✅ Installed Gum v${GUM_VERSION}"
 
-      - name: Build tarball
+      - name: Build full tarball
         run: |
           chmod +x scripts/packaging.sh scripts/lib/*.sh 2>/dev/null || true
           bash scripts/packaging.sh --tarball --verbose
-          echo "✅ Tarball built successfully"
+          echo "✅ Full tarball built successfully"
+
+      - name: Build lib-only tarball
+        if: ${{ github.event.inputs.skip_lib != 'true' }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          LIB_NAME="dev-control-lib-${VERSION}"
+          LIB_DIR="dist/${LIB_NAME}"
+          
+          mkdir -p "$LIB_DIR"
+          
+          echo "📦 Building lib-only package: ${LIB_NAME}"
+          
+          # Copy library files (flatten structure for easy sourcing)
+          cp scripts/lib/colors.sh "$LIB_DIR/"
+          cp scripts/lib/print.sh "$LIB_DIR/"
+          cp scripts/lib/tui.sh "$LIB_DIR/"
+          cp scripts/lib/output.sh "$LIB_DIR/"
+          cp scripts/lib/validation.sh "$LIB_DIR/"
+          cp scripts/lib/cli.sh "$LIB_DIR/"
+          cp scripts/lib/version.sh "$LIB_DIR/"
+          cp scripts/lib/README.md "$LIB_DIR/"
+          
+          # Copy config files (if tui theming needed)
+          mkdir -p "$LIB_DIR/config"
+          cp config/theme.yaml "$LIB_DIR/config/" 2>/dev/null || true
+          
+          # Copy LICENSE
+          cp LICENSE "$LIB_DIR/"
+          
+          # Create quick-start README
+          cat > "$LIB_DIR/INSTALL.md" << 'LIBEOF'
+# Dev-Control Library - Quick Start
+
+This is a lightweight standalone library package containing shared Bash utilities
+for TUI, terminal formatting, colors, and validation.
+
+## Installation
+
+Extract the tarball to your preferred location:
+
+```bash
+tar xzf dev-control-lib-*.tar.gz -C /usr/local/share/
+# Or to a local directory
+tar xzf dev-control-lib-*.tar.gz -C ~/.local/share/
+```
+
+## Usage
+
+In your Bash scripts:
+
+```bash
+#!/usr/bin/env bash
+
+# Set your lib path
+DC_LIB="/usr/local/share/dev-control-lib"
+
+# Source the libraries you need
+source "$DC_LIB/colors.sh"
+source "$DC_LIB/print.sh"
+
+# Now use them!
+print_header "My Script"
+print_info "Starting..."
+print_success "Done!"
+```
+
+## Available Libraries
+
+| Library | Description |
+|---------|-------------|
+| colors.sh | ANSI colour codes (RED, GREEN, BOLD, etc.) |
+| print.sh | Print functions (print_header, print_info, print_error, etc.) |
+| tui.sh | TUI helpers with Gum integration (optional gum dependency) |
+| output.sh | Output formatting (JSON, quiet, verbose modes) |
+| validation.sh | Input validation (require_var, is_valid_slug, etc.) |
+| cli.sh | CLI argument parsing helpers |
+| version.sh | Semantic version comparison utilities |
+
+See README.md for full documentation.
+LIBEOF
+          
+          # Create version file
+          echo "${VERSION}" > "$LIB_DIR/VERSION"
+          
+          # Create tarball
+          cd dist
+          tar czf "${LIB_NAME}.tar.gz" "${LIB_NAME}"
+          sha256sum "${LIB_NAME}.tar.gz" > "${LIB_NAME}.tar.gz.sha256"
+          cd ..
+          
+          echo "✅ Lib tarball built: dist/${LIB_NAME}.tar.gz"
 
       - name: List build artifacts
         run: |
+          VERSION="${{ steps.version.outputs.version }}"
           echo "📦 Build artifacts:"
           ls -la dist/
           
-          # Get tarball path and checksum
-          TARBALL=$(ls dist/*.tar.gz 2>/dev/null | head -1)
+          # Get full tarball info
+          TARBALL=$(ls dist/dev-control-${VERSION}.tar.gz 2>/dev/null || ls dist/*.tar.gz 2>/dev/null | grep -v lib | head -1)
           if [[ -n "$TARBALL" ]]; then
             echo "tarball_path=${TARBALL}" >> $GITHUB_ENV
             echo "tarball_name=$(basename "$TARBALL")" >> $GITHUB_ENV
             
             if [[ -f "${TARBALL}.sha256" ]]; then
-              SHA256=$(cat "${TARBALL}.sha256")
+              SHA256=$(cat "${TARBALL}.sha256" | awk '{print $1}')
               echo "tarball_sha256=${SHA256}" >> $GITHUB_ENV
-              echo "🔐 SHA256: ${SHA256}"
+              echo "🔐 Full tarball SHA256: ${SHA256}"
+            fi
+          fi
+          
+          # Get lib tarball info
+          LIB_TARBALL="dist/dev-control-lib-${VERSION}.tar.gz"
+          if [[ -f "$LIB_TARBALL" ]]; then
+            echo "lib_tarball_name=dev-control-lib-${VERSION}.tar.gz" >> $GITHUB_ENV
+            
+            if [[ -f "${LIB_TARBALL}.sha256" ]]; then
+              LIB_SHA256=$(cat "${LIB_TARBALL}.sha256" | awk '{print $1}')
+              echo "lib_tarball_sha256=${LIB_SHA256}" >> $GITHUB_ENV
+              echo "🔐 Lib tarball SHA256: ${LIB_SHA256}"
             fi
           fi
 
@@ -315,11 +409,22 @@ jobs:
           
           ## Installation
           
-          ### Quick Install (tarball)
+          ### Full Toolkit (tarball)
           \`\`\`bash
           curl -fsSL https://github.com/$GITHUB_REPOSITORY/releases/download/${TAG_NAME}/${tarball_name} | tar xz
           cd dev-control-${VERSION}
           ./install.sh
+          \`\`\`
+          
+          ### Library Only (lightweight)
+          For projects that only need the TUI/print/color utilities (~27KB vs ~180KB):
+          \`\`\`bash
+          curl -fsSL https://github.com/$GITHUB_REPOSITORY/releases/download/${TAG_NAME}/${lib_tarball_name} | tar xz
+          
+          # Then in your scripts:
+          source "./dev-control-lib-${VERSION}/colors.sh"
+          source "./dev-control-lib-${VERSION}/print.sh"
+          print_header "My Script"
           \`\`\`
           
           ### Homebrew (coming soon)
@@ -333,6 +438,7 @@ jobs:
           | File | SHA256 |
           |------|--------|
           | ${tarball_name} | \`${tarball_sha256}\` |
+          | ${lib_tarball_name} | \`${lib_tarball_sha256}\` |
           
           ---
           
@@ -384,295 +490,14 @@ jobs:
           echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
           echo "| Version | ${VERSION} |" >> $GITHUB_STEP_SUMMARY
           echo "| Tag | ${TAG_NAME} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Tarball | ${tarball_name} |" >> $GITHUB_STEP_SUMMARY
-          echo "| SHA256 | \`${tarball_sha256:0:16}...\` |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "| Package | File | SHA256 |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Full Toolkit | ${tarball_name} | \`${tarball_sha256:0:16}...\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Library Only | ${lib_tarball_name} | \`${lib_tarball_sha256:0:16}...\` |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Links" >> $GITHUB_STEP_SUMMARY
           echo "- [Release](https://github.com/$GITHUB_REPOSITORY/releases/tag/${TAG_NAME})" >> $GITHUB_STEP_SUMMARY
-          echo "- [Download](https://github.com/$GITHUB_REPOSITORY/releases/download/${TAG_NAME}/${tarball_name})" >> $GITHUB_STEP_SUMMARY
-
-  # ============================================================================
-  # Library-Only Release Job
-  # ============================================================================
-  # Builds and releases a lightweight lib-only package containing just the
-  # shared Bash utilities (colors, print, tui, validation, etc.) without
-  # the full dev-control CLI, git integration, or plugins.
-  #
-  # TRIGGERS:
-  #   - Push to tags matching lib-v* (e.g., lib-v0.2.0)
-  #   - Manual dispatch with include_lib=true or lib_only=true
-  #
-  # USE CASE:
-  #   Projects that want to use dev-control's TUI/print/color libraries
-  #   for consistent terminal output without the entire toolkit.
-  # ============================================================================
-
-  release-lib:
-    runs-on: ubuntu-latest
-    # Run when: lib-v* tag pushed, OR include_lib=true, OR lib_only=true
-    if: |
-      startsWith(github.ref, 'refs/tags/lib-v') ||
-      github.event.inputs.include_lib == 'true' ||
-      github.event.inputs.lib_only == 'true'
-    
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Determine lib version
-        id: lib_version
-        run: |
-          if [[ "${{ github.event_name }}" == "push" && "$GITHUB_REF" == refs/tags/lib-v* ]]; then
-            # Extract version from lib-v* tag
-            VERSION="${GITHUB_REF#refs/tags/lib-v}"
-            TAG_NAME="${GITHUB_REF#refs/tags/}"
-          else
-            # Use main version input for lib release
-            VERSION="${{ github.event.inputs.version }}"
-            TAG_NAME="lib-v${VERSION}"
-          fi
-          
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
-          echo "tag_name=${TAG_NAME}" >> $GITHUB_OUTPUT
-          echo "📦 Lib release version: ${VERSION}"
-          echo "🏷️ Lib tag: ${TAG_NAME}"
-
-      - name: Validate version format
-        run: |
-          VERSION="${{ steps.lib_version.outputs.version }}"
-          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+)?$ ]]; then
-            echo "❌ Invalid version format: $VERSION"
-            echo "Expected: X.Y.Z or X.Y.Z-suffix (e.g., 1.0.0, 2.1.0-beta)"
-            exit 1
-          fi
-          echo "✅ Lib version format valid: $VERSION"
-
-      - name: Build lib-only tarball
-        run: |
-          VERSION="${{ steps.lib_version.outputs.version }}"
-          LIB_NAME="dev-control-lib-${VERSION}"
-          LIB_DIR="dist/${LIB_NAME}"
-          
-          mkdir -p "$LIB_DIR"
-          
-          echo "📦 Building lib-only package: ${LIB_NAME}"
-          
-          # Copy library files (flatten structure for easy sourcing)
-          cp scripts/lib/colors.sh "$LIB_DIR/"
-          cp scripts/lib/print.sh "$LIB_DIR/"
-          cp scripts/lib/tui.sh "$LIB_DIR/"
-          cp scripts/lib/output.sh "$LIB_DIR/"
-          cp scripts/lib/validation.sh "$LIB_DIR/"
-          cp scripts/lib/cli.sh "$LIB_DIR/"
-          cp scripts/lib/version.sh "$LIB_DIR/"
-          cp scripts/lib/README.md "$LIB_DIR/"
-          
-          # Copy config files (if tui theming needed)
-          mkdir -p "$LIB_DIR/config"
-          cp config/theme.yaml "$LIB_DIR/config/" 2>/dev/null || true
-          
-          # Copy LICENSE
-          cp LICENSE "$LIB_DIR/"
-          
-          # Create quick-start README
-          cat > "$LIB_DIR/INSTALL.md" << 'LIBEOF'
-          # Dev-Control Library - Quick Start
-          
-          This is a lightweight standalone library package containing shared Bash utilities
-          for TUI, terminal formatting, colors, and validation.
-          
-          ## Installation
-          
-          Extract the tarball to your preferred location:
-          
-          ```bash
-          tar xzf dev-control-lib-*.tar.gz -C /usr/local/share/
-          # Or to a local directory
-          tar xzf dev-control-lib-*.tar.gz -C ~/.local/share/
-          ```
-          
-          ## Usage
-          
-          In your Bash scripts:
-          
-          ```bash
-          #!/usr/bin/env bash
-          
-          # Set your lib path
-          DC_LIB="/usr/local/share/dev-control-lib"
-          
-          # Source the libraries you need
-          source "$DC_LIB/colors.sh"
-          source "$DC_LIB/print.sh"
-          
-          # Now use them!
-          print_header "My Script"
-          print_info "Starting..."
-          print_success "Done!"
-          ```
-          
-          ## Available Libraries
-          
-          | Library | Description |
-          |---------|-------------|
-          | colors.sh | ANSI colour codes (RED, GREEN, BOLD, etc.) |
-          | print.sh | Print functions (print_header, print_info, print_error, etc.) |
-          | tui.sh | TUI helpers with Gum integration (optional gum dependency) |
-          | output.sh | Output formatting (JSON, quiet, verbose modes) |
-          | validation.sh | Input validation (require_var, is_valid_slug, etc.) |
-          | cli.sh | CLI argument parsing helpers |
-          | version.sh | Semantic version comparison utilities |
-          
-          See README.md for full documentation.
-          LIBEOF
-          
-          # Create version file
-          echo "${VERSION}" > "$LIB_DIR/VERSION"
-          
-          # Create tarball
-          cd dist
-          tar czf "${LIB_NAME}.tar.gz" "${LIB_NAME}"
-          sha256sum "${LIB_NAME}.tar.gz" > "${LIB_NAME}.tar.gz.sha256"
-          cd ..
-          
-          echo "✅ Lib tarball built: dist/${LIB_NAME}.tar.gz"
-          ls -la dist/
-
-      - name: Set artifact info
-        run: |
-          VERSION="${{ steps.lib_version.outputs.version }}"
-          LIB_TARBALL="dist/dev-control-lib-${VERSION}.tar.gz"
-          
-          echo "lib_tarball_path=${LIB_TARBALL}" >> $GITHUB_ENV
-          echo "lib_tarball_name=dev-control-lib-${VERSION}.tar.gz" >> $GITHUB_ENV
-          
-          if [[ -f "${LIB_TARBALL}.sha256" ]]; then
-            LIB_SHA256=$(cat "${LIB_TARBALL}.sha256" | awk '{print $1}')
-            echo "lib_tarball_sha256=${LIB_SHA256}" >> $GITHUB_ENV
-            echo "🔐 Lib SHA256: ${LIB_SHA256}"
-          fi
-
-      - name: Generate lib release notes
-        id: lib_release_notes
-        run: |
-          VERSION="${{ steps.lib_version.outputs.version }}"
-          TAG_NAME="${{ steps.lib_version.outputs.tag_name }}"
-          
-          NOTES_FILE=$(mktemp)
-          
-          cat > "$NOTES_FILE" << EOF
-          ## Dev-Control Library v${VERSION}
-          
-          Lightweight standalone Bash library for TUI, terminal formatting, and utilities.
-          
-          **This package contains ONLY the shared libraries** - no CLI, git integration, or plugins.
-          Perfect for projects that want consistent terminal output without the full dev-control toolkit.
-          
-          ## Quick Install
-          
-          \`\`\`bash
-          # Download and extract
-          curl -fsSL https://github.com/$GITHUB_REPOSITORY/releases/download/${TAG_NAME}/${lib_tarball_name} | tar xz
-          
-          # Use in your scripts
-          source "./dev-control-lib-${VERSION}/colors.sh"
-          source "./dev-control-lib-${VERSION}/print.sh"
-          
-          print_header "My Script"
-          print_success "Ready to go!"
-          \`\`\`
-          
-          ## What's Included
-          
-          | Library | Description |
-          |---------|-------------|
-          | \`colors.sh\` | ANSI colour codes (RED, GREEN, BOLD, etc.) |
-          | \`print.sh\` | Print functions (print_header, print_info, print_error, etc.) |
-          | \`tui.sh\` | TUI helpers with optional Gum integration |
-          | \`output.sh\` | Output formatting (JSON, quiet, verbose modes) |
-          | \`validation.sh\` | Input validation helpers |
-          | \`cli.sh\` | CLI argument parsing utilities |
-          | \`version.sh\` | Semantic version comparison |
-          
-          ## Dependencies
-          
-          - **Required:** Bash 4.0+
-          - **Optional:** [Gum](https://github.com/charmbracelet/gum) for enhanced TUI features
-          
-          ## Checksums
-          
-          | File | SHA256 |
-          |------|--------|
-          | ${lib_tarball_name} | \`${lib_tarball_sha256}\` |
-          
-          ---
-          
-          **Full dev-control release:** See [v${VERSION}](https://github.com/$GITHUB_REPOSITORY/releases/tag/v${VERSION}) for the complete toolkit.
-          EOF
-          
-          echo "notes_file=${NOTES_FILE}" >> $GITHUB_OUTPUT
-          echo "📝 Lib release notes generated"
-
-      - name: Create lib tag (manual dispatch only)
-        if: github.event_name == 'workflow_dispatch'
-        run: |
-          TAG_NAME="${{ steps.lib_version.outputs.tag_name }}"
-          
-          # Check if tag already exists
-          if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
-            echo "⚠️ Tag $TAG_NAME already exists, skipping tag creation"
-          else
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git tag -a "$TAG_NAME" -m "Library release $TAG_NAME"
-            git push origin "$TAG_NAME"
-            echo "✅ Created and pushed lib tag: $TAG_NAME"
-          fi
-
-      - name: Create GitHub Release for lib
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.lib_version.outputs.tag_name }}
-          name: "Dev-Control Library ${{ steps.lib_version.outputs.tag_name }}"
-          body_path: ${{ steps.lib_release_notes.outputs.notes_file }}
-          draft: ${{ github.event.inputs.draft || false }}
-          prerelease: ${{ github.event.inputs.prerelease || false }}
-          files: |
-            dist/dev-control-lib-*.tar.gz
-            dist/dev-control-lib-*.sha256
-          fail_on_unmatched_files: false
-          generate_release_notes: false
-
-      - name: Update 'lib-latest' tag
-        run: |
-          TAG_NAME="${{ steps.lib_version.outputs.tag_name }}"
-          
-          # Delete existing 'lib-latest' tag (local and remote)
-          git tag -d lib-latest 2>/dev/null || true
-          git push origin :refs/tags/lib-latest 2>/dev/null || true
-          
-          # Create new 'lib-latest' tag pointing to this release
-          git tag lib-latest "$TAG_NAME"
-          git push origin lib-latest
-          
-          echo "✅ Updated 'lib-latest' tag to point to ${TAG_NAME}"
-
-      - name: Lib Release Summary
-        run: |
-          VERSION="${{ steps.lib_version.outputs.version }}"
-          TAG_NAME="${{ steps.lib_version.outputs.tag_name }}"
-          
-          echo "## 📚 Library Release Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
-          echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Version | ${VERSION} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Tag | ${TAG_NAME} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Tarball | ${lib_tarball_name} |" >> $GITHUB_STEP_SUMMARY
-          echo "| SHA256 | \`${lib_tarball_sha256:0:16}...\` |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Links" >> $GITHUB_STEP_SUMMARY
-          echo "- [Lib Release](https://github.com/$GITHUB_REPOSITORY/releases/tag/${TAG_NAME})" >> $GITHUB_STEP_SUMMARY
-          echo "- [Download](https://github.com/$GITHUB_REPOSITORY/releases/download/${TAG_NAME}/${lib_tarball_name})" >> $GITHUB_STEP_SUMMARY
+          echo "- [Full Toolkit](https://github.com/$GITHUB_REPOSITORY/releases/download/${TAG_NAME}/${tarball_name})" >> $GITHUB_STEP_SUMMARY
+          echo "- [Library Only](https://github.com/$GITHUB_REPOSITORY/releases/download/${TAG_NAME}/${lib_tarball_name})" >> $GITHUB_STEP_SUMMARY
