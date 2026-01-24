@@ -1,0 +1,49 @@
+# Dev-Control Library-Only Packaging Configuration
+# 
+# This configuration is for building a lightweight standalone library package
+# that includes only the shared Bash utilities (tui, print, colors, validation, etc.)
+# without the full dev-control CLI, git integration, or plugins.
+#
+# Use Case: Projects that want to use dev-control's TUI/print/color libraries
+# for consistent terminal output without pulling in the entire toolkit.
+#
+# Installation (library users):
+#   curl -fsSL https://github.com/xaoscience/dev-control/releases/download/lib-v0.2.0/dev-control-lib-0.2.0.tar.gz | tar xz
+#   # Then in your scripts:
+#   source "/path/to/dev-control-lib/colors.sh"
+#   source "/path/to/dev-control-lib/print.sh"
+
+name: dev-control-lib
+version: 0.2.0
+description: "Lightweight Bash library for TUI, print utilities, and terminal formatting"
+homepage: https://github.com/xaoscience/dev-control
+license: GPL-3.0-or-later
+maintainer: "xaoscience <69734795+xaoscience@users.noreply.github.com>"
+
+# No entry point - this is a library
+entry_point: ""
+
+# UI Theme (matrix, hacker, cyber) - optional for TUI users
+theme: matrix
+
+# Library-only files to include
+# These have NO external dependencies (no git, gh, etc required)
+include:
+  - scripts/lib/colors.sh
+  - scripts/lib/print.sh
+  - scripts/lib/tui.sh
+  - scripts/lib/output.sh
+  - scripts/lib/validation.sh
+  - scripts/lib/cli.sh
+  - scripts/lib/version.sh
+  - scripts/lib/README.md
+  - config/theme.yaml
+  - LICENSE
+
+# No runtime dependencies for core lib
+# (gum is optional for tui.sh advanced features)
+dependencies: []
+
+# Optional dependencies (for enhanced functionality)
+optional_dependencies:
+  - gum  # For tui.sh Gum-based features
