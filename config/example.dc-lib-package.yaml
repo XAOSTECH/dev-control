@@ -1,10 +1,10 @@
 # Dev-Control Library-Only Packaging Configuration
 # 
 # This configuration is for building a lightweight standalone library package
-# that includes only the shared Bash utilities (tui, print, colors, validation, etc.)
+# that includes only the shared Bash utilities (tui, print, colours, validation, etc.)
 # without the full dev-control CLI, git integration, or plugins.
 #
-# Use Case: Projects that want to use dev-control's TUI/print/color libraries
+# Use Case: Projects that want to use dev-control's TUI/print/colour libraries
 # for consistent terminal output without pulling in the entire toolkit.
 #
 # Installation (library users):
