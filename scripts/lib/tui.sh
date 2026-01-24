@@ -445,7 +445,7 @@ tui_banner() {
             --border-foreground "${CURRENT_THEME[border]}" \
             --foreground "${CURRENT_THEME[primary]}" \
             --bold \
-            --align centre \
+            --align center \
             --width 60 \
             --padding "1 4"
     else
