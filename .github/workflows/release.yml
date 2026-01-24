@@ -1,8 +1,15 @@
 # ============================================================================
-# Release Workflow (release.yml)
+# Dev-Control Release Workflow (release.yml)
 # ============================================================================
 #
-# Automates GitHub releases for Dev-Control or any project using packaging.sh.
+# This is the release workflow for the dev-control project itself.
+# For the reusable template, see: workflows-templates/release.yml
+#
+# REPOSITORY: https://github.com/xaoscience/dev-control
+#
+# ============================================================================
+#
+# Automates GitHub releases for Dev-Control.
 # Builds tarball, creates GitHub release, manages version and latest tags.
 #
 # TRIGGERS:
@@ -284,11 +291,22 @@ jobs:
           # Copy LICENSE
           cp LICENSE "$LIB_DIR/"
           
-          # Create quick-start README
+          # Create quick-start INSTALL.md with origin attribution
           {
             echo "# Dev-Control Library - Quick Start"
             echo ""
+            echo "## Origin"
+            echo ""
+            echo "This library package was extracted from the dev-control toolkit."
+            echo ""
+            echo "- **Source Repository**: https://github.com/xaoscience/dev-control"
+            echo "- **Version**: ${VERSION}"
+            echo "- **Full Toolkit**: https://github.com/xaoscience/dev-control/releases"
+            echo ""
+            echo "## Description"
+            echo ""
             echo "Lightweight standalone library for TUI, terminal formatting, colors, and validation."
+            echo "This is a subset of the full dev-control toolkit, containing only the shared Bash utilities."
             echo ""
             echo "## Installation"
             echo ""
@@ -296,8 +314,8 @@ jobs:
             echo ""
             echo "## Usage"
             echo ""
-            echo "    source /usr/local/share/dev-control-lib-VERSION/colors.sh"
-            echo "    source /usr/local/share/dev-control-lib-VERSION/print.sh"
+            echo "    source /usr/local/share/dev-control-lib-${VERSION}/colors.sh"
+            echo "    source /usr/local/share/dev-control-lib-${VERSION}/print.sh"
             echo "    print_header \"My Script\""
             echo ""
             echo "## Libraries"
@@ -310,7 +328,10 @@ jobs:
             echo "- cli.sh: CLI argument parsing helpers"
             echo "- version.sh: Version comparison utilities"
             echo ""
-            echo "See README.md for full documentation."
+            echo "## Full Documentation"
+            echo ""
+            echo "See README.md in this package or visit:"
+            echo "https://github.com/xaoscience/dev-control/tree/main/scripts/lib"
           } > "$LIB_DIR/INSTALL.md"
           
           # Create version file

@@ -1,8 +1,14 @@
 # ============================================================================
-# Release Workflow (release.yml)
+# Release Workflow Template (release.yml)
 # ============================================================================
 #
-# Automates GitHub releases for Dev-Control or any project using packaging.sh.
+# ORIGIN: https://github.com/xaoscience/dev-control
+# This workflow template is part of the dev-control toolkit.
+# See: https://github.com/xaoscience/dev-control/blob/main/workflows-templates/
+#
+# ============================================================================
+#
+# Automates GitHub releases for any project using packaging.sh.
 # Builds tarball, creates GitHub release, manages version and latest tags.
 #
 # TRIGGERS:
@@ -10,9 +16,8 @@
 #   - Push to tags matching v* (requires careful tagging)
 #
 # ARTIFACTS:
-#   Each release includes two tarballs:
-#   1. dev-control-X.Y.Z.tar.gz     - Full toolkit (~180KB)
-#   2. dev-control-lib-X.Y.Z.tar.gz - Lib-only (~27KB)
+#   - PROJECT-X.Y.Z.tar.gz - Main release tarball
+#   - Optional: Additional tarballs (configure in 'Build additional packages' step)
 #
 # SAFEGUARDS:
 #   ✓ Version format validation (semantic versioning)
@@ -23,22 +28,16 @@
 #
 # WHAT IT DOES:
 #   1. Validates version format and commit count
-#   2. Builds full tarball using packaging.sh
-#   3. Builds lightweight lib-only tarball
-#   4. Creates GitHub release with both tarballs attached
+#   2. Builds main tarball using packaging.sh
+#   3. Optionally builds additional packages (customise as needed)
+#   4. Creates GitHub release with tarballs attached
 #   5. Updates 'latest' tag to point to new release
 #   6. Generates release notes from commits
 #
-# LIB-ONLY TARBALL:
-#   A lightweight package containing only shared Bash utilities:
-#   - colors.sh, print.sh, tui.sh, output.sh, validation.sh, cli.sh, version.sh
-#   
-#   Use cases:
-#   - Projects wanting TUI/print utilities without full toolkit
-#   - Consistent terminal formatting without git/gh dependencies
-#   
-#   Installation:
-#   curl -fsSL https://github.com/.../releases/download/vX.Y.Z/dev-control-lib-X.Y.Z.tar.gz | tar xz
+# CUSTOMISATION:
+#   - Edit the 'Build additional packages' step to add project-specific tarballs
+#   - Modify release notes template in 'Generate release notes' step
+#   - Adjust validation rules as needed for your project
 #
 # RECOMMENDED WORKFLOW:
 #
@@ -256,73 +255,44 @@ jobs:
           bash scripts/packaging.sh --tarball --verbose
           echo "✅ Full tarball built successfully"
 
-      - name: Build lib-only tarball
-        if: ${{ github.event.inputs.skip_lib != 'true' }}
-        run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          LIB_NAME="dev-control-lib-${VERSION}"
-          LIB_DIR="dist/${LIB_NAME}"
-          
-          mkdir -p "$LIB_DIR"
-          
-          echo "📦 Building lib-only package: ${LIB_NAME}"
-          
-          # Copy library files (flatten structure for easy sourcing)
-          cp scripts/lib/colors.sh "$LIB_DIR/"
-          cp scripts/lib/print.sh "$LIB_DIR/"
-          cp scripts/lib/tui.sh "$LIB_DIR/"
-          cp scripts/lib/output.sh "$LIB_DIR/"
-          cp scripts/lib/validation.sh "$LIB_DIR/"
-          cp scripts/lib/cli.sh "$LIB_DIR/"
-          cp scripts/lib/version.sh "$LIB_DIR/"
-          cp scripts/lib/README.md "$LIB_DIR/"
-          
-          # Copy config files (if tui theming needed)
-          mkdir -p "$LIB_DIR/config"
-          cp config/theme.yaml "$LIB_DIR/config/" 2>/dev/null || true
-          
-          # Copy LICENSE
-          cp LICENSE "$LIB_DIR/"
-          
-          # Create quick-start README
-          {
-            echo "# Dev-Control Library - Quick Start"
-            echo ""
-            echo "Lightweight standalone library for TUI, terminal formatting, colours, and validation."
-            echo ""
-            echo "## Installation"
-            echo ""
-            echo "    tar xzf dev-control-lib-*.tar.gz -C /usr/local/share/"
-            echo ""
-            echo "## Usage"
-            echo ""
-            echo "    source /usr/local/share/dev-control-lib-VERSION/colors.sh"
-            echo "    source /usr/local/share/dev-control-lib-VERSION/print.sh"
-            echo "    print_header \"My Script\""
-            echo ""
-            echo "## Libraries"
-            echo ""
-            echo "- colors.sh: ANSI colour codes"
-            echo "- print.sh: Print functions (print_header, print_info, etc.)"
-            echo "- tui.sh: TUI helpers with Gum integration"
-            echo "- output.sh: Output formatting"
-            echo "- validation.sh: Input validation helpers"
-            echo "- cli.sh: CLI argument parsing helpers"
-            echo "- version.sh: Version comparison utilities"
-            echo ""
-            echo "See README.md for full documentation."
-          } > "$LIB_DIR/INSTALL.md"
-          
-          # Create version file
-          echo "${VERSION}" > "$LIB_DIR/VERSION"
-          
-          # Create tarball
-          cd dist
-          tar czf "${LIB_NAME}.tar.gz" "${LIB_NAME}"
-          sha256sum "${LIB_NAME}.tar.gz" > "${LIB_NAME}.tar.gz.sha256"
-          cd ..
-          
-          echo "✅ Lib tarball built: dist/${LIB_NAME}.tar.gz"
+      # ========================================================================
+      # CUSTOMISE: Build additional packages (optional)
+      # ========================================================================
+      # Uncomment and modify this step to build additional tarballs.
+      # Example: A lightweight lib-only package, docs package, etc.
+      #
+      # - name: Build additional packages
+      #   run: |
+      #     VERSION="${{ steps.version.outputs.version }}"
+      #     PKG_NAME="myproject-extra-${VERSION}"
+      #     PKG_DIR="dist/${PKG_NAME}"
+      #     
+      #     mkdir -p "$PKG_DIR"
+      #     
+      #     # Copy files for additional package
+      #     cp -r src/lib/* "$PKG_DIR/"
+      #     cp LICENSE "$PKG_DIR/"
+      #     
+      #     # Create README with origin attribution
+      #     {
+      #       echo "# My Project Extra Package"
+      #       echo ""
+      #       echo "## Origin"
+      #       echo ""
+      #       echo "This package was built from: https://github.com/$GITHUB_REPOSITORY"
+      #       echo "Release: ${VERSION}"
+      #       echo ""
+      #       echo "## Installation"
+      #       echo "..."
+      #     } > "$PKG_DIR/README.md"
+      #     
+      #     echo "${VERSION}" > "$PKG_DIR/VERSION"
+      #     
+      #     cd dist
+      #     tar czf "${PKG_NAME}.tar.gz" "${PKG_NAME}"
+      #     sha256sum "${PKG_NAME}.tar.gz" > "${PKG_NAME}.tar.gz.sha256"
+      #     cd ..
+      # ========================================================================
 
       - name: List build artifacts
         run: |
@@ -330,8 +300,8 @@ jobs:
           echo "📦 Build artifacts:"
           ls -la dist/
           
-          # Get full tarball info
-          TARBALL=$(ls dist/dev-control-${VERSION}.tar.gz 2>/dev/null || ls dist/*.tar.gz 2>/dev/null | grep -v lib | head -1)
+          # Get main tarball info (first .tar.gz that's not a sub-package)
+          TARBALL=$(ls dist/*.tar.gz 2>/dev/null | head -1)
           if [[ -n "$TARBALL" ]]; then
             echo "tarball_path=${TARBALL}" >> $GITHUB_ENV
             echo "tarball_name=$(basename "$TARBALL")" >> $GITHUB_ENV
@@ -339,21 +309,13 @@ jobs:
             if [[ -f "${TARBALL}.sha256" ]]; then
               SHA256=$(cat "${TARBALL}.sha256" | awk '{print $1}')
               echo "tarball_sha256=${SHA256}" >> $GITHUB_ENV
-              echo "🔐 Full tarball SHA256: ${SHA256}"
+              echo "🔐 Tarball SHA256: ${SHA256}"
             fi
           fi
           
-          # Get lib tarball info
-          LIB_TARBALL="dist/dev-control-lib-${VERSION}.tar.gz"
-          if [[ -f "$LIB_TARBALL" ]]; then
-            echo "lib_tarball_name=dev-control-lib-${VERSION}.tar.gz" >> $GITHUB_ENV
-            
-            if [[ -f "${LIB_TARBALL}.sha256" ]]; then
-              LIB_SHA256=$(cat "${LIB_TARBALL}.sha256" | awk '{print $1}')
-              echo "lib_tarball_sha256=${LIB_SHA256}" >> $GITHUB_ENV
-              echo "🔐 Lib tarball SHA256: ${LIB_SHA256}"
-            fi
-          fi
+          # Count all tarballs for summary
+          TARBALL_COUNT=$(ls dist/*.tar.gz 2>/dev/null | wc -l)
+          echo "tarball_count=${TARBALL_COUNT}" >> $GITHUB_ENV
 
       - name: Generate release notes
         id: release_notes
@@ -386,28 +348,9 @@ jobs:
           
           ## Installation
           
-          ### Full Toolkit (tarball)
+          ### Quick Install (tarball)
           \`\`\`bash
           curl -fsSL https://github.com/$GITHUB_REPOSITORY/releases/download/${TAG_NAME}/${tarball_name} | tar xz
-          cd dev-control-${VERSION}
-          ./install.sh
-          \`\`\`
-          
-          ### Library Only (lightweight)
-          For projects that only need the TUI/print/colour utilities (~27KB vs ~180KB):
-          \`\`\`bash
-          curl -fsSL https://github.com/$GITHUB_REPOSITORY/releases/download/${TAG_NAME}/${lib_tarball_name} | tar xz
-          
-          # Then in your scripts:
-          source "./dev-control-lib-${VERSION}/colors.sh"
-          source "./dev-control-lib-${VERSION}/print.sh"
-          print_header "My Script"
-          \`\`\`
-          
-          ### Homebrew (coming soon)
-          \`\`\`bash
-          brew tap xaoscience/tap
-          brew install dev-control
           \`\`\`
           
           ## Checksums
@@ -415,11 +358,13 @@ jobs:
           | File | SHA256 |
           |------|--------|
           | ${tarball_name} | \`${tarball_sha256}\` |
-          | ${lib_tarball_name} | \`${lib_tarball_sha256}\` |
           
           ---
           
           **Full Changelog**: https://github.com/$GITHUB_REPOSITORY/compare/${PREV_TAG}...${TAG_NAME}
+          
+          ---
+          *Release workflow powered by [dev-control](https://github.com/xaoscience/dev-control)*
           EOF
           
           # Output for next step
@@ -467,14 +412,11 @@ jobs:
           echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
           echo "| Version | ${VERSION} |" >> $GITHUB_STEP_SUMMARY
           echo "| Tag | ${TAG_NAME} |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Artifacts" >> $GITHUB_STEP_SUMMARY
-          echo "| Package | File | SHA256 |" >> $GITHUB_STEP_SUMMARY
-          echo "|---------|------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Full Toolkit | ${tarball_name} | \`${tarball_sha256:0:16}...\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Library Only | ${lib_tarball_name} | \`${lib_tarball_sha256:0:16}...\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Artifacts | ${tarball_count} tarball(s) |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Links" >> $GITHUB_STEP_SUMMARY
           echo "- [Release](https://github.com/$GITHUB_REPOSITORY/releases/tag/${TAG_NAME})" >> $GITHUB_STEP_SUMMARY
-          echo "- [Full Toolkit](https://github.com/$GITHUB_REPOSITORY/releases/download/${TAG_NAME}/${tarball_name})" >> $GITHUB_STEP_SUMMARY
-          echo "- [Library Only](https://github.com/$GITHUB_REPOSITORY/releases/download/${TAG_NAME}/${lib_tarball_name})" >> $GITHUB_STEP_SUMMARY
+          echo "- [Download](https://github.com/$GITHUB_REPOSITORY/releases/download/${TAG_NAME}/${tarball_name})" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "*Workflow template from [dev-control](https://github.com/xaoscience/dev-control)*" >> $GITHUB_STEP_SUMMARY
