@@ -288,7 +288,7 @@ jobs:
           {
             echo "# Dev-Control Library - Quick Start"
             echo ""
-            echo "Lightweight standalone library for TUI, terminal formatting, colors, and validation."
+            echo "Lightweight standalone library for TUI, terminal formatting, colours, and validation."
             echo ""
             echo "## Installation"
             echo ""
@@ -394,7 +394,7 @@ jobs:
           \`\`\`
           
           ### Library Only (lightweight)
-          For projects that only need the TUI/print/color utilities (~27KB vs ~180KB):
+          For projects that only need the TUI/print/colour utilities (~27KB vs ~180KB):
           \`\`\`bash
           curl -fsSL https://github.com/$GITHUB_REPOSITORY/releases/download/${TAG_NAME}/${lib_tarball_name} | tar xz
           
