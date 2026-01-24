@@ -334,9 +334,14 @@ jobs:
             while IFS= read -r file; do
               [[ -z "$file" ]] && continue
               
-              # Find matches, excluding file paths and URLs
+              # Find matches, excluding:
+              # - File paths and URLs
+              # - CLI flags with values (--align center, --foreground color)
+              # - Gum/TUI library options
+              # - Variable references ($color, ${color})
+              # - Assignment patterns (color=, COLOR=)
               MATCHES=$(grep -inw "$american" "$file" 2>/dev/null | \
-                grep -vE '(/[a-zA-Z0-9_.-]+\.[a-z]{1,4}|https?://|file://)' || true)
+                grep -vE '(/[a-zA-Z0-9_.-]+\.[a-z]{1,4}|https?://|file://|--[a-z-]+ (center|color|gray)|\$\{?(color|center|gray)|\b(color|center|gray)[_A-Z]*=|gum |\\$)' || true)
               
               if [[ -n "$MATCHES" ]]; then
                 FILES_TO_FIX["$file"]=1
@@ -412,8 +417,12 @@ jobs:
               # Skip lines containing:
               # - Filenames with extensions (colors.sh, config.yaml)
               # - HTML attributes (align="center", style="color:")
-              # - CLI flags (--color, --center)
-              if echo "$line" | grep -qE '([a-zA-Z0-9_-]+\.[a-zA-Z]{1,4}\b|=["'\''](center|color)|--color|--center)'; then
+              # - CLI flags with values (--align center, --foreground color)
+              # - Gum/TUI commands and options
+              # - Variable references ($color, ${color}, COLOR_VAR)
+              # - Assignment patterns (color=, center=)
+              # - Escaped line continuations (trailing backslash)
+              if echo "$line" | grep -qE '([a-zA-Z0-9_-]+\.[a-zA-Z]{1,4}\b|=["'\''](center|color)|--[a-z-]+ (center|color|gray)|--color|--center|\$\{?(color|center|gray)|\b(COLOR|CENTER|GRAY)[_A-Z]*|gum |\\$)'; then
                 echo "$line"
               else
                 # Apply case-preserving replacement using perl
@@ -447,8 +456,8 @@ jobs:
               [[ -z "$file" ]] && continue
               
               # Check if file contains the word (case-insensitive, whole word)
-              # Exclude lines containing filenames, HTML attributes, or CLI flags
-              if grep -inw "$american" "$file" 2>/dev/null | grep -qvE '([a-zA-Z0-9_-]+\.[a-zA-Z]{1,4}\b|=["'\''](center|color)|--color|--center)'; then
+              # Exclude lines containing filenames, HTML attributes, CLI flags, or code patterns
+              if grep -inw "$american" "$file" 2>/dev/null | grep -qvE '([a-zA-Z0-9_-]+\.[a-zA-Z]{1,4}\b|=["'\''](center|color)|--[a-z-]+ (center|color|gray)|--color|--center|\$\{?(color|center|gray)|\b(COLOR|CENTER|GRAY)[_A-Z]*|gum |\\$)'; then
                 case_preserve_replace "$file" "$american" "$british"
                 echo "  ✓ Fixed in: $file"
                 FIXED_COUNT=$((FIXED_COUNT + 1))
