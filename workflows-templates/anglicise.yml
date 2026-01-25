@@ -476,12 +476,20 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
+          # Stage changes first to check if there are any
+          git add -A
+          
+          # Check if there are actual changes to commit
+          if git diff --cached --quiet; then
+            echo "⚠️ No actual changes to commit (files may have been excluded or already correct)"
+            echo "ℹ️ The check step found potential issues but the fix step couldn't apply changes."
+            echo "   This can happen when matches are in excluded patterns (URLs, CLI flags, etc.)"
+            exit 0
+          fi
+          
           # Create branch
           BRANCH_NAME="anglicise/$(date +%Y%m%d-%H%M%S)"
           git checkout -b "$BRANCH_NAME"
-          
-          # Stage changes
-          git add -A
           
           # Commit
           git commit -m "chore: convert American spellings to British English" -m "Automated conversion of American spellings to British equivalents:" -m "- -ize → -ise (organize → organise)" -m "- -or → -our (color → colour)" -m "- -er → -re (center → centre)" -m "- -og → -ogue (catalog → catalogue)" -m "- -ense → -ence (defense → defence)" -m "- -l- → -ll- (canceled → cancelled)" -m "- gray → grey, aging → ageing, etc."
