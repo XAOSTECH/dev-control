@@ -30,6 +30,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Libraries moved to scripts/lib/
 - Configuration now uses YAML format
 
+## [0.3.0] - 2026-01-26
+
+### Fixed
+- License detection now correctly identifies GPL-3.0 when version number is on a separate line
+- Debian package Depends field now properly formatted (comma+space separated)
+- Fixed library path in licenses.sh (was lib/license.sh, now lib/git/license.sh)
+
+### Improved
+- Documentation updated with concise introduction for new users
+- README.md restructured for better readability while maintaining template design
+
+## [0.2.2] - 2026-01-24
+
+### Changed
+- Refactored release workflow to separate template from dev-control-specific workflow
+- Converted American spellings to British English
+
+### Fixed
+- Expanded exclusions in anglicise workflow for CLI flags and code patterns
+
 ## [1.0.0] - 2025-01-15
 
 ### Added
@@ -53,5 +73,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - GPG commit signing support
 - SSH key management
 
-[Unreleased]: https://github.com/xaoscience/dev-control/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/xaoscience/dev-control/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/xaoscience/dev-control/compare/v0.2.2...v0.3.0
+[0.2.2]: https://github.com/xaoscience/dev-control/compare/v1.0.0...v0.2.2
 [1.0.0]: https://github.com/xaoscience/dev-control/releases/tag/v1.0.0
+
