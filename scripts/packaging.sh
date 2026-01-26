@@ -720,13 +720,17 @@ build_debian() {
     mkdir -p "$deb_dir/usr/bin"
     
     # Control file
+    # Format dependencies properly for Debian (comma-space separated, no trailing comma)
+    local deb_deps
+    deb_deps=$(echo "$PKG_DEPENDENCIES" | tr ',' ' ' | tr -s ' ' | sed 's/^ *//;s/ *$//' | tr ' ' '\n' | sort -u | grep -v '^$' | tr '\n' ',' | sed 's/,/, /g;s/, $//')
+    
     cat > "$deb_dir/DEBIAN/control" << EOF
 Package: $PKG_NAME
 Version: $PKG_VERSION
 Section: utils
 Priority: optional
 Architecture: all
-Depends: bash (>= 4.0), $(echo "$PKG_DEPENDENCIES" | tr ' ' ',' | sed 's/,,*/,/g')
+Depends: bash (>= 4.0), $deb_deps
 Recommends: gum
 Maintainer: $PKG_MAINTAINER
 Description: $PKG_DESCRIPTION

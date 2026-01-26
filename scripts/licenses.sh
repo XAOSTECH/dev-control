@@ -26,7 +26,7 @@ export DEV_CONTROL_DIR  # Used by sourced libraries
 # Source shared libraries
 source "$SCRIPT_DIR/lib/colors.sh"
 source "$SCRIPT_DIR/lib/print.sh"
-source "$SCRIPT_DIR/lib/license.sh"
+source "$SCRIPT_DIR/lib/git/license.sh"
 source "$SCRIPT_DIR/lib/git/utils.sh"
 
 # CLI options

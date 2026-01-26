@@ -117,15 +117,16 @@ detect_spdx_from_content() {
     fi
     
     # Pattern matching for common licenses
+    # Note: Content is already read as single string, use separate checks for multi-line patterns
     if echo "$content" | grep -qiE "MIT License|Permission is hereby granted.*MIT"; then
         echo "MIT"
     elif echo "$content" | grep -qiE "Apache License.*Version 2\.0|Licensed under the Apache License"; then
         echo "Apache-2.0"
-    elif echo "$content" | grep -qiE "GNU GENERAL PUBLIC LICENSE.*Version 3|GPLv3"; then
+    elif echo "$content" | grep -qiE "GNU GENERAL PUBLIC LICENSE" && echo "$content" | grep -qE "Version 3"; then
         echo "GPL-3.0"
-    elif echo "$content" | grep -qiE "GNU GENERAL PUBLIC LICENSE.*Version 2|GPLv2"; then
+    elif echo "$content" | grep -qiE "GNU GENERAL PUBLIC LICENSE" && echo "$content" | grep -qE "Version 2[^.]"; then
         echo "GPL-2.0"
-    elif echo "$content" | grep -qiE "GNU LESSER GENERAL PUBLIC LICENSE.*Version 3|LGPLv3"; then
+    elif echo "$content" | grep -qiE "GNU LESSER GENERAL PUBLIC LICENSE" && echo "$content" | grep -qE "Version 3"; then
         echo "LGPL-3.0"
     elif echo "$content" | grep -qiE "GNU LESSER GENERAL PUBLIC LICENSE.*Version 2\.1|LGPLv2\.1"; then
         echo "LGPL-2.1"
