@@ -23,14 +23,15 @@ on:
         required: false
         default: 'false'
 
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+
 jobs:
   shellcheck-analysis:
     name: ShellCheck Analysis & Suggestions
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: write
-      checks: write
     
     steps:
       - name: Checkout code
