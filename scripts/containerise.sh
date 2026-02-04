@@ -1007,7 +1007,7 @@ RUN mkdir -p "\$NVM_DIR" && \\
     echo 'export NVM_DIR="\$HOME/.config/nvm"' >> ~/.bashrc && \\
     echo '[ -s "\$NVM_DIR/nvm.sh" ] && \\. "\$NVM_DIR/nvm.sh"' >> ~/.bashrc && \\
     bash -c 'source \$NVM_DIR/nvm.sh && nvm install 25 && nvm alias default 25' && \\
-    curl -fsSL https://github.com/${CFG_GITHUB_USER}/dev-control/archive/refs/tags/latest.tar.gz | tar -xz && \\
+    curl -fsSL https://github.com/xaostech/dev-control/archive/refs/tags/latest.tar.gz | tar -xz && \\
     mv dev-control-* ~/.dev-control && \\
     bash -c 'bash ~/.dev-control/scripts/alias-loading.sh <<< A'
 
@@ -1070,10 +1070,15 @@ generate_devcontainer_json() {
     project_name=$(basename "${PROJECT_PATH:-$(pwd)}")
     
     # Determine remote user FIRST (needed for mount paths)
-    # Use CFG_CONTAINER_NAME which defaults to project folder name
-    local remote_user="$CFG_CONTAINER_NAME"
-    if [[ "$CFG_BASE_IMAGE" == mcr.microsoft.com/* ]]; then
+    local remote_user
+    if [[ -n "$use_image" || -n "$category" ]]; then
+        # --img and --base modes: use category name (matches user in base image)
+        remote_user="${category,,}"  # Force lowercase
+    elif [[ "$CFG_BASE_IMAGE" == mcr.microsoft.com/* ]]; then
         remote_user="vscode"
+    else
+        # General mode: use folder name
+        remote_user="$CFG_CONTAINER_NAME"
     fi
     
     # Build mounts array
@@ -1124,17 +1129,6 @@ generate_devcontainer_json() {
         if [[ -n "$extensions" ]]; then extensions+=","; fi
         extensions+="\"${ext}\""
     done
-    
-    # Determine remote user based on mode
-    if [[ -n "$use_image" || -n "$category" ]]; then
-        # --img and --base modes: use category name (matches user in base image)
-        remote_user="${category,,}"  # Force lowercase
-    elif [[ "$CFG_BASE_IMAGE" == mcr.microsoft.com/* ]]; then
-        remote_user="vscode"
-    else
-        # General mode: use folder name
-        remote_user="$CFG_CONTAINER_NAME"
-    fi
     
     # Build container environment vars
     local container_env="\"GPG_TTY\": \"\$(tty)\",
@@ -1235,7 +1229,7 @@ ${header_comment}  "name": "${project_name^^}",
   "containerEnv": {
     ${container_env}
   },
-  "postCreateCommand": "sudo chown -R ${remote_user}:${remote_user} . 2>/dev/null || true && sudo chmod 755 /home/${remote_user} 2>/dev/null || true && git config --global --add safe.directory '*' && sudo mkdir -p /run/user/${uid} && sudo chown ${remote_user}:${remote_user} /run/user/${uid} && ln -sf /tmp/wayland-0 /run/user/${uid}/wayland-0 2>/dev/null || true && gpg-connect-agent updatestartuptty /bye >/dev/null 2>&1 || true && sudo chown -R ${remote_user}:${remote_user} /run/user/${uid} 2>/dev/null || true",
+  "postCreateCommand": "sudo chown -R ${remote_user}:${remote_user} . 2>/dev/null || true && sudo chmod 755 /home/${remote_user} 2>/dev/null || true && sudo chown -R ${remote_user}:${remote_user} /home/${remote_user}/.vscode-server 2>/dev/null || true && git config --global --add safe.directory '*' && sudo mkdir -p /run/user/${uid} && sudo chown ${remote_user}:${remote_user} /run/user/${uid} && ln -sf /tmp/wayland-0 /run/user/${uid}/wayland-0 2>/dev/null || true && gpg-connect-agent updatestartuptty /bye >/dev/null 2>&1 || true && sudo chown -R ${remote_user}:${remote_user} /run/user/${uid} 2>/dev/null || true",
   "customizations": {
     "vscode": {
       "settings": {
@@ -1705,8 +1699,10 @@ ENV PATH=\$NVM_DIR/versions/node/v22.13.1/bin:\$PATH
 # Clean up GPG keyring (interferes with host GPG agent mount)
 RUN rm -rf ~/.gnupg
 
-# Pre-create .vscode-server directory
-RUN mkdir -p /home/${base_user}/.vscode-server && chmod 755 /home/${base_user}/.vscode-server
+# Pre-create .vscode-server directory with proper permissions (need root)
+USER root
+RUN mkdir -p /home/${base_user}/.vscode-server && chown ${base_user}:${base_user} /home/${base_user}/.vscode-server && chmod 755 /home/${base_user}/.vscode-server
+USER ${base_user}
 
 WORKDIR /workspaces
 DOCKERFILE_USER
