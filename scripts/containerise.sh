@@ -51,6 +51,8 @@ declare -A CONTAINER_DEFAULTS=(
     ["github_user"]=""
     ["github_user_email"]=""
     ["gpg_key_id"]=""
+    ["use_base_category"]="false"
+    ["base_category"]=""
     ["timezone"]="UTC"
     ["locale"]="en_US.UTF-8"
     ["ubuntu_mirror"]="http://archive.ubuntu.com/ubuntu"
@@ -60,9 +62,16 @@ declare -A CONTAINER_DEFAULTS=(
     ["mount_gpg"]="true"
     ["mount_gh_config"]="true"
     ["mount_docker_socket"]="true"
+    ["mount_wrangler"]="false"
     ["install_gh_cli"]="true"
     ["install_git_control"]="true"
     ["git_control_version"]="latest"
+    # Streaming/CUDA features
+    ["install_cuda"]="false"
+    ["install_ffmpeg"]="false"
+    ["install_nginx_rtmp"]="false"
+    ["install_streaming_utils"]="false"
+    ["enable_nvidia_devices"]="false"
 )
 
 # Common base images for selection
@@ -76,6 +85,37 @@ declare -a BASE_IMAGES=(
     "mcr.microsoft.com/devcontainers/javascript-node:22"
     "mcr.microsoft.com/devcontainers/rust:latest"
     "mcr.microsoft.com/devcontainers/go:latest"
+)
+
+# Base image categories - these ARE the base images you build/use
+# Build from: https://github.com/xaostech/dev-control/tree/main/.devcontainer
+declare -A BASE_IMAGE_CATEGORIES=(
+    ["game-dev"]="devcontrol/game-dev:latest"     # Godot, Vulkan, SDL2, GLFW, CUDA
+    ["art"]="devcontrol/art:latest"                # 2D/3D art tools: Krita, GIMP, Blender
+    ["data-science"]="devcontrol/data-science:latest"  # CUDA, FFmpeg, video/data processing
+    ["streaming"]="devcontrol/streaming:latest"    # FFmpeg+NVENC, NGINX-RTMP, ONNX Runtime
+    ["web-dev"]="devcontrol/web-dev:latest"        # Node.js, npm, Cloudflare Workers
+    ["dev-tools"]="devcontrol/dev-tools:latest"    # GCC, build-essential, compilers
+)
+
+# Category feature descriptions
+declare -A CATEGORY_FEATURES=(
+    ["game-dev"]="Godot 4.x, Vulkan SDK, SDL2, GLFW 3.4 (Wayland), CUDA 13.1"
+    ["art"]="2D/3D art tools: Krita, GIMP, Inkscape, Blender, ImageMagick"
+    ["data-science"]="CUDA 13.1, FFmpeg (NVENC/NVDEC), NVIDIA acceleration"
+    ["streaming"]="FFmpeg (NVENC/NVDEC), NGINX-RTMP, SRT, ONNX Runtime GPU, YOLOv8"
+    ["web-dev"]="Node.js 25 (nvm), npm, modern web frameworks, Wrangler, dev-control"
+    ["dev-tools"]="GCC, build-essential, common compilers, general development"
+)
+
+# GitHub build source references (for documentation)
+declare -A CATEGORY_GITHUB_PATHS=(
+    ["game-dev"]="https://github.com/xaostech/dev-control/tree/main/.devcontainer/game-dev"
+    ["art"]="https://github.com/xaostech/dev-control/tree/main/.devcontainer/art"
+    ["data-science"]="https://github.com/xaostech/dev-control/tree/main/.devcontainer/data-science"
+    ["streaming"]="https://github.com/xaostech/dev-control/tree/main/.devcontainer/streaming"
+    ["web-dev"]="https://github.com/xaostech/dev-control/tree/main/.devcontainer/web-dev"
+    ["dev-tools"]="https://github.com/xaostech/dev-control/tree/main/.devcontainer/dev-tools"
 )
 
 # Common mirrors for selection (main continental servers)
@@ -122,6 +162,8 @@ declare -a LOCALES=(
 )
 
 # CLI options
+MODE=""  # "base" or "image"
+CATEGORY_FLAG=""
 USE_DEFAULTS=false
 CONFIG_FILE=""
 PROJECT_PATH=""
@@ -133,39 +175,44 @@ SHOW_HELP=false
 
 show_help() {
     cat << 'EOF'
-Dev-Control Containerisation - Create optimised devcontainer configurations
+Dev-Control Containerisation - Build base images or generate devcontainers
 
 USAGE:
-  containerise.sh [PROJECT_PATH] [OPTIONS]
+  containerise.sh --base --CATEGORY     # Build a base image
+  containerise.sh --img --CATEGORY      # Generate devcontainer using base image
+  containerise.sh [PROJECT_PATH]        # Interactive mode (legacy)
 
-OPTIONS:
-  --defaults, -d      Use saved defaults from config file (one-click mode)
-  --config FILE, -c   Use specific configuration file
-  --help, -h          Show this help message
+MODES:
+  --base    Build a category base image (e.g., devcontrol/game-dev:latest)
+  --img     Generate devcontainer.json that uses a category base image
 
-CONFIGURATION:
-  Global config:    ~/.config/dev-control/container.yaml
-  Project config:   .devcontainer.yaml (in project root)
-
-  Configuration hierarchy (highest priority first):
-    1. CLI arguments
-    2. Project config (.devcontainer.yaml)
-    3. Global config (~/.config/dev-control/container.yaml)
-    4. Built-in defaults (UTC/en_US)
-
-GENERATED FILES:
-  .devcontainer/devcontainer.json  - VS Code devcontainer configuration
-  .devcontainer/Dockerfile         - Container build instructions
-  .devcontainer/.dockerignore      - Build context exclusions
+CATEGORIES:
+  --game-dev        Godot, Vulkan, SDL2, GLFW, CUDA
+  --art             Krita, GIMP, Inkscape, Blender
+  --data-science    CUDA, FFmpeg, NVIDIA acceleration
+  --streaming       FFmpeg+NVENC, NGINX-RTMP, ONNX Runtime
+  --web-dev         Node.js, npm, Cloudflare Workers
+  --dev-tools       GCC, build-essential, compilers
 
 EXAMPLES:
-  containerise.sh                     # Interactive mode in current directory
-  containerise.sh ~/projects/myapp    # Interactive mode for specific project
-  containerise.sh --defaults          # Use saved config (one-click)
-  containerise.sh -c myconfig.yaml    # Use custom config file
+  # Build base images
+  cd ~/.dev-control/.devcontainer && containerise.sh --base --game-dev
+  cd ~/projects/streaming && containerise.sh --base --streaming
+
+  # Generate devcontainers
+  cd ~/projects/my-game && containerise.sh --img --game-dev
+  cd ~/projects/web-app && containerise.sh --img --web-dev
+
+OPTIONS:
+  --help, -h          Show this help message
+
+LEGACY MODE (interactive):
+  containerise.sh [PROJECT_PATH]
+  containerise.sh --defaults
+  containerise.sh --config FILE
 
 ALIASES:
-  dc-container, dc-containerise, dc-devcontainer
+  dc-contain, dc-containerise, dc-devcontainer
 
 EOF
 }
@@ -202,7 +249,6 @@ parse_container_yaml() {
             
             # Export to current config
             case "$key" in
-                container_name)   CFG_CONTAINER_NAME="$value" ;;
                 github_user)      CFG_GITHUB_USER="$value" ;;
                 github_user_email) CFG_GITHUB_USER_EMAIL="$value" ;;
                 gpg_key_id)       CFG_GPG_KEY_ID="$value" ;;
@@ -215,9 +261,16 @@ parse_container_yaml() {
                 mount_gpg)        CFG_MOUNT_GPG="$value" ;;
                 mount_gh_config)  CFG_MOUNT_GH_CONFIG="$value" ;;
                 mount_docker_socket) CFG_MOUNT_DOCKER_SOCKET="$value" ;;
+                mount_wrangler)   CFG_MOUNT_WRANGLER="$value" ;;
                 install_gh_cli)   CFG_INSTALL_GH_CLI="$value" ;;
                 install_git_control) CFG_INSTALL_DEV_CONTROL="$value" ;;
                 git_control_version) CFG_DEV_CONTROL_VERSION="$value" ;;
+                # Streaming/CUDA features
+                install_cuda)     CFG_INSTALL_CUDA="$value" ;;
+                install_ffmpeg)   CFG_INSTALL_FFMPEG="$value" ;;
+                install_nginx_rtmp) CFG_INSTALL_NGINX_RTMP="$value" ;;
+                install_streaming_utils) CFG_INSTALL_STREAMING_UTILS="$value" ;;
+                enable_nvidia_devices) CFG_ENABLE_NVIDIA_DEVICES="$value" ;;
             esac
         fi
     done < "$file"
@@ -226,12 +279,13 @@ parse_container_yaml() {
 # Load configuration from all sources
 load_container_config() {
     # Start with defaults
-    CFG_CONTAINER_NAME="${CONTAINER_DEFAULTS[container_name]}"
     CFG_GITHUB_USER="${CONTAINER_DEFAULTS[github_user]}"
     CFG_GITHUB_USER_EMAIL="${CONTAINER_DEFAULTS[github_user_email]}"
     CFG_GPG_KEY_ID="${CONTAINER_DEFAULTS[gpg_key_id]}"
     CFG_TIMEZONE="${CONTAINER_DEFAULTS[timezone]}"
     CFG_LOCALE="${CONTAINER_DEFAULTS[locale]}"
+    CFG_USE_BASE_CATEGORY="${CONTAINER_DEFAULTS[use_base_category]}"
+    CFG_BASE_CATEGORY="${CONTAINER_DEFAULTS[base_category]}"
     CFG_UBUNTU_MIRROR="${CONTAINER_DEFAULTS[ubuntu_mirror]}"
     CFG_BASE_IMAGE="${CONTAINER_DEFAULTS[base_image]}"
     CFG_HUSH_LOGIN="${CONTAINER_DEFAULTS[hush_login]}"
@@ -242,6 +296,13 @@ load_container_config() {
     CFG_INSTALL_GH_CLI="${CONTAINER_DEFAULTS[install_gh_cli]}"
     CFG_INSTALL_DEV_CONTROL="${CONTAINER_DEFAULTS[install_git_control]}"
     CFG_DEV_CONTROL_VERSION="${CONTAINER_DEFAULTS[git_control_version]}"
+    CFG_MOUNT_WRANGLER="${CONTAINER_DEFAULTS[mount_wrangler]}"
+    # Streaming/CUDA features
+    CFG_INSTALL_CUDA="${CONTAINER_DEFAULTS[install_cuda]}"
+    CFG_INSTALL_FFMPEG="${CONTAINER_DEFAULTS[install_ffmpeg]}"
+    CFG_INSTALL_NGINX_RTMP="${CONTAINER_DEFAULTS[install_nginx_rtmp]}"
+    CFG_INSTALL_STREAMING_UTILS="${CONTAINER_DEFAULTS[install_streaming_utils]}"
+    CFG_ENABLE_NVIDIA_DEVICES="${CONTAINER_DEFAULTS[enable_nvidia_devices]}"
     
     # Load global config if exists
     if [[ -f "$DC_CONTAINER_CONFIG" ]]; then
@@ -293,6 +354,8 @@ locale: ${CFG_LOCALE}
 ubuntu-mirror: ${CFG_UBUNTU_MIRROR}
 
 # Docker Base Image
+use-base-category: ${CFG_USE_BASE_CATEGORY}
+base-category: ${CFG_BASE_CATEGORY}
 base-image: ${CFG_BASE_IMAGE}
 hush-login: ${CFG_HUSH_LOGIN}
 
@@ -308,6 +371,16 @@ mount-docker-socket: ${CFG_MOUNT_DOCKER_SOCKET}
 install-gh-cli: ${CFG_INSTALL_GH_CLI}
 install-dev-control: ${CFG_INSTALL_DEV_CONTROL}
 dev-control-version: ${CFG_DEV_CONTROL_VERSION}
+
+# Mount Options
+mount-wrangler: ${CFG_MOUNT_WRANGLER}
+
+# Streaming/CUDA Features
+install-cuda: ${CFG_INSTALL_CUDA}
+install-ffmpeg: ${CFG_INSTALL_FFMPEG}
+install-nginx-rtmp: ${CFG_INSTALL_NGINX_RTMP}
+install-streaming-utils: ${CFG_INSTALL_STREAMING_UTILS}
+enable-nvidia-devices: ${CFG_ENABLE_NVIDIA_DEVICES}
 EOF
 
     print_success "Configuration saved to: $file"
@@ -322,6 +395,18 @@ parse_args() {
         case "$1" in
             -h|--help)
                 SHOW_HELP=true
+                shift
+                ;;
+            --base)
+                MODE="base"
+                shift
+                ;;
+            --img)
+                MODE="image"
+                shift
+                ;;
+            --game-dev|--art|--data-science|--streaming|--web-dev|--dev-tools)
+                CATEGORY_FLAG="${1#--}"
                 shift
                 ;;
             -d|--defaults)
@@ -473,8 +558,41 @@ run_interactive_config() {
         read -rp "GPG key ID (optional): " CFG_GPG_KEY_ID
     fi
     
-    # Base image
-    CFG_BASE_IMAGE=$(select_from_list "Select base Docker image:" "$CFG_BASE_IMAGE" "${BASE_IMAGES[@]}")
+    # Base image category or custom
+    echo ""
+    echo -e "${BOLD}Base Image Selection:${NC}"
+    echo -e "  ${DIM}Choose a dev-control category (pre-built) or custom image${NC}"
+    echo ""
+    echo -e "  ${CYAN}Dev-Control Categories:${NC}"
+    for category in "${!BASE_IMAGE_CATEGORIES[@]}"; do
+        local image="${BASE_IMAGE_CATEGORIES[$category]}"
+        local desc="${CATEGORY_FEATURES[$category]}"
+        echo -e "    ${GREEN}$category${NC} → ${YELLOW}$image${NC}"
+        echo -e "      ${DIM}$desc${NC}"
+    done
+    echo ""
+    
+    if confirm "Use a dev-control category image?"; then
+        CFG_USE_BASE_CATEGORY="true"
+        local categories=("${!BASE_IMAGE_CATEGORIES[@]}")
+        echo ""
+        echo -e "${BOLD}Select category:${NC}"
+        select category in "${categories[@]}" "Custom image..."; do
+            if [[ -n "$category" && "$category" != "Custom image..." ]]; then
+                CFG_BASE_CATEGORY="$category"
+                CFG_BASE_IMAGE="${BASE_IMAGE_CATEGORIES[$category]}"
+                print_success "Selected: $category (${BASE_IMAGE_CATEGORIES[$category]})"
+                break
+            elif [[ "$category" == "Custom image..." ]]; then
+                CFG_USE_BASE_CATEGORY="false"
+                CFG_BASE_IMAGE=$(select_from_list "Select custom base Docker image:" "$CFG_BASE_IMAGE" "${BASE_IMAGES[@]}")
+                break
+            fi
+        done
+    else
+        CFG_USE_BASE_CATEGORY="false"
+        CFG_BASE_IMAGE=$(select_from_list "Select base Docker image:" "$CFG_BASE_IMAGE" "${BASE_IMAGES[@]}")
+    fi
     
     # Timezone
     CFG_TIMEZONE=$(select_from_list "Select timezone:" "$CFG_TIMEZONE" "${TIMEZONES[@]}")
@@ -484,6 +602,39 @@ run_interactive_config() {
     
     # Mirror
     CFG_UBUNTU_MIRROR=$(select_mirror "$CFG_UBUNTU_MIRROR")
+    
+    # Streaming/CUDA features
+    echo ""
+    print_separator
+    echo -e "${BOLD}Streaming & CUDA Features:${NC}"
+    echo -e "  ${DIM}Enable these for video streaming, transcoding, and GPU-accelerated workflows${NC}"
+    echo ""
+    
+    if confirm "Install CUDA Toolkit 13.1? (for GPU-accelerated compute)"; then
+        CFG_INSTALL_CUDA="true"
+        CFG_ENABLE_NVIDIA_DEVICES="true"
+    fi
+    
+    if confirm "Install FFmpeg from source with NVENC/NVDEC? (requires CUDA)"; then
+        CFG_INSTALL_FFMPEG="true"
+        if [[ "$CFG_INSTALL_CUDA" != "true" ]]; then
+            print_warning "Enabling CUDA automatically (required for FFmpeg NVENC/NVDEC)"
+            CFG_INSTALL_CUDA="true"
+            CFG_ENABLE_NVIDIA_DEVICES="true"
+        fi
+    fi
+    
+    if confirm "Install NGINX with RTMP module? (for streaming server)"; then
+        CFG_INSTALL_NGINX_RTMP="true"
+    fi
+    
+    if confirm "Install streaming utilities? (mediainfo, sox, v4l-utils, imagemagick)"; then
+        CFG_INSTALL_STREAMING_UTILS="true"
+    fi
+    
+    if confirm "Mount Cloudflare Wrangler config? (for Workers development)"; then
+        CFG_MOUNT_WRANGLER="true"
+    fi
     
     # Show summary
     echo ""
@@ -496,6 +647,12 @@ run_interactive_config() {
     print_kv "Timezone" "$CFG_TIMEZONE"
     print_kv "Locale" "$CFG_LOCALE"
     print_kv "Ubuntu mirror" "$CFG_UBUNTU_MIRROR"
+    print_kv "CUDA 13.1" "${CFG_INSTALL_CUDA:-false}"
+    print_kv "FFmpeg (NVENC)" "${CFG_INSTALL_FFMPEG:-false}"
+    print_kv "NGINX-RTMP" "${CFG_INSTALL_NGINX_RTMP:-false}"
+    print_kv "Streaming utils" "${CFG_INSTALL_STREAMING_UTILS:-false}"
+    print_kv "NVIDIA devices" "${CFG_ENABLE_NVIDIA_DEVICES:-false}"
+    print_kv "Wrangler mount" "${CFG_MOUNT_WRANGLER:-false}"
     print_separator
     
     # Offer to save as defaults
@@ -698,6 +855,115 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | d
 DOCKERFILE_EOF
         fi
 
+        # Add CUDA Toolkit if enabled
+        if [[ "$CFG_INSTALL_CUDA" == "true" ]]; then
+            cat >> "$dockerfile_path" << 'DOCKERFILE_EOF'
+
+# Install CUDA Toolkit 13.1
+RUN curl -fsSL --retry 5 --retry-delay 10 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-keyring_1.1-1_all.deb -o /tmp/cuda-keyring.deb \
+    && dpkg -i /tmp/cuda-keyring.deb && rm /tmp/cuda-keyring.deb \
+    && apt-get update && apt-get install -y --no-install-recommends \
+        cuda-toolkit-13-1 \
+        cuda-nvcc-13-1 \
+        cuda-libraries-dev-13-1 \
+        cuda-cudart-dev-13-1 \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV PATH=/usr/local/cuda-13.1/bin:$PATH \
+    LD_LIBRARY_PATH=/usr/local/cuda-13.1/lib64:$LD_LIBRARY_PATH \
+    CUDA_HOME=/usr/local/cuda-13.1
+DOCKERFILE_EOF
+        fi
+
+        # Add FFmpeg from source with NVENC/NVDEC if enabled
+        if [[ "$CFG_INSTALL_FFMPEG" == "true" ]]; then
+            cat >> "$dockerfile_path" << 'DOCKERFILE_EOF'
+
+# Install FFmpeg build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    autoconf automake cmake git-core libass-dev libfreetype6-dev \
+    libgnutls28-dev libmp3lame-dev libtool libvorbis-dev meson ninja-build \
+    pkg-config texinfo wget yasm zlib1g-dev nasm libx264-dev libx265-dev \
+    libnuma-dev libvpx-dev libfdk-aac-dev libopus-dev libdav1d-dev \
+    libaom-dev libwebp-dev libzmq3-dev librist-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Build SRT from source (not in Ubuntu 24.04 repos)
+RUN cd /tmp && git clone --depth 1 --branch v1.5.4 https://github.com/Haivision/srt.git \
+    && cd srt && mkdir build && cd build \
+    && cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local -DENABLE_SHARED=ON -DENABLE_STATIC=OFF \
+    && make -j$(nproc) && make install && ldconfig \
+    && cd / && rm -rf /tmp/srt
+
+# Install nv-codec-headers for NVENC/NVDEC
+RUN cd /tmp && git clone --depth 1 https://github.com/FFmpeg/nv-codec-headers.git \
+    && cd nv-codec-headers && make install PREFIX=/usr/local \
+    && cd / && rm -rf /tmp/nv-codec-headers
+
+# Build FFmpeg from master with hardware acceleration
+RUN cd /tmp && git clone --depth 1 https://github.com/FFmpeg/FFmpeg.git ffmpeg \
+    && cd ffmpeg && ./configure \
+        --prefix=/usr/local \
+        --enable-gpl --enable-nonfree \
+        --enable-libx264 --enable-libx265 --enable-libvpx \
+        --enable-libfdk-aac --enable-libmp3lame --enable-libopus --enable-libvorbis \
+        --enable-libass --enable-libfreetype --enable-libwebp \
+        --enable-libaom --enable-libdav1d \
+        --enable-libsrt --enable-librist --enable-libzmq \
+        --enable-cuda-nvcc --enable-cuvid --enable-nvenc --enable-nvdec \
+        --enable-ffnvcodec \
+        --extra-cflags="-I/usr/local/cuda-13.1/include" \
+        --extra-ldflags="-L/usr/local/cuda-13.1/lib64" \
+    && make -j$(nproc) && make install && ldconfig \
+    && cd / && rm -rf /tmp/ffmpeg
+DOCKERFILE_EOF
+        fi
+
+        # Add NGINX with RTMP if enabled
+        if [[ "$CFG_INSTALL_NGINX_RTMP" == "true" ]]; then
+            cat >> "$dockerfile_path" << 'DOCKERFILE_EOF'
+
+# Build NGINX with RTMP module (mainline 1.29.x with GPG verification)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpcre3-dev libssl-dev libgeoip-dev \
+    && rm -rf /var/lib/apt/lists/* \
+    && cd /tmp \
+    && curl -fsSL --retry 5 --retry-delay 10 -o nginx.tar.gz https://nginx.org/download/nginx-1.29.0.tar.gz \
+    && curl -fsSL --retry 5 --retry-delay 10 -o nginx.tar.gz.asc https://nginx.org/download/nginx-1.29.0.tar.gz.asc \
+    && gpg --batch --keyserver hkps://keyserver.ubuntu.com --recv-keys \
+        B0F4253373F8F6F510D42178520A9993A1C052F8 \
+        43387825DDB1BB97EC36BA5D007C8D7C15D87369 \
+        D6786CE303D9A9022998DC6CC8464D549AF75C0A \
+        13C82A63B603576156E30A4EA0EA981B66B0D967 \
+        573BFD6B3D8FBC641079A6ABABF5BD827BD9BF62 \
+    && gpg --batch --verify nginx.tar.gz.asc nginx.tar.gz \
+    && tar -xzf nginx.tar.gz \
+    && git clone --depth 1 https://github.com/arut/nginx-rtmp-module.git \
+    && cd nginx-1.29.0 \
+    && ./configure --prefix=/usr/local/nginx \
+        --with-http_ssl_module --with-http_v2_module --with-http_realip_module \
+        --with-http_geoip_module --with-stream --with-stream_ssl_module \
+        --add-module=../nginx-rtmp-module \
+    && make -j$(nproc) && make install \
+    && ln -s /usr/local/nginx/sbin/nginx /usr/local/bin/nginx \
+    && cd / && rm -rf /tmp/nginx* /tmp/nginx-rtmp-module
+DOCKERFILE_EOF
+        fi
+
+        # Add streaming utilities if enabled
+        if [[ "$CFG_INSTALL_STREAMING_UTILS" == "true" ]]; then
+            cat >> "$dockerfile_path" << 'DOCKERFILE_EOF'
+
+# Install streaming utilities
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    mediainfo \
+    sox libsox-fmt-all \
+    v4l-utils \
+    imagemagick \
+    && rm -rf /var/lib/apt/lists/*
+DOCKERFILE_EOF
+        fi
+
         cat >> "$dockerfile_path" << DOCKERFILE_EOF
 
 # Create user ${CFG_CONTAINER_NAME} with sudo privileges
@@ -766,6 +1032,16 @@ RUN $git_config_cmd
 DOCKERFILE_EOF
         fi
 
+        # Clean up build-time GPG keyring if packages used gpg --import
+        # This prevents interference with the mounted host GPG agent socket
+        if [[ "$CFG_INSTALL_NGINX_RTMP" == "true" ]]; then
+            cat >> "$dockerfile_path" << 'DOCKERFILE_EOF'
+
+# Clean up GPG keyring created during package verification (interferes with host GPG agent mount)
+RUN rm -rf ~/.gnupg
+DOCKERFILE_EOF
+        fi
+
         cat >> "$dockerfile_path" << DOCKERFILE_EOF
 
 WORKDIR /workspaces
@@ -787,9 +1063,18 @@ DOCKERFILE_EOF
 # Generate devcontainer.json
 generate_devcontainer_json() {
     local devcontainer_dir="$1"
+    local use_image="${2:-}"  # Optional: image tag to use instead of building
+    local category="${3:-}"   # Optional: category for header comments
     local devcontainer_file="$devcontainer_dir/devcontainer.json"
     local project_name
-    project_name=$(basename "$PROJECT_PATH")
+    project_name=$(basename "${PROJECT_PATH:-$(pwd)}")
+    
+    # Determine remote user FIRST (needed for mount paths)
+    # Use CFG_CONTAINER_NAME which defaults to project folder name
+    local remote_user="$CFG_CONTAINER_NAME"
+    if [[ "$CFG_BASE_IMAGE" == mcr.microsoft.com/* ]]; then
+        remote_user="vscode"
+    fi
     
     # Build mounts array
     local mounts=""
@@ -807,7 +1092,29 @@ generate_devcontainer_json() {
     
     if [[ "$CFG_MOUNT_GH_CONFIG" == "true" ]]; then
         if [[ -n "$mounts" ]]; then mounts+=","; fi
-        mounts+="\"source=\${localEnv:HOME}/.config/gh,target=/home/${CFG_CONTAINER_NAME}/.config/gh,type=bind,consistency=cached\""
+        mounts+="\"source=\${localEnv:HOME}/.config/gh,target=/home/${remote_user}/.config/gh,type=bind,consistency=cached\""
+    fi
+    
+    if [[ "$CFG_MOUNT_WRANGLER" == "true" ]]; then
+        if [[ -n "$mounts" ]]; then mounts+=","; fi
+        mounts+="\"source=\${localEnv:HOME}/.config/.wrangler,target=/home/${remote_user}/.config/.wrangler,type=bind,consistency=cached\""
+    fi
+    
+    # Add Wayland/X11 mounts for NVIDIA categories
+    if [[ "$CFG_ENABLE_NVIDIA_DEVICES" == "true" ]]; then
+        if [[ -n "$mounts" ]]; then mounts+=","; fi
+        mounts+="\"source=\${localEnv:XDG_RUNTIME_DIR}/\${localEnv:WAYLAND_DISPLAY},target=/tmp/wayland-0,type=bind,readonly\","
+        mounts+="\"source=/run/user/${uid}/wayland-0.lock,target=/tmp/wayland-0.lock,type=bind\","
+        mounts+="\"source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind\","
+        mounts+="\"source=/usr/lib/x86_64-linux-gnu/libcuda.so.1,target=/usr/lib/x86_64-linux-gnu/libcuda.so.1,type=bind,readonly\","
+        mounts+="\"source=/usr/lib/x86_64-linux-gnu/libnvcuvid.so.1,target=/usr/lib/x86_64-linux-gnu/libnvcuvid.so.1,type=bind,readonly\""
+    fi
+    
+    # Build NVIDIA device mounts if enabled
+    # Always include --userns=keep-id for rootless podman socket permission compatibility
+    local run_args="\"--userns=keep-id\""
+    if [[ "$CFG_ENABLE_NVIDIA_DEVICES" == "true" ]]; then
+        run_args+=",\"--shm-size=1g\",\"--device=/dev/dri\",\"--device=/dev/nvidia0\",\"--device=/dev/nvidiactl\",\"--device=/dev/nvidia-modeset\",\"--device=/dev/nvidia-uvm\",\"--device=/dev/nvidia-uvm-tools\""
     fi
     
     # Build extensions array
@@ -818,30 +1125,117 @@ generate_devcontainer_json() {
         extensions+="\"${ext}\""
     done
     
-    # Determine remote user based on image type
-    local remote_user="$CFG_CONTAINER_NAME"
-    if [[ "$CFG_BASE_IMAGE" == mcr.microsoft.com/* ]]; then
+    # Determine remote user based on mode
+    if [[ -n "$use_image" || -n "$category" ]]; then
+        # --img and --base modes: use category name (matches user in base image)
+        remote_user="${category,,}"  # Force lowercase
+    elif [[ "$CFG_BASE_IMAGE" == mcr.microsoft.com/* ]]; then
         remote_user="vscode"
+    else
+        # General mode: use folder name
+        remote_user="$CFG_CONTAINER_NAME"
+    fi
+    
+    # Build container environment vars
+    local container_env="\"GPG_TTY\": \"\$(tty)\",
+    \"GPG_KEY_ID\": \"${CFG_GPG_KEY_ID}\",
+    \"GITHUB_USER\": \"${CFG_GITHUB_USER}\",
+    \"DOCKER_HOST\": \"unix:///var/run/docker.sock\",
+    \"DISPLAY\": \"\${localEnv:DISPLAY}\",
+    \"TZ\": \"${CFG_TIMEZONE}\""
+    
+    if [[ "$CFG_ENABLE_NVIDIA_DEVICES" == "true" ]]; then
+        container_env+=",
+    \"NVIDIA_VISIBLE_DEVICES\": \"all\",
+    \"NVIDIA_DRIVER_CAPABILITIES\": \"compute,video,utility\",
+    \"__NV_PRIME_RENDER_OFFLOAD\": \"1\",
+    \"__GLX_VENDOR_LIBRARY_NAME\": \"nvidia\",
+    \"WAYLAND_DISPLAY\": \"wayland-0\",
+    \"XDG_RUNTIME_DIR\": \"/tmp\""
+    fi
+    
+    # Build runArgs
+    local run_args_block=""
+    if [[ -n "$run_args" ]]; then
+        run_args_block="\"runArgs\": [
+    ${run_args}
+  ],"
+    fi
+    
+    # Add header comments for category images
+    local header_comment=""
+    local image_or_build=""
+    
+    if [[ -n "$use_image" ]]; then
+        # Using pre-built image
+        image_or_build="\"image\": \"$use_image\","
+        if [[ -n "$category" ]]; then
+            local github_ref="${CATEGORY_GITHUB_PATHS[$category]}"
+            header_comment="  // ============================================================================
+  // Category: $category
+  // Base image: $use_image
+  // ============================================================================
+  // This devcontainer uses a pre-built dev-control category image.
+  // 
+  // Build source: $github_ref
+  // Features: ${CATEGORY_FEATURES[$category]}
+  // 
+  // To build this base image locally:
+  //   git clone https://github.com/xaostech/dev-control ~/.dev-control
+  //   cd ~/.dev-control/.devcontainer/$category
+  //   podman build -t $use_image .
+  //
+  // To use a local build instead of pulling from registry, ensure the image exists:
+  //   podman images | grep ${use_image%%:*}
+  // ============================================================================
+
+"
+        fi
+    elif [[ -n "$category" ]]; then
+        # Building from Dockerfile for a category
+        image_or_build="\"build\": {
+    \"dockerfile\": \"Dockerfile\"
+  },"
+        local image_tag="${BASE_IMAGE_CATEGORIES[$category]}"
+        local github_ref="${CATEGORY_GITHUB_PATHS[$category]}"
+        header_comment="  // ============================================================================
+  // Category: $category
+  // Image tag: $image_tag
+  // ============================================================================
+  // This devcontainer builds from the generated Dockerfile.
+  // 
+  // Build source: $github_ref
+  // Features: ${CATEGORY_FEATURES[$category]}
+  // 
+  // After building, tag the image for reuse:
+  //   podman tag \$(podman images -q --filter \"label=devcontainer.local_folder=\$(pwd)\") $image_tag
+  //
+  // Then use --img --$category in other projects to reference this image.
+  // ============================================================================
+
+"
+    else
+        # Regular build mode
+        image_or_build="\"build\": {
+    \"dockerfile\": \"Dockerfile\"
+  },"
     fi
     
     cat > "$devcontainer_file" << DEVCONTAINER_EOF
 {
-  "name": "${project_name^^}",
-  "build": {
-    "dockerfile": "Dockerfile"
-  },
+${header_comment}  "name": "${project_name^^}",
+  ${image_or_build}
   "remoteUser": "${remote_user}",
+  "workspaceMount": "source=\${localWorkspaceFolder},target=/workspaces/${project_name},type=bind,consistency=cached",
   "workspaceFolder": "/workspaces/${project_name}",
+  ${run_args_block}
   "mounts": [
     ${mounts}
   ],
   "containerEnv": {
-    "GPG_TTY": "\$(tty)",
-    "DOCKER_HOST": "unix:///var/run/docker.sock",
-    "DISPLAY": "\${localEnv:DISPLAY}",
-    "TZ": "${CFG_TIMEZONE}"
+    ${container_env}
   },
-  "postCreateCommand": "git config --global --add safe.directory '*' && gpg-connect-agent updatestartuptty /bye >/dev/null 2>&1 || true",
+  "postCreateCommand": "sudo chown -R ${remote_user}:${remote_user} . 2>/dev/null || true && sudo chmod 755 /home/${remote_user} 2>/dev/null || true && git config --global --add safe.directory '*' && sudo mkdir -p /run/user/${uid} && sudo chown ${remote_user}:${remote_user} /run/user/${uid} && ln -sf /tmp/wayland-0 /run/user/${uid}/wayland-0 2>/dev/null || true && gpg-connect-agent updatestartuptty /bye >/dev/null 2>&1 || true && sudo chown -R ${remote_user}:${remote_user} /run/user/${uid} 2>/dev/null || true",
   "customizations": {
     "vscode": {
       "settings": {
@@ -908,6 +1302,552 @@ show_activation_instructions() {
 }
 
 ################################################################################
+# Base Image Building
+################################################################################
+
+# Generate Dockerfile for a category with all features baked in
+generate_category_dockerfile() {
+    local category="$1"
+    local dockerfile_path="$2"
+    
+    cat > "$dockerfile_path" << 'DOCKERFILE_HEADER'
+FROM ubuntu:latest
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install core development tools and dependencies
+RUN apt-get update && apt-get upgrade -y && apt-get install -y \
+    git \
+    build-essential \
+    sudo \
+    locales \
+    lsb-release \
+    curl \
+    wget \
+    ca-certificates \
+    gnupg \
+    libsecret-tools \
+    nano \
+    jq \
+    && sed -i '/en_GB.UTF-8/s/^# //g' /etc/locale.gen \
+    && locale-gen en_GB.UTF-8 \
+    && update-locale LANG=en_GB.UTF-8 LC_ALL=en_GB.UTF-8 \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV LANG=en_GB.UTF-8 \
+    LC_ALL=en_GB.UTF-8 \
+    TZ=UTC \
+    EDITOR=nano
+
+RUN ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime && echo ${TZ} > /etc/timezone
+
+# Install GitHub CLI
+RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" > /etc/apt/sources.list.d/github-cli.list \
+    && apt-get update && apt-get install -y gh \
+    && rm -rf /var/lib/apt/lists/*
+DOCKERFILE_HEADER
+
+    # Add category-specific features
+    case "$category" in
+        game-dev)
+            cat >> "$dockerfile_path" << 'DOCKERFILE_GAMEDEV'
+
+# ============================================================================
+# GAME-DEV: Godot, Vulkan, SDL2, GLFW, CUDA
+# ============================================================================
+
+# Install Vulkan SDK and game development libraries
+RUN apt-get update && apt-get install -y \
+    cmake ninja-build scons pkg-config \
+    libx11-dev libxcursor-dev libxinerama-dev \
+    libgl1-mesa-dev libglu1-mesa-dev \
+    libasound2-dev libpulse-dev \
+    libfreetype6-dev libssl-dev libudev-dev \
+    libxi-dev libxrandr-dev \
+    vulkan-tools libvulkan-dev \
+    vulkan-utility-libraries-dev vulkan-validationlayers \
+    spirv-tools glslang-tools glslang-dev \
+    libshaderc-dev libshaderc1 \
+    libsdl2-2.0-0 libsdl2-dev libglm-dev \
+    libstb-dev libpng-dev libjpeg-dev \
+    libwayland-dev libxkbcommon-dev wayland-protocols \
+    libdecor-0-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Build GLFW 3.4 from source with native Wayland support
+RUN git clone --depth 1 --branch 3.4 https://github.com/glfw/glfw.git /tmp/glfw \
+    && cd /tmp/glfw \
+    && cmake -B build -G Ninja \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/usr/local \
+        -DGLFW_BUILD_WAYLAND=ON \
+        -DGLFW_BUILD_X11=OFF \
+        -DBUILD_SHARED_LIBS=ON \
+    && cmake --build build \
+    && cmake --install build \
+    && rm -rf /tmp/glfw \
+    && ldconfig
+
+# Install CUDA Toolkit 13.1
+RUN wget -q https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-keyring_1.1-1_all.deb -O /tmp/cuda-keyring.deb \
+    && dpkg -i /tmp/cuda-keyring.deb && rm /tmp/cuda-keyring.deb \
+    && apt-get update && apt-get install -y \
+        cuda-toolkit-13-1 cuda-nvcc-13-1 \
+        cuda-libraries-dev-13-1 cuda-cudart-dev-13-1 \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV PATH=/usr/local/cuda/bin:${PATH} \
+    LD_LIBRARY_PATH=/usr/local/cuda/lib64:${LD_LIBRARY_PATH} \
+    CUDA_HOME=/usr/local/cuda
+
+# Install Godot Engine
+RUN GODOT_VERSION=$(curl -s https://api.github.com/repos/godotengine/godot/releases/latest | jq -r '.tag_name' | sed 's/-stable//') \
+    && curl -fsSL "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip" -o /tmp/godot.zip \
+    && unzip -q /tmp/godot.zip -d /tmp \
+    && mv /tmp/Godot_v${GODOT_VERSION}-stable_linux.x86_64 /usr/local/bin/godot \
+    && chmod +x /usr/local/bin/godot \
+    && rm /tmp/godot.zip
+DOCKERFILE_GAMEDEV
+            ;;
+        
+        art)
+            cat >> "$dockerfile_path" << 'DOCKERFILE_ART'
+
+# ============================================================================
+# ART: 2D/3D art tools, design software
+# ============================================================================
+
+RUN apt-get update && apt-get install -y \
+    imagemagick \
+    gimp \
+    inkscape \
+    blender \
+    krita \
+    graphicsmagick \
+    optipng \
+    pngquant \
+    jpegoptim \
+    libheif-examples \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install pastel (color tool) from GitHub releases
+RUN PASTEL_VERSION=$(curl -s https://api.github.com/repos/sharkdp/pastel/releases/latest | grep -oP '"tag_name": "\K[^"]+') \
+    && curl -fsSL "https://github.com/sharkdp/pastel/releases/download/${PASTEL_VERSION}/pastel-${PASTEL_VERSION}-x86_64-unknown-linux-musl.tar.gz" | tar xz -C /tmp \
+    && sudo mv /tmp/pastel-${PASTEL_VERSION}-x86_64-unknown-linux-musl/pastel /usr/local/bin/ \
+    && sudo chmod +x /usr/local/bin/pastel \
+    && rm -rf /tmp/pastel-*
+DOCKERFILE_ART
+            ;;
+        
+        data-science)
+            cat >> "$dockerfile_path" << 'DOCKERFILE_DATASCIENCE'
+
+# ============================================================================
+# DATA-SCIENCE: CUDA, FFmpeg, NVIDIA acceleration
+# ============================================================================
+
+# Install CUDA Toolkit 13.1
+RUN wget -q https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-keyring_1.1-1_all.deb -O /tmp/cuda-keyring.deb \
+    && dpkg -i /tmp/cuda-keyring.deb && rm /tmp/cuda-keyring.deb \
+    && apt-get update && apt-get install -y \
+        cuda-toolkit-13-1 cuda-nvcc-13-1 \
+        cuda-libraries-dev-13-1 cuda-cudart-dev-13-1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install CUDA 12.6 runtime libraries for ONNX Runtime compatibility
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        cuda-cudart-12-6 cuda-nvrtc-12-6 \
+        libcublas-12-6 libcufft-12-6 libcurand-12-6 \
+        libcusparse-12-6 libcusolver-12-6 \
+        libnvjitlink-12-6 libcudnn9-cuda-12 \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV PATH=/usr/local/cuda/bin:${PATH} \
+    LD_LIBRARY_PATH=/usr/local/cuda-12.6/lib64:/usr/local/cuda/lib64:${LD_LIBRARY_PATH} \
+    CUDA_HOME=/usr/local/cuda
+
+# Install FFmpeg build dependencies
+RUN apt-get update && apt-get install -y \
+    nasm yasm pkg-config cmake \
+    libx264-dev libx265-dev libvpx-dev \
+    libfdk-aac-dev libmp3lame-dev libopus-dev \
+    libass-dev libfreetype6-dev libvorbis-dev \
+    libwebp-dev libaom-dev libdav1d-dev \
+    librist-dev libssl-dev libzmq3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Build SRT from source
+RUN git clone --depth 1 --branch v1.5.4 https://github.com/Haivision/srt.git /tmp/srt \
+    && cd /tmp/srt && cmake -B build -DCMAKE_INSTALL_PREFIX=/usr/local \
+    && cmake --build build -j$(nproc) && cmake --install build \
+    && rm -rf /tmp/srt && ldconfig
+
+# Install nv-codec-headers
+RUN git clone --depth 1 https://github.com/FFmpeg/nv-codec-headers.git /tmp/nv-codec-headers \
+    && cd /tmp/nv-codec-headers && make install \
+    && rm -rf /tmp/nv-codec-headers
+
+# Build FFmpeg with NVENC/NVDEC
+RUN git clone --depth 1 https://git.ffmpeg.org/ffmpeg.git /tmp/ffmpeg \
+    && cd /tmp/ffmpeg && ./configure \
+        --prefix=/usr/local --enable-gpl --enable-nonfree \
+        --enable-cuvid --enable-nvenc --enable-nvdec \
+        --enable-libx264 --enable-libx265 --enable-libvpx \
+        --enable-libfdk-aac --enable-libmp3lame --enable-libopus \
+        --enable-libass --enable-libfreetype --enable-libwebp \
+        --enable-libaom --enable-libdav1d --enable-libsrt \
+        --enable-librist --enable-libzmq \
+    && make -j$(nproc) && make install \
+    && rm -rf /tmp/ffmpeg && ldconfig
+DOCKERFILE_DATASCIENCE
+            ;;
+        
+        streaming)
+            cat >> "$dockerfile_path" << 'DOCKERFILE_STREAMING'
+
+# ============================================================================
+# STREAMING: FFmpeg+NVENC, NGINX-RTMP, SRT, ONNX Runtime GPU, YOLOv8
+# ============================================================================
+
+# Install CUDA Toolkit 13.1
+RUN wget -q https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-keyring_1.1-1_all.deb -O /tmp/cuda-keyring.deb \
+    && dpkg -i /tmp/cuda-keyring.deb && rm /tmp/cuda-keyring.deb \
+    && apt-get update && apt-get install -y \
+        cuda-toolkit-13-1 cuda-nvcc-13-1 \
+        cuda-libraries-dev-13-1 cuda-cudart-dev-13-1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install CUDA 12.6 runtime libraries for ONNX Runtime 1.20.x compatibility
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        cuda-cudart-12-6 cuda-nvrtc-12-6 \
+        libcublas-12-6 libcufft-12-6 libcurand-12-6 \
+        libcusparse-12-6 libcusolver-12-6 \
+        libnvjitlink-12-6 libcudnn9-cuda-12 \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV PATH=/usr/local/cuda/bin:${PATH} \
+    LD_LIBRARY_PATH=/usr/local/cuda-12.6/lib64:/usr/local/cuda/lib64:${LD_LIBRARY_PATH} \
+    CUDA_HOME=/usr/local/cuda
+
+# Install FFmpeg build dependencies
+RUN apt-get update && apt-get install -y \
+    nasm yasm pkg-config gpg dirmngr libmd0 cmake \
+    libx264-dev libx265-dev libvpx-dev \
+    libfdk-aac-dev libmp3lame-dev libopus-dev \
+    libass-dev libfreetype6-dev libvorbis-dev \
+    libwebp-dev libaom-dev libdav1d-dev \
+    librist-dev libssl-dev libzmq3-dev libsdl2-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Build SRT from source
+RUN git clone --depth 1 --branch v1.5.4 https://github.com/Haivision/srt.git /tmp/srt \
+    && cd /tmp/srt && cmake -B build -DCMAKE_INSTALL_PREFIX=/usr/local \
+    && cmake --build build -j$(nproc) && cmake --install build \
+    && rm -rf /tmp/srt && ldconfig
+
+# Install nv-codec-headers for NVENC/NVDEC
+RUN git clone --depth 1 https://github.com/FFmpeg/nv-codec-headers.git /tmp/nv-codec-headers \
+    && cd /tmp/nv-codec-headers && make install \
+    && rm -rf /tmp/nv-codec-headers
+
+# Build FFmpeg from master with NVENC/NVDEC
+RUN git clone --depth 1 https://git.ffmpeg.org/ffmpeg.git /tmp/ffmpeg \
+    && cd /tmp/ffmpeg && ./configure \
+        --prefix=/usr/local --enable-gpl --enable-nonfree \
+        --enable-cuvid --enable-nvenc --enable-nvdec \
+        --enable-libx264 --enable-libx265 --enable-libvpx \
+        --enable-libfdk-aac --enable-libmp3lame --enable-libopus \
+        --enable-libass --enable-libfreetype --enable-libwebp \
+        --enable-libaom --enable-libdav1d --enable-libsrt \
+        --enable-librist --enable-libzmq \
+    && make -j$(nproc) && make install \
+    && rm -rf /tmp/ffmpeg && ldconfig
+
+# Build NGINX with RTMP module
+RUN apt-get update && apt-get install -y libpcre3-dev libssl-dev zlib1g-dev \
+    && rm -rf /var/lib/apt/lists/* \
+    && git clone --depth 1 https://github.com/arut/nginx-rtmp-module.git /tmp/nginx-rtmp \
+    && curl -fsSL https://nginx.org/keys/nginx_signing.key | gpg --import \
+    && curl -sLO https://nginx.org/download/nginx-1.27.3.tar.gz \
+    && tar -xzf nginx-1.27.3.tar.gz -C /tmp && rm nginx-1.27.3.tar.gz \
+    && cd /tmp/nginx-1.27.3 && ./configure \
+        --prefix=/usr/local/nginx \
+        --with-http_ssl_module --with-http_v2_module \
+        --with-http_realip_module --with-http_stub_status_module \
+        --with-stream --with-stream_ssl_module \
+        --add-module=/tmp/nginx-rtmp \
+    && make -j$(nproc) && make install \
+    && rm -rf /tmp/nginx-* \
+    && ln -sf /usr/local/nginx/sbin/nginx /usr/local/bin/nginx
+
+# Install streaming utilities
+RUN apt-get update && apt-get install -y mediainfo && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y sox libsox-fmt-all && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y v4l-utils && rm -rf /var/lib/apt/lists/*
+
+# Install FFmpeg development headers
+RUN apt-get update && apt-get install -y \
+    libavformat-dev libavcodec-dev libavutil-dev libswscale-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install yt-dlp
+RUN YT_DLP_VERSION=$(curl -s https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest | jq -r '.tag_name') \
+    && curl -fsSL "https://github.com/yt-dlp/yt-dlp/releases/download/${YT_DLP_VERSION}/yt-dlp" -o /usr/local/bin/yt-dlp \
+    && chmod a+rx /usr/local/bin/yt-dlp
+
+# Install TensorRT
+RUN apt-get update && apt-get install -y \
+    libnvinfer-lean10 libnvinfer-vc-plugin10 \
+    libnvinfer-dispatch10 libnvinfer-headers-dev \
+    bc sqlite3 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install ONNX Runtime 1.20.1 GPU
+RUN ONNX_VERSION="1.20.1" \
+    && curl -fsSL "https://github.com/microsoft/onnxruntime/releases/download/v${ONNX_VERSION}/onnxruntime-linux-x64-gpu-${ONNX_VERSION}.tgz" -o /tmp/onnxruntime.tgz \
+    && tar -xzf /tmp/onnxruntime.tgz -C /opt \
+    && mv /opt/onnxruntime-linux-x64-gpu-${ONNX_VERSION} /opt/onnxruntime \
+    && ln -sf /opt/onnxruntime/include/* /usr/local/include/ \
+    && ln -sf /opt/onnxruntime/lib/libonnxruntime.so* /usr/local/lib/ \
+    && ln -sf /opt/onnxruntime/lib/libonnxruntime_providers_cuda.so /usr/local/lib/ \
+    && ln -sf /opt/onnxruntime/lib/libonnxruntime_providers_shared.so /usr/local/lib/ \
+    && ldconfig && rm -f /tmp/onnxruntime.tgz
+
+ENV ONNXRUNTIME_DIR=/opt/onnxruntime \
+    LD_LIBRARY_PATH=/opt/onnxruntime/lib:${LD_LIBRARY_PATH}
+
+# Export YOLOv8n to ONNX format
+RUN apt-get update && apt-get install -y --no-install-recommends python3-pip python3-venv \
+    && python3 -m venv /tmp/yolo-export \
+    && /tmp/yolo-export/bin/pip install ultralytics onnx onnxslim onnxruntime \
+    && cd /tmp/yolo-export \
+    && /tmp/yolo-export/bin/python -c "from ultralytics import YOLO; model = YOLO('yolov8n.pt'); model.export(format='onnx', imgsz=640, opset=17, simplify=True)" \
+    && mkdir -p /opt/models \
+    && mv /tmp/yolo-export/yolov8n.onnx /opt/models/yolov8n.onnx \
+    && chmod 644 /opt/models/yolov8n.* \
+    && rm -rf /tmp/yolo-export ~/.config/Ultralytics /tmp/Ultralytics \
+    && apt-get purge -y python3-pip python3-venv \
+    && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
+
+ENV PATH=/usr/local/nginx/sbin:$PATH
+DOCKERFILE_STREAMING
+            ;;
+        
+        web-dev)
+            cat >> "$dockerfile_path" << 'DOCKERFILE_WEBDEV'
+
+# ============================================================================
+# WEB-DEV: Node.js, npm, modern web frameworks, Wrangler
+# ============================================================================
+
+# Web development tools
+RUN apt-get update && apt-get install -y \
+    && rm -rf /var/lib/apt/lists/*
+DOCKERFILE_WEBDEV
+            ;;
+        
+        dev-tools)
+            cat >> "$dockerfile_path" << 'DOCKERFILE_DEVTOOLS'
+
+# ============================================================================
+# DEV-TOOLS: GCC, build-essential, common compilers
+# ============================================================================
+
+RUN apt-get update && apt-get install -y \
+    clang llvm gdb valgrind \
+    cmake ninja-build meson \
+    pkg-config autoconf automake libtool \
+    && rm -rf /var/lib/apt/lists/*
+DOCKERFILE_DEVTOOLS
+            ;;
+    esac
+
+    # Add common user setup at the end
+    # Use CATEGORY name for the base image user (generic, reusable)
+    local base_user="$category"
+    cat >> "$dockerfile_path" << DOCKERFILE_USER
+
+# ============================================================================
+# User setup: ${base_user} (category-based generic user)
+# ============================================================================
+
+# Create user ${base_user} with sudo privileges
+RUN if id ubuntu &>/dev/null; then \\
+        groupmod -n ${base_user} ubuntu && \\
+        usermod -l ${base_user} -d /home/${base_user} ubuntu && \\
+        mkdir -p /home/${base_user} && \\
+        chown -R ${base_user}:${base_user} /home/${base_user}; \\
+    else \\
+        useradd -m -s /bin/bash ${base_user}; \\
+    fi && \\
+    usermod -aG sudo ${base_user} && \\
+    echo "${base_user} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \\
+    mkdir -p /home/${base_user}/.config /home/${base_user}/.cache /home/${base_user}/.local/share && \\
+    chown -R ${base_user}:${base_user} /home/${base_user}
+
+USER ${base_user}
+WORKDIR /home/${base_user}
+
+RUN touch ~/.hushlogin
+
+# Install nvm and Node.js
+ENV NVM_DIR=/home/${base_user}/.config/nvm
+ENV BASH_ENV=/home/${base_user}/.bashrc
+RUN mkdir -p "\$NVM_DIR" && \\
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash && \\
+    echo 'export NVM_DIR="\$HOME/.config/nvm"' >> ~/.bashrc && \\
+    echo '[ -s "\$NVM_DIR/nvm.sh" ] && \\. "\$NVM_DIR/nvm.sh"' >> ~/.bashrc && \\
+    bash -c 'source \$NVM_DIR/nvm.sh && nvm install 22 && nvm alias default 22'
+
+ENV PATH=\$NVM_DIR/versions/node/v22.13.1/bin:\$PATH
+
+# Clean up GPG keyring (interferes with host GPG agent mount)
+RUN rm -rf ~/.gnupg
+
+# Pre-create .vscode-server directory
+RUN mkdir -p /home/${base_user}/.vscode-server && chmod 755 /home/${base_user}/.vscode-server
+
+WORKDIR /workspaces
+DOCKERFILE_USER
+}
+
+build_base_image() {
+    local category="$1"
+    local image_tag="${BASE_IMAGE_CATEGORIES[$category]}"
+    local github_ref="${CATEGORY_GITHUB_PATHS[$category]}"
+    
+    if [[ -z "$image_tag" ]]; then
+        print_error "Unknown category: $category"
+        echo "Available: ${!BASE_IMAGE_CATEGORIES[*]}"
+        exit 1
+    fi
+    
+    local project_dir="$(pwd)"
+    local project_name=$(basename "$project_dir")
+    local devcontainer_dir="$project_dir/.devcontainer"
+    
+    print_header "Generating Base Image Config: $category"
+    print_kv "Category" "$category"
+    print_kv "Image tag" "$image_tag"
+    print_kv "Features" "${CATEGORY_FEATURES[$category]}"
+    print_kv "Source" "$github_ref"
+    print_kv "Output" "$devcontainer_dir"
+    print_kv "GitHub User" "$CFG_GITHUB_USER"
+    print_kv "GPG Key" "$CFG_GPG_KEY_ID"
+    print_kv "Mount GPG" "$CFG_MOUNT_GPG"
+    print_kv "Mount GH Config" "$CFG_MOUNT_GH_CONFIG"
+    print_kv "Mount Docker" "$CFG_MOUNT_DOCKER_SOCKET"
+    echo ""
+    
+    # Create .devcontainer directory
+    mkdir -p "$devcontainer_dir"
+    
+    # Generate Dockerfile with all category features
+    print_info "Generating Dockerfile with $category features..."
+    generate_category_dockerfile "$category" "$devcontainer_dir/Dockerfile"
+    print_success "Created: $devcontainer_dir/Dockerfile"
+    
+    # Generate .dockerignore
+    generate_dockerignore "$devcontainer_dir"
+    
+    # Generate devcontainer.json using the standard function
+    PROJECT_PATH="$project_dir" generate_devcontainer_json "$devcontainer_dir" "" "$category"
+    echo ""
+    
+    print_header_success "Base Image Config Generated!"
+    echo ""
+    print_kv "Dockerfile" "$devcontainer_dir/Dockerfile"
+    print_kv "Config" "$devcontainer_dir/devcontainer.json"
+    echo ""
+    
+    echo -e "${BOLD}Build now?${NC}"
+    echo -e "  ${CYAN}Y${NC}) Build image with podman (may take 10-30 minutes)"
+    echo -e "  ${CYAN}N${NC}) Skip - use 'Open in Container' in VS Code instead"
+    echo ""
+    
+    if confirm "Build $image_tag now?"; then
+        print_info "Building image (this may take several minutes)..."
+        echo ""
+        
+        cd "$devcontainer_dir"
+        if podman build -t "$image_tag" .; then
+            echo ""
+            print_header_success "Base Image Built Successfully!"
+            print_kv "Image" "$image_tag"
+            echo ""
+            print_info "Verify: ${CYAN}podman images | grep ${image_tag%%:*}${NC}"
+            print_info "Use in other projects: ${CYAN}dc-contain --img --$category${NC}"
+        else
+            echo ""
+            print_error "Build failed"
+            exit 1
+        fi
+    else
+        echo ""
+        print_info "Skipped building. To build later:"
+        echo -e "  ${CYAN}cd $devcontainer_dir && podman build -t $image_tag .${NC}"
+        echo ""
+        print_info "Or open in VS Code and use 'Reopen in Container'"
+    fi
+}
+
+################################################################################
+# Image-based Devcontainer Generation
+################################################################################
+
+generate_image_devcontainer() {
+    local category="$1"
+    local image_tag="${BASE_IMAGE_CATEGORIES[$category]}"
+    local github_ref="${CATEGORY_GITHUB_PATHS[$category]}"
+    
+    if [[ -z "$image_tag" ]]; then
+        print_error "Unknown category: $category"
+        echo "Available: ${!BASE_IMAGE_CATEGORIES[*]}"
+        exit 1
+    fi
+    
+    local project_name=$(basename "$(pwd)")
+    local devcontainer_dir=".devcontainer"
+    
+    print_header "Generating Devcontainer: $project_name"
+    print_kv "Category" "$category"
+    print_kv "Base image" "$image_tag"
+    print_kv "Features" "${CATEGORY_FEATURES[$category]}"
+    print_kv "GitHub User" "$CFG_GITHUB_USER"
+    print_kv "GPG Key" "$CFG_GPG_KEY_ID"
+    print_kv "Mount GPG" "$CFG_MOUNT_GPG"
+    print_kv "Mount GH Config" "$CFG_MOUNT_GH_CONFIG"
+    print_kv "Mount Docker" "$CFG_MOUNT_DOCKER_SOCKET"
+    echo ""
+    
+    # Check if image exists (podman adds localhost/ prefix)
+    if ! podman images --format "{{.Repository}}:{{.Tag}}" | grep -qE "^(localhost/)?$image_tag\$"; then
+        print_warning "Base image not found locally: $image_tag"
+        echo ""
+        echo "Build it first:"
+        echo "  ${CYAN}cd ~/.dev-control/.devcontainer/$category${NC}"
+        echo "  ${CYAN}dc-contain --base --$category${NC}"
+        echo ""
+        if ! confirm "Continue anyway (will fail when opening devcontainer)?"; then
+            exit 1
+        fi
+    fi
+    
+    mkdir -p "$devcontainer_dir"
+    
+    # Generate devcontainer.json using the standard function
+    PROJECT_PATH="$(pwd)" generate_devcontainer_json "$devcontainer_dir" "$image_tag" "$category"
+    echo ""
+    print_header_success "Devcontainer Generated!"
+    echo ""
+    print_section "Next Steps:"
+    echo -e "  1. Open in VS Code: ${GREEN}code $(pwd)${NC}"
+    echo -e "  2. Press ${CYAN}F1${NC} → ${CYAN}Dev Containers: Reopen in Container${NC}"
+    echo ""
+}
+
+################################################################################
 # Main
 ################################################################################
 
@@ -921,7 +1861,18 @@ main() {
         exit 0
     fi
     
-    print_header "Dev-Control Containerisation"
+    # Always set project path first
+    if [[ -z "$PROJECT_PATH" ]]; then
+        PROJECT_PATH="$(pwd)"
+    fi
+    
+    # Always load user configuration (GPG, mounts, GitHub user, etc.)
+    load_container_config
+    
+    # Ensure container name is set from folder if not in config
+    if [[ -z "$CFG_CONTAINER_NAME" ]]; then
+        CFG_CONTAINER_NAME=$(basename "$PROJECT_PATH")
+    fi
     
     # Check if already in devcontainer
     if is_in_devcontainer; then
@@ -930,20 +1881,41 @@ main() {
         exit 0
     fi
     
-    # Detect project path
-    detect_project_path "$PROJECT_PATH"
-    
-    # Load configuration
-    load_container_config
-    
-    # Run interactive config unless using defaults
+    # Run interactive config unless using --defaults
     if [[ "$USE_DEFAULTS" != true ]]; then
+        # Only run full interactive mode if no MODE specified
+        if [[ -z "$MODE" ]]; then
+            print_header "Dev-Control Containerisation"
+            detect_project_path "$PROJECT_PATH"
+            load_container_config  # Reload if path changed
+        fi
         run_interactive_config
     else
         print_info "Using saved defaults from configuration"
-        # Ensure container name is set
-        if [[ -z "$CFG_CONTAINER_NAME" ]]; then
-            CFG_CONTAINER_NAME=$(basename "$PROJECT_PATH")
+    fi
+    
+    # Handle MODE-based workflows (--base or --img)
+    if [[ -n "$MODE" ]]; then
+        if [[ -z "$CATEGORY_FLAG" ]]; then
+            print_error "Category required. Use --game-dev, --art, --streaming, etc."
+            echo ""
+            show_help
+            exit 1
+        fi
+        
+        # Auto-enable NVIDIA for categories that use CUDA
+        case "$CATEGORY_FLAG" in
+            streaming|data-science|game-dev|art)
+                CFG_ENABLE_NVIDIA_DEVICES="true"
+                ;;
+        esac
+        
+        if [[ "$MODE" == "base" ]]; then
+            build_base_image "$CATEGORY_FLAG"
+            exit 0
+        elif [[ "$MODE" == "image" ]]; then
+            generate_image_devcontainer "$CATEGORY_FLAG"
+            exit 0
         fi
     fi
     
