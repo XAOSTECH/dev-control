@@ -5,30 +5,61 @@ All notable changes to Dev-Control will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-
-### Changed
-- Renamed project from Git-Control to Dev-Control
-- Main command changed from `gc` to `dc`
-- Config directory changed from `~/.config/git-control/` to `~/.config/dev-control/`
-- Project config file changed from `.gc-init.yaml` to `.dc-init.yaml`
-- All aliases now use `gc-` prefix instead of `dc-`
+## [0.4.0] - 2026-02-04
 
 ### Added
-- Modular CLI framework with `dc` entry point
-- Hierarchical configuration system (global + project)
-- Plugin architecture with auto-discovery
-- Interactive TUI mode with gum/fzf support
-- Output format support (--json, --quiet, --verbose)
-- Single-file installer script
-- Testing framework with bats
-- Version management and update checking
-- CHANGELOG.md
+- **Multi-category base image support** with specialised development environments
+  - Categories: game-dev, art, data-science, streaming, web-dev, dev-tools
+  - Feature descriptions and GitHub source references for each category
+- **Dual-mode operation**:
+  - `--base --CATEGORY`: Build pre-configured category base images
+  - `--img --CATEGORY`: Generate devcontainers from category base images
+- **GPU acceleration & streaming features**:
+  - CUDA Toolkit 13.1 support with NVIDIA hardware integration
+  - FFmpeg compilation from source with NVENC/NVDEC hardware encoding
+  - NGINX-RTMP streaming server integration with SRT protocol support
+  - ONNX Runtime GPU acceleration for ML inference
+  - YOLOv8 export and inference capabilities
+- **Enhanced configuration**:
+  - New options: `use_base_category`, `base_category`, `mount_wrangler`
+  - Streaming options: `install_cuda`, `install_ffmpeg`, `install_nginx_rtmp`,
+    `install_streaming_utils`, `enable_nvidia_devices`
+  - Configuration via new YAML keys in container configuration files
+- **Improved help & documentation**:
+  - Category descriptions with tools and versions
+  - Mode-specific usage examples
+  - GitHub source paths for category base images
 
 ### Changed
-- Restructured commands into commands/ directory
-- Libraries moved to scripts/lib/
-- Configuration now uses YAML format
+- `containerise.sh` help text completely restructured for multi-category architecture
+- Configuration loading refactored to support base category selection
+- Command-line parsing enhanced with MODE and CATEGORY_FLAG support
+- File permission: `containerise.sh` now executable (+x)
+
+### Technical Details
+- **Code changes**: +1026 lines (1080 insertions, 54 deletions)
+- **New functions**:
+  - `generate_category_dockerfile()`: Build category base images
+  - `build_base_image()`: Execute category base image builds
+  - `generate_image_devcontainer()`: Generate devcontainers from base images
+- **New data structures**:
+  - `BASE_IMAGE_CATEGORIES[]`: Category-to-image mappings
+  - `CATEGORY_FEATURES[]`: Feature descriptions per category
+  - `CATEGORY_GITHUB_PATHS[]`: Source code references
+
+### Backward Compatibility
+- ✓ Legacy interactive mode fully preserved
+- ✓ Existing .devcontainer configurations unaffected
+- ✓ `--defaults` and `--config FILE` options functional
+- ✓ Non-category configurations work as before
+
+### Use Cases Enabled
+- **Game Development**: Godot 4.x + Vulkan SDK + SDL2 + GLFW 3.4 + CUDA
+- **3D/2D Art**: Krita, GIMP, Inkscape, Blender, ImageMagick
+- **Data Science**: CUDA + FFmpeg + NVIDIA acceleration
+- **Live Streaming**: FFmpeg (NVENC/NVDEC) + NGINX-RTMP + ONNX Runtime
+- **Web Development**: Node.js 25 (nvm) + npm + Wrangler
+- **General Development**: GCC + build-essential + standard compilers
 
 ## [0.3.0] - 2026-01-26
 
