@@ -1431,7 +1431,7 @@ RUN apt-get update && apt-get install -y \
     libheif-examples \
     && rm -rf /var/lib/apt/lists/*
 
-# Install pastel (color tool) from GitHub releases
+# Install pastel (colour tool) from GitHub releases
 RUN PASTEL_VERSION=$(curl -s https://api.github.com/repos/sharkdp/pastel/releases/latest | grep -oP '"tag_name": "\K[^"]+') \
     && curl -fsSL "https://github.com/sharkdp/pastel/releases/download/${PASTEL_VERSION}/pastel-${PASTEL_VERSION}-x86_64-unknown-linux-musl.tar.gz" | tar xz -C /tmp \
     && sudo mv /tmp/pastel-${PASTEL_VERSION}-x86_64-unknown-linux-musl/pastel /usr/local/bin/ \
