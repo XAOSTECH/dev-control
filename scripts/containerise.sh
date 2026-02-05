@@ -108,6 +108,16 @@ declare -A CATEGORY_FEATURES=(
     ["dev-tools"]="GCC, build-essential, common compilers, general development"
 )
 
+# Category-specific VS Code extensions
+declare -A CATEGORY_EXTENSIONS=(
+    ["game-dev"]="GodotTools.godot-tools ms-vscode.cpptools"
+    ["art"]="MS-CEINTJE.vscode-krita-window-docker"
+    ["data-science"]="ms-python.python ms-toolsai.jupyter ms-python.vscode-pylance"
+    ["streaming"]="ms-vscode.cpptools ms-python.python"
+    ["web-dev"]="dbaeumer.vscode-eslint esbenp.prettier-vscode"
+    ["dev-tools"]="ms-vscode.cpptools ms-python.python"
+)
+
 # GitHub build source references (for documentation)
 declare -A CATEGORY_GITHUB_PATHS=(
     ["game-dev"]="https://github.com/xaostech/dev-control/tree/main/.devcontainer/game-dev"
@@ -168,6 +178,7 @@ USE_DEFAULTS=false
 CONFIG_FILE=""
 PROJECT_PATH=""
 SHOW_HELP=false
+NEST_MODE=false
 
 ################################################################################
 # Help
@@ -185,6 +196,7 @@ USAGE:
 MODES:
   --base    Build a category base image (e.g., devcontrol/game-dev:latest)
   --img     Generate devcontainer.json that uses a category base image
+  --nest    Recursively rebuild all base and img containers in subdirectories
 
 CATEGORIES:
   --game-dev        Godot, Vulkan, SDL2, GLFW, CUDA
@@ -202,6 +214,9 @@ EXAMPLES:
   # Generate devcontainers
   cd ~/projects/my-game && containerise.sh --img --game-dev
   cd ~/projects/web-app && containerise.sh --img --web-dev
+
+  # Rebuild all containers in a project tree
+  cd ~/PRO && containerise.sh --nest
 
 OPTIONS:
   --help, -h          Show this help message
@@ -403,6 +418,11 @@ parse_args() {
                 ;;
             --img)
                 MODE="image"
+                shift
+                ;;
+            --nest)
+                NEST_MODE=true
+                USE_DEFAULTS=true
                 shift
                 ;;
             --game-dev|--art|--data-science|--streaming|--web-dev|--dev-tools)
@@ -697,7 +717,7 @@ check_podman() {
     fi
     
     # Check if rootless
-    if podman info --format '{{.Host.Security.Rootless}}' 2>/dev/null | grep -q true; then
+    if podman info --format '{{.Host.Security.Rootless}}' 2>/dev/null | grep  true; then
         print_success "Rootless podman available"
         return 0
     else
@@ -711,7 +731,7 @@ install_rootless_podman() {
     print_header "Installing Rootless Podman"
     
     print_info "Updating package lists..."
-    sudo apt-get update -qq
+    sudo apt-get update q
     
     print_info "Installing podman..."
     sudo apt-get install -y podman uidmap slirp4netns fuse-overlayfs
@@ -719,7 +739,7 @@ install_rootless_podman() {
     print_info "Configuring rootless podman..."
     
     # Enable user namespaces
-    if [[ ! -f /etc/subuid ]] || ! grep -q "^$(whoami):" /etc/subuid; then
+    if [[ ! -f /etc/subuid ]] || ! grep  "^$(whoami):" /etc/subuid; then
         sudo usermod --add-subuids 100000-165535 --add-subgids 100000-165535 "$(whoami)"
     fi
     
@@ -1122,13 +1142,21 @@ generate_devcontainer_json() {
         run_args+=",\"--shm-size=1g\",\"--device=/dev/dri\",\"--device=/dev/nvidia0\",\"--device=/dev/nvidiactl\",\"--device=/dev/nvidia-modeset\",\"--device=/dev/nvidia-uvm\",\"--device=/dev/nvidia-uvm-tools\""
     fi
     
-    # Build extensions array
+    # Build extensions array (default + category-specific)
     local extensions=""
     IFS=',' read -ra ext_array <<< "$CFG_VSCODE_EXTENSIONS"
     for ext in "${ext_array[@]}"; do
         if [[ -n "$extensions" ]]; then extensions+=","; fi
         extensions+="\"${ext}\""
     done
+    
+    # Add category-specific extensions if available
+    if [[ -n "$category" && -n "${CATEGORY_EXTENSIONS[$category]}" ]]; then
+        for ext in ${CATEGORY_EXTENSIONS[$category]}; do
+            if [[ -n "$extensions" ]]; then extensions+=","; fi
+            extensions+="\"${ext}\""
+        done
+    fi
     
     # Build container environment vars
     local container_env="\"GPG_TTY\": \"\$(tty)\",
@@ -1202,7 +1230,7 @@ generate_devcontainer_json() {
   // Features: ${CATEGORY_FEATURES[$category]}
   // 
   // After building, tag the image for reuse:
-  //   podman tag \$(podman images -q --filter \"label=devcontainer.local_folder=\$(pwd)\") $image_tag
+  //   podman tag \$(podman images  --filter \"label=devcontainer.local_folder=\$(pwd)\") $image_tag
   //
   // Then use --img --$category in other projects to reference this image.
   // ============================================================================
@@ -1353,7 +1381,7 @@ DOCKERFILE_HEADER
 
 # Install Vulkan SDK and game development libraries
 RUN apt-get update && apt-get install -y \
-    cmake ninja-build scons pkg-config \
+    cmake ninja-build scons pkg-config unzip \
     libx11-dev libxcursor-dev libxinerama-dev \
     libgl1-mesa-dev libglu1-mesa-dev \
     libasound2-dev libpulse-dev \
@@ -1384,7 +1412,7 @@ RUN git clone --depth 1 --branch 3.4 https://github.com/glfw/glfw.git /tmp/glfw 
     && ldconfig
 
 # Install CUDA Toolkit 13.1
-RUN wget -q https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-keyring_1.1-1_all.deb -O /tmp/cuda-keyring.deb \
+RUN wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-keyring_1.1-1_all.deb -O /tmp/cuda-keyring.deb \
     && dpkg -i /tmp/cuda-keyring.deb && rm /tmp/cuda-keyring.deb \
     && apt-get update && apt-get install -y \
         cuda-toolkit-13-1 cuda-nvcc-13-1 \
@@ -1398,7 +1426,7 @@ ENV PATH=/usr/local/cuda/bin:${PATH} \
 # Install Godot Engine
 RUN GODOT_VERSION=$(curl -s https://api.github.com/repos/godotengine/godot/releases/latest | jq -r '.tag_name' | sed 's/-stable//') \
     && curl -fsSL "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip" -o /tmp/godot.zip \
-    && unzip -q /tmp/godot.zip -d /tmp \
+    && unzip  /tmp/godot.zip -d /tmp \
     && mv /tmp/Godot_v${GODOT_VERSION}-stable_linux.x86_64 /usr/local/bin/godot \
     && chmod +x /usr/local/bin/godot \
     && rm /tmp/godot.zip
@@ -1438,18 +1466,21 @@ DOCKERFILE_ART
             cat >> "$dockerfile_path" << 'DOCKERFILE_DATASCIENCE'
 
 # ============================================================================
-# DATA-SCIENCE: CUDA, FFmpeg, NVIDIA acceleration
+# DATA-SCIENCE: CUDA, Jupyter, Scientific Computing, Bioinformatics
 # ============================================================================
 
+# Switch to root for package installation
+USER root
+
 # Install CUDA Toolkit 13.1
-RUN wget -q https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-keyring_1.1-1_all.deb -O /tmp/cuda-keyring.deb \
+RUN wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-keyring_1.1-1_all.deb -O /tmp/cuda-keyring.deb \
     && dpkg -i /tmp/cuda-keyring.deb && rm /tmp/cuda-keyring.deb \
     && apt-get update && apt-get install -y \
         cuda-toolkit-13-1 cuda-nvcc-13-1 \
         cuda-libraries-dev-13-1 cuda-cudart-dev-13-1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Install CUDA 12.6 runtime libraries for ONNX Runtime compatibility
+# Install CUDA 12.6 runtime libraries for PyTorch/TensorFlow compatibility
 RUN apt-get update && apt-get install -y --no-install-recommends \
         cuda-cudart-12-6 cuda-nvrtc-12-6 \
         libcublas-12-6 libcufft-12-6 libcurand-12-6 \
@@ -1457,43 +1488,65 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libnvjitlink-12-6 libcudnn9-cuda-12 \
     && rm -rf /var/lib/apt/lists/*
 
-ENV PATH=/usr/local/cuda/bin:${PATH} \
+# Install scientific computing, bioinformatics, and data science dependencies
+RUN apt-get update && apt-get install -y \
+    libopenblas-dev liblapack-dev libgomp1 \
+    libhdf5-dev libnetcdf-dev \
+    graphviz ghostscript \
+    emboss ncbi-blast+ \
+    bowtie2 samtools bcftools \
+    bedtools bioperl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install R for statistical computing
+RUN apt-get update && apt-get install -y \
+    r-base r-base-dev r-recommended \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV PATH=/usr/local/cuda/bin:${PATH}:/usr/local/bin:/usr/bin:/bin \
     LD_LIBRARY_PATH=/usr/local/cuda-12.6/lib64:/usr/local/cuda/lib64:${LD_LIBRARY_PATH} \
     CUDA_HOME=/usr/local/cuda
 
-# Install FFmpeg build dependencies
 RUN apt-get update && apt-get install -y \
-    nasm yasm pkg-config cmake \
-    libx264-dev libx265-dev libvpx-dev \
-    libfdk-aac-dev libmp3lame-dev libopus-dev \
-    libass-dev libfreetype6-dev libvorbis-dev \
-    libwebp-dev libaom-dev libdav1d-dev \
-    librist-dev libssl-dev libzmq3-dev \
+    python3 python3-pip python3-dev python3-venv \
     && rm -rf /var/lib/apt/lists/*
 
-# Build SRT from source
-RUN git clone --depth 1 --branch v1.5.4 https://github.com/Haivision/srt.git /tmp/srt \
-    && cd /tmp/srt && cmake -B build -DCMAKE_INSTALL_PREFIX=/usr/local \
-    && cmake --build build -j$(nproc) && cmake --install build \
-    && rm -rf /tmp/srt && ldconfig
+# Install R packages for bioinformatics (phyloseq, etc.) - must be root
+RUN R --vanilla -e "install.packages(c('BiocManager', 'tidyverse', 'ggplot2', 'ggmap', 'plotly'), repos='http://cran.r-project.org')" \
+    && R --vanilla -e "BiocManager::install(c('phyloseq', 'dada2', 'DESeq2', 'limma', 'edgeR', 'igraph'), ask=FALSE)" \
+    && R --vanilla -e "install.packages('vegan', repos='http://cran.r-project.org')"
 
-# Install nv-codec-headers
-RUN git clone --depth 1 https://github.com/FFmpeg/nv-codec-headers.git /tmp/nv-codec-headers \
-    && cd /tmp/nv-codec-headers && make install \
-    && rm -rf /tmp/nv-codec-headers
+# Switch to user for Python package installation
+USER ${base_user}
 
-# Build FFmpeg with NVENC/NVDEC
-RUN git clone --depth 1 https://git.ffmpeg.org/ffmpeg.git /tmp/ffmpeg \
-    && cd /tmp/ffmpeg && ./configure \
-        --prefix=/usr/local --enable-gpl --enable-nonfree \
-        --enable-cuvid --enable-nvenc --enable-nvdec \
-        --enable-libx264 --enable-libx265 --enable-libvpx \
-        --enable-libfdk-aac --enable-libmp3lame --enable-libopus \
-        --enable-libass --enable-libfreetype --enable-libwebp \
-        --enable-libaom --enable-libdav1d --enable-libsrt \
-        --enable-librist --enable-libzmq \
-    && make -j$(nproc) && make install \
-    && rm -rf /tmp/ffmpeg && ldconfig
+# Install Python scientific stack via pip (user installation)
+RUN pip3 install --no-cache-dir --user \
+    numpy scipy scikit-learn scikit-image \
+    pandas polars dask dask-dataframe \
+    matplotlib seaborn plotly bokeh altair \
+    jupyter jupyterlab jupyterbook \
+    notebook ipykernel ipywidgets \
+    statsmodels sympy networkx \
+    torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124 \
+    tensorflow[and-cuda] \
+    pytorch-lightning \
+    transformers huggingface-hub \
+    nltk gensim spacy \
+    biopython genomics-python \
+    pysam pybedtools HTSeq \
+    && python -m spacy download en_core_web_sm
+
+# Install Jupyter extensions and lab extensions
+RUN pip3 install --no-cache-dir --user \
+    jupyter-lsp python-lsp-server \
+    jupyterlab-lsp jupyterlab-git \
+    jupyterlab-variableinspector jupyterlab-execute-time
+
+# Create Jupyter config directory
+RUN mkdir -p ~/.jupyter && touch ~/.hushlogin
+
+# Switch back to root for final setup
+USER root
 DOCKERFILE_DATASCIENCE
             ;;
         
@@ -1505,7 +1558,7 @@ DOCKERFILE_DATASCIENCE
 # ============================================================================
 
 # Install CUDA Toolkit 13.1
-RUN wget -q https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-keyring_1.1-1_all.deb -O /tmp/cuda-keyring.deb \
+RUN wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-keyring_1.1-1_all.deb -O /tmp/cuda-keyring.deb \
     && dpkg -i /tmp/cuda-keyring.deb && rm /tmp/cuda-keyring.deb \
     && apt-get update && apt-get install -y \
         cuda-toolkit-13-1 cuda-nvcc-13-1 \
@@ -1818,7 +1871,7 @@ generate_image_devcontainer() {
     echo ""
     
     # Check if image exists (podman adds localhost/ prefix)
-    if ! podman images --format "{{.Repository}}:{{.Tag}}" | grep -qE "^(localhost/)?$image_tag\$"; then
+    if ! podman images --format "{{.Repository}}:{{.Tag}}" | grep E "^(localhost/)?$image_tag\$"; then
         print_warning "Base image not found locally: $image_tag"
         echo ""
         echo "Build it first:"
@@ -1844,6 +1897,173 @@ generate_image_devcontainer() {
 }
 
 ################################################################################
+# Nest Mode - Recursively rebuild all base and img containers
+################################################################################
+
+run_nest_mode() {
+    local start_dir="${1:-$(pwd)}"
+    shift || true  # Remove first argument
+    
+    # Collect allowed categories from remaining args (--art, --game-dev, etc.)
+    local allowed_cats=""
+    for arg in "$@"; do
+        case "$arg" in
+            --game-dev|--art|--data-science|--streaming|--web-dev|--dev-tools)
+                allowed_cats+="${arg#--}|"
+                ;;
+        esac
+    done
+    allowed_cats="${allowed_cats%|}"  # Remove trailing |
+    
+    local nest_json="$start_dir/.devcontainer/nest.json"
+    
+    print_header "Nest Mode: Scanning for containers"
+    print_kv "Starting from" "$start_dir"
+    if [[ -n "$allowed_cats" ]]; then
+        print_kv "Filter to categories" "$allowed_cats"
+    fi
+    echo ""
+    
+    # Find all .devcontainer dirs and build projects list
+    find "$start_dir" -type d -name ".devcontainer" 2>/dev/null | sort | while read -r devcontainer_dir; do
+        local project_dir="$(dirname "$devcontainer_dir")"
+        local rel_path="${project_dir#$start_dir/}"
+        [[ "$rel_path" == "$project_dir" ]] && rel_path="."
+        
+        # Skip root
+        [[ "$rel_path" == "." ]] && continue
+        
+        local dcjson="$devcontainer_dir/devcontainer.json"
+        [[ ! -f "$dcjson" ]] && continue
+        
+        # Extract category and type
+        local category=$(grep -oiP '//\s*category:\s*\K[a-z0-9-]+' "$dcjson" 2>/dev/null | head -1)
+        category="${category:-unknown}"
+        
+        # Filter by allowed categories if specified
+        if [[ -n "$allowed_cats" ]]; then
+            local match=0
+            for allowed in ${allowed_cats//|/ }; do
+                [[ "$category" == "$allowed" ]] && match=1 && break
+            done
+            [[ $match -eq 0 ]] && continue
+        fi
+        
+        local type=""
+        [[ $(grep -c '"build"' "$dcjson" 2>/dev/null) -gt 0 ]] && type="BASE"
+        [[ $(grep -c '"image"' "$dcjson" 2>/dev/null) -gt 0 ]] && type="IMG"
+        [[ -z "$type" ]] && continue
+        
+        echo "$rel_path|$type|$category"
+    done > "$nest_json.tmp"
+    
+    # Read results
+    if [[ ! -f "$nest_json.tmp" ]] || [[ ! -s "$nest_json.tmp" ]]; then
+        print_error "No valid projects detected"
+        rm -f "$nest_json.tmp"
+        return 1
+    fi
+    
+    # Separate unknown and known categories
+    local -a unknown_projects
+    local -a known_projects
+    
+    while IFS='|' read -r path type category; do
+        if [[ "$category" == "unknown" ]]; then
+            unknown_projects+=("$path|$type|$category")
+        else
+            known_projects+=("$path|$type|$category")
+        fi
+    done < "$nest_json.tmp"
+    
+    # Display unknown projects first
+    echo ""
+    if [[ ${#unknown_projects[@]} -gt 0 ]]; then
+        print_header "⚠️  Unknown Category (will NOT be regenerated)"
+        echo ""
+        local idx=1
+        for proj in "${unknown_projects[@]}"; do
+            IFS='|' read -r path type category <<< "$proj"
+            printf "  ${CYAN}%d.${NC} %-30s ${YELLOW}%s${NC}\n" "$idx" "$path" "$type"
+            ((idx++))
+        done
+        echo ""
+    fi
+    
+    # Display recognized projects
+    print_header "Recognized Projects (will be regenerated)"
+    echo ""
+    
+    if [[ ${#known_projects[@]} -eq 0 ]]; then
+        print_warning "No recognized category projects found"
+        rm -f "$nest_json.tmp"
+        return 1
+    fi
+    
+    local idx=1
+    for proj in "${known_projects[@]}"; do
+        IFS='|' read -r path type category <<< "$proj"
+        printf "  ${CYAN}%d.${NC} %-30s ${YELLOW}%s${NC} ${GREEN}(%s)${NC}\n" "$idx" "$path" "$type" "$category"
+        ((idx++))
+    done
+    echo ""
+    
+    # Save to nest.json (only known projects)
+    mkdir -p "$start_dir/.devcontainer"
+    {
+        echo "{"
+        echo "  \"start_dir\": \"$start_dir\","
+        echo "  \"detected_at\": \"$(date -Iseconds)\","
+        echo "  \"projects\": ["
+        local first=true
+        for proj in "${known_projects[@]}"; do
+            IFS='|' read -r path type category <<< "$proj"
+            if [[ "$first" != true ]]; then echo ","; fi
+            printf "    {\"path\": \"%s\", \"type\": \"%s\", \"category\": \"%s\"}" "$path" "$type" "$category"
+            first=false
+        done
+        echo ""
+        echo "  ]"
+        echo "}"
+    } > "$nest_json"
+    
+    print_success "Saved configuration to $nest_json"
+    echo ""
+    
+    # ASK FOR CONFIRMATION FOR RECOGNIZED PROJECTS
+    print_warning "Regenerate ${#known_projects[@]} recognized containers?"
+    read -p "Proceed? [y/N] " -n 1 -r
+    echo ""
+    echo ""
+    
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        print_info "Aborted - no changes made"
+        rm -f "$nest_json.tmp"
+        return 0
+    fi
+    
+    # Execute builds (only known projects)
+    print_header "Building recognized containers"
+    echo ""
+    
+    for proj in "${known_projects[@]}"; do
+        IFS='|' read -r path type category <<< "$proj"
+        local full_path="$start_dir/$path"
+        [[ "$path" == "." ]] && full_path="$start_dir"
+        
+        if [[ -d "$full_path/.devcontainer" ]]; then
+            echo ""
+            print_info "$type: $path ($category)"
+            (cd "$full_path" && "$SCRIPT_DIR/containerise.sh" --defaults --"${type,,}" --"$category" <<< y)
+        fi
+    done
+    
+    rm -f "$nest_json.tmp"
+    echo ""
+    print_header_success "Nest Mode Complete"
+}
+
+################################################################################
 # Main
 ################################################################################
 
@@ -1860,6 +2080,12 @@ main() {
     # Always set project path first
     if [[ -z "$PROJECT_PATH" ]]; then
         PROJECT_PATH="$(pwd)"
+    fi
+    
+    # Handle --nest mode early and exit
+    if [[ "$NEST_MODE" == true ]]; then
+        run_nest_mode "$PROJECT_PATH"
+        exit 0
     fi
     
     # Always load user configuration (GPG, mounts, GitHub user, etc.)
