@@ -1516,31 +1516,53 @@ RUN R --vanilla -e "install.packages(c('BiocManager', 'tidyverse', 'ggplot2', 'g
     && R --vanilla -e "BiocManager::install(c('phyloseq', 'dada2', 'DESeq2', 'limma', 'edgeR', 'igraph'), ask=FALSE)" \
     && R --vanilla -e "install.packages('vegan', repos='http://cran.r-project.org')"
 
-# Switch to user for Python package installation
-USER ${base_user}
+# Install Miniforge (lightweight conda) as root
+RUN wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh -O /tmp/miniforge.sh && \
+    bash /tmp/miniforge.sh -b -p /opt/conda && \
+    rm /tmp/miniforge.sh && \
+    /opt/conda/bin/conda clean -afy
 
-# Install Python scientific stack via pip (user installation)
-RUN pip3 install --no-cache-dir --user \
+ENV PATH="/opt/conda/bin:$PATH"
+
+# Create conda environment with scientific and bioinformatics stack (as root)
+RUN conda create -y -n datasci python=3.11 && \
+    conda run -n datasci conda install -y -c conda-forge \
     numpy scipy scikit-learn scikit-image \
-    pandas polars dask dask-dataframe \
+    pandas polars dask \
     matplotlib seaborn plotly bokeh altair \
-    jupyter jupyterlab jupyterbook \
+    jupyter jupyterlab jupyter-book \
     notebook ipykernel ipywidgets \
     statsmodels sympy networkx \
-    torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124 \
-    tensorflow[and-cuda] \
-    pytorch-lightning \
-    transformers huggingface-hub \
     nltk gensim spacy \
-    biopython genomics-python \
-    pysam pybedtools HTSeq \
-    && python -m spacy download en_core_web_sm
+    biopython pysam pybedtools HTSeq \
+    bioconda::samtools bioconda::bcftools bioconda::bedtools \
+    && conda clean -afy
 
-# Install Jupyter extensions and lab extensions
-RUN pip3 install --no-cache-dir --user \
+# Install PyTorch and TensorFlow in conda env (separate to manage dependencies)
+RUN conda run -n datasci pip install --no-cache-dir \
+    torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu124 \
+    tensorflow[and-cuda] pytorch-lightning \
+    transformers huggingface-hub
+
+# Enable conda env on shell startup
+RUN echo "conda activate datasci" >> ~/.bashrc
+
+SHELL ["/opt/conda/envs/datasci/bin/python", "-m", "pip", "install"]
+
+# Switch to user
+USER ${base_user}
+
+# Install spacy model in conda env
+RUN /opt/conda/envs/datasci/bin/python -m spacy download en_core_web_sm
+
+# Install Jupyter extensions
+RUN /opt/conda/envs/datasci/bin/pip install --no-cache-dir \
     jupyter-lsp python-lsp-server \
     jupyterlab-lsp jupyterlab-git \
     jupyterlab-variableinspector jupyterlab-execute-time
+
+# Activate conda env by default in shells
+RUN echo 'source /opt/conda/etc/profile.d/conda.sh && conda activate datasci' >> ~/.bashrc
 
 # Create Jupyter config directory
 RUN mkdir -p ~/.jupyter && touch ~/.hushlogin
