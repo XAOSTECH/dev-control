@@ -111,7 +111,7 @@ declare -A CATEGORY_FEATURES=(
 # Category-specific VS Code extensions
 declare -A CATEGORY_EXTENSIONS=(
     ["game-dev"]="GodotTools.godot-tools ms-vscode.cpptools"
-    ["art"]="MS-CEINTJE.vscode-krita-window-docker"
+    ["art"]=""
     ["data-science"]="ms-python.python ms-toolsai.jupyter ms-python.vscode-pylance"
     ["streaming"]="ms-vscode.cpptools ms-python.python"
     ["web-dev"]="dbaeumer.vscode-eslint esbenp.prettier-vscode"
@@ -1544,22 +1544,17 @@ RUN conda run -n datasci pip install --no-cache-dir \
     tensorflow[and-cuda] pytorch-lightning \
     transformers huggingface-hub
 
+# Install spacy model (use direct conda env paths to avoid activation issues)
+RUN /opt/conda/envs/datasci/bin/python -m spacy download en_core_web_sm
+
+# Install Jupyter extensions (use direct conda env paths)
+RUN /opt/conda/envs/datasci/bin/pip install --no-cache-dir jupyter-lsp python-lsp-server jupyterlab-lsp jupyterlab-git jupyterlab-execute-time
+
 # Enable conda env on shell startup
 RUN echo "conda activate datasci" >> ~/.bashrc
 
-SHELL ["/opt/conda/envs/datasci/bin/python", "-m", "pip", "install"]
-
 # Switch to user
 USER ${base_user}
-
-# Install spacy model in conda env
-RUN /opt/conda/envs/datasci/bin/python -m spacy download en_core_web_sm
-
-# Install Jupyter extensions
-RUN /opt/conda/envs/datasci/bin/pip install --no-cache-dir \
-    jupyter-lsp python-lsp-server \
-    jupyterlab-lsp jupyterlab-git \
-    jupyterlab-variableinspector jupyterlab-execute-time
 
 # Activate conda env by default in shells
 RUN echo 'source /opt/conda/etc/profile.d/conda.sh && conda activate datasci' >> ~/.bashrc
@@ -1776,7 +1771,7 @@ RUN rm -rf ~/.gnupg
 
 # Pre-create .vscode-server directory with proper permissions (need root)
 USER root
-RUN mkdir -p /home/${base_user}/.vscode-server && chown ${base_user}:${base_user} /home/${base_user}/.vscode-server && chmod 755 /home/${base_user}/.vscode-server
+RUN mkdir -p /home/${base_user}/.vscode-server && chown ${base_user}:${base_user} /home/${base_user}/.vscode-server && chmod 775 /home/${base_user}/.vscode-server
 USER ${base_user}
 
 WORKDIR /workspaces
@@ -1893,7 +1888,7 @@ generate_image_devcontainer() {
     echo ""
     
     # Check if image exists (podman adds localhost/ prefix)
-    if ! podman images --format "{{.Repository}}:{{.Tag}}" | grep E "^(localhost/)?$image_tag\$"; then
+    if ! podman images --format "{{.Repository}}:{{.Tag}}" | grep -E "(localhost/)?${image_tag}$"; then
         print_warning "Base image not found locally: $image_tag"
         echo ""
         echo "Build it first:"
