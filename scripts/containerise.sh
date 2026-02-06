@@ -1015,27 +1015,6 @@ RUN touch ~/.hushlogin
 DOCKERFILE_EOF
         fi
 
-        # Add nvm, Node.js, and Dev-Control installation if enabled
-        if [[ "$CFG_INSTALL_DEV_CONTROL" == "true" ]]; then
-            cat >> "$dockerfile_path" << DOCKERFILE_EOF
-
-# Install nvm, Node.js, and Dev-Control
-ENV NVM_DIR=/home/${CFG_CONTAINER_NAME}/.config/nvm
-ENV BASH_ENV=/home/${CFG_CONTAINER_NAME}/.bashrc
-RUN mkdir -p "\$NVM_DIR" && \\
-    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash && \\
-    echo 'export NVM_DIR="\$HOME/.config/nvm"' >> ~/.bashrc && \\
-    echo '[ -s "\$NVM_DIR/nvm.sh" ] && \\. "\$NVM_DIR/nvm.sh"' >> ~/.bashrc && \\
-    bash -c 'source \$NVM_DIR/nvm.sh && nvm install 25 && nvm alias default 25' && \\
-    curl -fsSL https://github.com/xaostech/dev-control/archive/refs/tags/latest.tar.gz | tar -xz && \\
-    mv dev-control-* ~/.dev-control && \\
-    bash -c 'bash ~/.dev-control/scripts/alias-loading.sh <<< A'
-
-# Add node/npm/npx to PATH for VS Code extension host discovery
-ENV PATH=\$NVM_DIR/versions/node/v25.4.0/bin:\$PATH
-DOCKERFILE_EOF
-        fi
-
         # Add git configuration if user provided
         if [[ -n "$CFG_GITHUB_USER" && -n "$CFG_GITHUB_USER_EMAIL" ]]; then
             local git_config_cmd="git config --global user.email ${CFG_GITHUB_USER_EMAIL} && \\\n    git config --global user.name ${CFG_GITHUB_USER} && \\\n    git config --global init.defaultBranch main"
@@ -1243,6 +1222,17 @@ generate_devcontainer_json() {
   },"
     fi
     
+    # Build git config line from saved YAML configuration if available
+    local git_config_line=""
+    if [[ -n "$CFG_GITHUB_USER" && -n "$CFG_GITHUB_USER_EMAIL" ]]; then
+        git_config_line=" && git config --global user.email ${CFG_GITHUB_USER_EMAIL} && git config --global user.name ${CFG_GITHUB_USER}"
+        
+        # Add GPG config if key provided
+        if [[ -n "$CFG_GPG_KEY_ID" ]]; then
+            git_config_line="$git_config_line && git config --global commit.gpgsign true && git config --global user.signingkey ${CFG_GPG_KEY_ID} && git config --global gpg.program gpg"
+        fi
+    fi
+    
     cat > "$devcontainer_file" << DEVCONTAINER_EOF
 {
 ${header_comment}  "name": "${project_name^^}",
@@ -1257,7 +1247,7 @@ ${header_comment}  "name": "${project_name^^}",
   "containerEnv": {
     ${container_env}
   },
-  "postCreateCommand": "sudo chown -R ${remote_user}:${remote_user} . 2>/dev/null || true && sudo chmod 755 /home/${remote_user} 2>/dev/null || true && sudo chown -R ${remote_user}:${remote_user} /home/${remote_user}/.vscode-server 2>/dev/null || true && git config --global --add safe.directory '*' && sudo mkdir -p /run/user/${uid} && sudo chown ${remote_user}:${remote_user} /run/user/${uid} && ln -sf /tmp/wayland-0 /run/user/${uid}/wayland-0 2>/dev/null || true && gpg-connect-agent updatestartuptty /bye >/dev/null 2>&1 || true && sudo chown -R ${remote_user}:${remote_user} /run/user/${uid} 2>/dev/null || true",
+  "postCreateCommand": "sudo chown -R ${remote_user}:${remote_user} . 2>/dev/null || true && sudo chmod 755 /home/${remote_user} 2>/dev/null || true && sudo chown -R ${remote_user}:${remote_user} /home/${remote_user}/.vscode-server 2>/dev/null || true && git config --global --add safe.directory '*' && git config --global init.defaultBranch main${git_config_line} && sudo mkdir -p /run/user/${uid} && sudo chown ${remote_user}:${remote_user} /run/user/${uid} && ln -sf /tmp/wayland-0 /run/user/${uid}/wayland-0 2>/dev/null || true && gpg-connect-agent updatestartuptty /bye >/dev/null 2>&1 || true && sudo chown -R ${remote_user}:${remote_user} /run/user/${uid} 2>/dev/null || true && bash /opt/dev-control/scripts/alias-loading.sh <<< A",
   "customizations": {
     "vscode": {
       "settings": {
@@ -1769,9 +1759,27 @@ ENV PATH=\$NVM_DIR/versions/node/v22.13.1/bin:\$PATH
 # Clean up GPG keyring (interferes with host GPG agent mount)
 RUN rm -rf ~/.gnupg
 
-# Pre-create .vscode-server directory with proper permissions (need root)
+# Install dev-control system-wide to /opt
 USER root
+RUN mkdir -p /opt/dev-control && \\
+    curl -fsSL https://github.com/xaostech/dev-control/archive/refs/tags/latest.tar.gz | tar -xz --strip-components=1 -C /opt/dev-control && \\
+    chmod +x /opt/dev-control/scripts/*.sh /opt/dev-control/lib/*.sh /opt/dev-control/lib/git/*.sh 2>/dev/null || true && \\
+    echo 'export PATH=/opt/dev-control/scripts:\\$PATH' >> /etc/profile.d/dev-control.sh && \\
+    chmod 644 /etc/profile.d/dev-control.sh
+
+# Pre-create .vscode-server directory with proper permissions (need root)
 RUN mkdir -p /home/${base_user}/.vscode-server && chown ${base_user}:${base_user} /home/${base_user}/.vscode-server && chmod 775 /home/${base_user}/.vscode-server
+
+# Set git defaults as root for the user's home
+RUN HOME=/home/${base_user} git config --global --add safe.directory '*' && \\
+    HOME=/home/${base_user} git config --global init.defaultBranch main
+
+USER root
+
+# Load dev-control aliases into bashrc as root, then fix permissions
+RUN HOME=/home/${base_user} bash -c 'bash /opt/dev-control/scripts/alias-loading.sh <<< A' && \\
+    chown ${base_user}:${base_user} /home/${base_user}/.bash_aliases /home/${base_user}/.bashrc
+
 USER ${base_user}
 
 WORKDIR /workspaces
