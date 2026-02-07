@@ -149,6 +149,7 @@ Options:
                              Example: --amend HEAD=2 (amend 2nd to last commit)
   --sign                     Re-sign commits in the selected range (requires GPG)
                              Rewrites history to apply signatures and preserves dates
+                             Automatically force-pushes to remote after signing (atomic)
   --atomic-preserve          Deterministic preserve: recreate commits (including merges) with
                              `git commit-tree`, immediately sign and set author/committer dates (atomic)
   --drop COMMIT              Drop (remove) a single non-root commit from history
@@ -691,7 +692,7 @@ confirm_changes() {
     echo -e "    • Commit messages"
     echo -e "    • Author and committer dates"
     echo ""
-    echo -e "  After applying, you will need to:"
+    echo -e "  After applying, will automatically:"
     echo -e "    ${CYAN}git push --force-with-lease${NC}"
     echo ""
     # Use interactive FD 3 when available to avoid reading from piped stdin
@@ -1759,6 +1760,22 @@ sign_mode() {
             exit 1
         else
             print_success "Date verification PASSED: Sampled $sample_found commits all have correct dates (not 2025-12-27)"
+        fi
+    fi
+
+    # Auto-push after signing (atomic commit + push)
+    # Only push if we're still on the original branch (not a tmp branch that needs to be merged back)
+    # AND signatures weren't already pushed during PRESERVE_TOPOLOGY rebase
+    if [[ "${RANGE}" != tmp/* && "${SIGNATURES_ALREADY_APPLIED:-}" != "true" ]]; then
+        local current_branch
+        current_branch=$(git rev-parse --abbrev-ref HEAD)
+        
+        print_info "Auto-pushing signed commits to origin/${current_branch}"
+        if git push --force-with-lease origin "$current_branch"; then
+            print_success "Successfully pushed signed commits to origin/${current_branch}"
+        else
+            print_warning "Force-push failed; you may need to push manually with: git push --force-with-lease"
+            print_warning "This is normal if the remote has been updated since you started signing"
         fi
     fi
 
