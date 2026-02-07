@@ -68,7 +68,19 @@ ubuntu-mirror: http://archive.ubuntu.com/ubuntu
 # Docker Base Image
 # ============================================================================
 
-# Base image for the devcontainer
+# Whether to use a pre-built dev-control category image
+# When true, base-category is used to select the image tag
+# When false, base-image is used directly
+# Default: false
+use-base-category: false
+
+# Dev-control category to use (when use-base-category is true)
+# Available: game-dev, art, data-science, streaming, web-dev, dev-tools
+# Each category has a pre-built image with domain-specific tools
+# Default: (empty)
+base-category:
+
+# Base image for the devcontainer (when use-base-category is false)
 # Common options:
 #   - ubuntu:latest (Ubuntu latest, minimal)
 #   - ubuntu:noble (Ubuntu 24.04 LTS)
@@ -106,6 +118,10 @@ mount-gh-config: true
 # Enable Docker/Podman socket mount
 mount-docker-socket: true
 
+# Enable Cloudflare Wrangler config mount (for Workers development)
+# Default: false
+mount-wrangler: false
+
 # ============================================================================
 # Additional Features
 # ============================================================================
@@ -118,3 +134,28 @@ install-dev-control: true
 
 # Dev-Control version to install (tag or 'latest')
 dev-control-version: latest
+
+# ============================================================================
+# Streaming & CUDA Features
+# ============================================================================
+
+# Install CUDA Toolkit 13.1 (GPU-accelerated compute)
+# Default: false
+install-cuda: false
+
+# Install FFmpeg from source with NVENC/NVDEC (requires CUDA)
+# Default: false
+install-ffmpeg: false
+
+# Install NGINX with RTMP module (streaming server)
+# Default: false
+install-nginx-rtmp: false
+
+# Install streaming utilities (mediainfo, sox, v4l-utils, imagemagick)
+# Default: false
+install-streaming-utils: false
+
+# Enable NVIDIA GPU device passthrough in devcontainer
+# Required for CUDA, FFmpeg NVENC, and GPU-accelerated workloads
+# Default: false
+enable-nvidia-devices: false
