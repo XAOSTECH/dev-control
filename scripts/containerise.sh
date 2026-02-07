@@ -835,6 +835,7 @@ generate_devcontainer() {
     generate_dockerignore "$devcontainer_dir"
     generate_dockerfile "$devcontainer_dir"
     generate_devcontainer_json "$devcontainer_dir"
+    generate_config_variants "$devcontainer_dir" "" "" ""
     add_devcontainer_to_gitignore "$PROJECT_PATH"
 }
 
@@ -870,6 +871,127 @@ show_activation_instructions() {
     print_section "One-Click Mode:"
     echo -e "  Next time, run: ${GREEN}dc-container --defaults${NC}"
     echo ""
+}
+
+
+################################################################################
+# Config Variant Generation (_example and _minimal)
+################################################################################
+
+# Generate _example and _minimal config variants alongside personal config files
+# _example: tracked reference with placeholder values (YOUR_GITHUB_USER, etc.)
+# _minimal: tracked reference with all dependencies but no personal config
+#
+# Personal files (Dockerfile, devcontainer.json) are gitignored.
+# Variant files (Dockerfile_example, devcontainer_example.json, etc.) are tracked.
+generate_config_variants() {
+    local devcontainer_dir="$1"
+    local mode="${2:-}"       # "base", "image", or "" (no-flag)
+    local category="${3:-}"
+    local image_tag="${4:-}"
+
+    # Save original config
+    local orig_user="$CFG_GITHUB_USER"
+    local orig_email="${CFG_GITHUB_USER_EMAIL:-}"
+    local orig_gpg="${CFG_GPG_KEY_ID:-}"
+    local orig_mount_gpg="${CFG_MOUNT_GPG:-true}"
+    local orig_mount_gh="${CFG_MOUNT_GH_CONFIG:-true}"
+    local orig_mount_wrangler="${CFG_MOUNT_WRANGLER:-false}"
+
+    # ─── EXAMPLE VARIANT (placeholder credentials) ───
+    print_info "Generating _example variant (placeholder values)..."
+    CFG_GITHUB_USER="YOUR_GITHUB_USER"
+    CFG_GITHUB_USER_EMAIL="YOUR_GITHUB_EMAIL"
+    CFG_GPG_KEY_ID="YOUR_GPG_KEY_ID"
+    _generate_variant "$devcontainer_dir" "$mode" "$category" "$image_tag" "_example"
+
+    # ─── MINIMAL VARIANT (no personal config) ───
+    print_info "Generating _minimal variant (no personal config)..."
+    CFG_GITHUB_USER=""
+    CFG_GITHUB_USER_EMAIL=""
+    CFG_GPG_KEY_ID=""
+    CFG_MOUNT_GPG="false"
+    CFG_MOUNT_GH_CONFIG="false"
+    CFG_MOUNT_WRANGLER="false"
+    _generate_variant "$devcontainer_dir" "$mode" "$category" "$image_tag" "_minimal"
+
+    # ─── RESTORE original config ───
+    CFG_GITHUB_USER="$orig_user"
+    CFG_GITHUB_USER_EMAIL="$orig_email"
+    CFG_GPG_KEY_ID="$orig_gpg"
+    CFG_MOUNT_GPG="$orig_mount_gpg"
+    CFG_MOUNT_GH_CONFIG="$orig_mount_gh"
+    CFG_MOUNT_WRANGLER="$orig_mount_wrangler"
+
+    # Regenerate personal files (overwritten during no-flag variant generation)
+    if [[ "$mode" != "base" && "$mode" != "image" ]]; then
+        generate_dockerfile "$devcontainer_dir"
+    fi
+    if [[ "$mode" == "image" ]]; then
+        generate_devcontainer_json "$devcontainer_dir" "$image_tag" "$category"
+    elif [[ "$mode" == "base" ]]; then
+        generate_devcontainer_json "$devcontainer_dir" "" "$category"
+    else
+        generate_devcontainer_json "$devcontainer_dir"
+    fi
+
+    print_success "Config variants generated (_example + _minimal)"
+}
+
+# Internal helper: generate one variant (Dockerfile + devcontainer.json) with current config
+_generate_variant() {
+    local devcontainer_dir="$1"
+    local mode="$2"
+    local category="$3"
+    local image_tag="$4"
+    local suffix="$5"  # "_example" or "_minimal"
+
+    local variant_label=""
+    if [[ "$suffix" == "_example" ]]; then
+        variant_label="EXAMPLE: Replace YOUR_GITHUB_USER, YOUR_GITHUB_EMAIL, YOUR_GPG_KEY_ID with your values"
+    elif [[ "$suffix" == "_minimal" ]]; then
+        variant_label="MINIMAL: All dependencies, no personal config (git identity, GPG, host mounts)"
+    fi
+
+    # Generate Dockerfile variant (not needed for --img mode which uses pre-built image)
+    if [[ "$mode" != "image" ]]; then
+        if [[ "$mode" == "base" ]]; then
+            # generate_category_dockerfile accepts output path directly
+            generate_category_dockerfile "$category" "$devcontainer_dir/Dockerfile${suffix}"
+        else
+            # generate_dockerfile writes to Dockerfile, then rename
+            generate_dockerfile "$devcontainer_dir"
+            mv "$devcontainer_dir/Dockerfile" "$devcontainer_dir/Dockerfile${suffix}"
+        fi
+        # Prepend variant header
+        {
+            echo "# ${variant_label}"
+            echo "# This is a tracked reference file. Personal config (Dockerfile) is gitignored."
+            echo "#"
+            cat "$devcontainer_dir/Dockerfile${suffix}"
+        } > "$devcontainer_dir/Dockerfile${suffix}.tmp"
+        mv "$devcontainer_dir/Dockerfile${suffix}.tmp" "$devcontainer_dir/Dockerfile${suffix}"
+        print_success "Created: Dockerfile${suffix}"
+    fi
+
+    # Generate devcontainer.json variant
+    if [[ "$mode" == "image" ]]; then
+        generate_devcontainer_json "$devcontainer_dir" "$image_tag" "$category"
+    elif [[ "$mode" == "base" ]]; then
+        generate_devcontainer_json "$devcontainer_dir" "" "$category"
+    else
+        generate_devcontainer_json "$devcontainer_dir"
+    fi
+    mv "$devcontainer_dir/devcontainer.json" "$devcontainer_dir/devcontainer${suffix}.json"
+    # Insert variant comment after opening brace
+    {
+        head -1 "$devcontainer_dir/devcontainer${suffix}.json"
+        echo "  // ${variant_label}"
+        echo "  // This is a tracked reference file. Personal config (devcontainer.json) is gitignored."
+        tail -n +2 "$devcontainer_dir/devcontainer${suffix}.json"
+    } > "$devcontainer_dir/devcontainer${suffix}.json.tmp"
+    mv "$devcontainer_dir/devcontainer${suffix}.json.tmp" "$devcontainer_dir/devcontainer${suffix}.json"
+    print_success "Created: devcontainer${suffix}.json"
 }
 
 ################################################################################
@@ -1032,6 +1154,9 @@ build_base_image() {
     
     # Add personal config to .gitignore
     add_devcontainer_to_gitignore "$project_dir"
+
+    # Generate tracked config variants (_example + _minimal)
+    PROJECT_PATH="$project_dir" generate_config_variants "$devcontainer_dir" "base" "$category" ""
     echo ""
     
     print_header_success "Base Image Config Generated!"
@@ -1120,6 +1245,9 @@ generate_image_devcontainer() {
     
     # Add personal config to .gitignore
     add_devcontainer_to_gitignore "$(pwd)"
+
+    # Generate tracked config variants (_example + _minimal)
+    PROJECT_PATH="$(pwd)" generate_config_variants "$devcontainer_dir" "image" "$category" "$image_tag"
     echo ""
     print_header_success "Devcontainer Generated!"
     echo ""
