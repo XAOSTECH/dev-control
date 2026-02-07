@@ -750,6 +750,56 @@ install_rootless_podman() {
 }
 
 ################################################################################
+# Git Configuration Functions
+################################################################################
+
+# Generate git config commands for Dockerfile RUN statements
+# Args: user, email, gpg_key, [home_dir]
+generate_git_config_dockerfile() {
+    local user="$1"
+    local email="$2"
+    local gpg_key="$3"
+    local home_dir="$4"  # Optional: if running as root for another user
+    
+    local home_prefix=""
+    if [[ -n "$home_dir" ]]; then
+        home_prefix="HOME=$home_dir "
+    fi
+    
+    local config="${home_prefix}git config --global --add safe.directory '*' && ${home_prefix}git config --global init.defaultBranch main"
+    
+    if [[ -n "$user" && -n "$email" ]]; then
+        config+=" && ${home_prefix}git config --global user.email $email && ${home_prefix}git config --global user.name $user"
+        
+        if [[ -n "$gpg_key" ]]; then
+            config+=" && ${home_prefix}git config --global commit.gpgsign true && ${home_prefix}git config --global user.signingkey $gpg_key && ${home_prefix}git config --global gpg.program gpg"
+        fi
+    fi
+    
+    echo "$config"
+}
+
+# Generate git config commands for devcontainer.json postCreateCommand
+# Args: user, email, gpg_key
+generate_git_config_postcreate() {
+    local user="$1"
+    local email="$2"
+    local gpg_key="$3"
+    
+    local config="git config --global --add safe.directory '*' && git config --global init.defaultBranch main"
+    
+    if [[ -n "$user" && -n "$email" ]]; then
+        config+=" && git config --global user.email $email && git config --global user.name $user"
+        
+        if [[ -n "$gpg_key" ]]; then
+            config+=" && git config --global commit.gpgsign true && git config --global user.signingkey $gpg_key && git config --global gpg.program gpg"
+        fi
+    fi
+    
+    echo "$config"
+}
+
+################################################################################
 # File Generation
 ################################################################################
 
@@ -1015,21 +1065,14 @@ RUN touch ~/.hushlogin
 DOCKERFILE_EOF
         fi
 
-        # Add git configuration if user provided
-        if [[ -n "$CFG_GITHUB_USER" && -n "$CFG_GITHUB_USER_EMAIL" ]]; then
-            local git_config_cmd="git config --global user.email ${CFG_GITHUB_USER_EMAIL} && \\\n    git config --global user.name ${CFG_GITHUB_USER} && \\\n    git config --global init.defaultBranch main"
-            
-            # Add GPG config if key provided
-            if [[ -n "$CFG_GPG_KEY_ID" ]]; then
-                git_config_cmd="$git_config_cmd && \\\n    git config --global commit.gpgsign true && \\\n    git config --global user.signingkey ${CFG_GPG_KEY_ID} && \\\n    git config --global gpg.program gpg"
-            fi
-            
-            cat >> "$dockerfile_path" << DOCKERFILE_EOF
+        # Add git configuration (always include safe.directory and defaultBranch, user/email/gpg if provided)
+        local git_config_cmd=$(generate_git_config_dockerfile "$CFG_GITHUB_USER" "$CFG_GITHUB_USER_EMAIL" "$CFG_GPG_KEY_ID")
+        
+        cat >> "$dockerfile_path" << DOCKERFILE_EOF
 
-# Bake user-specific git config into image
+# Bake git config into image
 RUN $git_config_cmd
 DOCKERFILE_EOF
-        fi
 
         # Clean up build-time GPG keyring if packages used gpg --import
         # This prevents interference with the mounted host GPG agent socket
@@ -1222,16 +1265,8 @@ generate_devcontainer_json() {
   },"
     fi
     
-    # Build git config line from saved YAML configuration if available
-    local git_config_line=""
-    if [[ -n "$CFG_GITHUB_USER" && -n "$CFG_GITHUB_USER_EMAIL" ]]; then
-        git_config_line=" && git config --global user.email ${CFG_GITHUB_USER_EMAIL} && git config --global user.name ${CFG_GITHUB_USER}"
-        
-        # Add GPG config if key provided
-        if [[ -n "$CFG_GPG_KEY_ID" ]]; then
-            git_config_line="$git_config_line && git config --global commit.gpgsign true && git config --global user.signingkey ${CFG_GPG_KEY_ID} && git config --global gpg.program gpg"
-        fi
-    fi
+    # Build git config line from saved YAML configuration (always include safe.directory and defaultBranch)
+    local git_config_line=" && $(generate_git_config_postcreate "$CFG_GITHUB_USER" "$CFG_GITHUB_USER_EMAIL" "$CFG_GPG_KEY_ID")"
     
     cat > "$devcontainer_file" << DEVCONTAINER_EOF
 {
@@ -1767,12 +1802,14 @@ RUN mkdir -p /opt/dev-control && \\
     echo 'export PATH=/opt/dev-control/scripts:\\$PATH' >> /etc/profile.d/dev-control.sh && \\
     chmod 644 /etc/profile.d/dev-control.sh
 
-# Pre-create .vscode-server directory with proper permissions (need root)
-RUN mkdir -p /home/${base_user}/.vscode-server && chown ${base_user}:${base_user} /home/${base_user}/.vscode-server && chmod 775 /home/${base_user}/.vscode-server
+# Pre-create .vscode-server and .gnupg directories with proper permissions (need root)
+RUN mkdir -p /home/${base_user}/.vscode-server /home/${base_user}/.gnupg && \\
+    chown ${base_user}:${base_user} /home/${base_user}/.vscode-server /home/${base_user}/.gnupg && \\
+    chmod 775 /home/${base_user}/.vscode-server && \\
+    chmod 700 /home/${base_user}/.gnupg
 
-# Set git defaults as root for the user's home
-RUN HOME=/home/${base_user} git config --global --add safe.directory '*' && \\
-    HOME=/home/${base_user} git config --global init.defaultBranch main
+# Set git config as root for the user's home (bake user/email/gpg if available)
+RUN $(generate_git_config_dockerfile "$CFG_GITHUB_USER" "$CFG_GITHUB_USER_EMAIL" "$CFG_GPG_KEY_ID" "/home/${base_user}")
 
 USER root
 
