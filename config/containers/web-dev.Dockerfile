@@ -3,12 +3,13 @@
 # ============================================================================
 #
 # Category-specific layer appended after common.Dockerfile
-# Note: nvm/Node.js is installed in the common footer section
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2024-2026 xaoscience
 
-# Web development tools (minimal - most tools installed via npm/nvm in footer)
-RUN apt-get update && apt-get install -y \
-    python3 python3-pip \
-    && rm -rf /var/lib/apt/lists/*
+# Install Wrangler globally (Cloudflare Workers CLI)
+# Note: nvm/Node.js installed system-wide in common.Dockerfile
+RUN bash -c 'source /opt/nvm/nvm.sh && npm install -g wrangler'
+
+# Verify installation
+RUN bash -c 'source /opt/nvm/nvm.sh && wrangler --version'
