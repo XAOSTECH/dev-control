@@ -2,34 +2,34 @@
 
 <!-- Project Shields/Badges -->
 <p align="center">
-  <a href="https://github.com/xaoscience/dev-control">
-    <img alt="GitHub repo" src="https://img.shields.io/badge/GitHub-xaoscience%2Fdev--control-181717?style=for-the-badge&logo=github">
+  <a href="https://github.com/xaostech/dev-control">
+    <img alt="GitHub repo" src="https://img.shields.io/badge/GitHub-xaostech%2Fdev--control-181717?style=for-the-badge&logo=github">
   </a>
-  <a href="https://github.com/xaoscience/dev-control/releases">
-    <img alt="GitHub release" src="https://img.shields.io/github/v/release/xaoscience/dev-control?style=for-the-badge&logo=semantic-release&color=blue">
+  <a href="https://github.com/xaostech/dev-control/releases">
+    <img alt="GitHub release" src="https://img.shields.io/github/v/release/xaostech/dev-control?style=for-the-badge&logo=semantic-release&color=blue">
   </a>
-  <a href="https://github.com/xaoscience/dev-control/blob/main/LICENSE">
-    <img alt="License" src="https://img.shields.io/github/license/xaoscience/dev-control?style=for-the-badge&color=green">
-  </a>
-</p>
-
-<p align="center">
-  <a href="https://github.com/xaoscience/dev-control/actions/workflows/bash-lint.yml">
-    <img alt="CI Status" src="https://github.com/xaoscience/dev-control/actions/workflows/bash-lint.yml/badge.svg?branch=Main">
-  </a>
-  <a href="https://github.com/xaoscience/dev-control/issues">
-    <img alt="Issues" src="https://img.shields.io/github/issues/xaoscience/dev-control?style=flat-square&logo=github&color=yellow">
-  </a>
-  <a href="https://github.com/xaoscience/dev-control/pulls">
-    <img alt="Pull Requests" src="https://img.shields.io/github/issues-pr/xaoscience/dev-control?style=flat-square&logo=github&color=purple">
-  </a>
-  <a href="https://github.com/xaoscience/dev-control/stargazers">
-    <img alt="Stars" src="https://img.shields.io/github/stars/xaoscience/dev-control?style=flat-square&logo=github&color=gold">
+  <a href="https://github.com/xaostech/dev-control/blob/main/LICENSE">
+    <img alt="License" src="https://img.shields.io/github/license/xaostech/dev-control?style=for-the-badge&color=green">
   </a>
 </p>
 
 <p align="center">
-  <img alt="Last Commit" src="https://img.shields.io/github/last-commit/xaoscience/dev-control?style=flat-square&logo=git&color=blue">
+  <a href="https://github.com/xaostech/dev-control/actions/workflows/bash-lint.yml">
+    <img alt="CI Status" src="https://github.com/xaostech/dev-control/actions/workflows/bash-lint.yml/badge.svg?branch=Main">
+  </a>
+  <a href="https://github.com/xaostech/dev-control/issues">
+    <img alt="Issues" src="https://img.shields.io/github/issues/xaostech/dev-control?style=flat-square&logo=github&color=yellow">
+  </a>
+  <a href="https://github.com/xaostech/dev-control/pulls">
+    <img alt="Pull Requests" src="https://img.shields.io/github/issues-pr/xaostech/dev-control?style=flat-square&logo=github&color=purple">
+  </a>
+  <a href="https://github.com/xaostech/dev-control/stargazers">
+    <img alt="Stars" src="https://img.shields.io/github/stars/xaostech/dev-control?style=flat-square&logo=github&color=gold">
+  </a>
+</p>
+
+<p align="center">
+  <img alt="Last Commit" src="https://img.shields.io/github/last-commit/xaostech/dev-control?style=flat-square&logo=git&color=blue">
   <img alt="Shell" src="https://img.shields.io/badge/shell-bash-4EAA25?style=flat-square&logo=gnu-bash&logoColor=white">
   <img alt="Stability" src="https://img.shields.io/badge/stability-experimental-orange?style=flat-square">
   <img alt="Maintenance" src="https://img.shields.io/maintenance/yes/2026?style=flat-square">
@@ -43,7 +43,7 @@
 
 ```bash
 # Install
-git clone https://github.com/xaoscience/dev-control.git && cd dev-control && ./install.sh
+git clone https://github.com/xaostech/dev-control.git && cd dev-control && ./install.sh
 
 # Use
 dc init          # Set up a repo with templates, license, docs
@@ -53,7 +53,7 @@ dc fix           # Rewrite/sign/clean commit history safely
 dc modules       # Manage nested submodules automatically
 dc licenses      # Audit license compliance across repos
 dc mcp           # Configure AI coding assistants (MCP servers)
-dc container     # Generate devcontainer.json for VS Code
+dc contain       # Generate devcontainer.json for VS Code
 dc package       # Build tarballs, Homebrew, Snap, Deb, Nix, Docker
 ```
 
@@ -124,7 +124,7 @@ Managing modern software projects involves a lot of repetitive housekeeping:
 ### Install
 
 ```bash
-git clone https://github.com/xaoscience/dev-control.git
+git clone https://github.com/xaostech/dev-control.git
 cd dev-control
 ./install.sh          # Adds `dc` to your PATH and installs aliases
 source ~/.bashrc      # Or restart your shell
@@ -348,7 +348,7 @@ git push origin feature/amazing-feature
 - [ ] GUI wrapper (Bubble Tea / Tauri)
 - [ ] Remote plugin registry
 
-See [open issues](https://github.com/xaoscience/dev-control/issues) for more.
+See [open issues](https://github.com/xaostech/dev-control/issues) for more.
 
 ---
 
@@ -359,8 +359,8 @@ GPL-3.0. See [LICENSE](../LICENSE).
 ---
 
 <p align="center">
-  <a href="https://github.com/xaoscience">
-    <img src="https://img.shields.io/badge/Made%20with%20%E2%9D%A4%EF%B8%8F%20by-xaoscience-red?style=for-the-badge">
+  <a href="https://github.com/xaostech">
+    <img src="https://img.shields.io/badge/Made%20with%20%E2%9D%A4%EF%B8%8F%20by-xaostech-red?style=for-the-badge">
   </a>
 </p>
 
