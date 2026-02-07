@@ -8,6 +8,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2024-2026 xaoscience
 
-# Web development tools
+# Web development tools (minimal - most tools installed via npm/nvm in footer)
 RUN apt-get update && apt-get install -y \
+    python3 python3-pip \
     && rm -rf /var/lib/apt/lists/*

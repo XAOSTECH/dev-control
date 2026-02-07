@@ -570,3 +570,72 @@ add_devcontainer_to_gitignore() {
         print_info "Added personal devcontainer files to .gitignore"
     fi
 }
+# ============================================================================
+# CATEGORY DOCKERFILE GENERATION
+# ============================================================================
+
+# Generate complete Dockerfile for a category by concatenating templates
+# Args: category, output_path
+generate_category_dockerfile() {
+    local category="$1"
+    local output_path="$2"
+    local containers_dir="$DEV_CONTROL_DIR/config/containers"
+    
+    # Validate category exists
+    if [[ ! -f "$containers_dir/${category}.Dockerfile" ]]; then
+        print_error "Unknown category: $category"
+        return 1
+    fi
+    
+    # Build git config command for footer template
+    local git_config_cmd
+    git_config_cmd=$(generate_git_config_dockerfile "$CFG_GITHUB_USER" "$CFG_GITHUB_USER_EMAIL" "$CFG_GPG_KEY_ID" "/home/${category}")
+    
+    # Check if category needs video/render groups (streaming)
+    local needs_device_groups=false
+    [[ "$category" == "streaming" ]] && needs_device_groups=true
+    
+    # Concatenate: common + category-specific + optional groups + footer
+    {
+        # Common base layer
+        cat "$containers_dir/common.Dockerfile"
+        echo ""
+        
+        # Category-specific layer
+        cat "$containers_dir/${category}.Dockerfile"
+        echo ""
+        
+        # Add device groups if needed (before user creation)
+        if [[ "$needs_device_groups" == true ]]; then
+            cat << 'DOCKERFILE_GROUPS'
+# ============================================================================
+# Streaming: Create video and render groups for DRI/KMS device access
+# ============================================================================
+
+RUN groupadd -f -g 44 video && groupadd -f -g 109 render
+DOCKERFILE_GROUPS
+            echo ""
+        fi
+        
+        # Common footer (user setup, nvm, dev-control)
+        # Replace template variables: CATEGORY, GIT_CONFIG_CMD
+        sed -e "s/\${CATEGORY}/${category}/g" \
+            -e "s|\${GIT_CONFIG_CMD}|${git_config_cmd}|g" \
+            "$containers_dir/footer.Dockerfile"
+            
+        # Add streaming-specific user group membership
+        if [[ "$needs_device_groups" == true ]]; then
+            echo ""
+            cat << DOCKERFILE_STREAMING_GROUPS
+
+# Add ${category} to video and render groups for DRI/KMS access
+USER root
+RUN usermod -aG video,render ${category}
+USER ${category}
+DOCKERFILE_STREAMING_GROUPS
+        fi
+        
+    } > "$output_path"
+    
+    print_success "Generated category Dockerfile: $output_path"
+}
