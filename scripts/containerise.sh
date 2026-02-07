@@ -1164,6 +1164,11 @@ generate_devcontainer_json() {
         run_args+=",\"--shm-size=1g\",\"--device=/dev/dri\",\"--device=/dev/nvidia0\",\"--device=/dev/nvidiactl\",\"--device=/dev/nvidia-modeset\",\"--device=/dev/nvidia-uvm\",\"--device=/dev/nvidia-uvm-tools\""
     fi
     
+    # Streaming category: Always enable NVIDIA devices and DRI/KMS access
+    if [[ "$category" == "streaming" ]]; then
+        run_args="\"--userns=keep-id\",\"--shm-size=1g\",\"--device=/dev/dri\",\"--device=/dev/nvidia0\",\"--device=/dev/nvidiactl\",\"--device=/dev/nvidia-modeset\",\"--device=/dev/nvidia-uvm\",\"--device=/dev/nvidia-uvm-tools\",\"--group-add=video\",\"--group-add=render\",\"--security-opt=label=disable\""
+    fi
+    
     # Build extensions array (default + category-specific)
     local extensions=""
     IFS=',' read -ra ext_array <<< "$CFG_VSCODE_EXTENSIONS"
@@ -1188,7 +1193,7 @@ generate_devcontainer_json() {
     \"DISPLAY\": \"\${localEnv:DISPLAY}\",
     \"TZ\": \"${CFG_TIMEZONE}\""
     
-    if [[ "$CFG_ENABLE_NVIDIA_DEVICES" == "true" ]]; then
+    if [[ "$CFG_ENABLE_NVIDIA_DEVICES" == "true" || "$category" == "streaming" ]]; then
         container_env+=",
     \"NVIDIA_VISIBLE_DEVICES\": \"all\",
     \"NVIDIA_DRIVER_CAPABILITIES\": \"compute,video,utility\",
@@ -1282,7 +1287,7 @@ ${header_comment}  "name": "${project_name^^}",
   "containerEnv": {
     ${container_env}
   },
-  "postCreateCommand": "sudo chown -R ${remote_user}:${remote_user} . 2>/dev/null || true && sudo chmod 755 /home/${remote_user} 2>/dev/null || true && sudo chown -R ${remote_user}:${remote_user} /home/${remote_user}/.vscode-server 2>/dev/null || true && git config --global --add safe.directory '*' && git config --global init.defaultBranch main${git_config_line} && sudo mkdir -p /run/user/${uid} && sudo chown ${remote_user}:${remote_user} /run/user/${uid} && ln -sf /tmp/wayland-0 /run/user/${uid}/wayland-0 2>/dev/null || true && gpg-connect-agent updatestartuptty /bye >/dev/null 2>&1 || true && sudo chown -R ${remote_user}:${remote_user} /run/user/${uid} 2>/dev/null || true && bash /opt/dev-control/scripts/alias-loading.sh <<< A",
+  "postCreateCommand": "sudo chown -R ${remote_user}:${remote_user} . 2>/dev/null || true && sudo chmod 755 /home/${remote_user} 2>/dev/null || true && sudo chown -R ${remote_user}:${remote_user} /home/${remote_user}/.vscode-server 2>/dev/null || true && git config --global --add safe.directory '*' && git config --global init.defaultBranch main${git_config_line} && sudo mkdir -p /run/user/${uid} && sudo chown ${remote_user}:${remote_user} /run/user/${uid} && ln -sf /tmp/wayland-0 /run/user/${uid}/wayland-0 2>/dev/null || true && gpg-connect-agent updatestartuptty /bye >/dev/null 2>&1 || true && sudo chown -R ${remote_user}:${remote_user} /run/user/${uid} 2>/dev/null || true && bash -c 'bash /opt/dev-control/scripts/alias-loading.sh <<< A'",
   "customizations": {
     "vscode": {
       "settings": {
@@ -1755,6 +1760,19 @@ DOCKERFILE_DEVTOOLS
     # Add common user setup at the end
     # Use CATEGORY name for the base image user (generic, reusable)
     local base_user="$category"
+    
+    # Streaming category needs video/render groups for DRI/KMS access
+    if [[ "$category" == "streaming" ]]; then
+        cat >> "$dockerfile_path" << 'DOCKERFILE_GROUPS'
+
+# ============================================================================
+# Streaming: Create video and render groups for DRI/KMS device access
+# ============================================================================
+
+RUN groupadd -f -g 44 video && groupadd -f -g 109 render
+DOCKERFILE_GROUPS
+    fi
+    
     cat >> "$dockerfile_path" << DOCKERFILE_USER
 
 # ============================================================================
@@ -1774,6 +1792,18 @@ RUN if id ubuntu &>/dev/null; then \\
     echo "${base_user} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \\
     mkdir -p /home/${base_user}/.config /home/${base_user}/.cache /home/${base_user}/.local/share && \\
     chown -R ${base_user}:${base_user} /home/${base_user}
+DOCKERFILE_USER
+
+    # Add user to video/render groups for streaming category
+    if [[ "$category" == "streaming" ]]; then
+        cat >> "$dockerfile_path" << DOCKERFILE_STREAMING_GROUPS
+
+# Add ${base_user} to video and render groups for DRI/KMS access
+RUN usermod -aG video,render ${base_user}
+DOCKERFILE_STREAMING_GROUPS
+    fi
+    
+    cat >> "$dockerfile_path" << DOCKERFILE_USER_CONT
 
 USER ${base_user}
 WORKDIR /home/${base_user}
@@ -1802,11 +1832,12 @@ RUN mkdir -p /opt/dev-control && \\
     echo 'export PATH=/opt/dev-control/scripts:\\$PATH' >> /etc/profile.d/dev-control.sh && \\
     chmod 644 /etc/profile.d/dev-control.sh
 
-# Pre-create .vscode-server and .gnupg directories with proper permissions (need root)
-RUN mkdir -p /home/${base_user}/.vscode-server /home/${base_user}/.gnupg && \\
-    chown ${base_user}:${base_user} /home/${base_user}/.vscode-server /home/${base_user}/.gnupg && \\
+# Pre-create .vscode-server, .gnupg, and .bash_backups directories with proper permissions (need root)
+RUN mkdir -p /home/${base_user}/.vscode-server /home/${base_user}/.gnupg /home/${base_user}/.bash_backups && \\
+    chown ${base_user}:${base_user} /home/${base_user}/.vscode-server /home/${base_user}/.gnupg /home/${base_user}/.bash_backups && \\
     chmod 775 /home/${base_user}/.vscode-server && \\
-    chmod 700 /home/${base_user}/.gnupg
+    chmod 700 /home/${base_user}/.gnupg && \\
+    chmod 700 /home/${base_user}/.bash_backups
 
 # Set git config as root for the user's home (bake user/email/gpg if available)
 RUN $(generate_git_config_dockerfile "$CFG_GITHUB_USER" "$CFG_GITHUB_USER_EMAIL" "$CFG_GPG_KEY_ID" "/home/${base_user}")
@@ -1820,7 +1851,7 @@ RUN HOME=/home/${base_user} bash -c 'bash /opt/dev-control/scripts/alias-loading
 USER ${base_user}
 
 WORKDIR /workspaces
-DOCKERFILE_USER
+DOCKERFILE_USER_CONT
 }
 
 build_base_image() {
