@@ -31,7 +31,7 @@ DEV_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
 [[ ! -d "$DEV_CONTROL_DIR/docs-templates" ]] && [[ -d "./docs-templates" ]] && DEV_CONTROL_DIR="$(pwd)"
 
 # Source shared libraries
-source "$SCRIPT_DIR/lib/colors.sh"
+source "$SCRIPT_DIR/lib/colours.sh"
 source "$SCRIPT_DIR/lib/print.sh"
 
 # CLI options

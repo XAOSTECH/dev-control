@@ -4,10 +4,10 @@
 # Common print functions for consistent terminal output
 #
 # Usage:
-#   source "${SCRIPT_DIR}/lib/colors.sh"
+#   source "${SCRIPT_DIR}/lib/colours.sh"
 #   source "${SCRIPT_DIR}/lib/print.sh"
 #
-# Note: colors.sh must be sourced first for colors to be available
+# Note: colours.sh must be sourced first for colors to be available
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2024-2026 xaoscience

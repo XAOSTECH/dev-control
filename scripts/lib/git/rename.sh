@@ -19,7 +19,7 @@ DEV_CONTROL_DIR="$(dirname "$LIB_DIR")"
 export DEV_CONTROL_DIR
 
 # Source shared libraries
-source "$LIB_DIR/lib/colors.sh"
+source "$LIB_DIR/lib/colours.sh"
 source "$LIB_DIR/lib/print.sh"
 
 # Parse arguments

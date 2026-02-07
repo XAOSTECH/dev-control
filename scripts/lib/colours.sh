@@ -4,7 +4,7 @@
 # Common colour definitions for terminal output
 #
 # Usage:
-#   source "${SCRIPT_DIR}/lib/colors.sh"
+#   source "${SCRIPT_DIR}/lib/colours.sh"
 #
 
 # Text colours
