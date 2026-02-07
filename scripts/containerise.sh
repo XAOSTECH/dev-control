@@ -12,6 +12,8 @@
 #   ✓ Detects or prompts for project folder
 #   ✓ Installs/verifies rootless podman on Ubuntu
 #   ✓ Guides through VSCode devcontainer activation
+#   ✓ Generates _example and _minimal config variants
+#   ✓ Adds personal config files to .gitignore
 #
 # Usage:
 #   ./containerise.sh [PROJECT_PATH] [OPTIONS]
@@ -35,141 +37,7 @@ export DEV_CONTROL_DIR  # Export to avoid SC2034 warning
 source "$SCRIPT_DIR/lib/colours.sh"
 source "$SCRIPT_DIR/lib/print.sh"
 source "$SCRIPT_DIR/lib/validation.sh"
-
-################################################################################
-# Default Configuration
-################################################################################
-
-# Configuration file paths
-DC_CONTAINER_CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/dev-control"
-DC_CONTAINER_CONFIG="$DC_CONTAINER_CONFIG_DIR/container.yaml"
-DC_PROJECT_CONTAINER_CONFIG=".devcontainer.yaml"
-
-# Default values (neutral defaults, customisable for any region)
-declare -A CONTAINER_DEFAULTS=(
-    ["container_name"]=""  # Will be set to folder name if empty
-    ["github_user"]=""
-    ["github_user_email"]=""
-    ["gpg_key_id"]=""
-    ["use_base_category"]="false"
-    ["base_category"]=""
-    ["timezone"]="UTC"
-    ["locale"]="en_US.UTF-8"
-    ["ubuntu_mirror"]="http://archive.ubuntu.com/ubuntu"
-    ["base_image"]="ubuntu:latest"
-    ["hush_login"]="true"
-    ["vscode_extensions"]="github.copilot,github.copilot-chat"
-    ["mount_gpg"]="true"
-    ["mount_gh_config"]="true"
-    ["mount_docker_socket"]="true"
-    ["mount_wrangler"]="false"
-    ["install_gh_cli"]="true"
-    ["install_git_control"]="true"
-    ["git_control_version"]="latest"
-    # Streaming/CUDA features
-    ["install_cuda"]="false"
-    ["install_ffmpeg"]="false"
-    ["install_nginx_rtmp"]="false"
-    ["install_streaming_utils"]="false"
-    ["enable_nvidia_devices"]="false"
-)
-
-# Common base images for selection
-declare -a BASE_IMAGES=(
-    "ubuntu:latest"
-    "ubuntu:noble"
-    "ubuntu:jammy"
-    "mcr.microsoft.com/devcontainers/universal:2-linux"
-    "mcr.microsoft.com/devcontainers/base:ubuntu"
-    "mcr.microsoft.com/devcontainers/python:3.12"
-    "mcr.microsoft.com/devcontainers/javascript-node:22"
-    "mcr.microsoft.com/devcontainers/rust:latest"
-    "mcr.microsoft.com/devcontainers/go:latest"
-)
-
-# Base image categories - these ARE the base images you build/use
-# Build from: https://github.com/xaostech/dev-control/tree/main/.devcontainer
-declare -A BASE_IMAGE_CATEGORIES=(
-    ["game-dev"]="devcontrol/game-dev:latest"     # Godot, Vulkan, SDL2, GLFW, CUDA
-    ["art"]="devcontrol/art:latest"                # 2D/3D art tools: Krita, GIMP, Blender
-    ["data-science"]="devcontrol/data-science:latest"  # CUDA, FFmpeg, video/data processing
-    ["streaming"]="devcontrol/streaming:latest"    # FFmpeg+NVENC, NGINX-RTMP, ONNX Runtime
-    ["web-dev"]="devcontrol/web-dev:latest"        # Node.js, npm, Cloudflare Workers
-    ["dev-tools"]="devcontrol/dev-tools:latest"    # GCC, build-essential, compilers
-)
-
-# Category feature descriptions
-declare -A CATEGORY_FEATURES=(
-    ["game-dev"]="Godot 4.x, Vulkan SDK, SDL2, GLFW 3.4 (Wayland), CUDA 13.1"
-    ["art"]="2D/3D art tools: Krita, GIMP, Inkscape, Blender, ImageMagick"
-    ["data-science"]="CUDA 13.1, FFmpeg (NVENC/NVDEC), NVIDIA acceleration"
-    ["streaming"]="FFmpeg (NVENC/NVDEC), NGINX-RTMP, SRT, ONNX Runtime GPU, YOLOv8"
-    ["web-dev"]="Node.js 25 (nvm), npm, modern web frameworks, Wrangler, dev-control"
-    ["dev-tools"]="GCC, build-essential, common compilers, general development"
-)
-
-# Category-specific VS Code extensions
-declare -A CATEGORY_EXTENSIONS=(
-    ["game-dev"]="GodotTools.godot-tools ms-vscode.cpptools"
-    ["art"]=""
-    ["data-science"]="ms-python.python ms-toolsai.jupyter ms-python.vscode-pylance"
-    ["streaming"]="ms-vscode.cpptools ms-python.python"
-    ["web-dev"]="dbaeumer.vscode-eslint esbenp.prettier-vscode"
-    ["dev-tools"]="ms-vscode.cpptools ms-python.python"
-)
-
-# GitHub build source references (for documentation)
-declare -A CATEGORY_GITHUB_PATHS=(
-    ["game-dev"]="https://github.com/xaostech/dev-control/tree/main/.devcontainer/game-dev"
-    ["art"]="https://github.com/xaostech/dev-control/tree/main/.devcontainer/art"
-    ["data-science"]="https://github.com/xaostech/dev-control/tree/main/.devcontainer/data-science"
-    ["streaming"]="https://github.com/xaostech/dev-control/tree/main/.devcontainer/streaming"
-    ["web-dev"]="https://github.com/xaostech/dev-control/tree/main/.devcontainer/web-dev"
-    ["dev-tools"]="https://github.com/xaostech/dev-control/tree/main/.devcontainer/dev-tools"
-)
-
-# Common mirrors for selection (main continental servers)
-# Users can enter any custom mirror URL during selection
-declare -A UBUNTU_MIRRORS=(
-    ["Main Archive"]="http://archive.ubuntu.com/ubuntu"
-    ["North America"]="https://us.archive.ubuntu.com/ubuntu"
-    ["South America"]="https://br.archive.ubuntu.com/ubuntu"
-    ["Europe"]="https://eu.archive.ubuntu.com/ubuntu"
-    ["Asia"]="https://asia.archive.ubuntu.com/ubuntu"
-    ["Oceania"]="https://au.archive.ubuntu.com/ubuntu"
-    ["Africa"]="https://za.archive.ubuntu.com/ubuntu"
-)
-
-# Common timezones for selection (main continental zones)
-# Users can enter any valid TZ database name during selection
-declare -a TIMEZONES=(
-    "UTC"
-    "America/New_York"
-    "America/Los_Angeles"
-    "America/Sao_Paulo"
-    "Europe/London"
-    "Europe/Paris"
-    "Asia/Tokyo"
-    "Asia/Shanghai"
-    "Asia/Kolkata"
-    "Australia/Sydney"
-    "Africa/Johannesburg"
-)
-
-# Common locales for selection (major language/region combinations)
-# Users can enter any valid locale during selection
-declare -a LOCALES=(
-    "en_US.UTF-8"
-    "en_GB.UTF-8"
-    "pt_BR.UTF-8"
-    "es_ES.UTF-8"
-    "fr_FR.UTF-8"
-    "de_DE.UTF-8"
-    "ja_JP.UTF-8"
-    "zh_CN.UTF-8"
-    "hi_IN.UTF-8"
-    "ar_SA.UTF-8"
-)
+source "$SCRIPT_DIR/lib/container.sh"
 
 # CLI options
 MODE=""  # "base" or "image"
@@ -233,175 +101,6 @@ EOF
 }
 
 ################################################################################
-# YAML Configuration Parsing
-################################################################################
-
-# Parse container YAML config file
-parse_container_yaml() {
-    local file="$1"
-    local line key value
-    
-    [[ ! -f "$file" ]] && return 1
-    
-    while IFS= read -r line || [[ -n "$line" ]]; do
-        # Skip comments and empty lines
-        [[ "$line" =~ ^[[:space:]]*# ]] && continue
-        [[ -z "${line// /}" ]] && continue
-        
-        # Match key: value
-        if [[ "$line" =~ ^[[:space:]]*([a-zA-Z_][a-zA-Z0-9_-]*)[[:space:]]*:[[:space:]]*(.*)[[:space:]]*$ ]]; then
-            key="${BASH_REMATCH[1]}"
-            value="${BASH_REMATCH[2]}"
-            
-            # Remove quotes
-            value="${value#\"}"
-            value="${value%\"}"
-            value="${value#\'}"
-            value="${value%\'}"
-            
-            # Replace hyphens with underscores for variable names
-            key="${key//-/_}"
-            
-            # Export to current config
-            case "$key" in
-                github_user)      CFG_GITHUB_USER="$value" ;;
-                github_user_email) CFG_GITHUB_USER_EMAIL="$value" ;;
-                gpg_key_id)       CFG_GPG_KEY_ID="$value" ;;
-                timezone)         CFG_TIMEZONE="$value" ;;
-                locale)           CFG_LOCALE="$value" ;;
-                ubuntu_mirror)    CFG_UBUNTU_MIRROR="$value" ;;
-                base_image)       CFG_BASE_IMAGE="$value" ;;
-                hush_login)       CFG_HUSH_LOGIN="$value" ;;
-                vscode_extensions) CFG_VSCODE_EXTENSIONS="$value" ;;
-                mount_gpg)        CFG_MOUNT_GPG="$value" ;;
-                mount_gh_config)  CFG_MOUNT_GH_CONFIG="$value" ;;
-                mount_docker_socket) CFG_MOUNT_DOCKER_SOCKET="$value" ;;
-                mount_wrangler)   CFG_MOUNT_WRANGLER="$value" ;;
-                install_gh_cli)   CFG_INSTALL_GH_CLI="$value" ;;
-                install_git_control) CFG_INSTALL_DEV_CONTROL="$value" ;;
-                git_control_version) CFG_DEV_CONTROL_VERSION="$value" ;;
-                # Streaming/CUDA features
-                install_cuda)     CFG_INSTALL_CUDA="$value" ;;
-                install_ffmpeg)   CFG_INSTALL_FFMPEG="$value" ;;
-                install_nginx_rtmp) CFG_INSTALL_NGINX_RTMP="$value" ;;
-                install_streaming_utils) CFG_INSTALL_STREAMING_UTILS="$value" ;;
-                enable_nvidia_devices) CFG_ENABLE_NVIDIA_DEVICES="$value" ;;
-            esac
-        fi
-    done < "$file"
-}
-
-# Load configuration from all sources
-load_container_config() {
-    # Start with defaults
-    CFG_GITHUB_USER="${CONTAINER_DEFAULTS[github_user]}"
-    CFG_GITHUB_USER_EMAIL="${CONTAINER_DEFAULTS[github_user_email]}"
-    CFG_GPG_KEY_ID="${CONTAINER_DEFAULTS[gpg_key_id]}"
-    CFG_TIMEZONE="${CONTAINER_DEFAULTS[timezone]}"
-    CFG_LOCALE="${CONTAINER_DEFAULTS[locale]}"
-    CFG_USE_BASE_CATEGORY="${CONTAINER_DEFAULTS[use_base_category]}"
-    CFG_BASE_CATEGORY="${CONTAINER_DEFAULTS[base_category]}"
-    CFG_UBUNTU_MIRROR="${CONTAINER_DEFAULTS[ubuntu_mirror]}"
-    CFG_BASE_IMAGE="${CONTAINER_DEFAULTS[base_image]}"
-    CFG_HUSH_LOGIN="${CONTAINER_DEFAULTS[hush_login]}"
-    CFG_VSCODE_EXTENSIONS="${CONTAINER_DEFAULTS[vscode_extensions]}"
-    CFG_MOUNT_GPG="${CONTAINER_DEFAULTS[mount_gpg]}"
-    CFG_MOUNT_GH_CONFIG="${CONTAINER_DEFAULTS[mount_gh_config]}"
-    CFG_MOUNT_DOCKER_SOCKET="${CONTAINER_DEFAULTS[mount_docker_socket]}"
-    CFG_INSTALL_GH_CLI="${CONTAINER_DEFAULTS[install_gh_cli]}"
-    CFG_INSTALL_DEV_CONTROL="${CONTAINER_DEFAULTS[install_git_control]}"
-    CFG_DEV_CONTROL_VERSION="${CONTAINER_DEFAULTS[git_control_version]}"
-    CFG_MOUNT_WRANGLER="${CONTAINER_DEFAULTS[mount_wrangler]}"
-    # Streaming/CUDA features
-    CFG_INSTALL_CUDA="${CONTAINER_DEFAULTS[install_cuda]}"
-    CFG_INSTALL_FFMPEG="${CONTAINER_DEFAULTS[install_ffmpeg]}"
-    CFG_INSTALL_NGINX_RTMP="${CONTAINER_DEFAULTS[install_nginx_rtmp]}"
-    CFG_INSTALL_STREAMING_UTILS="${CONTAINER_DEFAULTS[install_streaming_utils]}"
-    CFG_ENABLE_NVIDIA_DEVICES="${CONTAINER_DEFAULTS[enable_nvidia_devices]}"
-    
-    # Load global config if exists
-    if [[ -f "$DC_CONTAINER_CONFIG" ]]; then
-        parse_container_yaml "$DC_CONTAINER_CONFIG"
-    fi
-    
-    # Load project config if exists
-    if [[ -n "$PROJECT_PATH" && -f "$PROJECT_PATH/$DC_PROJECT_CONTAINER_CONFIG" ]]; then
-        parse_container_yaml "$PROJECT_PATH/$DC_PROJECT_CONTAINER_CONFIG"
-    fi
-    
-    # Load explicit config file if provided
-    if [[ -n "$CONFIG_FILE" && -f "$CONFIG_FILE" ]]; then
-        parse_container_yaml "$CONFIG_FILE"
-    fi
-    
-    # Set container name to folder name if not specified
-    if [[ -z "$CFG_CONTAINER_NAME" && -n "$PROJECT_PATH" ]]; then
-        CFG_CONTAINER_NAME=$(basename "$PROJECT_PATH")
-    fi
-}
-
-# Save configuration to file
-save_container_config() {
-    local file="$1"
-    local dir
-    dir=$(dirname "$file")
-    
-    mkdir -p "$dir"
-    
-    cat > "$file" << EOF
-# Dev-Control container configuration
-# Generated by containerise.sh on $(date +%Y-%m-%d)
-#
-# SPDX-License-Identifier: GPL-3.0-or-later
-# SPDX-FileCopyrightText: 2024-2026 xaoscience
-
-# User & Project Identification
-container-name: ${CFG_CONTAINER_NAME}
-github-user: ${CFG_GITHUB_USER}
-github-user-email: ${CFG_GITHUB_USER_EMAIL}
-gpg-key-id: ${CFG_GPG_KEY_ID}
-
-# System Locale & Timezone
-timezone: ${CFG_TIMEZONE}
-locale: ${CFG_LOCALE}
-
-# Ubuntu Mirror
-ubuntu-mirror: ${CFG_UBUNTU_MIRROR}
-
-# Docker Base Image
-use-base-category: ${CFG_USE_BASE_CATEGORY}
-base-category: ${CFG_BASE_CATEGORY}
-base-image: ${CFG_BASE_IMAGE}
-hush-login: ${CFG_HUSH_LOGIN}
-
-# VS Code Extensions
-vscode-extensions: ${CFG_VSCODE_EXTENSIONS}
-
-# Mount Points
-mount-gpg: ${CFG_MOUNT_GPG}
-mount-gh-config: ${CFG_MOUNT_GH_CONFIG}
-mount-docker-socket: ${CFG_MOUNT_DOCKER_SOCKET}
-
-# Additional Features
-install-gh-cli: ${CFG_INSTALL_GH_CLI}
-install-dev-control: ${CFG_INSTALL_DEV_CONTROL}
-dev-control-version: ${CFG_DEV_CONTROL_VERSION}
-
-# Mount Options
-mount-wrangler: ${CFG_MOUNT_WRANGLER}
-
-# Streaming/CUDA Features
-install-cuda: ${CFG_INSTALL_CUDA}
-install-ffmpeg: ${CFG_INSTALL_FFMPEG}
-install-nginx-rtmp: ${CFG_INSTALL_NGINX_RTMP}
-install-streaming-utils: ${CFG_INSTALL_STREAMING_UTILS}
-enable-nvidia-devices: ${CFG_ENABLE_NVIDIA_DEVICES}
-EOF
-
-    print_success "Configuration saved to: $file"
-}
-
-################################################################################
 # CLI Argument Parsing
 ################################################################################
 
@@ -461,85 +160,6 @@ parse_args() {
 ################################################################################
 # Interactive Configuration
 ################################################################################
-
-# Numbered selection menu
-select_from_list() {
-    local prompt="$1"
-    local default="$2"
-    shift 2
-    local options=("$@")
-    local choice
-    local i=1
-    
-    # Send UI output to stderr so it's not captured by command substitution
-    echo "" >&2
-    echo -e "${BOLD}$prompt${NC}" >&2
-    for opt in "${options[@]}"; do
-        if [[ "$opt" == "$default" ]]; then
-            echo -e "  ${CYAN}${i})${NC} $opt ${GREEN}(default)${NC}" >&2
-        else
-            echo -e "  ${CYAN}${i})${NC} $opt" >&2
-        fi
-        ((i++))
-    done
-    echo -e "  ${CYAN}${i})${NC} ${DIM}Custom value...${NC}" >&2
-    
-    read -rp "Select [1-$i] or press Enter for default: " choice
-    
-    if [[ -z "$choice" ]]; then
-        echo "$default"
-        return
-    fi
-    
-    if [[ "$choice" =~ ^[0-9]+$ ]] && (( choice >= 1 && choice <= ${#options[@]} )); then
-        echo "${options[$((choice-1))]}"
-    elif [[ "$choice" == "$i" ]] || [[ "$choice" == "c" ]] || [[ "$choice" == "C" ]]; then
-        read -rp "Enter custom value: " custom
-        echo "$custom"
-    else
-        # Treat as custom input
-        echo "$choice"
-    fi
-}
-
-# Mirror selection (key-value based)
-select_mirror() {
-    local default="$1"
-    local choice
-    local i=1
-    local keys=()
-    
-    # Send UI output to stderr so it's not captured by command substitution
-    echo "" >&2
-    echo -e "${BOLD}Select Ubuntu archive mirror:${NC}" >&2
-    for key in "${!UBUNTU_MIRRORS[@]}"; do
-        keys+=("$key")
-        local url="${UBUNTU_MIRRORS[$key]}"
-        if [[ "$url" == "$default" ]]; then
-            echo -e "  ${CYAN}${i})${NC} $key ${GREEN}(default)${NC}" >&2
-        else
-            echo -e "  ${CYAN}${i})${NC} $key" >&2
-        fi
-        ((i++))
-    done
-    echo -e "  ${CYAN}${i})${NC} ${DIM}Custom URL...${NC}" >&2
-    
-    read -rp "Select [1-$i] or press Enter for default: " choice
-    
-    if [[ -z "$choice" ]]; then
-        echo "$default"
-        return
-    fi
-    
-    if [[ "$choice" =~ ^[0-9]+$ ]] && (( choice >= 1 && choice <= ${#keys[@]} )); then
-        echo "${UBUNTU_MIRRORS[${keys[$((choice-1))]}]}"
-    elif [[ "$choice" == "$i" ]]; then
-        read -rp "Enter custom mirror URL: " custom
-        echo "$custom"
-    else
-        echo "$default"
-    fi
-}
 
 # Interactive configuration prompts
 run_interactive_config() {
@@ -680,123 +300,6 @@ run_interactive_config() {
     if confirm "Save these settings as global defaults?"; then
         save_container_config "$DC_CONTAINER_CONFIG"
     fi
-}
-
-################################################################################
-# Detection Functions
-################################################################################
-
-# Detect or prompt for project path
-detect_project_path() {
-    local path="${1:-}"
-    
-    if [[ -n "$path" ]]; then
-        if is_directory "$path"; then
-            PROJECT_PATH=$(to_absolute_path "$path")
-        else
-            print_error "Directory not found: $path"
-            exit 1
-        fi
-    else
-        PROJECT_PATH=$(pwd)
-    fi
-    
-    print_info "Project path: ${CYAN}$PROJECT_PATH${NC}"
-}
-
-# Check if running in devcontainer
-is_in_devcontainer() {
-    [[ -f "/.dockerenv" ]] || [[ -n "${REMOTE_CONTAINERS:-}" ]] || [[ -n "${CODESPACES:-}" ]]
-}
-
-# Check rootless podman availability
-check_podman() {
-    if ! command -v podman &>/dev/null; then
-        print_warning "Podman not found"
-        return 1
-    fi
-    
-    # Check if rootless
-    if podman info --format '{{.Host.Security.Rootless}}' 2>/dev/null | grep  true; then
-        print_success "Rootless podman available"
-        return 0
-    else
-        print_warning "Podman not configured for rootless operation"
-        return 1
-    fi
-}
-
-# Install rootless podman on Ubuntu
-install_rootless_podman() {
-    print_header "Installing Rootless Podman"
-    
-    print_info "Updating package lists..."
-    sudo apt-get update q
-    
-    print_info "Installing podman..."
-    sudo apt-get install -y podman uidmap slirp4netns fuse-overlayfs
-    
-    print_info "Configuring rootless podman..."
-    
-    # Enable user namespaces
-    if [[ ! -f /etc/subuid ]] || ! grep  "^$(whoami):" /etc/subuid; then
-        sudo usermod --add-subuids 100000-165535 --add-subgids 100000-165535 "$(whoami)"
-    fi
-    
-    # Initialise rootless podman
-    podman system migrate 2>/dev/null || true
-    
-    print_success "Rootless podman installed and configured"
-}
-
-################################################################################
-# Git Configuration Functions
-################################################################################
-
-# Generate git config commands for Dockerfile RUN statements
-# Args: user, email, gpg_key, [home_dir]
-generate_git_config_dockerfile() {
-    local user="$1"
-    local email="$2"
-    local gpg_key="$3"
-    local home_dir="$4"  # Optional: if running as root for another user
-    
-    local home_prefix=""
-    if [[ -n "$home_dir" ]]; then
-        home_prefix="HOME=$home_dir "
-    fi
-    
-    local config="${home_prefix}git config --global --add safe.directory '*' && ${home_prefix}git config --global init.defaultBranch main"
-    
-    if [[ -n "$user" && -n "$email" ]]; then
-        config+=" && ${home_prefix}git config --global user.email $email && ${home_prefix}git config --global user.name $user"
-        
-        if [[ -n "$gpg_key" ]]; then
-            config+=" && ${home_prefix}git config --global commit.gpgsign true && ${home_prefix}git config --global user.signingkey $gpg_key && ${home_prefix}git config --global gpg.program gpg"
-        fi
-    fi
-    
-    echo "$config"
-}
-
-# Generate git config commands for devcontainer.json postCreateCommand
-# Args: user, email, gpg_key
-generate_git_config_postcreate() {
-    local user="$1"
-    local email="$2"
-    local gpg_key="$3"
-    
-    local config="git config --global --add safe.directory '*' && git config --global init.defaultBranch main"
-    
-    if [[ -n "$user" && -n "$email" ]]; then
-        config+=" && git config --global user.email $email && git config --global user.name $user"
-        
-        if [[ -n "$gpg_key" ]]; then
-            config+=" && git config --global commit.gpgsign true && git config --global user.signingkey $gpg_key && git config --global gpg.program gpg"
-        fi
-    fi
-    
-    echo "$config"
 }
 
 ################################################################################
@@ -1065,6 +568,21 @@ RUN touch ~/.hushlogin
 DOCKERFILE_EOF
         fi
 
+        # Install nvm and Node.js (required for npx-dependent MCP servers)
+        cat >> "$dockerfile_path" << DOCKERFILE_EOF
+
+# Install nvm and Node.js (required for npx-dependent MCP servers like firecrawl)
+ENV NVM_DIR=/home/${CFG_CONTAINER_NAME}/.config/nvm
+ENV BASH_ENV=/home/${CFG_CONTAINER_NAME}/.bashrc
+RUN mkdir -p "\$NVM_DIR" && \\
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash && \\
+    echo 'export NVM_DIR="\$HOME/.config/nvm"' >> ~/.bashrc && \\
+    echo '[ -s "\$NVM_DIR/nvm.sh" ] && \\. "\$NVM_DIR/nvm.sh"' >> ~/.bashrc && \\
+    bash -c 'source \$NVM_DIR/nvm.sh && nvm install 22 && nvm alias default 22'
+
+ENV PATH=\$NVM_DIR/versions/node/v22.13.1/bin:\$PATH
+DOCKERFILE_EOF
+
         # Add git configuration (always include safe.directory and defaultBranch, user/email/gpg if provided)
         local git_config_cmd=$(generate_git_config_dockerfile "$CFG_GITHUB_USER" "$CFG_GITHUB_USER_EMAIL" "$CFG_GPG_KEY_ID")
         
@@ -1178,7 +696,7 @@ generate_devcontainer_json() {
     done
     
     # Add category-specific extensions if available
-    if [[ -n "$category" && -n "${CATEGORY_EXTENSIONS[$category]}" ]]; then
+    if [[ -n "$category" && -n "${CATEGORY_EXTENSIONS[$category]:-}" ]]; then
         for ext in ${CATEGORY_EXTENSIONS[$category]}; do
             if [[ -n "$extensions" ]]; then extensions+=","; fi
             extensions+="\"${ext}\""
@@ -1317,6 +835,8 @@ generate_devcontainer() {
     generate_dockerignore "$devcontainer_dir"
     generate_dockerfile "$devcontainer_dir"
     generate_devcontainer_json "$devcontainer_dir"
+    generate_config_variants "$devcontainer_dir" "" "" ""
+    add_devcontainer_to_gitignore "$PROJECT_PATH"
 }
 
 ################################################################################
@@ -1353,412 +873,155 @@ show_activation_instructions() {
     echo ""
 }
 
+
+################################################################################
+# Config Variant Generation (_example and _minimal)
+################################################################################
+
+# Generate _example and _minimal config variants alongside personal config files
+# _example: tracked reference with placeholder values (YOUR_GITHUB_USER, etc.)
+# _minimal: tracked reference with all dependencies but no personal config
+#
+# Personal files (Dockerfile, devcontainer.json) are gitignored.
+# Variant files (Dockerfile_example, devcontainer_example.json, etc.) are tracked.
+generate_config_variants() {
+    local devcontainer_dir="$1"
+    local mode="${2:-}"       # "base", "image", or "" (no-flag)
+    local category="${3:-}"
+    local image_tag="${4:-}"
+
+    # Save original config
+    local orig_user="$CFG_GITHUB_USER"
+    local orig_email="${CFG_GITHUB_USER_EMAIL:-}"
+    local orig_gpg="${CFG_GPG_KEY_ID:-}"
+    local orig_mount_gpg="${CFG_MOUNT_GPG:-true}"
+    local orig_mount_gh="${CFG_MOUNT_GH_CONFIG:-true}"
+    local orig_mount_wrangler="${CFG_MOUNT_WRANGLER:-false}"
+
+    # ─── EXAMPLE VARIANT (placeholder credentials) ───
+    print_info "Generating _example variant (placeholder values)..."
+    CFG_GITHUB_USER="YOUR_GITHUB_USER"
+    CFG_GITHUB_USER_EMAIL="YOUR_GITHUB_EMAIL"
+    CFG_GPG_KEY_ID="YOUR_GPG_KEY_ID"
+    _generate_variant "$devcontainer_dir" "$mode" "$category" "$image_tag" "_example"
+
+    # ─── MINIMAL VARIANT (no personal config) ───
+    print_info "Generating _minimal variant (no personal config)..."
+    CFG_GITHUB_USER=""
+    CFG_GITHUB_USER_EMAIL=""
+    CFG_GPG_KEY_ID=""
+    CFG_MOUNT_GPG="false"
+    CFG_MOUNT_GH_CONFIG="false"
+    CFG_MOUNT_WRANGLER="false"
+    _generate_variant "$devcontainer_dir" "$mode" "$category" "$image_tag" "_minimal"
+
+    # ─── RESTORE original config ───
+    CFG_GITHUB_USER="$orig_user"
+    CFG_GITHUB_USER_EMAIL="$orig_email"
+    CFG_GPG_KEY_ID="$orig_gpg"
+    CFG_MOUNT_GPG="$orig_mount_gpg"
+    CFG_MOUNT_GH_CONFIG="$orig_mount_gh"
+    CFG_MOUNT_WRANGLER="$orig_mount_wrangler"
+
+    # Regenerate personal files (overwritten during no-flag variant generation)
+    if [[ "$mode" != "base" && "$mode" != "image" ]]; then
+        generate_dockerfile "$devcontainer_dir"
+    fi
+    if [[ "$mode" == "image" ]]; then
+        generate_devcontainer_json "$devcontainer_dir" "$image_tag" "$category"
+    elif [[ "$mode" == "base" ]]; then
+        generate_devcontainer_json "$devcontainer_dir" "" "$category"
+    else
+        generate_devcontainer_json "$devcontainer_dir"
+    fi
+
+    print_success "Config variants generated (_example + _minimal)"
+}
+
+# Internal helper: generate one variant (Dockerfile + devcontainer.json) with current config
+_generate_variant() {
+    local devcontainer_dir="$1"
+    local mode="$2"
+    local category="$3"
+    local image_tag="$4"
+    local suffix="$5"  # "_example" or "_minimal"
+
+    local variant_label=""
+    if [[ "$suffix" == "_example" ]]; then
+        variant_label="EXAMPLE: Replace YOUR_GITHUB_USER, YOUR_GITHUB_EMAIL, YOUR_GPG_KEY_ID with your values"
+    elif [[ "$suffix" == "_minimal" ]]; then
+        variant_label="MINIMAL: All dependencies, no personal config (git identity, GPG, host mounts)"
+    fi
+
+    # Generate Dockerfile variant (not needed for --img mode which uses pre-built image)
+    if [[ "$mode" != "image" ]]; then
+        if [[ "$mode" == "base" ]]; then
+            # generate_category_dockerfile accepts output path directly
+            generate_category_dockerfile "$category" "$devcontainer_dir/Dockerfile${suffix}"
+        else
+            # generate_dockerfile writes to Dockerfile, then rename
+            generate_dockerfile "$devcontainer_dir"
+            mv "$devcontainer_dir/Dockerfile" "$devcontainer_dir/Dockerfile${suffix}"
+        fi
+        # Prepend variant header
+        {
+            echo "# ${variant_label}"
+            echo "# This is a tracked reference file. Personal config (Dockerfile) is gitignored."
+            echo "#"
+            cat "$devcontainer_dir/Dockerfile${suffix}"
+        } > "$devcontainer_dir/Dockerfile${suffix}.tmp"
+        mv "$devcontainer_dir/Dockerfile${suffix}.tmp" "$devcontainer_dir/Dockerfile${suffix}"
+        print_success "Created: Dockerfile${suffix}"
+    fi
+
+    # Generate devcontainer.json variant
+    if [[ "$mode" == "image" ]]; then
+        generate_devcontainer_json "$devcontainer_dir" "$image_tag" "$category"
+    elif [[ "$mode" == "base" ]]; then
+        generate_devcontainer_json "$devcontainer_dir" "" "$category"
+    else
+        generate_devcontainer_json "$devcontainer_dir"
+    fi
+    mv "$devcontainer_dir/devcontainer.json" "$devcontainer_dir/devcontainer${suffix}.json"
+    # Insert variant comment after opening brace
+    {
+        head -1 "$devcontainer_dir/devcontainer${suffix}.json"
+        echo "  // ${variant_label}"
+        echo "  // This is a tracked reference file. Personal config (devcontainer.json) is gitignored."
+        tail -n +2 "$devcontainer_dir/devcontainer${suffix}.json"
+    } > "$devcontainer_dir/devcontainer${suffix}.json.tmp"
+    mv "$devcontainer_dir/devcontainer${suffix}.json.tmp" "$devcontainer_dir/devcontainer${suffix}.json"
+    print_success "Created: devcontainer${suffix}.json"
+}
+
 ################################################################################
 # Base Image Building
 ################################################################################
 
-# Generate Dockerfile for a category with all features baked in
+# Generate Dockerfile for a category by concatenating common + category + dynamic footer
 generate_category_dockerfile() {
     local category="$1"
     local dockerfile_path="$2"
+    local containers_dir="${DEV_CONTROL_DIR}/config/containers"
     
-    cat > "$dockerfile_path" << 'DOCKERFILE_HEADER'
-FROM ubuntu:latest
+    # Start with common base layer
+    if [[ -f "$containers_dir/common.Dockerfile" ]]; then
+        cat "$containers_dir/common.Dockerfile" > "$dockerfile_path"
+    else
+        print_error "common.Dockerfile not found: $containers_dir/common.Dockerfile"
+        exit 1
+    fi
+    
+    # Append category-specific layer
+    local category_file="$containers_dir/${category}.Dockerfile"
+    if [[ -f "$category_file" ]]; then
+        echo "" >> "$dockerfile_path"
+        cat "$category_file" >> "$dockerfile_path"
+    else
+        print_warning "No category Dockerfile found: $category_file"
+    fi
 
-ENV DEBIAN_FRONTEND=noninteractive
-
-# Install core development tools and dependencies
-RUN apt-get update && apt-get upgrade -y && apt-get install -y \
-    git \
-    build-essential \
-    sudo \
-    locales \
-    lsb-release \
-    curl \
-    wget \
-    ca-certificates \
-    gnupg \
-    libsecret-tools \
-    nano \
-    jq \
-    && sed -i '/en_GB.UTF-8/s/^# //g' /etc/locale.gen \
-    && locale-gen en_GB.UTF-8 \
-    && update-locale LANG=en_GB.UTF-8 LC_ALL=en_GB.UTF-8 \
-    && rm -rf /var/lib/apt/lists/*
-
-ENV LANG=en_GB.UTF-8 \
-    LC_ALL=en_GB.UTF-8 \
-    TZ=UTC \
-    EDITOR=nano
-
-RUN ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime && echo ${TZ} > /etc/timezone
-
-# Install GitHub CLI
-RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
-    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" > /etc/apt/sources.list.d/github-cli.list \
-    && apt-get update && apt-get install -y gh \
-    && rm -rf /var/lib/apt/lists/*
-DOCKERFILE_HEADER
-
-    # Add category-specific features
-    case "$category" in
-        game-dev)
-            cat >> "$dockerfile_path" << 'DOCKERFILE_GAMEDEV'
-
-# ============================================================================
-# GAME-DEV: Godot, Vulkan, SDL2, GLFW, CUDA
-# ============================================================================
-
-# Install Vulkan SDK and game development libraries
-RUN apt-get update && apt-get install -y \
-    cmake ninja-build scons pkg-config unzip \
-    libx11-dev libxcursor-dev libxinerama-dev \
-    libgl1-mesa-dev libglu1-mesa-dev \
-    libasound2-dev libpulse-dev \
-    libfreetype6-dev libssl-dev libudev-dev \
-    libxi-dev libxrandr-dev \
-    vulkan-tools libvulkan-dev \
-    vulkan-utility-libraries-dev vulkan-validationlayers \
-    spirv-tools glslang-tools glslang-dev \
-    libshaderc-dev libshaderc1 \
-    libsdl2-2.0-0 libsdl2-dev libglm-dev \
-    libstb-dev libpng-dev libjpeg-dev \
-    libwayland-dev libxkbcommon-dev wayland-protocols \
-    libdecor-0-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-# Build GLFW 3.4 from source with native Wayland support
-RUN git clone --depth 1 --branch 3.4 https://github.com/glfw/glfw.git /tmp/glfw \
-    && cd /tmp/glfw \
-    && cmake -B build -G Ninja \
-        -DCMAKE_BUILD_TYPE=Release \
-        -DCMAKE_INSTALL_PREFIX=/usr/local \
-        -DGLFW_BUILD_WAYLAND=ON \
-        -DGLFW_BUILD_X11=OFF \
-        -DBUILD_SHARED_LIBS=ON \
-    && cmake --build build \
-    && cmake --install build \
-    && rm -rf /tmp/glfw \
-    && ldconfig
-
-# Install CUDA Toolkit 13.1
-RUN wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-keyring_1.1-1_all.deb -O /tmp/cuda-keyring.deb \
-    && dpkg -i /tmp/cuda-keyring.deb && rm /tmp/cuda-keyring.deb \
-    && apt-get update && apt-get install -y \
-        cuda-toolkit-13-1 cuda-nvcc-13-1 \
-        cuda-libraries-dev-13-1 cuda-cudart-dev-13-1 \
-    && rm -rf /var/lib/apt/lists/*
-
-ENV PATH=/usr/local/cuda/bin:${PATH} \
-    LD_LIBRARY_PATH=/usr/local/cuda/lib64:${LD_LIBRARY_PATH} \
-    CUDA_HOME=/usr/local/cuda
-
-# Install Godot Engine
-RUN GODOT_VERSION=$(curl -s https://api.github.com/repos/godotengine/godot/releases/latest | jq -r '.tag_name' | sed 's/-stable//') \
-    && curl -fsSL "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip" -o /tmp/godot.zip \
-    && unzip  /tmp/godot.zip -d /tmp \
-    && mv /tmp/Godot_v${GODOT_VERSION}-stable_linux.x86_64 /usr/local/bin/godot \
-    && chmod +x /usr/local/bin/godot \
-    && rm /tmp/godot.zip
-DOCKERFILE_GAMEDEV
-            ;;
-        
-        art)
-            cat >> "$dockerfile_path" << 'DOCKERFILE_ART'
-
-# ============================================================================
-# ART: 2D/3D art tools, design software
-# ============================================================================
-
-RUN apt-get update && apt-get install -y \
-    imagemagick \
-    gimp \
-    inkscape \
-    blender \
-    krita \
-    graphicsmagick \
-    optipng \
-    pngquant \
-    jpegoptim \
-    libheif-examples \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install pastel (colour tool) from GitHub releases
-RUN PASTEL_VERSION=$(curl -s https://api.github.com/repos/sharkdp/pastel/releases/latest | grep -oP '"tag_name": "\K[^"]+') \
-    && curl -fsSL "https://github.com/sharkdp/pastel/releases/download/${PASTEL_VERSION}/pastel-${PASTEL_VERSION}-x86_64-unknown-linux-musl.tar.gz" | tar xz -C /tmp \
-    && sudo mv /tmp/pastel-${PASTEL_VERSION}-x86_64-unknown-linux-musl/pastel /usr/local/bin/ \
-    && sudo chmod +x /usr/local/bin/pastel \
-    && rm -rf /tmp/pastel-*
-DOCKERFILE_ART
-            ;;
-        
-        data-science)
-            cat >> "$dockerfile_path" << 'DOCKERFILE_DATASCIENCE'
-
-# ============================================================================
-# DATA-SCIENCE: CUDA, Jupyter, Scientific Computing, Bioinformatics
-# ============================================================================
-
-# Switch to root for package installation
-USER root
-
-# Install CUDA Toolkit 13.1
-RUN wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-keyring_1.1-1_all.deb -O /tmp/cuda-keyring.deb \
-    && dpkg -i /tmp/cuda-keyring.deb && rm /tmp/cuda-keyring.deb \
-    && apt-get update && apt-get install -y \
-        cuda-toolkit-13-1 cuda-nvcc-13-1 \
-        cuda-libraries-dev-13-1 cuda-cudart-dev-13-1 \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install CUDA 12.6 runtime libraries for PyTorch/TensorFlow compatibility
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        cuda-cudart-12-6 cuda-nvrtc-12-6 \
-        libcublas-12-6 libcufft-12-6 libcurand-12-6 \
-        libcusparse-12-6 libcusolver-12-6 \
-        libnvjitlink-12-6 libcudnn9-cuda-12 \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install scientific computing, bioinformatics, and data science dependencies
-RUN apt-get update && apt-get install -y \
-    libopenblas-dev liblapack-dev libgomp1 \
-    libhdf5-dev libnetcdf-dev \
-    graphviz ghostscript \
-    emboss ncbi-blast+ \
-    bowtie2 samtools bcftools \
-    bedtools bioperl \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install R for statistical computing
-RUN apt-get update && apt-get install -y \
-    r-base r-base-dev r-recommended \
-    && rm -rf /var/lib/apt/lists/*
-
-ENV PATH=/usr/local/cuda/bin:${PATH}:/usr/local/bin:/usr/bin:/bin \
-    LD_LIBRARY_PATH=/usr/local/cuda-12.6/lib64:/usr/local/cuda/lib64:${LD_LIBRARY_PATH} \
-    CUDA_HOME=/usr/local/cuda
-
-RUN apt-get update && apt-get install -y \
-    python3 python3-pip python3-dev python3-venv \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install R packages for bioinformatics (phyloseq, etc.) - must be root
-RUN R --vanilla -e "install.packages(c('BiocManager', 'tidyverse', 'ggplot2', 'ggmap', 'plotly'), repos='http://cran.r-project.org')" \
-    && R --vanilla -e "BiocManager::install(c('phyloseq', 'dada2', 'DESeq2', 'limma', 'edgeR', 'igraph'), ask=FALSE)" \
-    && R --vanilla -e "install.packages('vegan', repos='http://cran.r-project.org')"
-
-# Install Miniforge (lightweight conda) as root
-RUN wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh -O /tmp/miniforge.sh && \
-    bash /tmp/miniforge.sh -b -p /opt/conda && \
-    rm /tmp/miniforge.sh && \
-    /opt/conda/bin/conda clean -afy
-
-ENV PATH="/opt/conda/bin:$PATH"
-
-# Create conda environment with scientific and bioinformatics stack (as root)
-RUN conda create -y -n datasci python=3.11 && \
-    conda run -n datasci conda install -y -c conda-forge \
-    numpy scipy scikit-learn scikit-image \
-    pandas polars dask \
-    matplotlib seaborn plotly bokeh altair \
-    jupyter jupyterlab jupyter-book \
-    notebook ipykernel ipywidgets \
-    statsmodels sympy networkx \
-    nltk gensim spacy \
-    biopython pysam pybedtools HTSeq \
-    bioconda::samtools bioconda::bcftools bioconda::bedtools \
-    && conda clean -afy
-
-# Install PyTorch and TensorFlow in conda env (separate to manage dependencies)
-RUN conda run -n datasci pip install --no-cache-dir \
-    torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu124 \
-    tensorflow[and-cuda] pytorch-lightning \
-    transformers huggingface-hub
-
-# Install spacy model (use direct conda env paths to avoid activation issues)
-RUN /opt/conda/envs/datasci/bin/python -m spacy download en_core_web_sm
-
-# Install Jupyter extensions (use direct conda env paths)
-RUN /opt/conda/envs/datasci/bin/pip install --no-cache-dir jupyter-lsp python-lsp-server jupyterlab-lsp jupyterlab-git jupyterlab-execute-time
-
-# Enable conda env on shell startup
-RUN echo "conda activate datasci" >> ~/.bashrc
-
-# Switch to user
-USER ${base_user}
-
-# Activate conda env by default in shells
-RUN echo 'source /opt/conda/etc/profile.d/conda.sh && conda activate datasci' >> ~/.bashrc
-
-# Create Jupyter config directory
-RUN mkdir -p ~/.jupyter && touch ~/.hushlogin
-
-# Switch back to root for final setup
-USER root
-DOCKERFILE_DATASCIENCE
-            ;;
-        
-        streaming)
-            cat >> "$dockerfile_path" << 'DOCKERFILE_STREAMING'
-
-# ============================================================================
-# STREAMING: FFmpeg+NVENC, NGINX-RTMP, SRT, ONNX Runtime GPU, YOLOv8
-# ============================================================================
-
-# Install CUDA Toolkit 13.1
-RUN wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-keyring_1.1-1_all.deb -O /tmp/cuda-keyring.deb \
-    && dpkg -i /tmp/cuda-keyring.deb && rm /tmp/cuda-keyring.deb \
-    && apt-get update && apt-get install -y \
-        cuda-toolkit-13-1 cuda-nvcc-13-1 \
-        cuda-libraries-dev-13-1 cuda-cudart-dev-13-1 \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install CUDA 12.6 runtime libraries for ONNX Runtime 1.20.x compatibility
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        cuda-cudart-12-6 cuda-nvrtc-12-6 \
-        libcublas-12-6 libcufft-12-6 libcurand-12-6 \
-        libcusparse-12-6 libcusolver-12-6 \
-        libnvjitlink-12-6 libcudnn9-cuda-12 \
-    && rm -rf /var/lib/apt/lists/*
-
-ENV PATH=/usr/local/cuda/bin:${PATH} \
-    LD_LIBRARY_PATH=/usr/local/cuda-12.6/lib64:/usr/local/cuda/lib64:${LD_LIBRARY_PATH} \
-    CUDA_HOME=/usr/local/cuda
-
-# Install FFmpeg build dependencies
-RUN apt-get update && apt-get install -y \
-    nasm yasm pkg-config gpg dirmngr libmd0 cmake \
-    libx264-dev libx265-dev libvpx-dev \
-    libfdk-aac-dev libmp3lame-dev libopus-dev \
-    libass-dev libfreetype6-dev libvorbis-dev \
-    libwebp-dev libaom-dev libdav1d-dev \
-    librist-dev libssl-dev libzmq3-dev libsdl2-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-# Build SRT from source
-RUN git clone --depth 1 --branch v1.5.4 https://github.com/Haivision/srt.git /tmp/srt \
-    && cd /tmp/srt && cmake -B build -DCMAKE_INSTALL_PREFIX=/usr/local \
-    && cmake --build build -j$(nproc) && cmake --install build \
-    && rm -rf /tmp/srt && ldconfig
-
-# Install nv-codec-headers for NVENC/NVDEC
-RUN git clone --depth 1 https://github.com/FFmpeg/nv-codec-headers.git /tmp/nv-codec-headers \
-    && cd /tmp/nv-codec-headers && make install \
-    && rm -rf /tmp/nv-codec-headers
-
-# Build FFmpeg from master with NVENC/NVDEC
-RUN git clone --depth 1 https://git.ffmpeg.org/ffmpeg.git /tmp/ffmpeg \
-    && cd /tmp/ffmpeg && ./configure \
-        --prefix=/usr/local --enable-gpl --enable-nonfree \
-        --enable-cuvid --enable-nvenc --enable-nvdec \
-        --enable-libx264 --enable-libx265 --enable-libvpx \
-        --enable-libfdk-aac --enable-libmp3lame --enable-libopus \
-        --enable-libass --enable-libfreetype --enable-libwebp \
-        --enable-libaom --enable-libdav1d --enable-libsrt \
-        --enable-librist --enable-libzmq \
-    && make -j$(nproc) && make install \
-    && rm -rf /tmp/ffmpeg && ldconfig
-
-# Build NGINX with RTMP module
-RUN apt-get update && apt-get install -y libpcre3-dev libssl-dev zlib1g-dev \
-    && rm -rf /var/lib/apt/lists/* \
-    && git clone --depth 1 https://github.com/arut/nginx-rtmp-module.git /tmp/nginx-rtmp \
-    && curl -fsSL https://nginx.org/keys/nginx_signing.key | gpg --import \
-    && curl -sLO https://nginx.org/download/nginx-1.27.3.tar.gz \
-    && tar -xzf nginx-1.27.3.tar.gz -C /tmp && rm nginx-1.27.3.tar.gz \
-    && cd /tmp/nginx-1.27.3 && ./configure \
-        --prefix=/usr/local/nginx \
-        --with-http_ssl_module --with-http_v2_module \
-        --with-http_realip_module --with-http_stub_status_module \
-        --with-stream --with-stream_ssl_module \
-        --add-module=/tmp/nginx-rtmp \
-    && make -j$(nproc) && make install \
-    && rm -rf /tmp/nginx-* \
-    && ln -sf /usr/local/nginx/sbin/nginx /usr/local/bin/nginx
-
-# Install streaming utilities
-RUN apt-get update && apt-get install -y mediainfo && rm -rf /var/lib/apt/lists/*
-RUN apt-get update && apt-get install -y sox libsox-fmt-all && rm -rf /var/lib/apt/lists/*
-RUN apt-get update && apt-get install -y v4l-utils && rm -rf /var/lib/apt/lists/*
-
-# Install FFmpeg development headers
-RUN apt-get update && apt-get install -y \
-    libavformat-dev libavcodec-dev libavutil-dev libswscale-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install yt-dlp
-RUN YT_DLP_VERSION=$(curl -s https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest | jq -r '.tag_name') \
-    && curl -fsSL "https://github.com/yt-dlp/yt-dlp/releases/download/${YT_DLP_VERSION}/yt-dlp" -o /usr/local/bin/yt-dlp \
-    && chmod a+rx /usr/local/bin/yt-dlp
-
-# Install TensorRT
-RUN apt-get update && apt-get install -y \
-    libnvinfer-lean10 libnvinfer-vc-plugin10 \
-    libnvinfer-dispatch10 libnvinfer-headers-dev \
-    bc sqlite3 \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install ONNX Runtime 1.20.1 GPU
-RUN ONNX_VERSION="1.20.1" \
-    && curl -fsSL "https://github.com/microsoft/onnxruntime/releases/download/v${ONNX_VERSION}/onnxruntime-linux-x64-gpu-${ONNX_VERSION}.tgz" -o /tmp/onnxruntime.tgz \
-    && tar -xzf /tmp/onnxruntime.tgz -C /opt \
-    && mv /opt/onnxruntime-linux-x64-gpu-${ONNX_VERSION} /opt/onnxruntime \
-    && ln -sf /opt/onnxruntime/include/* /usr/local/include/ \
-    && ln -sf /opt/onnxruntime/lib/libonnxruntime.so* /usr/local/lib/ \
-    && ln -sf /opt/onnxruntime/lib/libonnxruntime_providers_cuda.so /usr/local/lib/ \
-    && ln -sf /opt/onnxruntime/lib/libonnxruntime_providers_shared.so /usr/local/lib/ \
-    && ldconfig && rm -f /tmp/onnxruntime.tgz
-
-ENV ONNXRUNTIME_DIR=/opt/onnxruntime \
-    LD_LIBRARY_PATH=/opt/onnxruntime/lib:${LD_LIBRARY_PATH}
-
-# Export YOLOv8n to ONNX format
-RUN apt-get update && apt-get install -y --no-install-recommends python3-pip python3-venv \
-    && python3 -m venv /tmp/yolo-export \
-    && /tmp/yolo-export/bin/pip install ultralytics onnx onnxslim onnxruntime \
-    && cd /tmp/yolo-export \
-    && /tmp/yolo-export/bin/python -c "from ultralytics import YOLO; model = YOLO('yolov8n.pt'); model.export(format='onnx', imgsz=640, opset=17, simplify=True)" \
-    && mkdir -p /opt/models \
-    && mv /tmp/yolo-export/yolov8n.onnx /opt/models/yolov8n.onnx \
-    && chmod 644 /opt/models/yolov8n.* \
-    && rm -rf /tmp/yolo-export ~/.config/Ultralytics /tmp/Ultralytics \
-    && apt-get purge -y python3-pip python3-venv \
-    && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
-
-ENV PATH=/usr/local/nginx/sbin:$PATH
-DOCKERFILE_STREAMING
-            ;;
-        
-        web-dev)
-            cat >> "$dockerfile_path" << 'DOCKERFILE_WEBDEV'
-
-# ============================================================================
-# WEB-DEV: Node.js, npm, modern web frameworks, Wrangler
-# ============================================================================
-
-# Web development tools
-RUN apt-get update && apt-get install -y \
-    && rm -rf /var/lib/apt/lists/*
-DOCKERFILE_WEBDEV
-            ;;
-        
-        dev-tools)
-            cat >> "$dockerfile_path" << 'DOCKERFILE_DEVTOOLS'
-
-# ============================================================================
-# DEV-TOOLS: GCC, build-essential, common compilers
-# ============================================================================
-
-RUN apt-get update && apt-get install -y \
-    clang llvm gdb valgrind \
-    cmake ninja-build meson \
-    pkg-config autoconf automake libtool \
-    && rm -rf /var/lib/apt/lists/*
-DOCKERFILE_DEVTOOLS
-            ;;
-    esac
-
-    # Add common user setup at the end
-    # Use CATEGORY name for the base image user (generic, reusable)
+    # Append dynamic footer (user setup, dev-control, git config)
     local base_user="$category"
     
     # Streaming category needs video/render groups for DRI/KMS access
@@ -1810,16 +1073,9 @@ WORKDIR /home/${base_user}
 
 RUN touch ~/.hushlogin
 
-# Install nvm and Node.js
-ENV NVM_DIR=/home/${base_user}/.config/nvm
-ENV BASH_ENV=/home/${base_user}/.bashrc
-RUN mkdir -p "\$NVM_DIR" && \\
-    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash && \\
-    echo 'export NVM_DIR="\$HOME/.config/nvm"' >> ~/.bashrc && \\
-    echo '[ -s "\$NVM_DIR/nvm.sh" ] && \\. "\$NVM_DIR/nvm.sh"' >> ~/.bashrc && \\
-    bash -c 'source \$NVM_DIR/nvm.sh && nvm install 22 && nvm alias default 22'
-
-ENV PATH=\$NVM_DIR/versions/node/v22.13.1/bin:\$PATH
+# Configure nvm for user shell (installed system-wide in common layer)
+RUN echo 'export NVM_DIR="/opt/nvm"' >> ~/.bashrc && \\
+    echo '[ -s "\$NVM_DIR/nvm.sh" ] && \\. "\$NVM_DIR/nvm.sh"' >> ~/.bashrc
 
 # Clean up GPG keyring (interferes with host GPG agent mount)
 RUN rm -rf ~/.gnupg
@@ -1829,7 +1085,7 @@ USER root
 RUN mkdir -p /opt/dev-control && \\
     curl -fsSL https://github.com/xaostech/dev-control/archive/refs/tags/latest.tar.gz | tar -xz --strip-components=1 -C /opt/dev-control && \\
     chmod +x /opt/dev-control/scripts/*.sh /opt/dev-control/lib/*.sh /opt/dev-control/lib/git/*.sh 2>/dev/null || true && \\
-    echo 'export PATH=/opt/dev-control/scripts:\\$PATH' >> /etc/profile.d/dev-control.sh && \\
+    echo 'export PATH=/opt/dev-control/scripts:\$PATH' >> /etc/profile.d/dev-control.sh && \\
     chmod 644 /etc/profile.d/dev-control.sh
 
 # Pre-create .vscode-server, .gnupg, and .bash_backups directories with proper permissions (need root)
@@ -1895,6 +1151,12 @@ build_base_image() {
     
     # Generate devcontainer.json using the standard function
     PROJECT_PATH="$project_dir" generate_devcontainer_json "$devcontainer_dir" "" "$category"
+    
+    # Add personal config to .gitignore
+    add_devcontainer_to_gitignore "$project_dir"
+
+    # Generate tracked config variants (_example + _minimal)
+    PROJECT_PATH="$project_dir" generate_config_variants "$devcontainer_dir" "base" "$category" ""
     echo ""
     
     print_header_success "Base Image Config Generated!"
@@ -1980,6 +1242,12 @@ generate_image_devcontainer() {
     
     # Generate devcontainer.json using the standard function
     PROJECT_PATH="$(pwd)" generate_devcontainer_json "$devcontainer_dir" "$image_tag" "$category"
+    
+    # Add personal config to .gitignore
+    add_devcontainer_to_gitignore "$(pwd)"
+
+    # Generate tracked config variants (_example + _minimal)
+    PROJECT_PATH="$(pwd)" generate_config_variants "$devcontainer_dir" "image" "$category" "$image_tag"
     echo ""
     print_header_success "Devcontainer Generated!"
     echo ""
@@ -2174,6 +1442,9 @@ main() {
     if [[ -z "$PROJECT_PATH" ]]; then
         PROJECT_PATH="$(pwd)"
     fi
+    
+    # Load categories from YAML
+    load_categories
     
     # Handle --nest mode early and exit
     if [[ "$NEST_MODE" == true ]]; then

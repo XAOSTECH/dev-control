@@ -1,0 +1,58 @@
+# Dev-Control Container Categories
+# Category definitions for base image building and devcontainer generation
+#
+# Each category defines a pre-built base image with specialised tools.
+# Use --base --CATEGORY to build, --img --CATEGORY to generate devcontainer.
+#
+# Format: 2-level YAML parsed by load_categories() in lib/container.sh
+#   category-name:
+#     image: <docker image tag>
+#     features: <human-readable feature list>
+#     extensions: <space-separated VS Code extension IDs>
+#     github-path: <URL to build source>
+#     nvidia: <true|false>
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2024-2026 xaoscience
+
+game-dev:
+  image: devcontrol/game-dev:latest
+  features: "Godot 4.x, Vulkan SDK, SDL2, GLFW 3.4 (Wayland), CUDA 13.1"
+  extensions: GodotTools.godot-tools ms-vscode.cpptools
+  github-path: https://github.com/xaostech/dev-control/tree/main/.devcontainer/game-dev
+  nvidia: true
+
+art:
+  image: devcontrol/art:latest
+  features: "2D/3D art tools: Krita, GIMP, Inkscape, Blender, ImageMagick"
+  extensions: ""
+  github-path: https://github.com/xaostech/dev-control/tree/main/.devcontainer/art
+  nvidia: true
+
+data-science:
+  image: devcontrol/data-science:latest
+  features: "CUDA 13.1, FFmpeg (NVENC/NVDEC), NVIDIA acceleration"
+  extensions: ms-python.python ms-toolsai.jupyter ms-python.vscode-pylance
+  github-path: https://github.com/xaostech/dev-control/tree/main/.devcontainer/data-science
+  nvidia: true
+
+streaming:
+  image: devcontrol/streaming:latest
+  features: "FFmpeg (NVENC/NVDEC), NGINX-RTMP, SRT, ONNX Runtime GPU, YOLOv8"
+  extensions: ms-vscode.cpptools ms-python.python
+  github-path: https://github.com/xaostech/dev-control/tree/main/.devcontainer/streaming
+  nvidia: true
+
+web-dev:
+  image: devcontrol/web-dev:latest
+  features: "Node.js 25 (nvm), npm, modern web frameworks, Wrangler, dev-control"
+  extensions: dbaeumer.vscode-eslint esbenp.prettier-vscode
+  github-path: https://github.com/xaostech/dev-control/tree/main/.devcontainer/web-dev
+  nvidia: false
+
+dev-tools:
+  image: devcontrol/dev-tools:latest
+  features: "GCC, build-essential, common compilers, general development"
+  extensions: ms-vscode.cpptools ms-python.python
+  github-path: https://github.com/xaostech/dev-control/tree/main/.devcontainer/dev-tools
+  nvidia: false
