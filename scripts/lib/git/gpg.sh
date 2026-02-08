@@ -139,23 +139,32 @@ EOF
 }
 
 # Export GPG private key
-# Usage: export_gpg_private_key <key_id> [output_file]
+# Usage: export_gpg_private_key <key_id> [output_file] [passphrase]
 # Args:
 #   key_id: GPG key ID or email
 #   output_file: Optional file to write to (default: stdout)
+#   passphrase: Optional passphrase for the key
 export_gpg_private_key() {
     local key_id="$1"
     local output_file="${2:-}"
+    local passphrase="${3:-}"
     
     if [[ -z "$key_id" ]]; then
         print_error "Key ID required"
         return 1
     fi
     
+    # Build GPG command with optional passphrase
+    local gpg_cmd=(gpg --armor --export-secret-keys)
+    if [[ -n "$passphrase" ]]; then
+        gpg_cmd+=(--pinentry-mode loopback --passphrase "$passphrase")
+    fi
+    gpg_cmd+=("$key_id")
+    
     if [[ -n "$output_file" ]]; then
         # Capture both stdout and stderr
         local export_output
-        export_output=$(gpg --armor --export-secret-keys "$key_id" 2>&1)
+        export_output=$("${gpg_cmd[@]}" 2>&1)
         local export_status=$?
         
         # Write to output file
@@ -176,7 +185,7 @@ export_gpg_private_key() {
         
         print_info "Private key exported to: $output_file"
     else
-        gpg --armor --export-secret-keys "$key_id"
+        "${gpg_cmd[@]}"
     fi
 }
 
@@ -227,7 +236,7 @@ add_gpg_secrets_to_repo() {
     # Export private key to temp file
     local temp_key
     temp_key=$(mktemp)
-    if ! export_gpg_private_key "$key_id" "$temp_key"; then
+    if ! export_gpg_private_key "$key_id" "$temp_key" "$passphrase"; then
         rm -f "$temp_key"
         return 1
     fi
