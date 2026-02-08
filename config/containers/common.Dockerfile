@@ -25,14 +25,14 @@ RUN apt-get update && apt-get upgrade -y && apt-get install -y \
     libsecret-tools \
     nano \
     jq \
-    && sed -i '/en_GB.UTF-8/s/^# //g' /etc/locale.gen \
-    && locale-gen en_GB.UTF-8 \
-    && update-locale LANG=en_GB.UTF-8 LC_ALL=en_GB.UTF-8 \
+    && sed -i '/${LOCALE%.*}/s/^# //g' /etc/locale.gen \
+    && locale-gen ${LOCALE} \
+    && update-locale LANG=${LOCALE} LC_ALL=${LOCALE} \
     && rm -rf /var/lib/apt/lists/*
 
-ENV LANG=en_GB.UTF-8 \
-    LC_ALL=en_GB.UTF-8 \
-    TZ=UTC \
+ENV LANG=${LOCALE} \
+    LC_ALL=${LOCALE} \
+    TZ=${TZ} \
     EDITOR=nano
 
 RUN ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime && echo ${TZ} > /etc/timezone
@@ -50,4 +50,5 @@ RUN mkdir -p /opt/nvm \
     && bash -c 'source /opt/nvm/nvm.sh && nvm install 22 && nvm alias default 22' \
     && chmod -R a+rx /opt/nvm
 
-ENV PATH=/opt/nvm/versions/node/v22.13.1/bin:$PATH
+# Set PATH for npx/npm to work in non-shell contexts (MCP servers, IDE integrations)
+ENV PATH=/opt/nvm/versions/node/v22.13.1/bin:${PATH}

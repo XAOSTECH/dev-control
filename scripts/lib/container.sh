@@ -594,14 +594,20 @@ generate_category_dockerfile() {
     # Escape & for sed (git config command contains &&)
     local git_config_cmd_escaped="${git_config_cmd//&/\\&}"
     
+    # Get locale and timezone from config (with fallback defaults)
+    local locale="${CFG_LOCALE:-en_US.UTF-8}"
+    local timezone="${CFG_TIMEZONE:-UTC}"
+    
     # Check if category needs video/render groups (streaming)
     local needs_device_groups=false
     [[ "$category" == "streaming" ]] && needs_device_groups=true
     
     # Concatenate: common + category-specific + optional groups + footer
     {
-        # Common base layer
-        cat "$containers_dir/common.Dockerfile"
+        # Common base layer (substitute locale and timezone variables)
+        sed -e "s|\${LOCALE}|${locale}|g" \
+            -e "s|\${TZ}|${timezone}|g" \
+            "$containers_dir/common.Dockerfile"
         echo ""
         
         # Category-specific layer
