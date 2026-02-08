@@ -153,11 +153,22 @@ export_gpg_private_key() {
     fi
     
     if [[ -n "$output_file" ]]; then
-        gpg --armor --export-secret-keys "$key_id" > "$output_file" 2>&1
+        # Capture both stdout and stderr
+        local export_output
+        export_output=$(gpg --armor --export-secret-keys "$key_id" 2>&1)
+        local export_status=$?
+        
+        # Write to output file
+        echo "$export_output" > "$output_file"
         
         # Verify export succeeded (file should contain PGP PRIVATE KEY BLOCK)
-        if [[ ! -s "$output_file" ]] || ! grep -q "BEGIN PGP PRIVATE KEY BLOCK" "$output_file"; then
+        if [[ $export_status -ne 0 ]] || [[ ! -s "$output_file" ]] || ! grep -q "BEGIN PGP PRIVATE KEY BLOCK" "$output_file"; then
             print_error "Failed to export private key for: $key_id"
+            print_error "GPG export output:"
+            echo "$export_output"
+            print_error ""
+            print_info "Trying to list keys in keyring:"
+            gpg --list-secret-keys --keyid-format LONG "$key_id" 2>&1 || true
             print_error "Key may not exist in keyring"
             rm -f "$output_file"
             return 1
