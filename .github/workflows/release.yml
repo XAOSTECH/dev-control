@@ -275,14 +275,14 @@ jobs:
           echo "📦 Building lib-only package: ${LIB_NAME}"
           
           # Copy library files (flatten structure for easy sourcing)
-          cp scripts/lib/colors.sh "$LIB_DIR/"
-          cp scripts/lib/print.sh "$LIB_DIR/"
-          cp scripts/lib/tui.sh "$LIB_DIR/"
-          cp scripts/lib/output.sh "$LIB_DIR/"
-          cp scripts/lib/validation.sh "$LIB_DIR/"
           cp scripts/lib/cli.sh "$LIB_DIR/"
-          cp scripts/lib/version.sh "$LIB_DIR/"
+          cp scripts/lib/colours.sh "$LIB_DIR/"
+          cp scripts/lib/output.sh "$LIB_DIR/"
+          cp scripts/lib/print.sh "$LIB_DIR/"
           cp scripts/lib/README.md "$LIB_DIR/"
+          cp scripts/lib/tui.sh "$LIB_DIR/"
+          cp scripts/lib/validation.sh "$LIB_DIR/"
+          cp scripts/lib/version.sh "$LIB_DIR/"
           
           # Copy config files (if tui theming needed)
           mkdir -p "$LIB_DIR/config"
