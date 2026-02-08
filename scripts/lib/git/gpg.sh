@@ -97,20 +97,32 @@ EOF
     
     # Generate key with verbose error output
     print_info "Running GPG key generation (this may take a minute)..."
-    if ! gpg --batch --gen-key "$batch_file" 2>&1 | tee /tmp/gpg-gen.log; then
+    local gpg_output
+    gpg_output=$(gpg --batch --gen-key "$batch_file" 2>&1)
+    
+    if [[ $? -ne 0 ]]; then
         print_error "Failed to generate GPG key"
         print_error "GPG output:"
-        cat /tmp/gpg-gen.log
-        rm -f "$batch_file" /tmp/gpg-gen.log
+        echo "$gpg_output"
+        rm -f "$batch_file"
         return 1
     fi
     
-    # Clean up batch file immediately (passphrase was only in memory and this temp file)
-    rm -f "$batch_file" /tmp/gpg-gen.log
+    echo "$gpg_output"
     
-    # Get the key ID
+    # Extract the fingerprint from revocation certificate message
+    # gpg outputs: "revocation certificate stored as '/path/to/FINGERPRINT.rev'"
     local key_id
-    key_id=$(gpg --list-keys --with-colons "$name_email" 2>/dev/null | grep '^fpr:' | head -1 | cut -d: -f10)
+    key_id=$(echo "$gpg_output" | grep -oP 'openpgp-revocs\.d/\K[0-9A-F]{40}(?=\.rev)')
+    
+    # Fallback: get newest key matching email (sorted by creation time)
+    if [[ -z "$key_id" ]]; then
+        print_warning "Could not extract fingerprint from GPG output, using fallback method"
+        key_id=$(gpg --list-keys --with-colons "$name_email" 2>/dev/null | awk -F: '/^pub:/{getline; if ($1=="fpr") print $10; exit}')
+    fi
+    
+    # Clean up batch file immediately (passphrase was only in memory and this temp file)
+    rm -f "$batch_file"
     
     if [[ -z "$key_id" ]]; then
         print_error "Failed to retrieve generated key ID"
