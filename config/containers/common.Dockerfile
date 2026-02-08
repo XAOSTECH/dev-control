@@ -25,7 +25,7 @@ RUN apt-get update && apt-get upgrade -y && apt-get install -y \
     libsecret-tools \
     nano \
     jq \
-    && sed -i '/${LOCALE%.*}/s/^# //g' /etc/locale.gen \
+    && sed -i '/${LOCALE}/s/^# //g' /etc/locale.gen \
     && locale-gen ${LOCALE} \
     && update-locale LANG=${LOCALE} LC_ALL=${LOCALE} \
     && rm -rf /var/lib/apt/lists/*
