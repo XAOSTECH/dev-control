@@ -65,6 +65,7 @@ MODES:
   --base    Build a category base image (e.g., devcontrol/game-dev:latest)
   --img     Generate devcontainer.json that uses a category base image
   --nest    Recursively rebuild all base and img containers in subdirectories
+            Use --nest . to include the root directory itself
 
 CATEGORIES:
   --game-dev        Godot, Vulkan, SDL2, GLFW, CUDA
@@ -85,6 +86,9 @@ EXAMPLES:
 
   # Rebuild all containers in a project tree
   cd ~/PRO && containerise.sh --nest
+
+  # Rebuild current directory as root + all subdirectories
+  cd ~/PRO/ART && containerise.sh --nest .
 
 OPTIONS:
   --help, -h          Show this help message
@@ -1151,7 +1155,14 @@ generate_image_devcontainer() {
 
 run_nest_mode() {
     local start_dir="${1:-$(pwd)}"
+    local include_root=false
     shift || true  # Remove first argument
+    
+    # Check if first arg is "." to include root directory
+    if [[ "$start_dir" == "." ]]; then
+        include_root=true
+        start_dir="$(pwd)"
+    fi
     
     # Collect allowed categories from remaining args (--art, --game-dev, etc.)
     local allowed_cats=""
@@ -1171,6 +1182,7 @@ run_nest_mode() {
     if [[ -n "$allowed_cats" ]]; then
         print_kv "Filter to categories" "$allowed_cats"
     fi
+    [[ "$include_root" == true ]] && print_kv "Include root" "yes"
     echo ""
     
     # Find all .devcontainer dirs and build projects list
@@ -1179,8 +1191,10 @@ run_nest_mode() {
         local rel_path="${project_dir#$start_dir/}"
         [[ "$rel_path" == "$project_dir" ]] && rel_path="."
         
-        # Skip root
-        [[ "$rel_path" == "." ]] && continue
+        # Skip root unless explicitly included with "."
+        if [[ "$rel_path" == "." && "$include_root" != true ]]; then
+            continue
+        fi
         
         local dcjson="$devcontainer_dir/devcontainer.json"
         [[ ! -f "$dcjson" ]] && continue
