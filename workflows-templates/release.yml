@@ -204,7 +204,8 @@ jobs:
 
       - name: Import GPG key (if available)
         id: import_gpg
-        if: github.event_name == 'workflow_dispatch' && vars.GPG_PRIVATE_KEY != '' && secrets.GPG_PASSPHRASE != ''
+        if: github.event_name == 'workflow_dispatch'
+        continue-on-error: true
         uses: crazy-max/ghaction-import-gpg@v6
         with:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
