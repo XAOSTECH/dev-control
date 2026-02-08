@@ -58,6 +58,23 @@ generate_bot_gpg_key() {
         return 1
     fi
     
+    # Check if we're in a container - GPG key generation often fails in containers
+    if [[ -f /.dockerenv ]] || grep -q docker /proc/1/cgroup 2>/dev/null; then
+        print_warning "Running in a container/devcontainer detected"
+        print_warning "GPG key generation may fail due to agent restrictions"
+        echo ""
+        print_info "💡 Recommended: Run this command on your HOST machine instead:"
+        echo ""
+        echo "  cd $(pwd)"
+        echo "  dc-gpg-setup"
+        echo ""
+        read -rp "Continue anyway? [y/N]: " continue_choice
+        if [[ ! "$continue_choice" =~ ^[Yy]$ ]]; then
+            print_info "Cancelled. Please run on host machine."
+            return 0
+        fi
+    fi
+    
     print_info "Generating GPG key..."
     print_info "  Type: $key_type $key_length"
     print_info "  Name: $name_real"
