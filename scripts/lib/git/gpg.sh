@@ -48,9 +48,15 @@ generate_bot_gpg_key() {
     name_email=$(grep "^Name-Email:" "$config_file" | awk '{print $2}')
     expire_date=$(grep "^Expire-Date:" "$config_file" | awk '{print $2}')
     
-    # Generate secure passphrase
+    # Generate secure passphrase (in memory only, never saved to file)
     local passphrase
     passphrase=$(openssl rand -base64 32)
+    
+    # Check if GPG is available
+    if ! command -v gpg &>/dev/null; then
+        print_error "GPG is not installed. Install with: apt install gnupg"
+        return 1
+    fi
     
     print_info "Generating GPG key..."
     print_info "  Type: $key_type $key_length"
@@ -58,7 +64,7 @@ generate_bot_gpg_key() {
     print_info "  Email: $name_email"
     print_info "  Expires: $expire_date"
     
-    # Create temporary batch file
+    # Create temporary batch file (auto-deleted after use)
     local batch_file
     batch_file=$(mktemp)
     
@@ -72,14 +78,18 @@ Passphrase: $passphrase
 %commit
 EOF
     
-    # Generate key
-    if ! gpg --batch --gen-key "$batch_file" 2>/dev/null; then
+    # Generate key with verbose error output
+    print_info "Running GPG key generation (this may take a minute)..."
+    if ! gpg --batch --gen-key "$batch_file" 2>&1 | tee /tmp/gpg-gen.log; then
         print_error "Failed to generate GPG key"
-        rm -f "$batch_file"
+        print_error "GPG output:"
+        cat /tmp/gpg-gen.log
+        rm -f "$batch_file" /tmp/gpg-gen.log
         return 1
     fi
     
-    rm -f "$batch_file"
+    # Clean up batch file immediately (passphrase was only in memory and this temp file)
+    rm -f "$batch_file" /tmp/gpg-gen.log
     
     # Get the key ID
     local key_id
