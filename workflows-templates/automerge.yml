@@ -61,13 +61,15 @@ jobs:
                 const isRepoOwner = author === owner;
                 const isCloudflare = author === 'cloudflare-workers-and-pages[bot]';
                 const isPages = author === 'github-pages[bot]' || author === 'github-pages-deploy-action[bot]';
+                const isGitHubActions = author === 'github-actions[bot]';
                 const isLabel = labels.includes('automerge');
+                const isTrustedAuthor = isDependabot || isRepoOwner || isCloudflare || isPages || isGitHubActions;
 
-                if (isDependabot || isRepoOwner || isCloudflare || isPages || isLabel) {
+                if (isLabel && isTrustedAuthor) {
                   validPRs.push(prNum);
-                  core.info(`PR #${prNum} valid (author=${author}, isDependabot=${isDependabot}, isRepoOwner=${isRepoOwner}, isCloudflare=${isCloudflare}, isPages=${isPages}, isLabel=${isLabel})`);
+                  core.info(`PR #${prNum} valid (author=${author}, label=automerge, isDependabot=${isDependabot}, isRepoOwner=${isRepoOwner}, isCloudflare=${isCloudflare}, isPages=${isPages}, isGitHubActions=${isGitHubActions})`);
                 } else {
-                  core.info(`PR #${prNum} skipped (not an allowed author and no automerge label)`);
+                  core.info(`PR #${prNum} skipped (requires automerge label AND trusted author - hasLabel=${isLabel}, isTrusted=${isTrustedAuthor})`);
                 }
               } catch (error) {
                 core.info(`PR #${prNum} not found or error: ${error.message}`);
