@@ -26,4 +26,4 @@ Key-Type: RSA
 Key-Length: 4096
 Name-Real: github_actions[bot]
 Name-Email: actions@github.com
-Expire-Date: 1d
+Expire-Date: 1y

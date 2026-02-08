@@ -259,6 +259,39 @@ jobs:
             documentation
             automated
       
+      - name: Import GPG key (if available)
+        id: import_gpg
+        if: ${{ !inputs.create_pr }}
+        continue-on-error: true
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          if [[ -z "$GPG_PRIVATE_KEY" ]]; then
+            echo "ℹ️ GPG_PRIVATE_KEY not configured - commits will be unsigned"
+            echo "outcome=skipped" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          # Import the key
+          echo "$GPG_PRIVATE_KEY" | gpg --batch --import 2>&1
+          
+          # Get the key ID
+          KEY_ID=$(echo "$GPG_PRIVATE_KEY" | gpg --batch --import --import-options show-only 2>&1 | grep -oP 'key \K[0-9A-F]+')
+          
+          if [[ -z "$KEY_ID" ]]; then
+            echo "⚠️ Failed to import GPG key"
+            echo "outcome=failure" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          # Configure git to use the key
+          git config --global user.signingkey "$KEY_ID"
+          git config --global commit.gpgsign true
+          
+          echo "✅ GPG key imported successfully"
+          echo "outcome=success" >> $GITHUB_OUTPUT
+      
       - name: Direct commit
         if: ${{ !inputs.create_pr }}
         run: |
