@@ -141,7 +141,16 @@ export_gpg_private_key() {
     fi
     
     if [[ -n "$output_file" ]]; then
-        gpg --armor --export-secret-keys "$key_id" > "$output_file"
+        gpg --armor --export-secret-keys "$key_id" > "$output_file" 2>&1
+        
+        # Verify export succeeded (file should contain PGP PRIVATE KEY BLOCK)
+        if [[ ! -s "$output_file" ]] || ! grep -q "BEGIN PGP PRIVATE KEY BLOCK" "$output_file"; then
+            print_error "Failed to export private key for: $key_id"
+            print_error "Key may not exist in keyring"
+            rm -f "$output_file"
+            return 1
+        fi
+        
         print_info "Private key exported to: $output_file"
     else
         gpg --armor --export-secret-keys "$key_id"
@@ -219,9 +228,15 @@ add_gpg_secrets_to_repo() {
     rm -f "$temp_key"
     
     print_success "GPG secrets added to $repo"
+    
+    # Get actual secret sizes for verification
+    local key_size passphrase_size
+    key_size=$(gh secret list --repo "$repo" --json name,updatedAt | jq -r '.[] | select(.name=="GPG_PRIVATE_KEY") | .updatedAt' | wc -c)
+    passphrase_size=${#passphrase}
+    
     print_info "Secrets added:"
-    print_info "  - GPG_PRIVATE_KEY (${#key_id} chars)"
-    print_info "  - GPG_PASSPHRASE (${#passphrase} chars)"
+    print_info "  - GPG_PRIVATE_KEY (exported successfully)"
+    print_info "  - GPG_PASSPHRASE ($passphrase_size chars)"
     
     return 0
 }
