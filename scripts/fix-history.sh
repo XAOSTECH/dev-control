@@ -413,9 +413,16 @@ select_stash_files() {
 # ============================================================================
 
 check_git_repo() {
+    local skip_uncommitted_check="${1:-false}"
+    
     if ! git rev-parse --git-dir > /dev/null 2>&1; then
         print_error "Not a git repository."
         exit 1
+    fi
+    
+    # Skip uncommitted changes check if requested (e.g., for cleanup-only mode)
+    if [[ "$skip_uncommitted_check" == "true" ]]; then
+        return 0
     fi
     
     if [[ -n "$(git status --porcelain)" ]]; then
@@ -2411,7 +2418,7 @@ main() {
     
     # If cleanup-only mode, run cleanup and exit
     if [[ "$CLEANUP_ONLY" == "true" ]]; then
-        check_git_repo
+        check_git_repo true  # Skip uncommitted changes check - not needed for cleanup
         cleanup_tmp_and_backup_refs
         exit 0
     fi
