@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **npx PATH for MCP servers**:
   - `ENV PATH` set globally in `common.Dockerfile` for Node.js binaries
   - Firecrawl and other npx-based MCP servers work out-of-the-box
-  - No shell initialization required for IDE integrations
+  - No shell initialisation required for IDE integrations
 - **Web-dev category enhancements**:
   - Wrangler (Cloudflare Workers CLI) installed globally via npm
   - Verification step added to confirm Wrangler installation

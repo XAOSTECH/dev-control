@@ -1253,12 +1253,12 @@ run_nest_mode() {
         echo ""
     fi
     
-    # Display recognized projects
-    print_header "Recognized Projects (will be regenerated)"
+    # Display recognised projects
+    print_header "Recognised Projects (will be regenerated)"
     echo ""
     
     if [[ ${#known_projects[@]} -eq 0 ]]; then
-        print_warning "No recognized category projects found"
+        print_warning "No recognised category projects found"
         rm -f "$nest_json.tmp"
         return 1
     fi
@@ -1293,8 +1293,8 @@ run_nest_mode() {
     print_success "Saved configuration to $nest_json"
     echo ""
     
-    # ASK FOR CONFIRMATION FOR RECOGNIZED PROJECTS
-    print_warning "Regenerate ${#known_projects[@]} recognized containers?"
+    # ASK FOR CONFIRMATION FOR RECOGNISED PROJECTS
+    print_warning "Regenerate ${#known_projects[@]} recognised containers?"
     read -p "Proceed? [y/N] " -n 1 -r
     echo ""
     echo ""
@@ -1306,7 +1306,7 @@ run_nest_mode() {
     fi
     
     # Execute builds (only known projects)
-    print_header "Building recognized containers"
+    print_header "Building recognised containers"
     echo ""
     
     for proj in "${known_projects[@]}"; do
