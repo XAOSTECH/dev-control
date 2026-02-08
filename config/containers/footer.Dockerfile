@@ -45,10 +45,11 @@ RUN mkdir -p /opt/dev-control && \
     echo 'export PATH=/opt/dev-control/scripts:$PATH' >> /etc/profile.d/dev-control.sh && \
     chmod 644 /etc/profile.d/dev-control.sh
 
-# Pre-create .vscode-server and .bash_backups directories with proper permissions
-RUN mkdir -p /home/${CATEGORY}/.vscode-server /home/${CATEGORY}/.bash_backups && \
-    chown ${CATEGORY}:${CATEGORY} /home/${CATEGORY}/.vscode-server /home/${CATEGORY}/.bash_backups && \
+# Pre-create .vscode-server, .gnupg, and .bash_backups directories with proper permissions
+RUN mkdir -p /home/${CATEGORY}/.vscode-server /home/${CATEGORY}/.gnupg /home/${CATEGORY}/.bash_backups && \
+    chown ${CATEGORY}:${CATEGORY} /home/${CATEGORY}/.vscode-server /home/${CATEGORY}/.gnupg /home/${CATEGORY}/.bash_backups && \
     chmod 775 /home/${CATEGORY}/.vscode-server && \
+    chmod 700 /home/${CATEGORY}/.gnupg && \
     chmod 700 /home/${CATEGORY}/.bash_backups
 
 # Set git config as root for the user's home
