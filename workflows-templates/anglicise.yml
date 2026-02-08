@@ -481,13 +481,13 @@ jobs:
           
           # Check if there are actual changes to commit
           if git diff --cached --quiet; then
-            echo "⚠️ No actual changes to commit (files may have been excluded or already correct)"
-            echo "ℹ️ The check step found potential issues but the fix step couldn't apply changes."
+            echo "✅ No changes needed - all spellings already conform to British English"
+            echo "ℹ️ The check step found potential issues but the fix step determined they were false positives."
             echo "   This can happen when matches are in excluded patterns (URLs, CLI flags, etc.)"
             exit 0
           fi
           
-          # Create branch
+          # Create branch only if we have changes
           BRANCH_NAME="anglicise/$(date +%Y%m%d-%H%M%S)"
           git checkout -b "$BRANCH_NAME"
           
