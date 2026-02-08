@@ -591,6 +591,9 @@ generate_category_dockerfile() {
     local git_config_cmd
     git_config_cmd=$(generate_git_config_dockerfile "$CFG_GITHUB_USER" "$CFG_GITHUB_USER_EMAIL" "$CFG_GPG_KEY_ID" "/home/${category}")
     
+    # Escape & for sed (git config command contains &&)
+    local git_config_cmd_escaped="${git_config_cmd//&/\\&}"
+    
     # Check if category needs video/render groups (streaming)
     local needs_device_groups=false
     [[ "$category" == "streaming" ]] && needs_device_groups=true
@@ -620,7 +623,7 @@ DOCKERFILE_GROUPS
         # Common footer (user setup, nvm, dev-control)
         # Replace template variables: CATEGORY, GIT_CONFIG_CMD
         sed -e "s/\${CATEGORY}/${category}/g" \
-            -e "s|\${GIT_CONFIG_CMD}|${git_config_cmd}|g" \
+            -e "s|\${GIT_CONFIG_CMD}|${git_config_cmd_escaped}|g" \
             "$containers_dir/footer.Dockerfile"
             
         # Add streaming-specific user group membership
