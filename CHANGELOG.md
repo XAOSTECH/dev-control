@@ -5,6 +5,69 @@ All notable changes to Dev-Control will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-02-08
+
+### Added
+- **Containerization modularization complete**:
+  - Extracted category Dockerfile generation to `lib/container.sh`
+  - Template files: `common.Dockerfile`, `footer.Dockerfile`, per-category Dockerfiles
+  - `generate_category_dockerfile()` function for DRY base image building
+- **Dynamic locale and timezone support**:
+  - Locale and timezone now configurable from user config (not hardcoded)
+  - `${LOCALE}` and `${TZ}` template variables in `common.Dockerfile`
+  - Defaults to `en_US.UTF-8` and `UTC` if not specified
+- **npx PATH for MCP servers**:
+  - `ENV PATH` set globally in `common.Dockerfile` for Node.js binaries
+  - Firecrawl and other npx-based MCP servers work out-of-the-box
+  - No shell initialization required for IDE integrations
+- **Web-dev category enhancements**:
+  - Wrangler (Cloudflare Workers CLI) installed globally via npm
+  - Verification step added to confirm Wrangler installation
+- **Config variant generation**:
+  - `_example` and `_minimal` variants for tracked reference configs
+  - Personal configs (Dockerfile, devcontainer.json) gitignored
+  - Tracked variants use placeholder values or omit personal config
+
+### Fixed
+- **GPG signing restored**:
+  - `postCreateCommand` now creates `/run/user/${uid}/gnupg` for socket mount
+  - `.gnupg` directory permissions fixed (`chmod 700`, proper ownership)
+  - GPG agent socket properly accessible in containers
+- **dc-fix auto-push**:
+  - Automatic force-push after signing operations
+  - Prevents divergent branch issues requiring manual push
+  - Uses `--force-with-lease` for safety
+- **Sed escaping bug**:
+  - Git config commands now properly escape `&` characters for sed
+  - Fixes template variable substitution in footer.Dockerfile
+- **Locale sed pattern**:
+  - Changed from `/${LOCALE%.*}/` to `/${LOCALE}/` (parameter expansion doesn't work in templates)
+  - Correctly matches `/etc/locale.gen` entries
+
+### Changed
+- **Reduced containerise.sh complexity**:
+  - Line count: 1532 → 1419 (7.4% reduction)
+  - Duplicate 113-line function removed (now in `lib/container.sh`)
+- **Improved .gitignore handling**:
+  - Personal devcontainer configs excluded from version control
+  - Tracked reference variants (_example, _minimal) committed
+
+### Technical Details
+- **Code changes**: Refactored ~200 lines from monolithic script to modular library
+- **New functions**:
+  - `generate_category_dockerfile()`: Concatenate templates with variable substitution
+  - `generate_git_config_dockerfile()`: Build git config for Dockerfile RUN
+  - `generate_git_config_postcreate()`: Build git config for postCreateCommand
+- **Template architecture**:
+  - `common.Dockerfile`: Base layer (Ubuntu, tools, locale, nvm, Node.js)
+  - `{category}.Dockerfile`: Category-specific installations
+  - `footer.Dockerfile`: User setup, dev-control install, git config
+
+### Backward Compatibility
+- ✓ All existing flows functional (--base, --img, interactive)
+- ✓ Legacy interactive mode unchanged
+- ✓ Existing .devcontainer configurations work as before
+
 ## [0.4.0] - 2026-02-04
 
 ### Added
@@ -104,7 +167,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - GPG commit signing support
 - SSH key management
 
-[Unreleased]: https://github.com/xaoscience/dev-control/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/xaoscience/dev-control/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/xaoscience/dev-control/compare/v0.4.0...v0.5.0
+[0.4.0]: https://github.com/xaoscience/dev-control/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/xaoscience/dev-control/compare/v0.2.2...v0.3.0
 [0.2.2]: https://github.com/xaoscience/dev-control/compare/v1.0.0...v0.2.2
 [1.0.0]: https://github.com/xaoscience/dev-control/releases/tag/v1.0.0
