@@ -17,6 +17,7 @@
 #   ./git-control.sh pr                 # Create pull request
 #   ./git-control.sh fix [OPTIONS]      # Fix commit history
 #   ./git-control.sh licenses [OPTIONS] # Audit licenses
+#   ./git-control.sh gpg-setup          # Setup GPG bot for Actions
 #   ./git-control.sh help               # Show this help
 #
 # Aliases: dc-git, gc-git
@@ -104,6 +105,7 @@ EXAMPLES:
   git-control.sh fix --sign --dry-run    # Preview signing commits
   git-control.sh licenses --deep         # Deep license scan
   git-control.sh licenses --apply MIT    # Apply MIT license
+  git-control.sh gpg-setup               # Setup GPG bot for Actions
 
 ALIASES (after running dc-aliases):
   dc-git         - This unified wrapper
@@ -112,6 +114,7 @@ ALIASES (after running dc-aliases):
   dc-pr          - Pull request creation
   dc-fix         - History fixing
   dc-licenses    - License auditing
+  dc-gpg-setup   - GPG bot setup
 
 For detailed help on each subcommand:
   git-control.sh init --help
@@ -141,6 +144,7 @@ display_menu() {
     print_menu_item "4" "Fix History (dc-fix)             - Rewrite commit history"
     print_menu_item "5" "License Auditor (dc-licenses)    - Audit and manage licenses"
     print_menu_item "6" "Rename Branches (dc-rename)      - Batch rename Main → main"
+    print_menu_item "7" "Setup GPG Bot (dc-gpg-setup)     - Configure GPG for Actions"
     echo ""
     
     print_menu_item "h" "Help"
@@ -181,6 +185,14 @@ run_subcommand() {
             check_script_exists "lib/git/rename.sh" && \
                 bash "$SCRIPT_DIR/lib/git/rename.sh" "$@"
             ;;
+        7|gpg|gpg-setup|setup-gpg)
+            check_script_exists "lib/git/gpg.sh" || {
+                print_error "gpg.sh not found"
+                return 1
+            }
+            source "$SCRIPT_DIR/lib/git/gpg.sh"
+            setup_bot_gpg_for_repo "$@"
+            ;;
         h|help|-h|--help)
             show_help
             ;;
@@ -215,6 +227,7 @@ show_quick_tips() {
     print_command_hint "Fix history" "dc-git fix"
     print_command_hint "Audit licenses" "dc-git lic"
     print_command_hint "Rename branches" "dc-git rename"
+    print_command_hint "Setup GPG bot" "dc-git gpg-setup"
     echo ""
 }
 
