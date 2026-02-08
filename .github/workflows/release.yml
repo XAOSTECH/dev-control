@@ -214,13 +214,42 @@ jobs:
         id: import_gpg
         if: github.event_name == 'workflow_dispatch'
         continue-on-error: true
-        uses: crazy-max/ghaction-import-gpg@v6
-        with:
-          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
-          passphrase: ${{ secrets.GPG_PASSPHRASE }}
-          git_user_signingkey: true
-          git_commit_gpgsign: true
-          git_tag_gpgsign: true
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          if [[ -z "$GPG_PRIVATE_KEY" ]]; then
+            echo "⚠️ GPG_PRIVATE_KEY secret not found - tags will be unsigned"
+            echo "outcome=skipped" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          echo "📦 Importing GPG key..."
+          
+          # Import the key
+          echo "$GPG_PRIVATE_KEY" | gpg --batch --import 2>&1
+          
+          # Get the key ID
+          KEY_ID=$(echo "$GPG_PRIVATE_KEY" | gpg --batch --import --import-options show-only 2>&1 | grep -oP 'key \K[0-9A-F]+')
+          
+          if [[ -z "$KEY_ID" ]]; then
+            echo "❌ Failed to import GPG key"
+            echo "outcome=failure" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+          
+          # Configure git to use the key
+          git config --global user.signingkey "$KEY_ID"
+          git config --global commit.gpgsign true
+          git config --global tag.gpgsign true
+          
+          # Configure GPG to use batch mode with passphrase
+          echo "allow-preset-passphrase" >> ~/.gnupg/gpg-agent.conf
+          gpgconf --kill gpg-agent
+          gpg-agent --daemon --allow-preset-passphrase
+          
+          echo "✅ GPG key imported: $KEY_ID"
+          echo "outcome=success" >> $GITHUB_OUTPUT
 
       - name: Create tag (manual dispatch only)
         if: github.event_name == 'workflow_dispatch'
@@ -484,18 +513,25 @@ jobs:
           cat "$NOTES_FILE"
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.version.outputs.tag_name }}
-          name: "Release ${{ steps.version.outputs.tag_name }}"
-          body_path: ${{ steps.release_notes.outputs.notes_file }}
-          draft: ${{ github.event.inputs.draft || false }}
-          prerelease: ${{ github.event.inputs.prerelease || false }}
-          files: |
-            dist/*.tar.gz
-            dist/*.sha256
-          fail_on_unmatched_files: false
-          generate_release_notes: false
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG_NAME="${{ steps.version.outputs.tag_name }}"
+          VERSION="${{ steps.version.outputs.version }}"
+          NOTES_FILE="${{ steps.release_notes.outputs.notes_file }}"
+          
+          # Build file list
+          FILES=$(find dist/ -name "*.tar.gz" -o -name "*.sha256" 2>/dev/null | tr '\n' ' ')
+          
+          # Create release using gh CLI
+          gh release create "$TAG_NAME" \
+            --title "Release $TAG_NAME" \
+            --notes-file "$NOTES_FILE" \
+            ${{ github.event.inputs.draft == 'true' && '--draft' || '' }} \
+            ${{ github.event.inputs.prerelease == 'true' && '--prerelease' || '' }} \
+            $FILES
+          
+          echo "✅ Release created: $TAG_NAME"
 
       - name: Update 'latest' tag
         run: |

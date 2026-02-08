@@ -117,7 +117,7 @@ EOF
         return 1
     fi
     
-    print_success "GPG key generated: $key_id"
+    print_success "GPG key generated successfully"
     
     # Export to environment for calling script
     export GPG_KEY_ID="$key_id"
@@ -265,7 +265,6 @@ setup_bot_gpg_for_repo() {
     
     if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
         print_info "Cancelled. GPG key generated but not added to repo."
-        print_info "Key ID: $GPG_KEY_ID"
         return 0
     fi
     
@@ -283,7 +282,6 @@ setup_bot_gpg_for_repo() {
     print_info "  3. Tags will be signed with: github_actions[bot] <actions@github.com>"
     echo ""
     print_info "Key details:"
-    print_info "  Key ID: $GPG_KEY_ID"
     print_info "  Expires: $(grep "^Expire-Date:" "$config_file" | awk '{print $2}')"
     print_info "  Location: ~/.gnupg/"
     echo ""
