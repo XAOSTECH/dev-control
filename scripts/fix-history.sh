@@ -1482,8 +1482,14 @@ sign_mode() {
     ORIGINAL_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
     print_info "Original branch recorded: $ORIGINAL_BRANCH"
 
-    if ! command -v gpg &>/dev/null && ! git config user.signingkey &>/dev/null; then
-        print_warning "GPG not found or signing key not configured. Aborting sign operation."
+    # Validate GPG setup
+    local signingkey
+    signingkey="$(git config user.signingkey 2>/dev/null || echo '')"
+    if ! command -v gpg &>/dev/null || [[ -z "$signingkey" ]] || [[ "$signingkey" == "none" ]]; then
+        print_warning "GPG not found or signing key not configured properly. Aborting sign operation."
+        if [[ "$signingkey" == "none" ]]; then
+            print_error "Signing key is set to 'none'. Check: git config --list | grep user.signingkey"
+        fi
         exit 1
     fi
 
