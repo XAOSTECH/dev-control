@@ -137,10 +137,6 @@ parse_args() {
                 shift
                 ;;
             --regen)
-                # Silently ignore for now - not implemented
-                shift
-                ;;
-            --regen)
                 NEST_REGEN=true
                 shift
                 ;;
