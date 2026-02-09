@@ -137,6 +137,10 @@ parse_args() {
                 shift
                 ;;
             --regen)
+                # Silently ignore for now - not implemented
+                shift
+                ;;
+            --regen)
                 NEST_REGEN=true
                 shift
                 ;;
@@ -968,18 +972,17 @@ show_activation_instructions() {
     echo ""
     
     print_section "Next Steps:"
-    echo -e "  1. Open the project in VS Code: ${GREEN}code $PROJECT_PATH${NC}"
-    echo -e "  2. Press ${CYAN}F1${NC} and run: ${CYAN}Dev Containers: Reopen in Container${NC}"
-    echo ""
-    
-    print_section "Alternative:"
-    echo -e "  Use the Remote-Containers icon in the bottom-left corner"
+    echo -e "  1. Download dev-control with: ${GREEN}gh release download latest --repo xaoscience/dev-control${NC}"
+    echo -e "  2. Load aliases: ${GREEN}source ./scripts/alias-loading.sh${NC}"
+    echo -e "  3. Open the project in VS Code: ${GREEN}code $PROJECT_PATH${NC}"
+    echo -e "  4. Press ${CYAN}F1${NC} and run: ${CYAN}Dev Containers: Reopen in Container${NC}"
     echo ""
     
     print_section "One-Click Mode:"
     echo -e "  Next time, run: ${GREEN}dc-container --defaults${NC}"
     echo ""
 }
+
 
 
 ################################################################################
@@ -1311,13 +1314,7 @@ run_nest_mode() {
         print_kv "Filter to categories" "$allowed_cats"
     fi
     [[ "$include_root" == true ]] && print_kv "Include root" "yes"
-    
-    # Ensure temp directory exists  
-    mkdir -p "$start_dir/.devcontainer"
-    
-    # First pass: scan for existing containers and save project list
     echo ""
-    print_info "Scanning for projects..."
     
     # Find all .devcontainer dirs and build projects list
     find "$start_dir" -type d -name ".devcontainer" 2>/dev/null | sort | while read -r devcontainer_dir; do
@@ -1325,18 +1322,26 @@ run_nest_mode() {
         local rel_path="${project_dir#$start_dir/}"
         [[ "$rel_path" == "$project_dir" ]] && rel_path="."
         
+        # Skip root unless explicitly included with "."
+        if [[ "$rel_path" == "." && "$include_root" != true ]]; then
+            continue
+        fi
+        
         local dcjson="$devcontainer_dir/devcontainer.json"
         [[ ! -f "$dcjson" ]] && continue
         
-        # Extract category
-        local category=$(grep -oP '"_dc_metadata"\s*:\s*\{[^}]*"category"\s*:\s*"\K[^"]*' "$dcjson" 2>/dev/null | head -1)
-        if [[ -z "$category" ]]; then
-            category=$(grep -oiP '//\s*category:\s*\K[a-z0-9-]+' "$dcjson" 2>/dev/null | head -1)
-        fi
-        if [[ -z "$category" ]]; then
-            [[ -f "$devcontainer_dir/README.md" ]] && category=$(grep -oP '(?<=**Category: `)[^`]*' "$devcontainer_dir/README.md" 2>/dev/null | head -1)
-        fi
+        # Extract category from comment
+        local category=$(grep -oiP '//\s*category:\s*\K[a-z0-9-]+' "$dcjson" 2>/dev/null | head -1)
         category="${category:-unknown}"
+        
+        # Filter by allowed categories if specified
+        if [[ -n "$allowed_cats" ]]; then
+            local match=0
+            for allowed in ${allowed_cats//|/ }; do
+                [[ "$category" == "$allowed" ]] && match=1 && break
+            done
+            [[ $match -eq 0 ]] && continue
+        fi
         
         local type=""
         [[ $(grep -c '"build"' "$dcjson" 2>/dev/null) -gt 0 ]] && type="BASE"
@@ -1346,16 +1351,16 @@ run_nest_mode() {
         echo "$rel_path|$type|$category"
     done > "$nest_json.tmp"
     
-    # Handle --regen: delete existing .devcontainer directories
+    # Handle --regen: delete existing .devcontainer directories (except root)
     if [[ "$NEST_REGEN" == true ]]; then
-        print_kv "Regenerate mode" "DELETE existing .devcontainer dirs"
+        print_kv "Regenerate mode" "DELETE existing .devcontainer dirs (keeping root)"
         echo ""
-        print_warning "This will DELETE all .devcontainer directories under $start_dir"
+        print_warning "This will DELETE all .devcontainer directories under $start_dir (except root)"
 
         local -a regen_dirs
         mapfile -t regen_dirs < <(
             find "$start_dir" -type d -name ".devcontainer" 2>/dev/null \
-                | grep -vE '/\.(tmp|bak)(/|$)' \
+                | grep -v "^$start_dir/.devcontainer$" \
                 | sort
         )
 
@@ -1382,8 +1387,6 @@ run_nest_mode() {
             echo ""
             print_success "Deleted $count .devcontainer directories"
             echo ""
-            # Recreate root .devcontainer for nest.json
-            mkdir -p "$start_dir/.devcontainer"
         else
             print_info "Aborted"
             rm -f "$nest_json.tmp"
@@ -1393,24 +1396,7 @@ run_nest_mode() {
     
     echo ""
 
-    # If no existing projects found in scan, check if there are git repos to use as fallback
-    if [[ ! -s "$nest_json.tmp" ]]; then
-        print_warning "No existing projects with .devcontainer found"
-        echo ""
-        
-        # Try to find git repositories as fallback projects
-        echo ""
-        print_info "Searching for git repositories that could be projects..."
-        find "$start_dir" -name ".git" -type d 2>/dev/null | sort | while read -r gitdir; do
-            local project_dir="$(dirname "$gitdir")"
-            local rel_path="${project_dir#$start_dir/}"
-            [[ "$rel_path" == "$project_dir" ]] && rel_path="."
-            # Fallback: no category, no type - will prompt user to assign
-            echo "$rel_path||unknown"
-        done > "$nest_json.tmp"
-    fi
-    
-    # If still nothing found, return error
+    # Read results
     if [[ ! -f "$nest_json.tmp" ]] || [[ ! -s "$nest_json.tmp" ]]; then
         print_error "No valid projects detected"
         rm -f "$nest_json.tmp"
@@ -1429,47 +1415,17 @@ run_nest_mode() {
         fi
     done < "$nest_json.tmp"
     
-    # Interactive assignment for unknown projects
+    # Display unknown projects first
     echo ""
     if [[ ${#unknown_projects[@]} -gt 0 ]]; then
-        print_header "⚠️  Unknown Category - Assign categories to proceed"
+        print_header "⚠️  Unknown Category (will NOT be regenerated)"
         echo ""
-        print_info "Available categories:"
-        echo "  1) game-dev      (Godot, Vulkan, SDL2, GLFW, CUDA)"
-        echo "  2) art           (Krita, GIMP, Inkscape, Blender)"
-        echo "  3) data-science  (CUDA, FFmpeg, NVIDIA acceleration)"
-        echo "  4) streaming     (FFmpeg+NVENC, NGINX-RTMP)"
-        echo "  5) web-dev       (Node.js, npm, Cloudflare Workers)"
-        echo "  6) dev-tools     (GCC, build-essential, compilers)"
-        echo "  0) Skip this project"
-        echo ""
-        
-        local -a assigned_projects
+        local idx=1
         for proj in "${unknown_projects[@]}"; do
             IFS='|' read -r path type category <<< "$proj"
-            echo ""
-            print_info "Assign category for: ${CYAN}${path}${NC} (${YELLOW}${type}${NC})"
-            read -p "  Enter choice [0-6]: " choice
-            
-            case "$choice" in
-                1) assigned_projects+=("$path|$type|game-dev") ;;
-                2) assigned_projects+=("$path|$type|art") ;;
-                3) assigned_projects+=("$path|$type|data-science") ;;
-                4) assigned_projects+=("$path|$type|streaming") ;;
-                5) assigned_projects+=("$path|$type|web-dev") ;;
-                6) assigned_projects+=("$path|$type|dev-tools") ;;
-                0) 
-                    print_info "Skipped: $path"
-                    ;;
-                *)
-                    print_warning "Invalid choice. Skipped: $path"
-                    ;;
-            esac
+            printf "  ${CYAN}%d.${NC} %-30s ${YELLOW}%s${NC}\n" "$idx" "$path" "$type"
+            ((idx++))
         done
-        
-        if [[ ${#assigned_projects[@]} -gt 0 ]]; then
-            known_projects+=("${assigned_projects[@]}")
-        fi
         echo ""
     fi
     
