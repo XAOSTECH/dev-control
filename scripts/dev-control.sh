@@ -52,6 +52,109 @@ check_script_exists() {
 }
 
 # ============================================================================
+# CLUSTER MODE - Setup: init + container + mcp
+# ============================================================================
+
+run_cluster_setup() {
+    print_header "Dev-Control Cluster Setup"
+    echo ""
+    print_info "Setup fully fledged cluster: templates + container + MCP"
+    echo ""
+    
+    # Step 1: Select container type
+    echo -e "${BOLD}Step 1: Select container type${NC}"
+    echo "  1) Custom base image (--bare)"
+    echo "  2) Category-based (--img with built base)"
+    echo "  3) Just templates & MCP (skip   container)"
+    echo ""
+    read -rp "Choice [1-3]: " container_choice
+    
+    case "$container_choice" in
+        1)
+            CLUSTER_MODE="bare"
+            echo -e "${CYAN}→ Using custom base image${NC}"
+            ;;
+        2)
+            CLUSTER_MODE="img"
+            echo -e "${CYAN}→ Using category base image${NC}"
+            echo ""
+            echo -e "${BOLD}Step 2: Select category${NC}"
+            echo "  1) game-dev    - Godot, Vulkan, SDL2, GLFW, CUDA"
+            echo "  2) art         - Krita, GIMP, Inkscape, Blender"
+            echo "  3) data-science - CUDA, FFmpeg, NVIDIA"
+            echo "  4) streaming   - FFmpeg+NVENC, NGINX-RTMP, ONNX"
+            echo "  5) web-dev     - Node.js, npm, Cloudflare Workers"
+            echo "  6) dev-tools   - GCC, build-essential, compilers"
+            echo ""
+            read -rp "Choice [1-6]: " category_choice
+            
+            case "$category_choice" in
+                1) CLUSTER_CATEGORY="--game-dev" ;;
+                2) CLUSTER_CATEGORY="--art" ;;
+                3) CLUSTER_CATEGORY="--data-science" ;;
+                4) CLUSTER_CATEGORY="--streaming" ;;
+                5) CLUSTER_CATEGORY="--web-dev" ;;
+                6) CLUSTER_CATEGORY="--dev-tools" ;;
+                *) print_error "Invalid choice"; exit 1 ;;
+            esac
+            echo -e "${CYAN}→ Using category: ${CLUSTER_CATEGORY}${NC}"
+            ;;
+        3)
+            CLUSTER_MODE="templates-only"
+            echo -e "${CYAN}→ Skipping container setup${NC}"
+            ;;
+        *)
+            print_error "Invalid choice"
+            exit 1
+            ;;
+    esac
+    
+    echo ""
+    print_step "Starting cluster setup..."
+    echo ""
+    
+    # Step: Initialize templates
+    print_step "1/3 Initializing templates..."
+    check_script_exists "template-loading.sh" && \
+        bash "$SCRIPT_DIR/template-loading.sh" -y --reuse-owner <<< "y" 2>/dev/null || true
+    echo ""
+    
+    # Step: Setup container (unless templates-only)
+    if [[ "$CLUSTER_MODE" != "templates-only" ]]; then
+        print_step "2/3 Setting up container..."
+        local containerise_args="--defaults"
+        if [[ "$CLUSTER_MODE" == "bare" ]]; then
+            containerise_args="--bare --defaults"
+        elif [[ "$CLUSTER_MODE" == "img" ]]; then
+            containerise_args="--img $CLUSTER_CATEGORY --defaults"
+        fi
+        check_script_exists "containerise.sh" && \
+           bash "$SCRIPT_DIR/containerise.sh" $containerise_args 2>/dev/null || true
+        echo ""
+    else
+        print_info "Skipped: container setup (templates-only mode)"
+        echo ""
+    fi
+    
+    # Step: Setup MCP
+    print_step "3/3 Setting up MCP servers..."
+    check_script_exists "mcp-setup.sh" && \
+        bash "$SCRIPT_DIR/mcp-setup.sh" --config-only 2>/dev/null || true
+    echo ""
+    
+    print_header_success "Cluster setup complete!"
+    echo ""
+    print_section "What's been set up:"
+    print_list_item "✓ Templates (docs, workflows, licenses)"
+    if [[ "$CLUSTER_MODE" != "templates-only" ]]; then
+        print_list_item "✓ Devcontainer ($([ "$CLUSTER_MODE" = "bare" ] && echo "bare" || echo "with $CLUSTER_CATEGORY"))"
+    fi
+    print_list_item "✓ MCP servers (GitHub, Stack Overflow, Firecrawl)"
+    echo ""
+    print_info "Your project is ready for development!"
+}
+
+# ============================================================================
 # HELP DISPLAY
 # ============================================================================
 
@@ -73,6 +176,7 @@ COMMANDS:
   licenses, lic      Audit licenses (dc-licenses)
   package, pkg       Build multi-platform packages (dc-package)
   mcp                Setup MCP servers (dc-mcp)
+  cluster            Setup fully fledged cluster (init + container + mcp)
   container          Setup devcontainer (dc-container)
   help               Show this help message
 
@@ -80,13 +184,14 @@ INTERACTIVE MODE:
   Run without arguments to use the interactive menu.
 
 EXAMPLES:
-  ./dev-control.sh                   # Interactive menu
-  ./dev-control.sh init              # Initialize templates
-  ./dev-control.sh repo              # Create repository
-  ./dev-control.sh pr                # Create pull request
-  ./dev-control.sh fix --range HEAD=5  # Fix last 5 commits
-  ./dev-control.sh licenses --deep   # Audit licenses recursively
-  ./dev-control.sh package --all     # Build all package types
+  ./dev-control.sh                      # Interactive menu
+  ./dev-control.sh init                 # Initialize templates
+  ./dev-control.sh repo                 # Create repository
+  ./dev-control.sh cluster              # Init, Containerise, MCP-setup (also add to aliases as dc-cluster and nothing else)
+  ./dev-control.sh pr                   # Create pull request
+  ./dev-control.sh fix --range HEAD=5   # Fix last 5 commits
+  ./dev-control.sh licenses --deep      # Audit licenses recursively
+  ./dev-control.sh package --all        # Build all package types
 
 ALIASES:
   After running 'dc-aliases', these shortcuts are available:
@@ -139,6 +244,7 @@ display_menu() {
     echo -e "${BOLD}Environment${NC}"
     print_menu_item "m" "MCP Setup (dc-mcp)               - Setup MCP servers"
     print_menu_item "c" "Containerise (dc-container)      - Setup devcontainer"
+    print_menu_item "l" "Cluster Setup (dc-cluster)       - Full project setup (templates+container+mcp)"
     print_menu_item "0" "Exit"
     echo ""
 }
@@ -191,6 +297,9 @@ run_tool() {
         c|C|container|containerise)
             check_script_exists "containerise.sh" && \
                 bash "$SCRIPT_DIR/containerise.sh" "$@"
+            ;;
+        l|L|cluster)
+            run_cluster_setup
             ;;
         0|exit|q|quit)
             print_info "Goodbye!"
