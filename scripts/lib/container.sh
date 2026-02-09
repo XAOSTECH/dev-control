@@ -570,6 +570,121 @@ add_devcontainer_to_gitignore() {
         print_info "Added personal devcontainer files to .gitignore"
     fi
 }
+
+# ============================================================================
+# README GENERATION
+# ============================================================================
+
+# Write a devcontainer README with dev-control-specific instructions.
+# Args: readme_file, category, type, base_image, image_tag, source, features, container_name
+write_devcontainer_readme() {
+    local readme_file="$1"
+    local category="$2"
+    local type="$3"
+    local base_image="$4"
+    local image_tag="$5"
+    local source="$6"
+    local features="$7"
+    local container_name="$8"
+
+    local example_category="$category"
+    if [[ -z "$example_category" || "$example_category" == "custom" ]]; then
+        example_category="art"
+    fi
+
+    local type_label="Custom"
+    if [[ "$type" == "image" ]]; then
+        type_label="Pre-built image"
+    elif [[ "$type" == "build" ]]; then
+        type_label="Build from Dockerfile"
+    fi
+
+    {
+        echo "# Container Configuration"
+        echo ""
+        echo "## Metadata"
+        echo "- **Category**: \`${category:-custom}\`"
+        echo "- **Type**: \`${type_label}\`"
+        if [[ -n "$container_name" ]]; then
+            echo "- **Container Name**: \`${container_name}\`"
+        fi
+        echo ""
+        echo "## Generated Instructions"
+        echo ""
+        echo "1. Download the latest dev-control release tag (latest):"
+        echo ""
+        echo "   \`gh release download latest --repo xaoscience/dev-control\`"
+        echo ""
+        echo "2. Load aliases (includes dc-contain):"
+        echo ""
+        echo "   \`source ./scripts/alias-loading.sh\`"
+        echo ""
+        echo "3. Build a base image (example):"
+        echo ""
+        echo "   \`dc-contain --base --${example_category} --defaults\`"
+        echo "   \`dc-contain --base --${example_category}\`  # interactive config"
+        echo ""
+        echo "4. Run the script directly (same example):"
+        echo ""
+        echo "   \`./scripts/containerise.sh --base --${example_category} --defaults\`"
+        echo ""
+        if [[ "$type" == "image" ]]; then
+            echo "5. Generate an image-based devcontainer (example):"
+            echo ""
+            echo "   \`dc-contain --img --${example_category}\`"
+            echo ""
+        fi
+        echo "## About"
+        echo ""
+        if [[ "$type" == "image" ]]; then
+            echo "This devcontainer uses a pre-built dev-control category image."
+            [[ -n "$base_image" ]] && echo "**Base Image:** \`${base_image}\`"
+        elif [[ "$type" == "build" ]]; then
+            echo "This devcontainer builds from the generated Dockerfile."
+            [[ -n "$image_tag" ]] && echo "**Image tag:** \`${image_tag}\`"
+        else
+            echo "This devcontainer uses the project configuration and defaults."
+        fi
+        echo ""
+        if [[ -n "$features" ]]; then
+            echo "**Features:** ${features}"
+            echo ""
+        fi
+        if [[ -n "$source" ]]; then
+            echo "**Build source:** ${source}"
+            echo ""
+        fi
+        echo "## Files"
+        echo ""
+        echo "- **devcontainer.json** - Your personal VS Code devcontainer configuration (gitignored)"
+        echo "- **Dockerfile** - Your personal container image definition (gitignored)"
+        echo "- **.dockerignore** - Files to exclude from build context"
+        echo "- **README.md** - This file"
+        echo "- **devcontainer_example.json** - Tracked reference with placeholder values"
+        echo "- **Dockerfile_example** - Tracked reference Dockerfile"
+        echo "- **devcontainer_minimal.json** - Tracked minimal configuration"
+        echo "- **Dockerfile_minimal** - Tracked minimal Dockerfile"
+        echo ""
+        echo "## Usage"
+        echo ""
+        echo "1. Open this project in VS Code"
+        echo "2. Press \`F1\` and run: \`Dev Containers: Reopen in Container\`"
+        echo "3. The container will build and you'll work inside it"
+        echo ""
+        echo "## Customisation"
+        echo ""
+        echo "Edit \`devcontainer.json\` or \`Dockerfile\` to customise:"
+        echo "- Installed tools and libraries"
+        echo "- Environment variables"
+        echo "- VSCode extensions"
+        echo "- Mount points and volumes"
+        echo ""
+        echo "For more information, see the Dev Containers docs:"
+        echo "https://code.visualstudio.com/docs/devcontainers/containers"
+    } > "$readme_file"
+
+    print_success "Created: $readme_file"
+}
 # ============================================================================
 # CATEGORY DOCKERFILE GENERATION
 # ============================================================================

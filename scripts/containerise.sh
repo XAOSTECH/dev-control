@@ -869,67 +869,20 @@ generate_category_readme() {
     local features=$(echo "$metadata" | grep -oP '(?<="features":")[^"]*')
     
     local readme_file="$devcontainer_dir/README.md"
+    local project_dir
+    project_dir="$(dirname "$devcontainer_dir")"
+    local container_name
+    container_name="$(basename "$project_dir")"
     
-    {
-        echo "# Container Configuration"
-        echo ""
-        echo "**Category:** \`$category\`"
-        echo ""
-        
-        if [[ "$type" == "image" ]]; then
-            echo "**Type:** Pre-built image"
-            echo "**Base Image:** \`$base_image\`"
-            echo ""
-            echo "## About"
-            echo ""
-            echo "This devcontainer uses a pre-built dev-control category image."
-            echo ""
-            echo "**Features:** $features"
-            echo ""
-            echo "**Build source:** $source"
-            echo ""
-            echo "## Build Locally"
-            echo ""
-            echo "To build this base image locally:"
-            echo ""
-            echo "\`\`\`bash"
-            echo "git clone https://github.com/xaostech/dev-control ~/.dev-control"
-            echo "cd ~/.dev-control/.devcontainer/$category"
-            echo "podman build -t $base_image ."
-            echo "\`\`\`"
-            echo ""
-            echo "## Using Local Build"
-            echo ""
-            echo "To use a local build instead of pulling from registry, ensure the image exists:"
-            echo ""
-            echo "\`\`\`bash"
-            echo "podman images | grep ${base_image%%:*}"
-            echo "\`\`\`"
-        elif [[ "$type" == "build" ]]; then
-            echo "**Type:** Build from Dockerfile"
-            echo "**Image tag:** \`$image_tag\`"
-            echo ""
-            echo "## About"
-            echo ""
-            echo "This devcontainer builds from the generated Dockerfile."
-            echo ""
-            echo "**Features:** $features"
-            echo ""
-            echo "**Build source:** $source"
-            echo ""
-            echo "## Tag for Reuse"
-            echo ""
-            echo "After building, tag the image for reuse:"
-            echo ""
-            echo "\`\`\`bash"
-            echo "podman tag \$(podman images --filter \"label=devcontainer.local_folder=\$(pwd)\") $image_tag"
-            echo "\`\`\`"
-            echo ""
-            echo "Then use \`--img --$category\` in other projects to reference this image."
-        fi
-    } > "$readme_file"
-    
-    print_success "Created: $readme_file"
+    write_devcontainer_readme \
+        "$readme_file" \
+        "$category" \
+        "$type" \
+        "$base_image" \
+        "$image_tag" \
+        "$source" \
+        "$features" \
+        "$container_name"
 }
 
 # Generate all devcontainer files
@@ -957,55 +910,28 @@ generate_container_readme() {
     local readme_file="$devcontainer_dir/README.md"
     
     # Determine container type from devcontainer.json
-    local container_type="Custom"
+    local container_type="custom"
     if [[ -f "$devcontainer_dir/devcontainer.json" ]]; then
-        grep -q '"build"' "$devcontainer_dir/devcontainer.json" && container_type="Base Image"
-        grep -q '"image"' "$devcontainer_dir/devcontainer.json" && container_type="Image-based"
+        grep -q '"build"' "$devcontainer_dir/devcontainer.json" && container_type="build"
+        grep -q '"image"' "$devcontainer_dir/devcontainer.json" && container_type="image"
     fi
     
     # Determine category - check if we're in base/image mode
     local category="custom"
     [[ -n "$CATEGORY_FLAG" ]] && category="$CATEGORY_FLAG"
     
-    local container_name=$(basename "$PROJECT_PATH")
+    local container_name
+    container_name=$(basename "$PROJECT_PATH")
     
-    cat > "$readme_file" << EOF
-# Container Configuration
-
-## Metadata
-- **Category**: \`$category\`
-- **Type**: \`$container_type\`
-- **Container Name**: \`$container_name\`
-
-## About This Container
-
-This directory contains the devcontainer configuration for this project.
-
-### Files
-
-- **devcontainer.json** - VS Code devcontainer configuration
-- **Dockerfile** - Container image definition
-- **.dockerignore** - Files to exclude from build context
-- **README.md** - This file (metadata and instructions)
-
-### Usage
-
-1. Open this project in VS Code
-2. Press \`F1\` and run: \`Dev Containers: Reopen in Container\`
-3. The container will build and you'll work inside it
-
-### Customisation
-
-Edit \`devcontainer.json\` or \`Dockerfile\` to customise:
-- Installed tools and libraries
-- Environment variables
-- VSCode extensions
-- Mount points and volumes
-
-For more information, see the [Dev Containers documentation](https://code.visualstudio.com/docs/devcontainers/containers).
-EOF
-
-    print_success "Created: $readme_file"
+    write_devcontainer_readme \
+        "$readme_file" \
+        "$category" \
+        "$container_type" \
+        "" \
+        "" \
+        "" \
+        "" \
+        "$container_name"
 }
 
 show_activation_instructions() {
@@ -1098,38 +1024,6 @@ generate_config_variants() {
     else
         generate_devcontainer_json "$devcontainer_dir"
     fi
-
-    # Generate variants documentation
-    local variants_readme="$devcontainer_dir/VARIANTS.md"
-    cat > "$variants_readme" << 'VARIANTS_EOF'
-# Configuration Variants
-
-This directory contains multiple devcontainer configurations for different use cases.
-
-## Files
-
-- **devcontainer.json** - Your personal configuration (gitignored, created on first run)
-- **Dockerfile** - Your personal Dockerfile (gitignored, created on first run)
-- **devcontainer_example.json** - Tracked reference with placeholder values
-- **Dockerfile_example** - Tracked reference Dockerfile with placeholders
-- **devcontainer_minimal.json** - Tracked reference with all dependencies but no personal config
-- **Dockerfile_minimal** - Minimal Dockerfile variant
-
-## Using Variants
-
-### Example Variant
-The `_example` files show what a complete configuration looks like with placeholder values.
-Copy and modify these as a starting point for your personal config.
-
-### Minimal Variant
-The `_minimal` files provide a working devcontainer with all dependencies but no personal settings.
-Use this when you want to avoid mounting host config files or GPG.
-
-## Personal Config
-
-Your personal `.json` and `Dockerfile` files (without suffix) are created on first use and added to `.gitignore`.
-These are not tracked in the repository - modify them freely for your local setup.
-VARIANTS_EOF
 
     print_success "Config variants generated (_example + _minimal)"
 }
