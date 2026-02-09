@@ -463,8 +463,8 @@ create_mcp_config() {
             "env": {
                                 "FIRECRAWL_API_KEY": "\${input:firecrawlApiKey}",
                                 "PATH": "${firecrawl_path}",
-                                "NPM_CONFIG_CACHE": "\${env:HOME}/.cache/npm",
-                                "npm_config_cache": "\${env:HOME}/.cache/npm"
+                                "NPM_CONFIG_CACHE": "/tmp/npm-cache",
+                                "npm_config_cache": "/tmp/npm-cache"
             },
             "type": "stdio"
         }
@@ -529,8 +529,8 @@ create_mcp_config_with_token() {
             "env": {
                                 "FIRECRAWL_API_KEY": "\${input:firecrawlApiKey}",
                                 "PATH": "${firecrawl_path}",
-                                "NPM_CONFIG_CACHE": "\${env:HOME}/.cache/npm",
-                                "npm_config_cache": "\${env:HOME}/.cache/npm"
+                                "NPM_CONFIG_CACHE": "/tmp/npm-cache",
+                                "npm_config_cache": "/tmp/npm-cache"
             },
             "type": "stdio"
         }
