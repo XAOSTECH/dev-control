@@ -500,6 +500,18 @@ jobs:
           echo "✅ GPG key imported successfully"
           echo "outcome=success" >> $GITHUB_OUTPUT
 
+      - name: Ensure automerge label exists
+        if: steps.check.outputs.needs_fix == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Create 'automerge' label if it doesn't exist
+          gh label create automerge \
+            --description "Automatically merge this PR" \
+            --color "3BEF67" \
+            2>/dev/null || true
+          echo "✅ Automerge label ensured"
+
       - name: Create Pull Request
         if: steps.check.outputs.needs_fix == 'true'
         env:
