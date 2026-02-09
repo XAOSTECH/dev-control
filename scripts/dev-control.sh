@@ -113,8 +113,8 @@ run_cluster_setup() {
     print_step "Starting cluster setup..."
     echo ""
     
-    # Step: Initialize templates
-    print_step "1/3 Initializing templates..."
+    # Step: Initialise templates
+    print_step "1/3 Initialising templates..."
     check_script_exists "template-loading.sh" && \
         bash "$SCRIPT_DIR/template-loading.sh" -y --reuse-owner <<< "y" 2>/dev/null || true
     echo ""
