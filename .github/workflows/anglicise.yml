@@ -482,7 +482,7 @@ jobs:
           fi
           
           # Import the key
-          echo "$GPG_PRIVATE_KEY" | gpg --batch --import 2>&1 || true
+          echo "$GPG_PRIVATE_KEY" | gpg --batch --import 2>&1 | sed -E 's/key [0-9A-F]+: //' || true
           
           # Get the key ID (try multiple patterns)
           KEY_ID=$(echo "$GPG_PRIVATE_KEY" | gpg --batch --import --import-options show-only 2>&1 | grep -oE 'key [0-9A-F]+' | head -1 | awk '{print $2}' || true)
@@ -503,7 +503,7 @@ jobs:
           git config --global user.signingkey "$KEY_ID"
           git config --global commit.gpgsign true
           
-          echo "✅ GPG key $KEY_ID imported and configured successfully"
+          echo "✅ GPG key imported and configured successfully"
           echo "outcome=success" >> $GITHUB_OUTPUT
           exit 0
 
