@@ -461,7 +461,8 @@ create_mcp_config() {
       "command": "bash",
       "args": ["-c", "source \$HOME/.bashrc && npx -y firecrawl-mcp"],
       "env": {
-        "FIRECRAWL_API_KEY": "\${input:firecrawlApiKey}"
+                "FIRECRAWL_API_KEY": "\${input:firecrawlApiKey}",
+                "PATH": "${firecrawl_path}"
       },
       "type": "stdio"
     }
@@ -524,7 +525,8 @@ create_mcp_config_with_token() {
       "command": "bash",
       "args": ["-c", "source \$HOME/.bashrc && npx -y firecrawl-mcp"],
       "env": {
-        "FIRECRAWL_API_KEY": "\${input:firecrawlApiKey}"
+                "FIRECRAWL_API_KEY": "\${input:firecrawlApiKey}",
+                "PATH": "${firecrawl_path}"
       },
       "type": "stdio"
     }
