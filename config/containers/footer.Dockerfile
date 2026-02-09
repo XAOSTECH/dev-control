@@ -59,6 +59,11 @@ USER root
 RUN HOME=/home/${CATEGORY} bash -c 'bash /opt/dev-control/scripts/alias-loading.sh <<< A' && \
     chown ${CATEGORY}:${CATEGORY} /home/${CATEGORY}/.bash_aliases /home/${CATEGORY}/.bashrc
 
+# Final permission enforcement (survives --userns remapping)
+RUN chmod -R u+w /home/${CATEGORY}/.gnupg /home/${CATEGORY}/.ssh /home/${CATEGORY}/.cache 2>/dev/null || true && \
+    chmod 700 /home/${CATEGORY}/.gnupg 2>/dev/null || true && \
+    chown -R ${CATEGORY}:${CATEGORY} /home/${CATEGORY}/.gnupg /home/${CATEGORY}/.ssh /home/${CATEGORY}/.cache 2>/dev/null || true
+
 USER ${CATEGORY}
 
 WORKDIR /workspaces
