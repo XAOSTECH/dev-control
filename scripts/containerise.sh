@@ -1457,6 +1457,7 @@ run_nest_mode() {
         mapfile -t regen_dirs < <(
             find "$start_dir" -type d -name ".devcontainer" 2>/dev/null \
                 | grep -v "^$start_dir/.devcontainer$" \
+                | grep -vE '/(\.tmp|\.bak)/' \
                 | sort
         )
 
