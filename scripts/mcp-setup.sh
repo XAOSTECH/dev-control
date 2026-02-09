@@ -457,15 +457,17 @@ create_mcp_config() {
       "type": "http",
       "url": "https://mcp.stackoverflow.com"
     },
-    "firecrawl": {
-      "command": "bash",
-      "args": ["-c", "source \$HOME/.bashrc && npx -y firecrawl-mcp"],
-      "env": {
-                "FIRECRAWL_API_KEY": "\${input:firecrawlApiKey}",
-                "PATH": "${firecrawl_path}"
-      },
-      "type": "stdio"
-    }
+        "firecrawl": {
+            "command": "bash",
+            "args": ["-lc", "source \$HOME/.bashrc && npx -y firecrawl-mcp"],
+            "env": {
+                                "FIRECRAWL_API_KEY": "\${input:firecrawlApiKey}",
+                                "PATH": "${firecrawl_path}",
+                                "NPM_CONFIG_CACHE": "\${env:HOME}/.cache/npm",
+                                "npm_config_cache": "\${env:HOME}/.cache/npm"
+            },
+            "type": "stdio"
+        }
   }
 }
 MCP_EOF
@@ -521,15 +523,17 @@ create_mcp_config_with_token() {
       "type": "http",
       "url": "https://mcp.stackoverflow.com"
     },
-    "firecrawl": {
-      "command": "bash",
-      "args": ["-c", "source \$HOME/.bashrc && npx -y firecrawl-mcp"],
-      "env": {
-                "FIRECRAWL_API_KEY": "\${input:firecrawlApiKey}",
-                "PATH": "${firecrawl_path}"
-      },
-      "type": "stdio"
-    }
+        "firecrawl": {
+            "command": "bash",
+            "args": ["-lc", "source \$HOME/.bashrc && npx -y firecrawl-mcp"],
+            "env": {
+                                "FIRECRAWL_API_KEY": "\${input:firecrawlApiKey}",
+                                "PATH": "${firecrawl_path}",
+                                "NPM_CONFIG_CACHE": "\${env:HOME}/.cache/npm",
+                                "npm_config_cache": "\${env:HOME}/.cache/npm"
+            },
+            "type": "stdio"
+        }
   }
 }
 EOF
