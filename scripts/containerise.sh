@@ -1321,16 +1321,33 @@ run_nest_mode() {
         local dcjson="$devcontainer_dir/devcontainer.json"
         [[ ! -f "$dcjson" ]] && continue
         
-        # Extract category: try JSON metadata field first, then comment headers, then README
-        local category=$(grep -oP '"_dc_metadata"\s*:\s*\{[^}]*"category"\s*:\s*"\K[^"]*' "$dcjson" 2>/dev/null | head -1)
+        # Extract category: multiple fallback methods for maximum compatibility
+        # Method 1: Try JSON metadata field (new files)
+        local category=$(grep -oP '"_dc_metadata"[^}]*"category"\s*:\s*"\K[^"]*' "$dcjson" 2>/dev/null | head -1)
+        
+        # Method 2: Try comment header (medium-age files)
         if [[ -z "$category" ]]; then
-            # Fallback to comment header (for older files)
-            category=$(grep -oiP '//\s*category:\s*\K[a-z0-9-]+' "$dcjson" 2>/dev/null | head -1)
+            category=$(grep -oiP 'Category:\s*\K[a-z0-9-]+' "$dcjson" 2>/dev/null | head -1)
         fi
+        
+        # Method 3: Try README.md (if exists)
         if [[ -z "$category" ]]; then
-            # Last resort: check README.md if it exists
-            [[ -f "$devcontainer_dir/README.md" ]] && category=$(grep -oP '(?<=**Category: `)[^`]*' "$devcontainer_dir/README.md" 2>/dev/null | head -1)
+            [[ -f "$devcontainer_dir/README.md" ]] && category=$(grep -oP '(?<=\*\*Category: `).*(?=`)' "$devcontainer_dir/README.md" 2>/dev/null | head -1)
         fi
+        
+        # Method 4: Try to infer from base image in Dockerfile
+        if [[ -z "$category" ]]; then
+            if [[ -f "$devcontainer_dir/Dockerfile" ]]; then
+                # Check for category-specific base patterns
+                for cat in game-dev art data-science streaming web-dev dev-tools; do
+                    if grep -q "devcontrol/$cat" "$devcontainer_dir/Dockerfile" 2>/dev/null; then
+                        category="$cat"
+                        break
+                    fi
+                done
+            fi
+        fi
+        
         category="${category:-unknown}"
         
         # Filter by allowed categories if specified
