@@ -1272,6 +1272,35 @@ generate_image_devcontainer() {
 }
 
 ################################################################################
+# Save detected metadata to devcontainer.json
+################################################################################
+
+save_detected_metadata() {
+    local dcjson="$1"
+    local category="$2"
+    
+    [[ -z "$category" ]] || [[ "$category" == "unknown" ]] && return 1
+    [[ ! -f "$dcjson" ]] && return 1
+    
+    # Build metadata line
+    local metadata_json="{\"type\":\"detected\",\"category\":\"$category\",\"detected_at\":\"$(date -Iseconds)\"}"
+    
+    # Check if devcontainer.json has _dc_metadata field
+    if grep -q '"_dc_metadata"' "$dcjson"; then
+        # Already has metadata, don't overwrite
+        return 0
+    fi
+    
+    # Add metadata to JSON (simple sed approach)
+    # Find the closing brace and insert metadata before it
+    local temp_json=$(mktemp)
+    sed -e '/"remoteUser"/a\    ,"_dc_metadata": '"$metadata_json" "$dcjson" > "$temp_json"
+    mv "$temp_json" "$dcjson"
+    
+    return 0
+}
+
+################################################################################
 # Nest Mode - Recursively rebuild all base and img containers
 ################################################################################
 
@@ -1345,6 +1374,32 @@ run_nest_mode() {
                         break
                     fi
                 done
+            fi
+        fi
+        
+        # Method 5: Infer from project folder name
+        if [[ -z "$category" ]]; then
+            local folder_name="${project_dir##*/}"
+            # Convert to lowercase for comparison
+            folder_name_lower="${folder_name,,}"
+            # Check if folder name matches or partially matches a category
+            for cat in game-dev art data-science streaming web-dev dev-tools; do
+                # Exact match or folder name contains category keyword (without dashes)
+                if [[ "$folder_name_lower" == "$cat" ]] || [[ "$folder_name_lower" == "${cat//-/}" ]]; then
+                    category="$cat"
+                    break
+                fi
+            done
+        fi
+        
+        # If category is still unknown but we found it, save metadata
+        local save_metadata=false
+        if [[ -z "$category" ]] || [[ "$category" == "unknown" ]]; then
+            category="unknown"
+        else
+            # Check if metadata already exists
+            if ! grep -q '"_dc_metadata"' "$dcjson" 2>/dev/null; then
+                save_detected_metadata "$dcjson" "$category"
             fi
         fi
         
