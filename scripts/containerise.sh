@@ -563,8 +563,11 @@ RUN if id ubuntu &>/dev/null; then \\
     fi && \\
     usermod -aG sudo ${CFG_CONTAINER_NAME} && \\
     echo "${CFG_CONTAINER_NAME} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \\
-    mkdir -p /home/${CFG_CONTAINER_NAME}/.config /home/${CFG_CONTAINER_NAME}/.cache /home/${CFG_CONTAINER_NAME}/.local/share && \\
-    chown -R ${CFG_CONTAINER_NAME}:${CFG_CONTAINER_NAME} /home/${CFG_CONTAINER_NAME}
+    mkdir -p /home/${CFG_CONTAINER_NAME}/.config /home/${CFG_CONTAINER_NAME}/.cache /home/${CFG_CONTAINER_NAME}/.local/share /home/${CFG_CONTAINER_NAME}/.vscode-server /home/${CFG_CONTAINER_NAME}/.gnupg /home/${CFG_CONTAINER_NAME}/.bash_backups && \\
+    chown -R ${CFG_CONTAINER_NAME}:${CFG_CONTAINER_NAME} /home/${CFG_CONTAINER_NAME} && \\
+    chmod 775 /home/${CFG_CONTAINER_NAME}/.vscode-server && \\
+    chmod 700 /home/${CFG_CONTAINER_NAME}/.gnupg && \\
+    chmod 700 /home/${CFG_CONTAINER_NAME}/.bash_backups
 
 USER ${CFG_CONTAINER_NAME}
 WORKDIR /home/${CFG_CONTAINER_NAME}
@@ -994,6 +997,38 @@ generate_config_variants() {
         generate_devcontainer_json "$devcontainer_dir"
     fi
 
+    # Generate variants documentation
+    local variants_readme="$devcontainer_dir/VARIANTS.md"
+    cat > "$variants_readme" << 'VARIANTS_EOF'
+# Configuration Variants
+
+This directory contains multiple devcontainer configurations for different use cases.
+
+## Files
+
+- **devcontainer.json** - Your personal configuration (gitignored, created on first run)
+- **Dockerfile** - Your personal Dockerfile (gitignored, created on first run)
+- **devcontainer_example.json** - Tracked reference with placeholder values
+- **Dockerfile_example** - Tracked reference Dockerfile with placeholders
+- **devcontainer_minimal.json** - Tracked reference with all dependencies but no personal config
+- **Dockerfile_minimal** - Minimal Dockerfile variant
+
+## Using Variants
+
+### Example Variant
+The `_example` files show what a complete configuration looks like with placeholder values.
+Copy and modify these as a starting point for your personal config.
+
+### Minimal Variant
+The `_minimal` files provide a working devcontainer with all dependencies but no personal settings.
+Use this when you want to avoid mounting host config files or GPG.
+
+## Personal Config
+
+Your personal `.json` and `Dockerfile` files (without suffix) are created on first use and added to `.gitignore`.
+These are not tracked in the repository - modify them freely for your local setup.
+VARIANTS_EOF
+
     print_success "Config variants generated (_example + _minimal)"
 }
 
@@ -1042,14 +1077,6 @@ _generate_variant() {
         generate_devcontainer_json "$devcontainer_dir"
     fi
     mv "$devcontainer_dir/devcontainer.json" "$devcontainer_dir/devcontainer${suffix}.json"
-    # Insert variant comment after opening brace
-    {
-        head -1 "$devcontainer_dir/devcontainer${suffix}.json"
-        echo "  // ${variant_label}"
-        echo "  // This is a tracked reference file. Personal config (devcontainer.json) is gitignored."
-        tail -n +2 "$devcontainer_dir/devcontainer${suffix}.json"
-    } > "$devcontainer_dir/devcontainer${suffix}.json.tmp"
-    mv "$devcontainer_dir/devcontainer${suffix}.json.tmp" "$devcontainer_dir/devcontainer${suffix}.json"
     print_success "Created: devcontainer${suffix}.json"
 }
 
