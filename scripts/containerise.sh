@@ -1602,11 +1602,12 @@ run_nest_mode() {
         local full_path="$start_dir/$path"
         [[ "$path" == "." ]] && full_path="$start_dir"
         
-        if [[ -d "$full_path/.devcontainer" ]]; then
-            echo ""
-            print_info "$type: $path ($category)"
-            (cd "$full_path" && "$SCRIPT_DIR/containerise.sh" --defaults --"${type,,}" --"$category" <<< y)
-        fi
+        # Verify project directory exists
+        [[ ! -d "$full_path" ]] && continue
+        
+        echo ""
+        print_info "$type: $path ($category)"
+        (cd "$full_path" && "$SCRIPT_DIR/containerise.sh" --defaults --"${type,,}" --"$category" <<< y)
     done
     
     rm -f "$nest_json.tmp"
