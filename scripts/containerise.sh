@@ -48,6 +48,7 @@ CONFIG_FILE=""
 PROJECT_PATH=""
 SHOW_HELP=false
 NEST_MODE=false
+NEST_REGEN=false
 
 ################################################################################
 # Help
@@ -68,6 +69,7 @@ MODES:
   --bare    Generate minimal devcontainer (no category, custom base image)
   --nest    Recursively rebuild all base and img containers in subdirectories
             Use --nest . to include the root directory itself
+  --regen   Delete all .devcontainer dirs before nest rebuild (forces regeneration)
 
 CATEGORIES:
   --game-dev        Godot, Vulkan, SDL2, GLFW, CUDA
@@ -132,6 +134,10 @@ parse_args() {
             --nest)
                 NEST_MODE=true
                 USE_DEFAULTS=true
+                shift
+                ;;
+            --regen)
+                NEST_REGEN=true
                 shift
                 ;;
             --game-dev|--art|--data-science|--streaming|--web-dev|--dev-tools)
@@ -1305,6 +1311,28 @@ run_nest_mode() {
         print_kv "Filter to categories" "$allowed_cats"
     fi
     [[ "$include_root" == true ]] && print_kv "Include root" "yes"
+    
+    # Handle --regen: delete existing .devcontainer directories
+    if [[ "$NEST_REGEN" == true ]]; then
+        print_kv "Regenerate mode" "DELETE existing .devcontainer dirs"
+        echo ""
+        print_warning "This will DELETE all .devcontainer directories under $start_dir"
+        if confirm "Are you ABSOLUTELY sure?"; then
+            local count=0
+            while IFS= read -r dc_dir; do
+                rm -rf "$dc_dir"
+                print_success "Deleted: ${dc_dir#$start_dir/}"
+                ((count++))
+            done < <(find "$start_dir" -type d -name ".devcontainer" 2>/dev/null)
+            echo ""
+            print_success "Deleted $count .devcontainer directories"
+            echo ""
+        else
+            print_info "Aborted"
+            return 0
+        fi
+    fi
+    
     echo ""
     
     # Find all .devcontainer dirs and build projects list
