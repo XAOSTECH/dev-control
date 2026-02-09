@@ -458,11 +458,10 @@ create_mcp_config() {
       "url": "https://mcp.stackoverflow.com"
     },
     "firecrawl": {
-      "command": "$npx_cmd",
-      "args": ["-y", "firecrawl-mcp"],
+      "command": "bash",
+      "args": ["-c", "source \$HOME/.bashrc && npx -y firecrawl-mcp"],
       "env": {
-        "FIRECRAWL_API_KEY": "\${input:firecrawlApiKey}",
-        "PATH": "$firecrawl_path"
+        "FIRECRAWL_API_KEY": "\${input:firecrawlApiKey}"
       },
       "type": "stdio"
     }
@@ -471,12 +470,7 @@ create_mcp_config() {
 MCP_EOF
     
     print_success "Created: $MCP_CONFIG_FILE"
-    if [[ "$npx_cmd" != "npx" ]]; then
-        print_info "Using npx at: ${CYAN}$npx_cmd${NC}"
-    fi
-    if [[ -n "$node_bin_dir" ]]; then
-        print_info "Node.js bin dir: ${CYAN}$node_bin_dir${NC}"
-    fi
+    print_info "Firecrawl will source NVM from ~/.bashrc dynamically"
     print_info "VS Code will prompt for tokens on first use"
 }
 
@@ -527,11 +521,10 @@ create_mcp_config_with_token() {
       "url": "https://mcp.stackoverflow.com"
     },
     "firecrawl": {
-      "command": "$npx_cmd",
-      "args": ["-y", "firecrawl-mcp"],
+      "command": "bash",
+      "args": ["-c", "source \$HOME/.bashrc && npx -y firecrawl-mcp"],
       "env": {
-        "FIRECRAWL_API_KEY": "\${input:firecrawlApiKey}",
-        "PATH": "$firecrawl_path"
+        "FIRECRAWL_API_KEY": "\${input:firecrawlApiKey}"
       },
       "type": "stdio"
     }
@@ -540,12 +533,7 @@ create_mcp_config_with_token() {
 EOF
     
     print_success "Created: $MCP_CONFIG_FILE"
-    if [[ "$npx_cmd" != "npx" ]]; then
-        print_info "Using npx at: ${CYAN}$npx_cmd${NC}"
-    fi
-    if [[ -n "$node_bin_dir" ]]; then
-        print_info "Node.js bin dir: ${CYAN}$node_bin_dir${NC}"
-    fi
+    print_info "Firecrawl will source NVM from ~/.bashrc dynamically"
     print_info "Token embedded in config (secure file permissions recommended)"
     chmod 600 "$MCP_CONFIG_FILE" 2>/dev/null || true
 }
