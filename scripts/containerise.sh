@@ -1378,35 +1378,27 @@ run_nest_mode() {
         print_info "Using existing nest.json as source of truth"
         echo ""
         
-        # Read projects from nest.json (bash-only JSON parsing)
-        local in_projects=false
-        local path="" type="" category=""
-        
-        while IFS= read -r line; do
-            # Extract path
-            if [[ $line =~ \"path\":\s*\"([^\"]+)\" ]]; then
-                path="${BASH_REMATCH[1]}"
+        # Extract projects from nest.json using grep/sed
+        # Each line: {"path": "...", "type": "...", "category": "..."}
+        grep -oP '\{"path"[^}]+\}' "$nest_json" | while read -r project_obj; do
+            # Extract values from JSON object
+            local path=$(echo "$project_obj" | grep -oP '"path":\s*"\K[^"]+')
+            local type=$(echo "$project_obj" | grep -oP '"type":\s*"\K[^"]+')
+            local category=$(echo "$project_obj" | grep -oP '"category":\s*"\K[^"]+')
+            
+            [[ -z "$path" || -z "$type" || -z "$category" ]] && continue
+            
+            # Filter by allowed categories if specified
+            if [[ -n "$allowed_cats" ]]; then
+                local match=0
+                for allowed in ${allowed_cats//|/ }; do
+                    [[ "$category" == "$allowed" ]] && match=1 && break
+                done
+                [[ $match -eq 0 ]] && continue
             fi
-            # Extract type
-            if [[ $line =~ \"type\":\s*\"([^\"]+)\" ]]; then
-                type="${BASH_REMATCH[1]}"
-            fi
-            # Extract category
-            if [[ $line =~ \"category\":\s*\"([^\"]+)\" ]]; then
-                category="${BASH_REMATCH[1]}"
-                
-                # Filter by allowed categories if specified
-                if [[ -n "$allowed_cats" ]]; then
-                    local match=0
-                    for allowed in ${allowed_cats//|/ }; do
-                        [[ "$category" == "$allowed" ]] && match=1 && break
-                    done
-                    [[ $match -eq 0 ]] && continue
-                fi
-                
-                echo "$path|$type|$category"
-            fi
-        done < "$nest_json" > "$nest_json.tmp"
+            
+            echo "$path|$type|$category"
+        done > "$nest_json.tmp"
     else
         # No nest.json - scan for .devcontainer dirs and extract categories from README.md
         print_info "No nest.json found. Scanning for containers..."
