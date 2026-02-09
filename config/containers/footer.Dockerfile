@@ -23,7 +23,8 @@ RUN if id ubuntu &>/dev/null; then \
     usermod -aG sudo ${CATEGORY} && \
     echo "${CATEGORY} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
     mkdir -p /home/${CATEGORY}/.config /home/${CATEGORY}/.cache /home/${CATEGORY}/.local/share && \
-    chown -R ${CATEGORY}:${CATEGORY} /home/${CATEGORY}
+    chown -R ${CATEGORY}:${CATEGORY} /home/${CATEGORY} && \
+    rm -rf /root/.gnupg /home/${CATEGORY}/.gnupg
 
 USER ${CATEGORY}
 WORKDIR /home/${CATEGORY}
@@ -33,9 +34,6 @@ RUN touch ~/.hushlogin
 # Configure nvm for user shell (installed system-wide in common layer)
 RUN echo 'export NVM_DIR="/opt/nvm"' >> ~/.bashrc && \
     echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> ~/.bashrc
-
-# Clean up GPG keyring, then recreate directory with proper permissions
-RUN rm -rf ~/.gnupg && mkdir -p ~/.gnupg && chmod 700 ~/.gnupg
 
 # Install dev-control system-wide to /opt
 USER root

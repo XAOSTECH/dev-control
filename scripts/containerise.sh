@@ -573,7 +573,11 @@ RUN if id ubuntu &>/dev/null; then \\
     chown -R ${CFG_CONTAINER_NAME}:${CFG_CONTAINER_NAME} /home/${CFG_CONTAINER_NAME} && \\
     chmod 775 /home/${CFG_CONTAINER_NAME}/.vscode-server && \\
     chmod 700 /home/${CFG_CONTAINER_NAME}/.gnupg && \\
-    chmod 700 /home/${CFG_CONTAINER_NAME}/.bash_backups
+    chmod 700 /home/${CFG_CONTAINER_NAME}/.bash_backups && \\
+    rm -rf /root/.gnupg /home/${CFG_CONTAINER_NAME}/.gnupg /home/${CFG_CONTAINER_NAME}/.gnupg.old && \\
+    mkdir -p /home/${CFG_CONTAINER_NAME}/.gnupg && \\
+    chmod 700 /home/${CFG_CONTAINER_NAME}/.gnupg && \\
+    chown ${CFG_CONTAINER_NAME}:${CFG_CONTAINER_NAME} /home/${CFG_CONTAINER_NAME}/.gnupg
 
 USER ${CFG_CONTAINER_NAME}
 WORKDIR /home/${CFG_CONTAINER_NAME}
@@ -610,15 +614,6 @@ DOCKERFILE_EOF
 # Bake git config into image
 RUN $git_config_cmd
 DOCKERFILE_EOF
-
-        # Clean up build-time GPG keyring if packages used gpg --import
-        if [[ "$CFG_INSTALL_NGINX_RTMP" == "true" ]]; then
-            cat >> "$dockerfile_path" << 'DOCKERFILE_EOF'
-
-# Clean up GPG keyring created during package verification, then recreate directory with proper permissions
-RUN rm -rf ~/.gnupg && mkdir -p ~/.gnupg && chmod 700 ~/.gnupg
-DOCKERFILE_EOF
-        fi
 
         cat >> "$dockerfile_path" << DOCKERFILE_EOF
 
