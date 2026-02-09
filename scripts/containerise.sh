@@ -804,6 +804,13 @@ generate_devcontainer_json() {
   },"
     fi
     
+    # Build the metadata line if category exists
+    local metadata_line=""
+    if [[ -n "$category_metadata" ]]; then
+        metadata_line=",
+  \"_dc_metadata\": ${category_metadata}"
+    fi
+    
     cat > "$devcontainer_file" << DEVCONTAINER_EOF
 ${header_comment}{
   "name": "${project_name^^}",
@@ -830,7 +837,9 @@ ${header_comment}{
         ${extensions}
       ]
     }
-  }$(if [[ -n "$category_metadata" ]]; then echo ",\n  \"_dc_metadata\": ${category_metadata}"; fi)\n}\nDEVCONTAINER_EOF
+  }${metadata_line}
+}
+DEVCONTAINER_EOF
 
     # Generate category documentation as README if applicable
     if [[ -n "$category_metadata" ]]; then
