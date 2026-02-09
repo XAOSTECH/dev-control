@@ -1476,11 +1476,22 @@ run_nest_mode() {
         if confirm "Are you ABSOLUTELY sure?"; then
             local count=0
             local dc_dir
+            echo ""
+            
+            # Temporarily disable set -e for deletion loop (rm might fail on some dirs)
+            set +e
             for dc_dir in "${regen_dirs[@]}"; do
+                print_info "Deleting: ${dc_dir#$start_dir/}"
                 rm -rf "$dc_dir"
-                print_success "Deleted: ${dc_dir#$start_dir/}"
+                if [[ $? -eq 0 ]]; then
+                    print_success "Deleted: ${dc_dir#$start_dir/}"
+                else
+                    print_warning "Failed to delete: ${dc_dir#$start_dir/}"
+                fi
                 ((count++))
             done
+            set -e
+            
             echo ""
             print_success "Deleted $count .devcontainer directories"
             echo ""
