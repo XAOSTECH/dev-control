@@ -12,12 +12,16 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2024-2026 xaoscience
 
+LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${LIB_DIR}/colours.sh"
+
 # ============================================================================
 # HEADER FUNCTIONS
 # ============================================================================
 
 # Print a styled header box with auto-padding (blue theme)
 # Usage: print_header "Title Text" [width]
+
 print_header() {
     local title="$1"
     local width=${2:-68}
@@ -27,8 +31,7 @@ print_header() {
     local right_padding=$(( total_padding - left_padding ))
     
     echo -e "\n${BOLD}${BLUE}╔$(printf '═%.0s' $(seq 1 "$width"))╗${NC}"
-    printf '%s%s%s%*s%s%s%s%*s%s%s%s\n' \
-        "${BOLD}" "${BLUE}" "║" "$left_padding" "" "${CYAN}" "$title" "${NC}" "$right_padding" "" "${BOLD}" "${BLUE}" "║${NC}"
+    echo -e "${BOLD}${BLUE}║$(printf '%*s' $left_padding '')${CYAN}${title}${NC}$(printf '%*s' $right_padding '')${BOLD}${BLUE}║${NC}"
     echo -e "${BOLD}${BLUE}╚$(printf '═%.0s' $(seq 1 "$width"))╝${NC}\n"
 }
 
@@ -43,8 +46,7 @@ print_header_success() {
     local right_padding=$(( total_padding - left_padding ))
     
     echo -e "\n${BOLD}${GREEN}╔$(printf '═%.0s' $(seq 1 "$width"))╗${NC}"
-    printf '%s%s%s%*s%s%s%s%*s%s%s%s\n' \
-        "${BOLD}" "${GREEN}" "║" "$left_padding" "" "${CYAN}" "$title" "${NC}" "$right_padding" "" "${BOLD}" "${GREEN}" "║${NC}"
+    echo -e "${BOLD}${GREEN}║$(printf '%*s' $left_padding '')${CYAN}${title}${NC}$(printf '%*s' $right_padding '')${BOLD}${GREEN}║${NC}"
     echo -e "${BOLD}${GREEN}╚$(printf '═%.0s' $(seq 1 "$width"))╝${NC}\n"
 }
 
@@ -59,8 +61,7 @@ print_header_warning() {
     local right_padding=$(( total_padding - left_padding ))
     
     echo -e "\n${BOLD}${YELLOW}╔$(printf '═%.0s' $(seq 1 "$width"))╗${NC}"
-    printf '%s%s%s%*s%s%s%s%*s%s%s%s\n' \
-        "${BOLD}" "${YELLOW}" "║" "$left_padding" "" "${CYAN}" "$title" "${NC}" "$right_padding" "" "${BOLD}" "${YELLOW}" "║${NC}"
+    echo -e "${BOLD}${YELLOW}║$(printf '%*s' $left_padding '')${CYAN}${title}${NC}$(printf '%*s' $right_padding '')${BOLD}${YELLOW}║${NC}"
     echo -e "${BOLD}${YELLOW}╚$(printf '═%.0s' $(seq 1 "$width"))╝${NC}\n"
 }
 
