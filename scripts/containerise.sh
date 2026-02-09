@@ -947,6 +947,7 @@ generate_devcontainer() {
     generate_dockerignore "$devcontainer_dir"
     generate_dockerfile "$devcontainer_dir"
     generate_devcontainer_json "$devcontainer_dir"
+    generate_container_readme "$devcontainer_dir"
     generate_config_variants "$devcontainer_dir" "" "" ""
     add_devcontainer_to_gitignore "$PROJECT_PATH"
 }
@@ -954,6 +955,62 @@ generate_devcontainer() {
 ################################################################################
 # Output
 ################################################################################
+
+generate_container_readme() {
+    local devcontainer_dir="$1"
+    local readme_file="$devcontainer_dir/README.md"
+    
+    # Determine container type from devcontainer.json
+    local container_type="Custom"
+    if [[ -f "$devcontainer_dir/devcontainer.json" ]]; then
+        grep -q '"build"' "$devcontainer_dir/devcontainer.json" && container_type="Base Image"
+        grep -q '"image"' "$devcontainer_dir/devcontainer.json" && container_type="Image-based"
+    fi
+    
+    # Determine category - check if we're in base/image mode
+    local category="custom"
+    [[ -n "$CATEGORY_FLAG" ]] && category="$CATEGORY_FLAG"
+    
+    local container_name=$(basename "$PROJECT_PATH")
+    
+    cat > "$readme_file" << EOF
+# Container Configuration
+
+## Metadata
+- **Category**: \`$category\`
+- **Type**: \`$container_type\`
+- **Container Name**: \`$container_name\`
+
+## About This Container
+
+This directory contains the devcontainer configuration for this project.
+
+### Files
+
+- **devcontainer.json** - VS Code devcontainer configuration
+- **Dockerfile** - Container image definition
+- **.dockerignore** - Files to exclude from build context
+- **README.md** - This file (metadata and instructions)
+
+### Usage
+
+1. Open this project in VS Code
+2. Press \`F1\` and run: \`Dev Containers: Reopen in Container\`
+3. The container will build and you'll work inside it
+
+### Customisation
+
+Edit \`devcontainer.json\` or \`Dockerfile\` to customise:
+- Installed tools and libraries
+- Environment variables
+- VSCode extensions
+- Mount points and volumes
+
+For more information, see the [Dev Containers documentation](https://code.visualstudio.com/docs/devcontainers/containers).
+EOF
+
+    print_success "Created: $readme_file"
+}
 
 show_activation_instructions() {
     print_header_success "Containerisation Complete!"
@@ -1316,40 +1373,91 @@ run_nest_mode() {
     [[ "$include_root" == true ]] && print_kv "Include root" "yes"
     echo ""
     
-    # Find all .devcontainer dirs and build projects list
-    find "$start_dir" -type d -name ".devcontainer" 2>/dev/null | sort | while read -r devcontainer_dir; do
-        local project_dir="$(dirname "$devcontainer_dir")"
-        local rel_path="${project_dir#$start_dir/}"
-        [[ "$rel_path" == "$project_dir" ]] && rel_path="."
+    # Check if nest.json exists - use it as source of truth
+    if [[ -f "$nest_json" ]]; then
+        print_info "Using existing nest.json as source of truth"
+        echo ""
         
-        # Skip root unless explicitly included with "."
-        if [[ "$rel_path" == "." && "$include_root" != true ]]; then
-            continue
-        fi
+        # Read projects from nest.json (bash-only JSON parsing)
+        local in_projects=false
+        local path="" type="" category=""
         
-        local dcjson="$devcontainer_dir/devcontainer.json"
-        [[ ! -f "$dcjson" ]] && continue
+        while IFS= read -r line; do
+            # Extract path
+            if [[ $line =~ \"path\":\s*\"([^\"]+)\" ]]; then
+                path="${BASH_REMATCH[1]}"
+            fi
+            # Extract type
+            if [[ $line =~ \"type\":\s*\"([^\"]+)\" ]]; then
+                type="${BASH_REMATCH[1]}"
+            fi
+            # Extract category
+            if [[ $line =~ \"category\":\s*\"([^\"]+)\" ]]; then
+                category="${BASH_REMATCH[1]}"
+                
+                # Filter by allowed categories if specified
+                if [[ -n "$allowed_cats" ]]; then
+                    local match=0
+                    for allowed in ${allowed_cats//|/ }; do
+                        [[ "$category" == "$allowed" ]] && match=1 && break
+                    done
+                    [[ $match -eq 0 ]] && continue
+                fi
+                
+                echo "$path|$type|$category"
+            fi
+        done < "$nest_json" > "$nest_json.tmp"
+    else
+        # No nest.json - scan for .devcontainer dirs and extract categories from README.md
+        print_info "No nest.json found. Scanning for containers..."
+        echo ""
         
-        # Extract category from comment
-        local category=$(grep -oiP '//\s*category:\s*\K[a-z0-9-]+' "$dcjson" 2>/dev/null | head -1)
-        category="${category:-unknown}"
-        
-        # Filter by allowed categories if specified
-        if [[ -n "$allowed_cats" ]]; then
-            local match=0
-            for allowed in ${allowed_cats//|/ }; do
-                [[ "$category" == "$allowed" ]] && match=1 && break
-            done
-            [[ $match -eq 0 ]] && continue
-        fi
-        
-        local type=""
-        [[ $(grep -c '"build"' "$dcjson" 2>/dev/null) -gt 0 ]] && type="BASE"
-        [[ $(grep -c '"image"' "$dcjson" 2>/dev/null) -gt 0 ]] && type="IMG"
-        [[ -z "$type" ]] && continue
-        
-        echo "$rel_path|$type|$category"
-    done > "$nest_json.tmp"
+        # Find all .devcontainer dirs and build projects list
+        find "$start_dir" -type d -name ".devcontainer" 2>/dev/null | sort | while read -r devcontainer_dir; do
+            local project_dir="$(dirname "$devcontainer_dir")"
+            local rel_path="${project_dir#$start_dir/}"
+            [[ "$rel_path" == "$project_dir" ]] && rel_path="."
+            
+            # Skip root unless explicitly included with "."
+            if [[ "$rel_path" == "." && "$include_root" != true ]]; then
+                continue
+            fi
+            
+            local dcjson="$devcontainer_dir/devcontainer.json"
+            [[ ! -f "$dcjson" ]] && continue
+            
+            # Extract category from README.md first
+            local category="unknown"
+            local readme_file="$devcontainer_dir/README.md"
+            if [[ -f "$readme_file" ]]; then
+                category=$(grep -oP '(?<=^- \*\*Category\*\*: `)[^`]*' "$readme_file" 2>/dev/null | head -1)
+                category="${category:-unknown}"
+            fi
+            
+            # Fallback: try comment in devcontainer.json
+            if [[ "$category" == "unknown" ]]; then
+                category=$(grep -oiP '//\s*category:\s*\K[a-z0-9-]+' "$dcjson" 2>/dev/null | head -1)
+                category="${category:-unknown}"
+            fi
+            
+            # Filter by allowed categories if specified
+            if [[ -n "$allowed_cats" ]]; then
+                local match=0
+                for allowed in ${allowed_cats//|/ }; do
+                    [[ "$category" == "$allowed" ]] && match=1 && break
+                done
+                [[ $match -eq 0 ]] && continue
+            fi
+            
+            local type=""
+            [[ $(grep -c '"build"' "$dcjson" 2>/dev/null) -gt 0 ]] && type="BASE"
+            [[ $(grep -c '"image"' "$dcjson" 2>/dev/null) -gt 0 ]] && type="IMG"
+            [[ -z "$type" ]] && continue
+            
+            echo "$rel_path|$type|$category"
+        done > "$nest_json.tmp"
+    fi
+
     
     # Handle --regen: delete existing .devcontainer directories (except root)
     if [[ "$NEST_REGEN" == true ]]; then
@@ -1426,6 +1534,12 @@ run_nest_mode() {
             printf "  ${CYAN}%d.${NC} %-30s ${YELLOW}%s${NC}\n" "$idx" "$path" "$type"
             ((idx++))
         done
+        echo ""
+        print_section "To regenerate these containers:"
+        echo -e "  1. Cd into each project directory"
+        echo -e "  2. Run: ${GREEN}containerise.sh --${type,,} --CATEGORY${NC}"
+        echo -e "     (where CATEGORY is one of: art, game-dev, data-science, streaming, web-dev, dev-tools)"
+        echo -e "  3. Or add them to ${CYAN}$nest_json${NC} manually"
         echo ""
     fi
     
