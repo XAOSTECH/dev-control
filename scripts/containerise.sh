@@ -1495,7 +1495,7 @@ run_nest_mode() {
             echo ""
             print_success "Deleted $count .devcontainer directories"
             echo ""
-            print_info "Continuing with rebuild of recognized projects..."
+            print_info "Continuing with rebuild of recognised projects..."
             echo ""
         else
             print_info "Aborted"
