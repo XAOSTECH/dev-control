@@ -748,6 +748,7 @@ generate_devcontainer_json() {
     # Determine image_or_build and store category metadata for README
     local image_or_build=""
     local category_metadata=""
+    local header_comment=""
     
     if [[ -n "$use_image" ]]; then
         # Using pre-built image
@@ -755,6 +756,23 @@ generate_devcontainer_json() {
         if [[ -n "$category" ]]; then
             local github_ref="${CATEGORY_GITHUB_PATHS[$category]}"
             category_metadata="{\"type\":\"image\",\"category\":\"$category\",\"base_image\":\"$use_image\",\"source\":\"$github_ref\",\"features\":\"${CATEGORY_FEATURES[$category]}\"}"
+            header_comment="  // Category: $category
+  // Base image: $use_image
+  // ============================================================================
+  // This devcontainer uses a pre-built dev-control category image.
+  // 
+  // Build source: $github_ref
+  // Features: ${CATEGORY_FEATURES[$category]}
+  // 
+  // To build this base image locally:
+  //   git clone https://github.com/xaostech/dev-control ~/.dev-control
+  //   cd ~/.dev-control/.devcontainer/$category
+  //   podman build -t $use_image .
+  //
+  // To use a local build instead of pulling from registry, ensure the image exists:
+  //   podman images | grep ${use_image%%:*}
+  // ============================================================================
+"
         fi
     elif [[ -n "$category" ]]; then
         # Building from Dockerfile for a category
@@ -764,6 +782,21 @@ generate_devcontainer_json() {
         local image_tag="${BASE_IMAGE_CATEGORIES[$category]}"
         local github_ref="${CATEGORY_GITHUB_PATHS[$category]}"
         category_metadata="{\"type\":\"build\",\"category\":\"$category\",\"image_tag\":\"$image_tag\",\"source\":\"$github_ref\",\"features\":\"${CATEGORY_FEATURES[$category]}\"}"
+        header_comment="  // ============================================================================
+  // Category: $category
+  // Image tag: $image_tag
+  // ============================================================================
+  // This devcontainer builds from the generated Dockerfile.
+  // 
+  // Build source: $github_ref
+  // Features: ${CATEGORY_FEATURES[$category]}
+  // 
+  // After building, tag the image for reuse:
+  //   podman tag \$(podman images --filter \"label=devcontainer.local_folder=\$(pwd)\") $image_tag
+  //
+  // Then use --img --$category in other projects to reference this image.
+  // ============================================================================
+"
     else
         # Regular build mode
         image_or_build="\"build\": {
@@ -773,7 +806,7 @@ generate_devcontainer_json() {
     
     cat > "$devcontainer_file" << DEVCONTAINER_EOF
 {
-  "name": "${project_name^^}",
+${header_comment}  "name": "${project_name^^}",
   ${image_or_build}
   "remoteUser": "${remote_user}",
   "workspaceMount": "source=\${localWorkspaceFolder},target=/workspaces/${project_name},type=bind,consistency=cached",
@@ -1281,7 +1314,7 @@ run_nest_mode() {
         local dcjson="$devcontainer_dir/devcontainer.json"
         [[ ! -f "$dcjson" ]] && continue
         
-        # Extract category and type
+        # Extract category from comment header
         local category=$(grep -oiP '//\s*category:\s*\K[a-z0-9-]+' "$dcjson" 2>/dev/null | head -1)
         category="${category:-unknown}"
         
