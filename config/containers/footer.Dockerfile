@@ -34,8 +34,8 @@ RUN touch ~/.hushlogin
 RUN echo 'export NVM_DIR="/opt/nvm"' >> ~/.bashrc && \
     echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> ~/.bashrc
 
-# Clean up GPG keyring (interferes with host GPG agent mount)
-RUN rm -rf ~/.gnupg
+# Clean up GPG keyring, then recreate directory with proper permissions
+RUN rm -rf ~/.gnupg && mkdir -p ~/.gnupg && chmod 700 ~/.gnupg
 
 # Install dev-control system-wide to /opt
 USER root

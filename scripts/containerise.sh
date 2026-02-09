@@ -612,12 +612,11 @@ RUN $git_config_cmd
 DOCKERFILE_EOF
 
         # Clean up build-time GPG keyring if packages used gpg --import
-        # This prevents interference with the mounted host GPG agent socket
         if [[ "$CFG_INSTALL_NGINX_RTMP" == "true" ]]; then
             cat >> "$dockerfile_path" << 'DOCKERFILE_EOF'
 
-# Clean up GPG keyring created during package verification (interferes with host GPG agent mount)
-RUN rm -rf ~/.gnupg
+# Clean up GPG keyring created during package verification, then recreate directory with proper permissions
+RUN rm -rf ~/.gnupg && mkdir -p ~/.gnupg && chmod 700 ~/.gnupg
 DOCKERFILE_EOF
         fi
 
