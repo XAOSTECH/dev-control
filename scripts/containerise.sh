@@ -805,8 +805,8 @@ generate_devcontainer_json() {
     fi
     
     cat > "$devcontainer_file" << DEVCONTAINER_EOF
-{
-${header_comment}  "name": "${project_name^^}",
+${header_comment}{
+  "name": "${project_name^^}",
   ${image_or_build}
   "remoteUser": "${remote_user}",
   "workspaceMount": "source=\${localWorkspaceFolder},target=/workspaces/${project_name},type=bind,consistency=cached",
@@ -830,9 +830,7 @@ ${header_comment}  "name": "${project_name^^}",
         ${extensions}
       ]
     }
-  }
-}
-DEVCONTAINER_EOF
+  }$(if [[ -n "$category_metadata" ]]; then echo ",\n  \"_dc_metadata\": ${category_metadata}"; fi)\n}\nDEVCONTAINER_EOF
 
     # Generate category documentation as README if applicable
     if [[ -n "$category_metadata" ]]; then
@@ -1314,8 +1312,16 @@ run_nest_mode() {
         local dcjson="$devcontainer_dir/devcontainer.json"
         [[ ! -f "$dcjson" ]] && continue
         
-        # Extract category from comment header
-        local category=$(grep -oiP '//\s*category:\s*\K[a-z0-9-]+' "$dcjson" 2>/dev/null | head -1)
+        # Extract category: try JSON metadata field first, then comment headers, then README
+        local category=$(grep -oP '"_dc_metadata"\s*:\s*\{[^}]*"category"\s*:\s*"\K[^"]*' "$dcjson" 2>/dev/null | head -1)
+        if [[ -z "$category" ]]; then
+            # Fallback to comment header (for older files)
+            category=$(grep -oiP '//\s*category:\s*\K[a-z0-9-]+' "$dcjson" 2>/dev/null | head -1)
+        fi
+        if [[ -z "$category" ]]; then
+            # Last resort: check README.md if it exists
+            [[ -f "$devcontainer_dir/README.md" ]] && category=$(grep -oP '(?<=**Category: `)[^`]*' "$devcontainer_dir/README.md" 2>/dev/null | head -1)
+        fi
         category="${category:-unknown}"
         
         # Filter by allowed categories if specified
