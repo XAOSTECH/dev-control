@@ -445,30 +445,30 @@ create_mcp_config() {
       "password": true
     }
   ],
-  "servers": {
-    "github": {
-      "type": "http",
-      "url": "https://api.githubcopilot.com/mcp/",
-      "headers": {
-        "Authorisation": "Bearer \${input:github_mcp_pat}"
-      }
-    },
-    "stackoverflow": {
-      "type": "http",
-      "url": "https://mcp.stackoverflow.com"
-    },
+    "servers": {
+        "github": {
+            "type": "http",
+            "url": "https://api.githubcopilot.com/mcp/",
+            "headers": {
+                "Authorization": "Bearer \${input:github_mcp_pat}"
+            }
+        },
+        "stackoverflow": {
+            "type": "http",
+            "url": "https://mcp.stackoverflow.com"
+        },
         "firecrawl": {
             "command": "bash",
             "args": ["-lc", "source \$HOME/.bashrc && npx -y firecrawl-mcp"],
             "env": {
-                                "FIRECRAWL_API_KEY": "\${input:firecrawlApiKey}",
-                                "PATH": "${firecrawl_path}",
-                                "NPM_CONFIG_CACHE": "/tmp/npm-cache",
-                                "npm_config_cache": "/tmp/npm-cache"
+                "FIRECRAWL_API_KEY": "\${input:firecrawlApiKey}",
+                "PATH": "${firecrawl_path}",
+                "NPM_CONFIG_CACHE": "/tmp/npm-cache",
+                "npm_config_cache": "/tmp/npm-cache"
             },
             "type": "stdio"
         }
-  }
+    }
 }
 MCP_EOF
     
@@ -511,30 +511,30 @@ create_mcp_config_with_token() {
       "password": true
     }
   ],
-  "servers": {
-    "github": {
-      "type": "http",
-      "url": "https://api.githubcopilot.com/mcp/",
-      "headers": {
-        "Authorisation": "Bearer $token"
-      }
-    },
-    "stackoverflow": {
-      "type": "http",
-      "url": "https://mcp.stackoverflow.com"
-    },
+    "servers": {
+        "github": {
+            "type": "http",
+            "url": "https://api.githubcopilot.com/mcp/",
+            "headers": {
+                "Authorization": "Bearer $token"
+            }
+        },
+        "stackoverflow": {
+            "type": "http",
+            "url": "https://mcp.stackoverflow.com"
+        },
         "firecrawl": {
             "command": "bash",
             "args": ["-lc", "source \$HOME/.bashrc && npx -y firecrawl-mcp"],
             "env": {
-                                "FIRECRAWL_API_KEY": "\${input:firecrawlApiKey}",
-                                "PATH": "${firecrawl_path}",
-                                "NPM_CONFIG_CACHE": "/tmp/npm-cache",
-                                "npm_config_cache": "/tmp/npm-cache"
+                "FIRECRAWL_API_KEY": "\${input:firecrawlApiKey}",
+                "PATH": "${firecrawl_path}",
+                "NPM_CONFIG_CACHE": "/tmp/npm-cache",
+                "npm_config_cache": "/tmp/npm-cache"
             },
             "type": "stdio"
         }
-  }
+    }
 }
 EOF
     

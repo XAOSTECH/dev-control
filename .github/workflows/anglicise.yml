@@ -341,7 +341,7 @@ jobs:
               # - Variable references ($color, ${color})
               # - Assignment patterns (color=, COLOR=)
               MATCHES=$(grep -inw "$american" "$file" 2>/dev/null | \
-                grep -vE '(/[a-zA-Z0-9_.-]+\.[a-z]{1,4}|https?://|file://|--[a-z-]+ (center|color|gray)|\$\{?(color|center|gray)|\b(color|center|gray)[_A-Z]*=|gum |\\$)' || true)
+                grep -vE '(/[a-zA-Z0-9_.-]+\.[a-z]{1,4}|https?://|file://|"Authorization": "Bearer|--[a-z-]+ (center|color|gray)|\$\{?(color|center|gray)|\b(color|center|gray)[_A-Z]*=|gum |\\$)' || true)
               
               if [[ -n "$MATCHES" ]]; then
                 FILES_TO_FIX["$file"]=1
@@ -457,7 +457,7 @@ jobs:
               
               # Check if file contains the word (case-insensitive, whole word)
               # Exclude lines containing filenames, HTML attributes, CLI flags, or code patterns
-              if grep -inw "$american" "$file" 2>/dev/null | grep -qvE '([a-zA-Z0-9_-]+\.[a-zA-Z]{1,4}\b|=["'\''](center|color)|--[a-z-]+ (center|color|gray)|--color|--center|\$\{?(color|center|gray)|\b(COLOR|CENTER|GRAY)[_A-Z]*|gum |\\$)'; then
+              if grep -inw "$american" "$file" 2>/dev/null | grep -qvE '([a-zA-Z0-9_-]+\.[a-zA-Z]{1,4}\b|"Authorization": "Bearer|=["'\''](center|color)|--[a-z-]+ (center|color|gray)|--color|--center|\$\{?(color|center|gray)|\b(COLOR|CENTER|GRAY)[_A-Z]*|gum |\\$)'; then
                 case_preserve_replace "$file" "$american" "$british"
                 echo "  ✓ Fixed in: $file"
                 FIXED_COUNT=$((FIXED_COUNT + 1))
