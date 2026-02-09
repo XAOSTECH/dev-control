@@ -739,34 +739,19 @@ generate_devcontainer_json() {
   ],"
     fi
     
-    # Add header comments for category images
-    local header_comment=""
+    # Build git config line from saved YAML configuration (always include safe.directory and defaultBranch)
+    local git_config_line=" && $(generate_git_config_postcreate "$CFG_GITHUB_USER" "$CFG_GITHUB_USER_EMAIL" "$CFG_GPG_KEY_ID")"
+    
+    # Determine image_or_build and store category metadata for README
     local image_or_build=""
+    local category_metadata=""
     
     if [[ -n "$use_image" ]]; then
         # Using pre-built image
         image_or_build="\"image\": \"$use_image\","
         if [[ -n "$category" ]]; then
             local github_ref="${CATEGORY_GITHUB_PATHS[$category]}"
-            header_comment="  // ============================================================================
-  // Category: $category
-  // Base image: $use_image
-  // ============================================================================
-  // This devcontainer uses a pre-built dev-control category image.
-  // 
-  // Build source: $github_ref
-  // Features: ${CATEGORY_FEATURES[$category]}
-  // 
-  // To build this base image locally:
-  //   git clone https://github.com/xaostech/dev-control ~/.dev-control
-  //   cd ~/.dev-control/.devcontainer/$category
-  //   podman build -t $use_image .
-  //
-  // To use a local build instead of pulling from registry, ensure the image exists:
-  //   podman images | grep ${use_image%%:*}
-  // ============================================================================
-
-"
+            category_metadata="{\"type\":\"image\",\"category\":\"$category\",\"base_image\":\"$use_image\",\"source\":\"$github_ref\",\"features\":\"${CATEGORY_FEATURES[$category]}\"}"
         fi
     elif [[ -n "$category" ]]; then
         # Building from Dockerfile for a category
@@ -775,22 +760,7 @@ generate_devcontainer_json() {
   },"
         local image_tag="${BASE_IMAGE_CATEGORIES[$category]}"
         local github_ref="${CATEGORY_GITHUB_PATHS[$category]}"
-        header_comment="  // ============================================================================
-  // Category: $category
-  // Image tag: $image_tag
-  // ============================================================================
-  // This devcontainer builds from the generated Dockerfile.
-  // 
-  // Build source: $github_ref
-  // Features: ${CATEGORY_FEATURES[$category]}
-  // 
-  // After building, tag the image for reuse:
-  //   podman tag \$(podman images  --filter \"label=devcontainer.local_folder=\$(pwd)\") $image_tag
-  //
-  // Then use --img --$category in other projects to reference this image.
-  // ============================================================================
-
-"
+        category_metadata="{\"type\":\"build\",\"category\":\"$category\",\"image_tag\":\"$image_tag\",\"source\":\"$github_ref\",\"features\":\"${CATEGORY_FEATURES[$category]}\"}"
     else
         # Regular build mode
         image_or_build="\"build\": {
@@ -798,12 +768,9 @@ generate_devcontainer_json() {
   },"
     fi
     
-    # Build git config line from saved YAML configuration (always include safe.directory and defaultBranch)
-    local git_config_line=" && $(generate_git_config_postcreate "$CFG_GITHUB_USER" "$CFG_GITHUB_USER_EMAIL" "$CFG_GPG_KEY_ID")"
-    
     cat > "$devcontainer_file" << DEVCONTAINER_EOF
 {
-${header_comment}  "name": "${project_name^^}",
+  "name": "${project_name^^}",
   ${image_or_build}
   "remoteUser": "${remote_user}",
   "workspaceMount": "source=\${localWorkspaceFolder},target=/workspaces/${project_name},type=bind,consistency=cached",
@@ -831,7 +798,89 @@ ${header_comment}  "name": "${project_name^^}",
 }
 DEVCONTAINER_EOF
 
+    # Generate category documentation as README if applicable
+    if [[ -n "$category_metadata" ]]; then
+        generate_category_readme "$devcontainer_dir" "$category_metadata"
+    fi
+    
     print_success "Created: $devcontainer_file"
+}
+
+# Generate category README documentation
+generate_category_readme() {
+    local devcontainer_dir="$1"
+    local metadata="$2"
+    
+    # Parse metadata JSON (simple extraction without jq)
+    local category=$(echo "$metadata" | grep -oP '(?<="category":")[^"]*')
+    local type=$(echo "$metadata" | grep -oP '(?<="type":")[^"]*')
+    local base_image=$(echo "$metadata" | grep -oP '(?<="base_image":")[^"]*')
+    local image_tag=$(echo "$metadata" | grep -oP '(?<="image_tag":")[^"]*')
+    local source=$(echo "$metadata" | grep -oP '(?<="source":")[^"]*')
+    local features=$(echo "$metadata" | grep -oP '(?<="features":")[^"]*')
+    
+    local readme_file="$devcontainer_dir/README.md"
+    
+    {
+        echo "# Container Configuration"
+        echo ""
+        echo "**Category:** \`$category\`"
+        echo ""
+        
+        if [[ "$type" == "image" ]]; then
+            echo "**Type:** Pre-built image"
+            echo "**Base Image:** \`$base_image\`"
+            echo ""
+            echo "## About"
+            echo ""
+            echo "This devcontainer uses a pre-built dev-control category image."
+            echo ""
+            echo "**Features:** $features"
+            echo ""
+            echo "**Build source:** $source"
+            echo ""
+            echo "## Build Locally"
+            echo ""
+            echo "To build this base image locally:"
+            echo ""
+            echo "\`\`\`bash"
+            echo "git clone https://github.com/xaostech/dev-control ~/.dev-control"
+            echo "cd ~/.dev-control/.devcontainer/$category"
+            echo "podman build -t $base_image ."
+            echo "\`\`\`"
+            echo ""
+            echo "## Using Local Build"
+            echo ""
+            echo "To use a local build instead of pulling from registry, ensure the image exists:"
+            echo ""
+            echo "\`\`\`bash"
+            echo "podman images | grep ${base_image%%:*}"
+            echo "\`\`\`"
+        elif [[ "$type" == "build" ]]; then
+            echo "**Type:** Build from Dockerfile"
+            echo "**Image tag:** \`$image_tag\`"
+            echo ""
+            echo "## About"
+            echo ""
+            echo "This devcontainer builds from the generated Dockerfile."
+            echo ""
+            echo "**Features:** $features"
+            echo ""
+            echo "**Build source:** $source"
+            echo ""
+            echo "## Tag for Reuse"
+            echo ""
+            echo "After building, tag the image for reuse:"
+            echo ""
+            echo "\`\`\`bash"
+            echo "podman tag \$(podman images --filter \"label=devcontainer.local_folder=\$(pwd)\") $image_tag"
+            echo "\`\`\`"
+            echo ""
+            echo "Then use \`--img --$category\` in other projects to reference this image."
+        fi
+    } > "$readme_file"
+    
+    print_success "Created: $readme_file"
 }
 
 # Generate all devcontainer files
