@@ -42,6 +42,7 @@ source "$SCRIPT_DIR/lib/container.sh"
 # CLI options
 MODE=""  # "base" or "image"
 CATEGORY_FLAG=""
+BARE_MODE=false
 USE_DEFAULTS=false
 CONFIG_FILE=""
 PROJECT_PATH=""
@@ -64,6 +65,7 @@ USAGE:
 MODES:
   --base    Build a category base image (e.g., devcontrol/game-dev:latest)
   --img     Generate devcontainer.json that uses a category base image
+  --bare    Generate minimal devcontainer (no category, custom base image)
   --nest    Recursively rebuild all base and img containers in subdirectories
             Use --nest . to include the root directory itself
 
@@ -121,6 +123,10 @@ parse_args() {
                 ;;
             --img)
                 MODE="image"
+                shift
+                ;;
+            --bare)
+                BARE_MODE=true
                 shift
                 ;;
             --nest)
@@ -1354,6 +1360,13 @@ main() {
         exit 0
     fi
     
+    # Handle --bare mode
+    if [[ "$BARE_MODE" == true ]]; then
+        print_header "Dev-Control Containerisation (Bare Mode)"
+        print_info "Setting up minimal devcontainer (custom base image only)"
+        # Bare mode: don't require defaults, continue to interactive config
+    fi
+    
     # Always load user configuration (GPG, mounts, GitHub user, etc.)
     load_container_config
     
@@ -1404,6 +1417,15 @@ main() {
         elif [[ "$MODE" == "image" ]]; then
             generate_image_devcontainer "$CATEGORY_FLAG"
             exit 0
+        fi
+    fi
+    
+    # Bare mode requires defaults or will use interactive config
+    if [[ "$BARE_MODE" == true ]]; then
+        if [[ "$USE_DEFAULTS" != true ]]; then
+            print_warning "Bare mode with interactive config not fully supported"
+            print_info "Use --defaults flag with --bare for one-shot setup"
+            exit 1
         fi
     fi
     
