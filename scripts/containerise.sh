@@ -1484,6 +1484,8 @@ run_nest_mode() {
             echo ""
             print_success "Deleted $count .devcontainer directories"
             echo ""
+            print_info "Continuing with rebuild of recognized projects..."
+            echo ""
         else
             print_info "Aborted"
             rm -f "$nest_json.tmp"
@@ -1573,15 +1575,22 @@ run_nest_mode() {
     echo ""
     
     # ASK FOR CONFIRMATION FOR RECOGNISED PROJECTS
-    print_warning "Regenerate ${#known_projects[@]} recognised containers?"
-    read -p "Proceed? [y/N] " -n 1 -r
-    echo ""
-    echo ""
-    
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        print_info "Aborted - no changes made"
-        rm -f "$nest_json.tmp"
-        return 0
+    # Skip if --regen was used (user already confirmed delete operation)
+    if [[ "$NEST_REGEN" != true ]]; then
+        print_warning "Regenerate ${#known_projects[@]} recognised containers?"
+        read -p "Proceed? [y/N] " -n 1 -r
+        echo ""
+        echo ""
+        
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            print_info "Aborted - no changes made"
+            rm -f "$nest_json.tmp"
+            return 0
+        fi
+    else
+        # With --regen, auto-proceed after deletion confirmation
+        print_info "Auto-proceeding with rebuild of ${#known_projects[@]} containers..."
+        echo ""
     fi
     
     # Execute builds (only known projects)
