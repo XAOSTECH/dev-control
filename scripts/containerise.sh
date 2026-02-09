@@ -1323,7 +1323,10 @@ run_nest_mode() {
                 rm -rf "$dc_dir"
                 print_success "Deleted: ${dc_dir#$start_dir/}"
                 ((count++))
-            done < <(find "$start_dir" -type d -name ".devcontainer" 2>/dev/null)
+            done < <(
+                find "$start_dir" -type d -name ".devcontainer" 2>/dev/null \
+                    | grep -vE '/\.(tmp|bak)(/|$)'
+            )
             echo ""
             print_success "Deleted $count .devcontainer directories"
             echo ""
