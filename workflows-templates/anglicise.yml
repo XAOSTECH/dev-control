@@ -499,11 +499,10 @@ jobs:
             exit 0
           fi
           
-          # Configure git to use the key
           git config --global user.signingkey "$KEY_ID"
           git config --global commit.gpgsign true
           
-          echo "✅ GPG key $KEY_ID imported and configured successfully"
+          echo "✅ GPG key imported and configured successfully"
           echo "outcome=success" >> $GITHUB_OUTPUT
           exit 0
 
