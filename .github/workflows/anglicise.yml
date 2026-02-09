@@ -482,14 +482,20 @@ jobs:
           fi
           
           # Import the key
-          echo "$GPG_PRIVATE_KEY" | gpg --batch --import 2>&1
+          echo "$GPG_PRIVATE_KEY" | gpg --batch --import 2>&1 || true
           
-          # Get the key ID
-          KEY_ID=$(echo "$GPG_PRIVATE_KEY" | gpg --batch --import --import-options show-only 2>&1 | grep -oP 'key \K[0-9A-F]+')
+          # Get the key ID (try multiple patterns)
+          KEY_ID=$(echo "$GPG_PRIVATE_KEY" | gpg --batch --import --import-options show-only 2>&1 | grep -oE 'key [0-9A-F]+' | head -1 | awk '{print $2}' || true)
           
           if [[ -z "$KEY_ID" ]]; then
-            echo "⚠️ Failed to import GPG key"
-            echo "outcome=failure" >> $GITHUB_OUTPUT
+            # Try alternative extraction from gpg --list-secret-keys
+            KEY_ID=$(gpg --list-secret-keys --keyid-format=long 2>/dev/null | grep -oE '[0-9A-F]{16}' | head -1 || true)
+          fi
+          
+          if [[ -z "$KEY_ID" ]]; then
+            echo "⚠️ Could not extract GPG key ID, but import may have succeeded"
+            echo "ℹ️ Commits will be unsigned"
+            echo "outcome=partial" >> $GITHUB_OUTPUT
             exit 0
           fi
           
@@ -497,8 +503,9 @@ jobs:
           git config --global user.signingkey "$KEY_ID"
           git config --global commit.gpgsign true
           
-          echo "✅ GPG key imported successfully"
+          echo "✅ GPG key $KEY_ID imported and configured successfully"
           echo "outcome=success" >> $GITHUB_OUTPUT
+          exit 0
 
       - name: Ensure automerge label exists
         if: steps.check.outputs.needs_fix == 'true'
