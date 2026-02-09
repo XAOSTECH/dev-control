@@ -3,6 +3,9 @@ name: Automerge
 on:
   pull_request_target:
     types: [opened, reopened, labeled, synchronize]
+  workflow_run:
+    workflows: ["British English Spelling Check"]
+    types: [completed]
   workflow_dispatch:
     inputs:
       pull_numbers:
@@ -43,6 +46,24 @@ jobs:
               prNumbers = [context.payload.pull_request.number];
             }
             
+            if (prNumbers.length === 0) {
+              core.info('No PR numbers found, scanning open PRs with automerge label.');
+              try {
+                const issues = await github.rest.issues.listForRepo({
+                  owner,
+                  repo,
+                  state: 'open',
+                  labels: 'automerge',
+                  per_page: 100
+                });
+                prNumbers = issues.data
+                  .filter(issue => issue.pull_request)
+                  .map(issue => issue.number);
+              } catch (error) {
+                core.info(`Failed to list PRs by label: ${error.message}`);
+              }
+            }
+
             if (prNumbers.length === 0) {
               core.info('No PR numbers found.');
               core.setOutput('pr_numbers', '[]');
