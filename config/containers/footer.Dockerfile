@@ -14,11 +14,11 @@
 # Create user ${CATEGORY} with sudo privileges
 RUN if id ubuntu &>/dev/null; then \
         groupmod -n ${CATEGORY} ubuntu && \
-        usermod -l ${CATEGORY} -d /home/${CATEGORY} ubuntu && \
+        usermod -u 1000 -l ${CATEGORY} -d /home/${CATEGORY} ubuntu && \
         mkdir -p /home/${CATEGORY} && \
         chown -R ${CATEGORY}:${CATEGORY} /home/${CATEGORY}; \
     else \
-        useradd -m -s /bin/bash ${CATEGORY}; \
+        useradd -m -s /bin/bash -u 1000 ${CATEGORY}; \
     fi && \
     usermod -aG sudo ${CATEGORY} && \
     echo "${CATEGORY} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
@@ -43,11 +43,11 @@ RUN mkdir -p /opt/dev-control && \
     echo 'export PATH=/opt/dev-control/scripts:$PATH' >> /etc/profile.d/dev-control.sh && \
     chmod 644 /etc/profile.d/dev-control.sh
 
-# Pre-create .vscode-server, .gnupg, and .bash_backups directories with proper permissions
-RUN mkdir -p /home/${CATEGORY}/.vscode-server /home/${CATEGORY}/.gnupg /home/${CATEGORY}/.bash_backups && \
-    chown ${CATEGORY}:${CATEGORY} /home/${CATEGORY}/.vscode-server /home/${CATEGORY}/.gnupg /home/${CATEGORY}/.bash_backups && \
+# Pre-create .vscode-server and .bash_backups directories with proper permissions
+# (VS Code will create .gnupg fresh during initialization with correct ownership)
+RUN mkdir -p /home/${CATEGORY}/.vscode-server /home/${CATEGORY}/.bash_backups && \
+    chown ${CATEGORY}:${CATEGORY} /home/${CATEGORY}/.vscode-server /home/${CATEGORY}/.bash_backups && \
     chmod 775 /home/${CATEGORY}/.vscode-server && \
-    chmod 700 /home/${CATEGORY}/.gnupg && \
     chmod 700 /home/${CATEGORY}/.bash_backups
 
 # Set git config as root for the user's home
@@ -60,9 +60,8 @@ RUN HOME=/home/${CATEGORY} bash -c 'bash /opt/dev-control/scripts/alias-loading.
     chown ${CATEGORY}:${CATEGORY} /home/${CATEGORY}/.bash_aliases /home/${CATEGORY}/.bashrc
 
 # Final permission enforcement (survives --userns remapping)
-RUN chmod -R u+w /home/${CATEGORY}/.gnupg /home/${CATEGORY}/.ssh /home/${CATEGORY}/.cache 2>/dev/null || true && \
-    chmod 700 /home/${CATEGORY}/.gnupg 2>/dev/null || true && \
-    chown -R ${CATEGORY}:${CATEGORY} /home/${CATEGORY}/.gnupg /home/${CATEGORY}/.ssh /home/${CATEGORY}/.cache 2>/dev/null || true
+RUN chmod -R u+w /home/${CATEGORY}/.ssh /home/${CATEGORY}/.cache 2>/dev/null || true && \
+    chown -R ${CATEGORY}:${CATEGORY} /home/${CATEGORY}/.ssh /home/${CATEGORY}/.cache 2>/dev/null || true
 
 USER ${CATEGORY}
 

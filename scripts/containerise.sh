@@ -559,25 +559,21 @@ DOCKERFILE_EOF
 RUN if id ubuntu &>/dev/null; then \\
         # Rename ubuntu user and ensure home exists
         groupmod -n ${CFG_CONTAINER_NAME} ubuntu && \\
-        usermod -l ${CFG_CONTAINER_NAME} -d /home/${CFG_CONTAINER_NAME} ubuntu && \\
+        usermod -u 1000 -l ${CFG_CONTAINER_NAME} -d /home/${CFG_CONTAINER_NAME} ubuntu && \\
         if [ ! -d /home/${CFG_CONTAINER_NAME} ]; then mkdir -p /home/${CFG_CONTAINER_NAME}; fi && \\
         if [ -d /home/ubuntu ] && [ ! -d /home/${CFG_CONTAINER_NAME} ]; then \\
             mv /home/ubuntu /home/${CFG_CONTAINER_NAME}; \\
         fi; \\
     else \\
-        useradd -m -s /bin/bash ${CFG_CONTAINER_NAME}; \\
+        useradd -m -s /bin/bash -u 1000 ${CFG_CONTAINER_NAME}; \\
     fi && \\
     usermod -aG sudo ${CFG_CONTAINER_NAME} && \\
     echo "${CFG_CONTAINER_NAME} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \\
-    mkdir -p /home/${CFG_CONTAINER_NAME}/.config /home/${CFG_CONTAINER_NAME}/.cache /home/${CFG_CONTAINER_NAME}/.local/share /home/${CFG_CONTAINER_NAME}/.vscode-server /home/${CFG_CONTAINER_NAME}/.gnupg /home/${CFG_CONTAINER_NAME}/.bash_backups && \\
+    mkdir -p /home/${CFG_CONTAINER_NAME}/.config /home/${CFG_CONTAINER_NAME}/.cache /home/${CFG_CONTAINER_NAME}/.local/share /home/${CFG_CONTAINER_NAME}/.vscode-server /home/${CFG_CONTAINER_NAME}/.bash_backups && \\
     chown -R ${CFG_CONTAINER_NAME}:${CFG_CONTAINER_NAME} /home/${CFG_CONTAINER_NAME} && \\
     chmod 775 /home/${CFG_CONTAINER_NAME}/.vscode-server && \\
-    chmod 700 /home/${CFG_CONTAINER_NAME}/.gnupg && \\
     chmod 700 /home/${CFG_CONTAINER_NAME}/.bash_backups && \\
-    rm -rf /root/.gnupg /home/${CFG_CONTAINER_NAME}/.gnupg /home/${CFG_CONTAINER_NAME}/.gnupg.old && \\
-    mkdir -p /home/${CFG_CONTAINER_NAME}/.gnupg && \\
-    chmod 700 /home/${CFG_CONTAINER_NAME}/.gnupg && \\
-    chown ${CFG_CONTAINER_NAME}:${CFG_CONTAINER_NAME} /home/${CFG_CONTAINER_NAME}/.gnupg
+    rm -rf /root/.gnupg /home/${CFG_CONTAINER_NAME}/.gnupg.old
 
 USER ${CFG_CONTAINER_NAME}
 WORKDIR /home/${CFG_CONTAINER_NAME}
@@ -792,7 +788,7 @@ generate_devcontainer_json() {
   "containerEnv": {
     ${container_env}
   },
-  "postCreateCommand": "sudo chown -R ${uid}:${uid} . 2>/dev/null || true && sudo chmod 755 /home/${remote_user} 2>/dev/null || true && sudo chown -R ${uid}:${uid} /home/${remote_user}/.vscode-server 2>/dev/null || true && git config --global --add safe.directory '*' && git config --global init.defaultBranch main${git_config_line} && sudo mkdir -p /run/user/${uid}/gnupg && sudo chown -R ${uid}:${uid} /run/user/${uid} && ln -sf /tmp/wayland-0 /run/user/${uid}/wayland-0 2>/dev/null || true && sudo rm -rf /home/${remote_user}/.gnupg && sudo mkdir -p /home/${remote_user}/.gnupg && sudo chmod 700 /home/${remote_user}/.gnupg && sudo chown ${uid}:${uid} /home/${remote_user}/.gnupg && bash -c 'bash /opt/dev-control/scripts/alias-loading.sh <<< A'",
+  "postStartCommand": "sudo chown -R ${uid}:${uid} . 2>/dev/null || true && sudo chmod 755 /home/${remote_user} 2>/dev/null || true && sudo chown -R ${uid}:${uid} /home/${remote_user}/.vscode-server 2>/dev/null || true && sudo mkdir -p /run/user/${uid}/gnupg && sudo chown -R ${uid}:${uid} /run/user/${uid} 2>/dev/null || true && ln -sf /tmp/wayland-0 /run/user/${uid}/wayland-0 2>/dev/null || true && git config --global --add safe.directory '*' && git config --global init.defaultBranch main${git_config_line} && bash -c 'bash /opt/dev-control/scripts/alias-loading.sh <<< A'",
   "customizations": {
     "vscode": {
       "settings": {
