@@ -388,8 +388,8 @@ jobs:
           VERSION="${{ steps.version.outputs.version }}"
           TAG_NAME="${{ steps.version.outputs.tag_name }}"
           
-          # Get previous tag
-          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          # Get previous version tag (v*), sorted by version (excludes 'latest' tag)
+          PREV_TAG=$(git tag -l 'v*' --sort=-version:refname | head -2 | tail -1 || echo "")
           
           # Generate changelog
           NOTES_FILE=$(mktemp)
@@ -402,7 +402,7 @@ jobs:
           if [[ -n "$PREV_TAG" ]]; then
             echo "### Commits since ${PREV_TAG}" >> "$NOTES_FILE"
             echo "" >> "$NOTES_FILE"
-            git log "${PREV_TAG}..HEAD" --pretty=format:"- %s (%h)" >> "$NOTES_FILE"
+            git log "${PREV_TAG}..${TAG_NAME}" --pretty=format:"- %s (%h)" >> "$NOTES_FILE"
           else
             echo "### Initial Release" >> "$NOTES_FILE"
             echo "" >> "$NOTES_FILE"
