@@ -5,6 +5,24 @@ All notable changes to Dev-Control will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.2] - 2026-02-11
+
+### Fixed
+- **Devcontainer UID mismatch with `--userns=keep-id`**:
+  - Added `-u 1000` flag to `usermod` when renaming ubuntu user in Dockerfile
+  - Ensures dev-tools user UID matches host UID 1000 from `--userns=keep-id` remapping
+  - Fixes "Permission denied" errors on `.gnupg`, `.ssh`, `.gitconfig` during container initialization
+- **GPG directory pre-creation removed**:
+  - Removed `.gnupg` pre-creation from `footer.Dockerfile` and `containerise.sh`
+  - Let VS Code create `.gnupg` during initialization with correct user ownership
+  - Prevents permission mismatches when `--userns=keep-id` remaps UIDs at runtime
+
+### Added
+- **Debugging guide for conditional code paths**:
+  - New lesson documenting how to identify and fix conditional branch issues in generated Dockerfiles
+  - Explains how layer cache changes prove edits are recognized
+  - Guidance on tracing which conditional branch executes based on STEP output
+
 ## [0.5.0] - 2026-02-08
 
 ### Added
