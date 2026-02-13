@@ -781,7 +781,7 @@ generate_devcontainer_json() {
   "containerEnv": {
     ${container_env}
   },
-  "postStartCommand": "sudo chown -R ${uid}:${uid} . 2>/dev/null || true && sudo chmod 755 /home/${remote_user} 2>/dev/null || true && sudo chown -R ${uid}:${uid} /home/${remote_user}/.vscode-server 2>/dev/null || true && sudo mkdir -p /run/user/${uid}/gnupg && sudo chown -R ${uid}:${uid} /run/user/${uid} 2>/dev/null || true && ln -sf /tmp/wayland-0 /run/user/${uid}/wayland-0 2>/dev/null || true && git config --global --add safe.directory '*' && git config --global init.defaultBranch main${git_config_line} && bash -c 'bash /opt/dev-control/scripts/alias-loading.sh <<< A'",
+  "postCreateCommand": "sudo chown -R ${uid}:${uid} . 2>/dev/null || true && sudo chmod 755 /home/${remote_user} 2>/dev/null || true && sudo chown -R ${uid}:${uid} /home/${remote_user}/.vscode-server 2>/dev/null || true && sudo mkdir -p /run/user/${uid}/gnupg && sudo chown -R ${uid}:${uid} /run/user/${uid} 2>/dev/null || true && ln -sf /tmp/wayland-0 /run/user/${uid}/wayland-0 2>/dev/null || true${git_config_line} && bash -c 'bash /opt/dev-control/scripts/alias-loading.sh <<< A'",
   "customizations": {
     "vscode": {
       "settings": {
