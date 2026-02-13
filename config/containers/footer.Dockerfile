@@ -50,15 +50,6 @@ RUN mkdir -p /home/${CATEGORY}/.vscode-server /home/${CATEGORY}/.bash_backups &&
     chmod 775 /home/${CATEGORY}/.vscode-server && \
     chmod 700 /home/${CATEGORY}/.bash_backups
 
-# Set git config as root for the user's home
-RUN ${GIT_CONFIG_CMD}
-
-USER root
-
-# Load dev-control aliases into bashrc as root, then fix permissions
-RUN HOME=/home/${CATEGORY} bash -c 'bash /opt/dev-control/scripts/alias-loading.sh <<< A' && \
-    chown ${CATEGORY}:${CATEGORY} /home/${CATEGORY}/.bash_aliases /home/${CATEGORY}/.bashrc
-
 # Final permission enforcement (survives --userns remapping)
 RUN chmod -R u+w /home/${CATEGORY}/.ssh /home/${CATEGORY}/.cache 2>/dev/null || true && \
     chown -R ${CATEGORY}:${CATEGORY} /home/${CATEGORY}/.ssh /home/${CATEGORY}/.cache 2>/dev/null || true
