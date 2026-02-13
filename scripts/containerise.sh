@@ -767,13 +767,6 @@ generate_devcontainer_json() {
   },"
     fi
     
-    # Build the metadata line if category exists
-    local metadata_line=""
-    if [[ -n "$category_metadata" ]]; then
-        metadata_line=",
-  \"_dc_metadata\": ${category_metadata}"
-    fi
-    
     cat > "$devcontainer_file" << DEVCONTAINER_EOF
 {
   "name": "${project_name^^}",
@@ -800,7 +793,7 @@ generate_devcontainer_json() {
         ${extensions}
       ]
     }
-  }${metadata_line}
+  }
 }
 DEVCONTAINER_EOF
 
