@@ -1293,9 +1293,41 @@ run_nest_mode() {
     
     # Handle --regen: delete existing .devcontainer directories (except root)
     if [[ "$NEST_REGEN" == true ]]; then
-        print_kv "Regenerate mode" "DELETE existing .devcontainer dirs (keeping root)"
+        print_kv "Regenerate mode" "DELETE existing containers and .devcontainer dirs (keeping root)"
         echo ""
-        print_warning "This will DELETE all .devcontainer directories under $start_dir (except root)"
+        print_warning "This will DELETE all dev-control containers and .devcontainer directories under $start_dir (except root)"
+
+        # First, delete any matching containers
+        local -a container_ids
+        mapfile -t container_ids < <(
+            docker ps -q -a --filter "label=devcontainer.local_folder" 2>/dev/null | grep -v "^$" || true
+        )
+        
+        if [[ ${#container_ids[@]} -gt 0 ]]; then
+            echo ""
+            print_info "Found ${#container_ids[@]} dev-control containers to delete:"
+            local container_id
+            for container_id in "${container_ids[@]}"; do
+                local folder=$(docker inspect "$container_id" --format='{{.Config.Labels.devcontainer.local_folder}}' 2>/dev/null || echo "unknown")
+                echo "  - $folder (${container_id:0:12})"
+            done
+            echo ""
+            
+            if confirm "Delete these containers?"; then
+                echo ""
+                for container_id in "${container_ids[@]}"; do
+                    print_info "Stopping container ${container_id:0:12}..."
+                    docker stop "$container_id" 2>/dev/null || true
+                    print_info "Removing container ${container_id:0:12}..."
+                    docker rm "$container_id" 2>/dev/null || true
+                    print_success "Removed container ${container_id:0:12}"
+                done
+                echo ""
+                print_success "Deleted ${#container_ids[@]} containers"
+            else
+                print_info "Skipped container deletion"
+            fi
+        fi
 
         local -a regen_dirs
         mapfile -t regen_dirs < <(
