@@ -23,7 +23,7 @@ fi
 
 PLUGINS_DIR="$DC_ROOT/plugins"
 
-source "$DC_ROOT/scripts/lib/colors.sh"
+source "$DC_ROOT/scripts/lib/colours.sh"
 source "$DC_ROOT/scripts/lib/print.sh"
 
 # ============================================================================

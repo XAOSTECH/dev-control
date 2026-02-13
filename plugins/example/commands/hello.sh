@@ -11,7 +11,7 @@ if [[ -z "$DC_ROOT" ]]; then
     exit 1
 fi
 
-source "$DC_ROOT/scripts/lib/colors.sh"
+source "$DC_ROOT/scripts/lib/colours.sh"
 source "$DC_ROOT/scripts/lib/print.sh"
 
 # Handle --help

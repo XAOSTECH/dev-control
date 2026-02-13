@@ -15,7 +15,7 @@ cd "$SCRIPT_DIR"
 
 # Source shared libraries
 LIB_DIR="$(cd "$SCRIPT_DIR/../scripts/lib" && pwd)"
-source "$LIB_DIR/colors.sh"
+source "$LIB_DIR/colours.sh"
 source "$LIB_DIR/print.sh"
 
 # ============================================================================

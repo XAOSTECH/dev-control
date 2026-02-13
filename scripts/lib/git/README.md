@@ -105,7 +105,7 @@ Conflict resolution utilities for automated history rewriting operations.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Source required libraries (order matters)
-source "$SCRIPT_DIR/lib/colors.sh"
+source "$SCRIPT_DIR/lib/colours.sh"
 source "$SCRIPT_DIR/lib/print.sh"
 source "$SCRIPT_DIR/lib/git/utils.sh"
 source "$SCRIPT_DIR/lib/git/cleanup.sh"  # depends on print.sh
@@ -113,7 +113,7 @@ source "$SCRIPT_DIR/lib/git/worktree.sh" # depends on print.sh
 source "$SCRIPT_DIR/lib/git/backup.sh"   # depends on print.sh
 
 # For history rewriting operations (used by fix-history.sh):
-source "$SCRIPT_DIR/lib/git/dates.sh"    # depends on print.sh, colors.sh
+source "$SCRIPT_DIR/lib/git/dates.sh"    # depends on print.sh, colours.sh
 source "$SCRIPT_DIR/lib/git/topology.sh" # depends on print.sh
 source "$SCRIPT_DIR/lib/git/harness.sh"  # depends on print.sh
 source "$SCRIPT_DIR/lib/git/rewrite.sh"  # depends on print.sh
@@ -122,7 +122,7 @@ source "$SCRIPT_DIR/lib/git/rewrite.sh"  # depends on print.sh
 ## Dependencies
 
 All modules in this directory depend on:
-- `lib/colors.sh` - Color definitions
+- `lib/colours.sh` - Color definitions
 - `lib/print.sh` - Print functions (`print_info`, `print_error`, etc.)
 
 ## Adding New Modules

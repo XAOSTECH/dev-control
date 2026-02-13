@@ -15,7 +15,7 @@ if [[ -z "$DC_ROOT" ]]; then
     DC_ROOT="$(dirname "$SCRIPT_PATH")"
 fi
 
-source "$DC_ROOT/scripts/lib/colors.sh"
+source "$DC_ROOT/scripts/lib/colours.sh"
 source "$DC_ROOT/scripts/lib/print.sh"
 source "$DC_ROOT/scripts/lib/git-utils.sh"
 source "$DC_ROOT/scripts/lib/output.sh"

@@ -50,7 +50,7 @@ commands:
 set -e
 
 # DC_ROOT is available - use it for shared libraries
-source "$DC_ROOT/scripts/lib/colors.sh"
+source "$DC_ROOT/scripts/lib/colours.sh"
 source "$DC_ROOT/scripts/lib/print.sh"
 
 # Respect global options

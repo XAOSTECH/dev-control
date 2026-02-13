@@ -41,7 +41,7 @@ PLUGINS_DIR="$DC_ROOT/plugins"
 LIB_DIR="$SCRIPTS_DIR/lib"
 
 # Source core libraries
-source "$LIB_DIR/colors.sh"
+source "$LIB_DIR/colours.sh"
 source "$LIB_DIR/print.sh"
 
 # Global options

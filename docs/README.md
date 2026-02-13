@@ -313,7 +313,7 @@ Located in `scripts/lib/`:
 
 | Library | Purpose |
 |---------|---------|
-| `colors.sh` | ANSI terminal colours |
+| `colours.sh` | ANSI terminal colours |
 | `print.sh` | Formatted output (headers, boxes, spinners) |
 | `config.sh` | YAML config parsing |
 | `tui.sh` | Gum/fzf interactive prompts |

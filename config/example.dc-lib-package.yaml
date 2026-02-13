@@ -10,7 +10,7 @@
 # Installation (library users):
 #   curl -fsSL https://github.com/xaoscience/dev-control/releases/download/lib-v0.2.0/dev-control-lib-0.2.0.tar.gz | tar xz
 #   # Then in your scripts:
-#   source "/path/to/dev-control-lib/colors.sh"
+#   source "/path/to/dev-control-lib/colours.sh"
 #   source "/path/to/dev-control-lib/print.sh"
 
 name: dev-control-lib
@@ -29,7 +29,7 @@ theme: matrix
 # Library-only files to include
 # These have NO external dependencies (no git, gh, etc required)
 include:
-  - scripts/lib/colors.sh
+  - scripts/lib/colours.sh
   - scripts/lib/print.sh
   - scripts/lib/tui.sh
   - scripts/lib/output.sh

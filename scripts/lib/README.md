@@ -6,11 +6,11 @@ reduces code duplication, and makes maintenance easier.
 
 ## Libraries
 
-### colors.sh
+### colours.sh
 ANSI colour code definitions for terminal output.
 
 ```bash
-source "$SCRIPT_DIR/lib/colors.sh"
+source "$SCRIPT_DIR/lib/colours.sh"
 echo -e "${GREEN}Success!${NC}"
 ```
 
@@ -20,7 +20,7 @@ echo -e "${GREEN}Success!${NC}"
 Consistent print functions for headers, messages, and formatting.
 
 ```bash
-source "$SCRIPT_DIR/lib/colors.sh"  # Required first
+source "$SCRIPT_DIR/lib/colours.sh"  # Required first
 source "$SCRIPT_DIR/lib/print.sh"
 
 print_header "My Tool"
@@ -196,7 +196,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEV_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
 
 # Source shared libraries
-source "$SCRIPT_DIR/lib/colors.sh"
+source "$SCRIPT_DIR/lib/colours.sh"
 source "$SCRIPT_DIR/lib/print.sh"
 source "$SCRIPT_DIR/lib/git-utils.sh"  # Optional
 

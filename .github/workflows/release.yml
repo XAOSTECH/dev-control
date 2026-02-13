@@ -38,7 +38,7 @@
 #
 # LIB-ONLY TARBALL:
 #   A lightweight package containing only shared Bash utilities:
-#   - colors.sh, print.sh, tui.sh, output.sh, validation.sh, cli.sh, version.sh
+#   - colours.sh, print.sh, tui.sh, output.sh, validation.sh, cli.sh, version.sh
 #   
 #   Use cases:
 #   - Projects wanting TUI/print utilities without full toolkit
@@ -379,13 +379,13 @@ jobs:
             echo ""
             echo "## Usage"
             echo ""
-            echo "    source /usr/local/share/dev-control-lib-${VERSION}/colors.sh"
+            echo "    source /usr/local/share/dev-control-lib-${VERSION}/colours.sh"
             echo "    source /usr/local/share/dev-control-lib-${VERSION}/print.sh"
             echo "    print_header \"My Script\""
             echo ""
             echo "## Libraries"
             echo ""
-            echo "- colors.sh: ANSI colour codes"
+            echo "- colours.sh: ANSI colour codes"
             echo "- print.sh: Print functions (print_header, print_info, etc.)"
             echo "- tui.sh: TUI helpers with Gum integration"
             echo "- output.sh: Output formatting"
@@ -485,7 +485,7 @@ jobs:
           curl -fsSL https://github.com/$GITHUB_REPOSITORY/releases/download/${TAG_NAME}/${lib_tarball_name} | tar xz
           
           # Then in your scripts:
-          source "./dev-control-lib-${VERSION}/colors.sh"
+          source "./dev-control-lib-${VERSION}/colours.sh"
           source "./dev-control-lib-${VERSION}/print.sh"
           print_header "My Script"
           \`\`\`
