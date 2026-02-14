@@ -1244,8 +1244,8 @@ run_nest_mode() {
         print_info "No nest.json found. Scanning for containers..."
         echo ""
         
-        # Find all .devcontainer dirs and build projects list
-        find "$start_dir" -type d -name ".devcontainer" 2>/dev/null | sort | while read -r devcontainer_dir; do
+        # Find all .devcontainer dirs and build projects list (exclude .tmp and .bak)
+        find "$start_dir" \( -name ".tmp" -o -name ".bak" -o -name "*.tmp" -o -name "*.bak" \) -prune -o -type d -name ".devcontainer" -print 2>/dev/null | sort | while read -r devcontainer_dir; do
             local project_dir="$(dirname "$devcontainer_dir")"
             local rel_path="${project_dir#$start_dir/}"
             [[ "$rel_path" == "$project_dir" ]] && rel_path="."
