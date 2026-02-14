@@ -39,9 +39,7 @@ RUN echo 'export NVM_DIR="/opt/nvm"' >> ~/.bashrc && \
 # Install dev-control system-wide to /opt
 USER root
 RUN mkdir -p /opt/dev-control && \
-    for i in 1 2 3; do \
-        curl -fsSL -L https://github.com/XAOSTECH/dev-control/archive/refs/tags/latest.tar.gz | tar -xz --strip-components=1 -C /opt/dev-control && break || ([ $i -lt 3 ] && sleep 2); \
-    done && \
+    wget -O- https://github.com/XAOSTECH/dev-control/archive/refs/tags/latest.tar.gz | tar -xz --strip-components=1 -C /opt/dev-control && \
     chmod +x /opt/dev-control/scripts/*.sh /opt/dev-control/lib/*.sh /opt/dev-control/lib/git/*.sh 2>/dev/null || true && \
     echo 'export PATH=/opt/dev-control/scripts:$PATH' >> /etc/profile.d/dev-control.sh && \
     chmod 644 /etc/profile.d/dev-control.sh
