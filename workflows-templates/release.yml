@@ -46,8 +46,12 @@
 #   3. Create PR and merge to main
 #   4. Update CHANGELOG.md with version section
 #   5. Commit changelog: git commit -m "chore: update CHANGELOG for v1.0.0"
-#   6. Create tag: git tag -a v1.0.0 -m "Release v1.0.0"
+#   6. Create signed tag: git tag -s v1.0.0 -m "Release v1.0.0"
 #   7. Push tag: git push origin v1.0.0
+#
+# TO SIGN AN EXISTING TAG RETROACTIVELY:
+#   git tag -s -f v1.0.0 -m "Release v1.0.0"  # Force recreate with signature
+#   git push --force origin v1.0.0             # Force push to replace
 #
 # OR use manual dispatch for testing/special releases:
 #   - Actions → Release → Run workflow → Enter version
@@ -55,22 +59,30 @@
 # BEST PRACTICES:
 #   - Always update CHANGELOG.md before releasing
 #   - Use semantic versioning (v1.0.0, not v1.0 or v01.00.00)
-#   - Create annotated tags: git tag -a v1.0.0 -m "message"
+#   - Create signed tags: git tag -s v1.0.0 -m "message" (or -a for unsigned)
 #   - Wait for at least 3 commits since last release
 #   - Run full test suite locally before tagging
 #   - Review commits to ensure quality with: git log v0.9.0..main --oneline
 #
-# TAG SIGNING (OPTIONAL):
-#   If your repository requires signed tags, add these secrets:
+# TAG SIGNING (RECOMMENDED):
+#   Create signed tags locally for better security and authenticity:
+#   
+#   New tags:
+#     git tag -s v1.0.0 -m "Release v1.0.0"
+#     git push origin v1.0.0
+#   
+#   Retroactively sign existing tag:
+#     git tag -s -f v1.0.0 -m "Release v1.0.0"  # Force recreate with signature
+#     git push --force origin v1.0.0             # Force push to replace unsigned tag
+#   
+#   Workflow automation (optional):
+#   If you want GitHub Actions to sign tags during manual dispatch, add these secrets:
 #   1. Generate GPG key: gpg --full-generate-key
 #   2. Export private key: gpg --armor --export-secret-keys YOUR_EMAIL > private.key
 #   3. Add to GitHub Secrets:
 #      - GPG_PRIVATE_KEY: contents of private.key
 #      - GPG_PASSPHRASE: your GPG passphrase
 #   4. The workflow will automatically sign tags when these secrets exist
-#   
-#   Alternative: Create tags locally with: git tag -s v1.0.0 -m "Release v1.0.0"
-#   Then push: git push origin v1.0.0 (workflow triggers on tag push)
 #
 # ============================================================================
 
