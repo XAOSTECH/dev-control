@@ -43,12 +43,14 @@ RUN mkdir -p /opt/dev-control && \
     echo 'export PATH=/opt/dev-control/scripts:$PATH' >> /etc/profile.d/dev-control.sh && \
     chmod 644 /etc/profile.d/dev-control.sh
 
-# Pre-create .vscode-server and .bash_backups directories with proper permissions
-# (VS Code will create .gnupg fresh during initialization with correct ownership)
-RUN mkdir -p /home/${CATEGORY}/.vscode-server /home/${CATEGORY}/.bash_backups && \
-    chown ${CATEGORY}:${CATEGORY} /home/${CATEGORY}/.vscode-server /home/${CATEGORY}/.bash_backups && \
+# Pre-create directories with proper permissions
+# .gnupg must exist with correct permissions (700) so VS Code init doesn't fail trying to create it
+# postCreateCommand will remove and recreate it fresh on each container start
+RUN mkdir -p /home/${CATEGORY}/.vscode-server /home/${CATEGORY}/.bash_backups /home/${CATEGORY}/.gnupg && \
+    chown ${CATEGORY}:${CATEGORY} /home/${CATEGORY}/.vscode-server /home/${CATEGORY}/.bash_backups /home/${CATEGORY}/.gnupg && \
     chmod 775 /home/${CATEGORY}/.vscode-server && \
-    chmod 700 /home/${CATEGORY}/.bash_backups
+    chmod 700 /home/${CATEGORY}/.bash_backups && \
+    chmod 700 /home/${CATEGORY}/.gnupg
 
 # Final permission enforcement (survives --userns remapping)
 RUN chmod -R u+w /home/${CATEGORY}/.ssh /home/${CATEGORY}/.cache 2>/dev/null || true && \
