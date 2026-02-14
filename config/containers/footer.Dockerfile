@@ -24,6 +24,7 @@ RUN if id ubuntu &>/dev/null; then \
     echo "${CATEGORY} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
     mkdir -p /home/${CATEGORY}/.config /home/${CATEGORY}/.cache /home/${CATEGORY}/.local/share && \
     chown -R ${CATEGORY}:${CATEGORY} /home/${CATEGORY} && \
+    chmod 755 /home/${CATEGORY} && \
     rm -rf /root/.gnupg /home/${CATEGORY}/.gnupg
 
 USER ${CATEGORY}
