@@ -459,6 +459,7 @@ jobs:
         env:
           GPG_PRIVATE_KEY: ${{ secrets.BOT_GPG_PRIVATE_KEY }}
           GPG_PASSPHRASE: ${{ secrets.BOT_GPG_PASSPHRASE }}
+          GPG_PINENTRY_MODE: loopback
         run: |
           [[ -z "$GPG_PRIVATE_KEY" ]] && exit 0
           
