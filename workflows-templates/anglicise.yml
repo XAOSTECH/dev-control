@@ -470,14 +470,14 @@ jobs:
           [[ -z "$KEY_ID" ]] && exit 0
           
           # Create GPG wrapper script for loopback pinentry
-          mkdir -p ~/.local/bin
-          printf '#!/bin/bash\nexec gpg --pinentry-mode loopback "$@"\n' > ~/.local/bin/gpg-loopback
-          chmod +x ~/.local/bin/gpg-loopback
+          mkdir -p $HOME/.local/bin
+          printf '#!/bin/bash\nexec gpg --pinentry-mode loopback "$@"\n' > $HOME/.local/bin/gpg-loopback
+          chmod +x $HOME/.local/bin/gpg-loopback
           
-          # Configure git for signing with wrapper
+          # Configure git for signing with wrapper (use absolute path)
           git config --global user.signingkey "$KEY_ID"
           git config --global commit.gpgsign true
-          git config --global gpg.program ~/.local/bin/gpg-loopback
+          git config --global gpg.program $HOME/.local/bin/gpg-loopback
 
       - name: Ensure automerge label exists
         if: steps.check.outputs.needs_fix == 'true'
@@ -498,6 +498,7 @@ jobs:
           GPG_PINENTRY_MODE: loopback
           GPG_PASSPHRASE: ${{ secrets.BOT_GPG_PASSPHRASE }}
         run: |
+          export PATH="$HOME/.local/bin:$PATH"
           # Configure git
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
