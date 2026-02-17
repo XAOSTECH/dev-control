@@ -506,6 +506,8 @@ jobs:
         if: steps.check.outputs.needs_fix == 'true'
         env:
           GH_TOKEN: ${{ steps.app_token.outputs.token }}
+          GPG_PINENTRY_MODE: loopback
+          GPG_PASSPHRASE: ${{ secrets.XB_GP }}
         run: |
           # Configure git
           git config user.name "github-actions[bot]"

@@ -169,6 +169,8 @@ jobs:
         if: steps.replace.outputs.needs_pr == 'true'
         env:
           GH_TOKEN: ${{ steps.app_token.outputs.token }}
+          GPG_PINENTRY_MODE: loopback
+          GPG_PASSPHRASE: ${{ secrets.BOT_GPG_PASSPHRASE }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
