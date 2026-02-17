@@ -145,10 +145,7 @@ jobs:
           
           # Create GPG wrapper script for loopback pinentry
           mkdir -p ~/.local/bin
-          cat > ~/.local/bin/gpg-loopback << 'GPGWRAPPER'
-#!/bin/bash
-exec gpg --pinentry-mode loopback "$@"
-GPGWRAPPER
+          printf '#!/bin/bash\nexec gpg --pinentry-mode loopback "$@"\n' > ~/.local/bin/gpg-loopback
           chmod +x ~/.local/bin/gpg-loopback
           
           # Configure git for signing with wrapper
