@@ -15,7 +15,6 @@ on:
         description: 'Comma-separated paths to exclude (e.g., ".github, node_modules")'
         required: false
         type: string
-        default: '.git'
 
 permissions:
   contents: write
@@ -137,17 +136,6 @@ jobs:
         run: |
           [[ -z "$GPG_PRIVATE_KEY" ]] && exit 0
           
-          # Setup GPG configuration directory
-          mkdir -p ~/.gnupg
-          chmod 700 ~/.gnupg
-          
-          # Configure GPG to use loopback pinentry (non-interactive)
-          printf 'pinentry-mode loopback\nuse-agent\n' > ~/.gnupg/gpg.conf
-          printf 'pinentry-program /usr/bin/pinentry-loopback\nallow-loopback-pinentry\n' > ~/.gnupg/gpg-agent.conf
-          
-          # Kill any existing gpg-agent so it reads new config
-          gpgconf --kill gpg-agent 2>/dev/null || true
-          
           # Import the key (output suppressed)
           echo "$GPG_PRIVATE_KEY" | gpg --batch --import --quiet 2>/dev/null || true
           
@@ -155,15 +143,10 @@ jobs:
           KEY_ID=$(gpg --list-secret-keys --keyid-format=long 2>/dev/null | grep -oE '[0-9A-F]{16}' | head -1 || true)
           [[ -z "$KEY_ID" ]] && exit 0
           
-          # Cache passphrase in gpg-agent for this session
-          KEYGRIP=$(gpg --with-keygrip --list-secret-keys "$KEY_ID" 2>/dev/null | grep Keygrip | awk '{print $NF}' | head -1)
-          if [[ -n "$KEYGRIP" ]]; then
-            /usr/lib/gnupg/gpg-preset-passphrase --preset "$KEYGRIP" <<< "$GPG_PASSPHRASE" > /dev/null 2>&1 || true
-          fi
-          
-          # Configure git for signing
+          # Configure git for signing with loopback pinentry
           git config --global user.signingkey "$KEY_ID"
           git config --global commit.gpgsign true
+          git config --global gpg.program "gpg --pinentry-mode loopback"
 
       - name: Create Pull Request
         if: steps.replace.outputs.needs_pr == 'true'
