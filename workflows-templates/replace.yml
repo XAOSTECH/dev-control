@@ -136,31 +136,42 @@ jobs:
         run: |
           [[ -z "$GPG_PRIVATE_KEY" ]] && exit 0
           
-          # Import the key (output suppressed)
+          mkdir -p ~/.gnupg
+          chmod 700 ~/.gnupg
+          
+          # Configure gpg-agent to allow passphrase presetting
+          printf 'default-cache-ttl 21600\nmax-cache-ttl 31536000\nallow-preset-passphrase\n' > ~/.gnupg/gpg-agent.conf
+          
+          # Reload agent with new config
+          gpg-connect-agent 'RELOADAGENT' /bye 2>/dev/null || gpgconf --kill gpg-agent 2>/dev/null || true
+          
+          # Import the key
           echo "$GPG_PRIVATE_KEY" | gpg --batch --import --quiet 2>/dev/null || true
           
-          # Extract key ID
-          KEY_ID=$(gpg --list-secret-keys --keyid-format=long 2>/dev/null | grep -oE '[0-9A-F]{16}' | head -1 || true)
+          # Get fingerprint and keygrips
+          FINGERPRINT=$(gpg --batch --with-colons --list-secret-keys 2>/dev/null | grep '^fpr' | head -1 | cut -d: -f10)
+          [[ -z "$FINGERPRINT" ]] && exit 0
+          
+          KEYGRIPS=$(gpg --batch --with-colons --with-keygrip --list-secret-keys "$FINGERPRINT" 2>/dev/null | grep '^grp' | cut -d: -f10)
+          
+          # Preset the passphrase for each keygrip (hex-encoded)
+          HEX_PASSPHRASE=$(printf '%s' "$GPG_PASSPHRASE" | od -A n -t x1 | tr -d ' \n' | tr '[:lower:]' '[:upper:]')
+          while IFS= read -r KEYGRIP; do
+            [[ -z "$KEYGRIP" ]] && continue
+            gpg-connect-agent "PRESET_PASSPHRASE $KEYGRIP -1 $HEX_PASSPHRASE" /bye 2>/dev/null || true
+          done <<< "$KEYGRIPS"
+          
+          # Configure git for signing
+          KEY_ID=$(gpg --list-secret-keys --keyid-format=long 2>/dev/null | grep -oE '[0-9A-F]{16}' | head -1)
           [[ -z "$KEY_ID" ]] && exit 0
-          
-          # Create GPG wrapper script for loopback pinentry
-          mkdir -p $HOME/.local/bin
-          printf '#!/bin/bash\nexec gpg --pinentry-mode loopback "$@"\n' > $HOME/.local/bin/gpg-loopback
-          chmod +x $HOME/.local/bin/gpg-loopback
-          
-          # Configure git for signing with wrapper (use absolute path)
           git config --global user.signingkey "$KEY_ID"
           git config --global commit.gpgsign true
-          git config --global gpg.program $HOME/.local/bin/gpg-loopback
 
       - name: Create Pull Request
         if: steps.replace.outputs.needs_pr == 'true'
         env:
           GH_TOKEN: ${{ steps.app_token.outputs.token }}
-          GPG_PINENTRY_MODE: loopback
-          GPG_PASSPHRASE: ${{ secrets.BOT_GPG_PASSPHRASE }}
         run: |
-          export PATH="$HOME/.local/bin:$PATH"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
