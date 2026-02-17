@@ -143,10 +143,18 @@ jobs:
           KEY_ID=$(gpg --list-secret-keys --keyid-format=long 2>/dev/null | grep -oE '[0-9A-F]{16}' | head -1 || true)
           [[ -z "$KEY_ID" ]] && exit 0
           
-          # Configure git for signing with loopback pinentry
+          # Create GPG wrapper script for loopback pinentry
+          mkdir -p ~/.local/bin
+          cat > ~/.local/bin/gpg-loopback << 'GPGWRAPPER'
+#!/bin/bash
+exec gpg --pinentry-mode loopback "$@"
+GPGWRAPPER
+          chmod +x ~/.local/bin/gpg-loopback
+          
+          # Configure git for signing with wrapper
           git config --global user.signingkey "$KEY_ID"
           git config --global commit.gpgsign true
-          git config --global gpg.program "gpg --pinentry-mode loopback"
+          git config --global gpg.program ~/.local/bin/gpg-loopback
 
       - name: Create Pull Request
         if: steps.replace.outputs.needs_pr == 'true'
