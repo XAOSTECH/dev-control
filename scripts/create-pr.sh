@@ -9,7 +9,7 @@
 #   - Currently on a feature/fix branch (not main/master)
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
-# SPDX-FileCopyrightText: 2024-2026 xaoscience
+# SPDX-FileCopyrightText: 2025-2026 xaoscience
 
 set -e
 
