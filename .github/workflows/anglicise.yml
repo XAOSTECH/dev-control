@@ -459,28 +459,44 @@ jobs:
         env:
           GPG_PRIVATE_KEY: ${{ secrets.XB_GK }}
           GPG_PASSPHRASE: ${{ secrets.XB_GP }}
-          GPG_PINENTRY_MODE: loopback
         run: |
           [[ -z "$GPG_PRIVATE_KEY" ]] && exit 0
           
-          # Import the key
-          echo "$GPG_PRIVATE_KEY" | gpg --batch --import 2>&1 || true
+          # Setup GPG configuration directory
+          mkdir -p ~/.gnupg
+          chmod 700 ~/.gnupg
           
-          # Get the key ID
+          # Configure GPG to use loopback pinentry (non-interactive)
+          cat > ~/.gnupg/gpg.conf << 'GPGCONFIG'
+pinentry-mode loopback
+use-agent
+GPGCONFIG
+          
+          # Configure gpg-agent to use loopback pinentry
+          cat > ~/.gnupg/gpg-agent.conf << 'AGENTCONFIG'
+pinentry-program /usr/bin/pinentry-loopback
+allow-loopback-pinentry
+AGENTCONFIG
+          
+          # Kill any existing gpg-agent so it reads new config
+          gpgconf --kill gpg-agent 2>/dev/null || true
+          
+          # Import the key (output suppressed)
+          echo "$GPG_PRIVATE_KEY" | gpg --batch --import --quiet 2>/dev/null || true
+          
+          # Extract key ID
           KEY_ID=$(gpg --list-secret-keys --keyid-format=long 2>/dev/null | grep -oE '[0-9A-F]{16}' | head -1 || true)
           [[ -z "$KEY_ID" ]] && exit 0
           
-          # Configure for batch/non-interactive signing
+          # Cache passphrase in gpg-agent for this session
+          KEYGRIP=$(gpg --with-keygrip --list-secret-keys "$KEY_ID" 2>/dev/null | grep Keygrip | awk '{print $NF}' | head -1)
+          if [[ -n "$KEYGRIP" ]]; then
+            /usr/lib/gnupg/gpg-preset-passphrase --preset "$KEYGRIP" <<< "$GPG_PASSPHRASE" > /dev/null 2>&1 || true
+          fi
+          
+          # Configure git for signing
           git config --global user.signingkey "$KEY_ID"
           git config --global commit.gpgsign true
-          git config --global gpg.program gpg
-          
-          # Enable loopback mode for passphrase input (required for CI/CD)
-          mkdir -p ~/.gnupg
-          echo "pinentry-program /usr/bin/pinentry-loopback" >> ~/.gnupg/gpg-agent.conf
-          gpgconf --kill gpg-agent 2>/dev/null || true
-          
-          echo "✅ GPG key configured for CI/CD signing"
 
       - name: Ensure automerge label exists
         if: steps.check.outputs.needs_fix == 'true'
