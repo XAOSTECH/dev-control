@@ -20,6 +20,13 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Generate App Token
+        id: app_token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_PRIVATE_KEY }}
+
       - name: Check for American spellings
         id: check
         run: |
@@ -487,7 +494,7 @@ jobs:
       - name: Ensure automerge label exists
         if: steps.check.outputs.needs_fix == 'true'
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.app_token.outputs.token }}
         run: |
           # Create 'automerge' label if it doesn't exist
           gh label create automerge \
@@ -499,7 +506,7 @@ jobs:
       - name: Create Pull Request
         if: steps.check.outputs.needs_fix == 'true'
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.app_token.outputs.token }}
         run: |
           # Configure git
           git config user.name "github-actions[bot]"

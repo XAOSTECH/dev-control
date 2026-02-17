@@ -20,6 +20,13 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Generate App Token
+        id: app_token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.XB_AI }}
+          private-key: ${{ secrets.XB_PK }}
+
       - name: Check for American spellings
         id: check
         run: |
@@ -445,13 +452,13 @@ jobs:
           
           echo "✅ Applied fixes to $FIXED_COUNT file(s)"
 
-      - name: Import GPG key (if available)
+      - name: Import GPG key
         id: import_gpg
         if: steps.check.outputs.needs_fix == 'true'
         continue-on-error: true
         env:
-          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
-          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+          GPG_PRIVATE_KEY: ${{ secrets.XB_GK }}
+          GPG_PASSPHRASE: ${{ secrets.XB_GP }}
         run: |
           if [[ -z "$GPG_PRIVATE_KEY" ]]; then
             echo "ℹ️ GPG_PRIVATE_KEY not configured - commits will be unsigned"
@@ -488,7 +495,7 @@ jobs:
       - name: Ensure automerge label exists
         if: steps.check.outputs.needs_fix == 'true'
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.app_token.outputs.token }}
         run: |
           # Create 'automerge' label if it doesn't exist
           gh label create automerge \
@@ -500,7 +507,7 @@ jobs:
       - name: Create Pull Request
         if: steps.check.outputs.needs_fix == 'true'
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.app_token.outputs.token }}
         run: |
           # Configure git
           git config user.name "github-actions[bot]"

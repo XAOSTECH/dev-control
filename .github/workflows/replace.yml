@@ -32,6 +32,13 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Generate App Token
+        id: app_token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.XB_AI }}
+          private-key: ${{ secrets.XB_PK }}
+
       - name: Validate inputs
         run: |
           if [[ -z "${{ inputs.search_text }}" ]]; then
@@ -125,8 +132,8 @@ jobs:
         if: steps.replace.outputs.needs_pr == 'true'
         continue-on-error: true
         env:
-          GPG_PRIVATE_KEY: ${{ secrets.BOT_GPG_PRIVATE_KEY }}
-          GPG_PASSPHRASE: ${{ secrets.BOT_GPG_PASSPHRASE }}
+          GPG_PRIVATE_KEY: ${{ secrets.XB_GK }}
+          GPG_PASSPHRASE: ${{ secrets.XB_GP }}
         run: |
           if [[ -z "$GPG_PRIVATE_KEY" ]]; then
             echo "ℹ️ BOT_GPG_PRIVATE_KEY not configured - commits will be unsigned"
@@ -157,7 +164,7 @@ jobs:
       - name: Create Pull Request
         if: steps.replace.outputs.needs_pr == 'true'
         env:
-          GH_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app_token.outputs.token }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"

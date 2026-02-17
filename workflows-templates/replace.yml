@@ -32,6 +32,13 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Generate App Token
+        id: app_token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_PRIVATE_KEY }}
+
       - name: Validate inputs
         run: |
           if [[ -z "${{ inputs.search_text }}" ]]; then
@@ -157,7 +164,7 @@ jobs:
       - name: Create Pull Request
         if: steps.replace.outputs.needs_pr == 'true'
         env:
-          GH_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app_token.outputs.token }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
