@@ -4,9 +4,7 @@
 
 | Version | Status | Release Date | Support |
 |---------|--------|--------------|---------|
-| 1.0.0 | Prerelease | - | Current development |
-
-**Latest Release**: [dev-control-v1.0.0](https://github.com/xaoscience/dev-control/releases/tag/latest) (Prerelease)
+|[dev-control-v0.5.3 (latest)](https://github.com/xaoscience/dev-control/releases/tag/v0.5.3) | Prerelease | 14 feb 2026 | Current development |
 
 ## Reporting a Vulnerability
 
