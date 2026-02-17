@@ -39,7 +39,7 @@
 
 ## TL;DR
 
-**Dev-Control** is a modular CLI toolkit that automates the tedious parts of your Git workflow—so you can focus on code, not config.
+**Dev-Control** is a modular CLI toolkit that automates customising and setting up repos (100% community standards), nested gitmodules, centralised .tmp and .bak, nested containers, mcp-servers, app packages and attempts to make arduous CLI and Git tasks (such as signing woktrees with topology and surgically dropping commits) easy and robust, so you can focus on your code - while, ironically, I focus on optimising this. All functions have a --dry-run option, so test it out and feel free to let me know of any issues or requests! Contributions are also lauded!  
 
 ```bash
 # Install
@@ -57,7 +57,7 @@ dc contain       # Generate devcontainer.json for VS Code
 dc package       # Build tarballs, Homebrew, Snap, Deb, Nix, Docker
 ```
 
-If you've ever spent more time wrestling Git or setting up yet another repo than actually writing code—this is for you.
+Any new alias to sync? dca-alias (all-alias).
 
 ---
 
