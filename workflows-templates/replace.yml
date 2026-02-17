@@ -142,16 +142,8 @@ jobs:
           chmod 700 ~/.gnupg
           
           # Configure GPG to use loopback pinentry (non-interactive)
-          cat > ~/.gnupg/gpg.conf << 'GPGCONFIG'
-pinentry-mode loopback
-use-agent
-GPGCONFIG
-          
-          # Configure gpg-agent to use loopback pinentry
-          cat > ~/.gnupg/gpg-agent.conf << 'AGENTCONFIG'
-pinentry-program /usr/bin/pinentry-loopback
-allow-loopback-pinentry
-AGENTCONFIG
+          printf 'pinentry-mode loopback\nuse-agent\n' > ~/.gnupg/gpg.conf
+          printf 'pinentry-program /usr/bin/pinentry-loopback\nallow-loopback-pinentry\n' > ~/.gnupg/gpg-agent.conf
           
           # Kill any existing gpg-agent so it reads new config
           gpgconf --kill gpg-agent 2>/dev/null || true
