@@ -135,31 +135,26 @@ jobs:
           GPG_PRIVATE_KEY: ${{ secrets.XB_GK }}
           GPG_PASSPHRASE: ${{ secrets.XB_GP }}
         run: |
-          if [[ -z "$GPG_PRIVATE_KEY" ]]; then
-            echo "ℹ️ BOT_GPG_PRIVATE_KEY not configured - commits will be unsigned"
-            echo "outcome=skipped" >> $GITHUB_OUTPUT
-            exit 0
-          fi
+          [[ -z "$GPG_PRIVATE_KEY" ]] && exit 0
           
-          echo "$GPG_PRIVATE_KEY" | gpg --batch --import 2>&1 | sed -E 's/key [0-9A-F]+: //' || true
+          # Import the key
+          echo "$GPG_PRIVATE_KEY" | gpg --batch --import 2>&1 || true
           
-          KEY_ID=$(echo "$GPG_PRIVATE_KEY" | gpg --batch --import --import-options show-only 2>&1 | grep -oE 'key [0-9A-F]+' | head -1 | awk '{print $2}' || true)
+          # Get the key ID
+          KEY_ID=$(gpg --list-secret-keys --keyid-format=long 2>/dev/null | grep -oE '[0-9A-F]{16}' | head -1 || true)
+          [[ -z "$KEY_ID" ]] && exit 0
           
-          if [[ -z "$KEY_ID" ]]; then
-            KEY_ID=$(gpg --list-secret-keys --keyid-format=long 2>/dev/null | grep -oE '[0-9A-F]{16}' | head -1 || true)
-          fi
-          
-          if [[ -z "$KEY_ID" ]]; then
-            echo "⚠️ Could not extract GPG key ID"
-            echo "outcome=partial" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-          
+          # Configure for batch/non-interactive signing
           git config --global user.signingkey "$KEY_ID"
           git config --global commit.gpgsign true
+          git config --global gpg.program gpg
           
-          echo "✅ GPG key configured successfully"
-          echo "outcome=success" >> $GITHUB_OUTPUT
+          # Enable loopback mode for passphrase input (required for CI/CD)
+          mkdir -p ~/.gnupg
+          echo "pinentry-program /usr/bin/pinentry-loopback" >> ~/.gnupg/gpg-agent.conf
+          gpgconf --kill gpg-agent 2>/dev/null || true
+          
+          echo "✅ GPG key configured for CI/CD signing"
 
       - name: Create Pull Request
         if: steps.replace.outputs.needs_pr == 'true'
