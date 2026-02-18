@@ -155,7 +155,7 @@ jobs:
           KEYGRIPS=$(gpg --batch --with-colons --with-keygrip --list-secret-keys "$FINGERPRINT" 2>/dev/null | grep '^grp' | cut -d: -f10)
           
           # Preset the passphrase for each keygrip (hex-encoded)
-          HEX_PASSPHRASE=$(printf '%s' "$GPG_PASSPHRASE" | od -A n -t x1 | tr -d ' \n' | tr '[:lower:]' '[:upper:]')
+          HEX_PASSPHRASE=$(printf '%s' "$GPG_PASSPHRASE" | xxd -p -u | tr -d '\n')
           while IFS= read -r KEYGRIP; do
             [[ -z "$KEYGRIP" ]] && continue
             gpg-connect-agent "PRESET_PASSPHRASE $KEYGRIP -1 $HEX_PASSPHRASE" /bye 2>/dev/null || true
