@@ -125,6 +125,12 @@ on:
 permissions:
   contents: write
 
+# One release job per tag at a time; if a second run starts (e.g. re-trigger from tag push)
+# it waits rather than racing. Both paths are idempotent so the second run is a no-op.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 env:
   GUM_VERSION: '0.17.0'
 
@@ -558,15 +564,18 @@ jobs:
           # Build file list
           FILES=$(find dist/ -name "*.tar.gz" -o -name "*.sha256" 2>/dev/null | tr '\n' ' ')
           
-          # Create release using gh CLI
-          gh release create "$TAG_NAME" \
-            --title "Release $TAG_NAME" \
-            --notes-file "$NOTES_FILE" \
-            ${{ github.event.inputs.draft == 'true' && '--draft' || '' }} \
-            ${{ github.event.inputs.prerelease == 'true' && '--prerelease' || '' }} \
-            $FILES
-          
-          echo "✅ Release created: $TAG_NAME"
+          # Create release (idempotent — skip if already exists)
+          if gh release view "$TAG_NAME" &>/dev/null; then
+            echo "✅ Release $TAG_NAME already exists — skipping creation"
+          else
+            gh release create "$TAG_NAME" \
+              --title "Release $TAG_NAME" \
+              --notes-file "$NOTES_FILE" \
+              ${{ github.event.inputs.draft == 'true' && '--draft' || '' }} \
+              ${{ github.event.inputs.prerelease == 'true' && '--prerelease' || '' }} \
+              $FILES
+            echo "✅ Release created: $TAG_NAME"
+          fi
 
       - name: Update 'latest' tag
         env:
