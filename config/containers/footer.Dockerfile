@@ -33,8 +33,10 @@ WORKDIR /home/${CATEGORY}
 RUN touch ~/.hushlogin
 
 # Configure nvm for user shell (installed system-wide in common layer)
+# Set GPG_TTY correctly for interactive shells (must be evaluated at runtime, not baked in).
 RUN echo 'export NVM_DIR="/opt/nvm"' >> ~/.bashrc && \
-    echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> ~/.bashrc
+    echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> ~/.bashrc && \
+    echo 'export GPG_TTY=$(tty)' >> ~/.bashrc
 
 # Install dev-control system-wide to /opt
 USER root

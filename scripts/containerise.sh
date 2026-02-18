@@ -662,7 +662,11 @@ generate_devcontainer_json() {
     uid=$(id -u)
     
     if [[ "$CFG_MOUNT_GPG" == "true" ]]; then
-        mounts+="\"source=/run/user/${uid}/gnupg/S.gpg-agent,target=/run/user/${uid}/gnupg/S.gpg-agent,type=bind\""
+        # VS Code's Remote Containers extension automatically forwards the host gpg-agent
+        # socket into the container at ~/.gnupg/S.gpg-agent via its built-in forwarding.
+        # Mounting the raw socket file here would create a second competing path and
+        # also fails hard at container start if the host gpg-agent socket does not exist.
+        : # GPG agent forwarding is handled by VS Code's built-in mechanism
     fi
     
     if [[ "$CFG_MOUNT_DOCKER_SOCKET" == "true" ]]; then
@@ -719,8 +723,9 @@ generate_devcontainer_json() {
     fi
     
     # Build container environment vars
-    local container_env="\"GPG_TTY\": \"\$(tty)\",
-    \"GPG_KEY_ID\": \"${CFG_GPG_KEY_ID}\",
+    # Note: GPG_TTY cannot be set here (tty is not known at JSON generation time).
+    # It is set correctly at shell startup via postCreateCommand or terminal init.
+    local container_env="\"GPG_KEY_ID\": \"${CFG_GPG_KEY_ID}\",
     \"GITHUB_USER\": \"${CFG_GITHUB_USER}\",
     \"DOCKER_HOST\": \"unix:///var/run/docker.sock\",
     \"DISPLAY\": \"\${localEnv:DISPLAY}\",
