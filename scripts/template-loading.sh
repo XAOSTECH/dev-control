@@ -614,10 +614,10 @@ add_badges_after_title() {
     <img alt="GitHub repo" src="https://img.shields.io/badge/GitHub-{{ORG_NAME}}%2F-{{REPO_SLUG}}-181717?style=for-the-badge&logo=github">
   </a>
   <a href="{{REPO_URL}}/releases">
-    <img alt="GitHub release" src="https://img.shields.io/github/v/release/{{ORG_NAME}}/{{REPO_SLUG}}?style=for-the-badge&logo=semantic-release&color=blue">
+    <img alt="GitHub release" src="https://img.shields.io/github/v/release/{{ORG_NAME}}/{{REPO_SLUG}}?style=for-the-badge&logo=semantic-release&colour=blue">
   </a>
   <a href="{{REPO_URL}}/blob/main/LICENSE">
-    <img alt="License" src="https://img.shields.io/github/license/{{ORG_NAME}}/{{REPO_SLUG}}?style=for-the-badge&color=green">
+    <img alt="License" src="https://img.shields.io/github/license/{{ORG_NAME}}/{{REPO_SLUG}}?style=for-the-badge&colour=green">
   </a>
 </p>
 

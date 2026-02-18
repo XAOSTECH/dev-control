@@ -12,7 +12,7 @@
 #
 # Usage:
 #   ./git-control.sh                    # Interactive menu
-#   ./git-control.sh init               # Initialize repo templates
+#   ./git-control.sh init               # Initialise repo templates
 #   ./git-control.sh repo               # Create GitHub repository
 #   ./git-control.sh pr                 # Create pull request
 #   ./git-control.sh fix [OPTIONS]      # Fix commit history
@@ -97,7 +97,7 @@ WORKFLOW EXAMPLE:
 
 EXAMPLES:
   git-control.sh                         # Interactive menu
-  git-control.sh init                    # Initialize templates
+  git-control.sh init                    # Initialise templates
   git-control.sh init --batch -y         # Batch init multiple repos
   git-control.sh repo                    # Create repository
   git-control.sh pr                      # Create pull request

@@ -122,7 +122,7 @@ source "$SCRIPT_DIR/lib/git/rewrite.sh"  # depends on print.sh
 ## Dependencies
 
 All modules in this directory depend on:
-- `lib/colours.sh` - Color definitions
+- `lib/colours.sh` - Colour definitions
 - `lib/print.sh` - Print functions (`print_info`, `print_error`, etc.)
 
 ## Adding New Modules
