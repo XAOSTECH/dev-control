@@ -14,9 +14,7 @@
 # Create user ${CATEGORY} with sudo privileges
 RUN if id ubuntu &>/dev/null; then \
         groupmod -n ${CATEGORY} ubuntu && \
-        usermod -u 1000 -l ${CATEGORY} -d /home/${CATEGORY} ubuntu && \
-        mkdir -p /home/${CATEGORY} && \
-        chown -R ${CATEGORY}:${CATEGORY} /home/${CATEGORY}; \
+        usermod -l ${CATEGORY} -d /home/${CATEGORY} -m ubuntu; \
     else \
         useradd -m -s /bin/bash -u 1000 ${CATEGORY}; \
     fi && \
@@ -30,7 +28,7 @@ RUN if id ubuntu &>/dev/null; then \
 USER ${CATEGORY}
 WORKDIR /home/${CATEGORY}
 
-RUN touch ~/.hushlogin
+RUN touch ~/.hushlogin ~/.bashrc
 
 # Configure nvm for user shell (installed system-wide in common layer)
 # Set GPG_TTY correctly for interactive shells (must be evaluated at runtime, not baked in).
