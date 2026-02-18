@@ -185,7 +185,7 @@ INTERACTIVE MODE:
 
 EXAMPLES:
   ./dev-control.sh                      # Interactive menu
-  ./dev-control.sh init                 # Initialize templates
+  ./dev-control.sh init                 # Initialise templates
   ./dev-control.sh repo                 # Create repository
   ./dev-control.sh cluster              # Init, Containerise, MCP-setup (also add to aliases as dc-cluster and nothing else)
   ./dev-control.sh pr                   # Create pull request
