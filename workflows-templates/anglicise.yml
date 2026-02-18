@@ -55,10 +55,10 @@ jobs:
             ALREADY=$(GH_TOKEN="$USER_TOKEN" gh api /user/gpg_keys \
               --jq ".[] | select(.key_id == \"$KEY_ID\") | .id" 2>/dev/null || true)
             if [[ "$ALREADY" =~ ^[0-9]+$ ]]; then
-              GH_TOKEN="$USER_TOKEN" gh api "/user/gpg_keys/${ALREADY}" --method DELETE 2>/dev/null || true
+              GH_TOKEN="$USER_TOKEN" gh api "/user/gpg_keys/${ALREADY}" --method DELETE >/dev/null 2>&1 || true
             fi
             RESULT=$(GH_TOKEN="$USER_TOKEN" gh api /user/gpg_keys \
-              --method POST -f armored_public_key="$GPG_PUBLIC_KEY" --jq '.id' 2>&1)
+              --method POST -f armored_public_key="$GPG_PUBLIC_KEY" --jq '.id' 2>/dev/null) || RESULT=""
             if [[ "$RESULT" =~ ^[0-9]+$ ]]; then
               echo "✅ GPG public key registered to xaos-bot (id: $RESULT)"
             else
