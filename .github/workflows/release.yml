@@ -307,7 +307,8 @@ jobs:
               echo "ℹ️ Created unsigned tag: $TAG_NAME (add GPG_PRIVATE_KEY secret for signed tags)"
             fi
             
-            git push origin "$TAG_NAME"
+            # Push via GITHUB_TOKEN so this doesn't re-trigger push:tags:v* (PAT pushes would)
+            git push "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" "$TAG_NAME"
             echo "✅ Pushed tag: $TAG_NAME"
           fi
 
