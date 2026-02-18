@@ -133,11 +133,6 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Full history for changelog generation
-
       - name: Generate App Token
         id: app_token
         uses: actions/create-github-app-token@v1
@@ -145,12 +140,14 @@ jobs:
           app-id: ${{ secrets.XB_AI }}
           private-key: ${{ secrets.XB_PK }}
 
-      - name: Configure git remote with app token
-        run: |
-          # Use the app token for all git pushes so the GitHub App's
-          # workflows installation permission is applied (not GITHUB_TOKEN)
-          git remote set-url origin \
-            "https://x-access-token:${{ steps.app_token.outputs.token }}@github.com/${{ github.repository }}"
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for changelog generation
+          # Use the app token so actions/checkout installs its credential helper
+          # with the app token — this carries the 'workflows' installation permission
+          # for all subsequent git pushes, including workflow file references.
+          token: ${{ steps.app_token.outputs.token }}
 
       - name: Register bot GPG key
         continue-on-error: true
