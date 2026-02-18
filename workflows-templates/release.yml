@@ -529,8 +529,22 @@ jobs:
           echo "✅ Release created: $TAG_NAME"
 
       - name: Update 'latest' tag
+        env:
+          GH_TOKEN: ${{ steps.app_token.outputs.token }}
         run: |
           TAG_NAME="${{ steps.version.outputs.tag_name }}"
+          
+          # Configure git identity (required for annotated tag creation)
+          APP_SLUG="${{ steps.app_token.outputs.app-slug }}"
+          DISPLAY_NAME="${{ vars.BOT_NAME || steps.app_token.outputs.app-slug }}"
+          BOT_ID=$(gh api "/users/${APP_SLUG}[bot]" --jq '.id' 2>/dev/null || echo "")
+          if [[ -n "$BOT_ID" ]]; then
+            git config user.name "${DISPLAY_NAME}[bot]"
+            git config user.email "${BOT_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+          fi
           
           # Delete existing 'latest' tag (local and remote)
           git tag -d latest 2>/dev/null || true
