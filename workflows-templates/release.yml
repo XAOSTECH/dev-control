@@ -137,6 +137,13 @@ jobs:
           app-id: ${{ secrets.BOT_APP_ID }}
           private-key: ${{ secrets.BOT_PRIVATE_KEY }}
 
+      - name: Configure git remote with app token
+        run: |
+          # Use the app token for all git pushes so the GitHub App's
+          # workflows installation permission is applied (not GITHUB_TOKEN)
+          git remote set-url origin \
+            "https://x-access-token:${{ steps.app_token.outputs.token }}@github.com/${{ github.repository }}"
+
       - name: Register bot GPG key
         continue-on-error: true
         env:
@@ -569,8 +576,6 @@ jobs:
           
           # Create new 'latest' tag pointing to the commit this release tag resolves to
           # Use ^{} to dereference the version tag to its commit (avoids a nested tag)
-          # Use app token for push so the GitHub App's workflows permission is applied
-          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}"
           git tag -a -m "Latest release: ${TAG_NAME}" latest "${TAG_NAME}^{}"
           git push origin latest
           
