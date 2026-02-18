@@ -5,8 +5,6 @@ All notable changes to Dev-Control will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-
-
 ## [0.5.4] - 2026-02-18
 
 ### Added
@@ -18,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - add text replacement workflow
 
 ### Fixed
+- support v-prefixed version input, strip if present
+- normalise CHANGELOG blank lines with cat -s after each edit
 - add per-tag concurrency and idempotent release creation
 - use GITHUB_TOKEN to push tag in dispatch path to prevent re-trigger
 - skip GPG re-registration if key already present
@@ -50,6 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - enable GPG signing in CI/CD with loopback pinentry mode
 
 ### Changed
+- chore: update CHANGELOG for v0.5.4 (re-release)
 - perf: skip build steps on duplicate run via early release check
 - chore: update CHANGELOG for v0.5.4
 - refactor: deduplicate commit-fetching into shared gather step
@@ -64,7 +65,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - chore: update workflows with GitHub App token integration
 - chore: change anglicise workflow to run monthly and on-demand only
 - docs(security): version
-
 
 ## [0.5.2] - 2026-02-11
 
