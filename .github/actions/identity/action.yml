@@ -64,8 +64,8 @@ runs:
         ALREADY=$(GH_TOKEN="$USER_TOKEN" gh api /user/gpg_keys \
           --jq ".[] | select(.key_id == \"$KEY_ID\") | .id" 2>/dev/null || true)
         if [[ "$ALREADY" =~ ^[0-9]+$ ]]; then
-          echo "✅ GPG key already registered (id: $ALREADY) — re-registering to pick up new UIDs"
-          GH_TOKEN="$USER_TOKEN" gh api "/user/gpg_keys/${ALREADY}" --method DELETE >/dev/null 2>&1 || true
+          echo "✅ GPG key already registered (id: $ALREADY) — skipping"
+          exit 0
         fi
         RESULT=$(GH_TOKEN="$USER_TOKEN" gh api /user/gpg_keys \
           --method POST -f armored_public_key="$GPG_PUBLIC_KEY" --jq '.id' 2>/dev/null) || RESULT=""
