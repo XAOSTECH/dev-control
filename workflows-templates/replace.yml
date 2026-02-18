@@ -38,6 +38,23 @@ jobs:
           app-id: ${{ secrets.BOT_APP_ID }}
           private-key: ${{ secrets.BOT_PRIVATE_KEY }}
 
+      - name: Register bot GPG key
+        continue-on-error: true
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.BOT_GPG_PRIVATE_KEY }}
+        run: |
+          [[ -z "$GPG_PRIVATE_KEY" ]] && exit 0
+          echo "$GPG_PRIVATE_KEY" | gpg --batch --import --quiet 2>/dev/null || true
+          KEY_ID=$(gpg --list-secret-keys --keyid-format=long 2>/dev/null | grep -oE '[0-9A-F]{16}' | head -1)
+          [[ -z "$KEY_ID" ]] && exit 0
+          GPG_PUBLIC_KEY=$(gpg --armor --export "$KEY_ID" 2>/dev/null || true)
+          [[ -z "$GPG_PUBLIC_KEY" ]] && exit 0
+          GH_TOKEN="${{ steps.app_token.outputs.token }}" gh api /user/gpg_keys \
+            --method POST \
+            -f armored_public_key="$GPG_PUBLIC_KEY" \
+            2>/dev/null || true
+          echo "✅ GPG public key registered for bot profile"
+
       - name: Validate inputs
         run: |
           if [[ -z "${{ inputs.search_text }}" ]]; then
@@ -166,15 +183,6 @@ jobs:
           [[ -z "$KEY_ID" ]] && exit 0
           git config --global user.signingkey "$KEY_ID"
           git config --global commit.gpgsign true
-          
-          # Upload GPG public key to bot's GitHub profile (enables Verified badge on commits)
-          GPG_PUBLIC_KEY=$(gpg --armor --export "$KEY_ID" 2>/dev/null || true)
-          if [[ -n "$GPG_PUBLIC_KEY" ]]; then
-            GH_TOKEN="${{ steps.app_token.outputs.token }}" gh api /user/gpg_keys \
-              --method POST \
-              -f armored_public_key="$GPG_PUBLIC_KEY" \
-              2>/dev/null || true
-          fi
 
       - name: Create Pull Request
         if: steps.replace.outputs.needs_pr == 'true'
