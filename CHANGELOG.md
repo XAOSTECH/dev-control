@@ -53,6 +53,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - enable GPG signing in CI/CD with loopback pinentry mode
 
 ### Changed
+- docs(readme): update command examples
+- chore: update CHANGELOG for v0.5.4 (re-release)
 - chore: update CHANGELOG for v0.5.4 (re-release)
 - chore: update CHANGELOG for v0.5.4 (re-release)
 - perf: skip build steps on duplicate run via early release check
