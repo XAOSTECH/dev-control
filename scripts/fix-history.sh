@@ -60,8 +60,9 @@ SIGN_MODE=false
 TIMED_SIGN_MODE=false  # Space out PR signing by minute boundaries
 DROP_COMMIT=""
 # Auto-resolve strategy: empty|ours|theirs
-# Can be set via environment (AUTO_RESOLVE=ours|theirs) or via --auto-resolve <mode>
+# Can be set via environment (AUTO_RESOLVE=ours|theirs|OURS|THEIRS) or via --auto-resolve <mode|=mode>
 AUTO_RESOLVE="${AUTO_RESOLVE:-}"
+AUTO_RESOLVE="${AUTO_RESOLVE,,}"  # normalise to lowercase
 # Reconstruction options
 RECONSTRUCT_AUTO=false   # if true, try multiple auto-resolve strategies automatically
 ALLOW_OVERRIDE_SAME_BRANCH=${ALLOW_OVERRIDE_SAME_BRANCH:-false}  # if true, auto-confirm destructive override of original branch when safe
@@ -88,18 +89,28 @@ TEMP_ALL_DATES="/tmp/git-fix-history-all-dates.txt"
 TEMP_BACKUP="/tmp/git-fix-history-backup-$(date +%s).bundle"
 
 # Parse a simple --auto-resolve argument early so users can pass it anywhere on the command line
-# Accepts: --auto-resolve <ours|theirs>
+# Accepts: --auto-resolve <ours|theirs>  OR  --auto-resolve=<ours|theirs>  (case-insensitive)
 ARGS=("$@")
 for ((i=0;i<${#ARGS[@]};i++)); do
-    if [[ "${ARGS[$i]}" == "--auto-resolve" ]]; then
+    _arg="${ARGS[$i]}"
+    if [[ "$_arg" == "--auto-resolve" ]]; then
         if [[ $((i+1)) -lt ${#ARGS[@]} ]]; then
-            AUTO_RESOLVE="${ARGS[$((i+1))]}"
+            AUTO_RESOLVE="${ARGS[$((i+1))],,}"
             if [[ "$AUTO_RESOLVE" != "ours" && "$AUTO_RESOLVE" != "theirs" ]]; then
                 echo "[WARNING] Invalid value for --auto-resolve: $AUTO_RESOLVE (allowed: ours|theirs). Ignoring." >&2
                 AUTO_RESOLVE=""
             else
                 echo "[INFO] Auto-resolve strategy set to: $AUTO_RESOLVE" >&2
             fi
+        fi
+    elif [[ "$_arg" == --auto-resolve=* ]]; then
+        AUTO_RESOLVE="${_arg#--auto-resolve=}"
+        AUTO_RESOLVE="${AUTO_RESOLVE,,}"
+        if [[ "$AUTO_RESOLVE" != "ours" && "$AUTO_RESOLVE" != "theirs" ]]; then
+            echo "[WARNING] Invalid value for --auto-resolve: $AUTO_RESOLVE (allowed: ours|theirs). Ignoring." >&2
+            AUTO_RESOLVE=""
+        else
+            echo "[INFO] Auto-resolve strategy set to: $AUTO_RESOLVE" >&2
         fi
     fi
 done
@@ -258,12 +269,21 @@ parse_args() {
                 ;;
 
             --auto-resolve)
-                AUTO_RESOLVE="$2"
+                AUTO_RESOLVE="${2,,}"
                 if [[ "$AUTO_RESOLVE" != "ours" && "$AUTO_RESOLVE" != "theirs" ]]; then
-                    print_error "Invalid value for --auto-resolve: $AUTO_RESOLVE (allowed: ours|theirs)"
+                    print_error "Invalid value for --auto-resolve: $2 (allowed: ours|theirs)"
                     exit 1
                 fi
                 shift 2
+                ;;
+            --auto-resolve=*)
+                AUTO_RESOLVE="${1#--auto-resolve=}"
+                AUTO_RESOLVE="${AUTO_RESOLVE,,}"
+                if [[ "$AUTO_RESOLVE" != "ours" && "$AUTO_RESOLVE" != "theirs" ]]; then
+                    print_error "Invalid value for --auto-resolve: ${1#--auto-resolve=} (allowed: ours|theirs)"
+                    exit 1
+                fi
+                shift
                 ;;
 
             --restore)
