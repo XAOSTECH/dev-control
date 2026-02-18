@@ -1,0 +1,40 @@
+# ============================================================================
+# GPG Key Configuration for xaos-bot GitHub App Bot
+# ============================================================================
+#
+# This configuration is used by scripts/lib/git/gpg.sh to generate a GPG key
+# specifically for the xaos-bot[bot] automated signing identity.
+#
+# IMPORTANT: Before using this profile, replace BOT_ID below with the actual
+# numeric GitHub user ID of xaos-bot[bot]. Find it with:
+#
+#   gh api "/users/xaos-bot[bot]" --jq '.id'
+#
+# The Name-Email MUST match the bot's GitHub noreply address exactly, because
+# GitHub's commit verification checks that:
+#   1. The signing key is registered on the committer's GitHub account
+#   2. The commit email matches a UID email on the signing key
+#
+# Usage (after updating BOT_ID):
+#   dc-gpg-setup config/profiles/xaos-bot[bot]_gpg.yml
+#   # OR
+#   source scripts/lib/git/gpg.sh
+#   generate_bot_gpg_key config/profiles/xaos-bot[bot]_gpg.yml
+#
+# After generating, update repository secrets:
+#   XB_GK  — the new GPG private key (armored)
+#   XB_GP  — the new GPG passphrase
+#
+# SECURITY NOTE:
+#   - Passphrase is auto-generated in memory during script execution
+#   - NEVER stored in this config file or any other file
+#   - Generated using: openssl rand -base64 32
+#   - Both key and passphrase are stored securely in GitHub Secrets
+#
+# ============================================================================
+
+Key-Type: RSA
+Key-Length: 4096
+Name-Real: xaos-bot[bot]
+Name-Email: BOT_ID+xaos-bot[bot]@users.noreply.github.com
+Expire-Date: 1y

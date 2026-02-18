@@ -31,9 +31,22 @@ jobs:
         continue-on-error: true
         env:
           GPG_PRIVATE_KEY: ${{ secrets.BOT_GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.BOT_GPG_PASSPHRASE }}
         run: |
           [[ -z "$GPG_PRIVATE_KEY" ]] && exit 0
           echo "$GPG_PRIVATE_KEY" | gpg --batch --import --quiet 2>/dev/null || true
+          FINGERPRINT=$(gpg --batch --with-colons --list-secret-keys 2>/dev/null | grep '^fpr' | head -1 | cut -d: -f10)
+          [[ -z "$FINGERPRINT" ]] && exit 0
+          # Add bot's noreply email as a UID so GitHub can verify signed commits
+          APP_SLUG="${{ steps.app_token.outputs.app-slug }}"
+          BOT_ID=$(GH_TOKEN="${{ steps.app_token.outputs.token }}" gh api "/users/${APP_SLUG}[bot]" --jq '.id' 2>/dev/null || echo "")
+          if [[ -n "$BOT_ID" && -n "$GPG_PASSPHRASE" ]]; then
+            BOT_EMAIL="${BOT_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
+            if ! gpg --list-keys 2>/dev/null | grep -qF "$BOT_EMAIL"; then
+              printf '%s' "$GPG_PASSPHRASE" | gpg --batch --pinentry-mode loopback --passphrase-fd 0 \
+                --quick-add-uid "$FINGERPRINT" "${APP_SLUG}[bot] <${BOT_EMAIL}>" 2>/dev/null || true
+            fi
+          fi
           KEY_ID=$(gpg --list-secret-keys --keyid-format=long 2>/dev/null | grep -oE '[0-9A-F]{16}' | head -1)
           [[ -z "$KEY_ID" ]] && exit 0
           GPG_PUBLIC_KEY=$(gpg --armor --export "$KEY_ID" 2>/dev/null || true)
@@ -506,6 +519,16 @@ jobs:
             gpg-connect-agent "PRESET_PASSPHRASE $KEYGRIP -1 $HEX_PASSPHRASE" /bye 2>/dev/null || true
           done <<< "$KEYGRIPS"
           
+          # Ensure bot's noreply email is a UID on the key (required for GitHub commit verification)
+          APP_SLUG="${{ steps.app_token.outputs.app-slug }}"
+          BOT_ID=$(GH_TOKEN="${{ steps.app_token.outputs.token }}" gh api "/users/${APP_SLUG}[bot]" --jq '.id' 2>/dev/null || echo "")
+          if [[ -n "$BOT_ID" ]]; then
+            BOT_EMAIL="${BOT_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
+            if ! gpg --list-keys 2>/dev/null | grep -qF "$BOT_EMAIL"; then
+              gpg --batch --quick-add-uid "$FINGERPRINT" "${APP_SLUG}[bot] <${BOT_EMAIL}>" 2>/dev/null || true
+            fi
+          fi
+          
           # Configure git for signing
           KEY_ID=$(gpg --list-secret-keys --keyid-format=long 2>/dev/null | grep -oE '[0-9A-F]{16}' | head -1)
           [[ -z "$KEY_ID" ]] && exit 0
@@ -531,12 +554,12 @@ jobs:
         run: |
           # Use app bot identity for commits
           # APP_SLUG is the ASCII machine slug (used in email for attribution)
-          # APP_NAME is the display name (may contain Unicode e.g. χαος)
+          # DISPLAY_NAME: set vars.BOT_NAME in repo settings for a custom display name (e.g. χαος)
           APP_SLUG="${{ steps.app_token.outputs.app-slug }}"
+          DISPLAY_NAME="${{ vars.BOT_NAME || steps.app_token.outputs.app-slug }}"
           BOT_ID=$(gh api "/users/${APP_SLUG}[bot]" --jq '.id' 2>/dev/null || echo "")
-          APP_NAME=$(gh api /app --jq '.name' 2>/dev/null || echo "")
           if [[ -n "$BOT_ID" ]]; then
-            git config user.name "${APP_NAME:-${APP_SLUG}}[bot]"
+            git config user.name "${DISPLAY_NAME}[bot]"
             git config user.email "${BOT_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
           else
             git config user.name "github-actions[bot]"
