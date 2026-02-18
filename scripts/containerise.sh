@@ -49,6 +49,7 @@ PROJECT_PATH=""
 SHOW_HELP=false
 NEST_MODE=false
 NEST_REGEN=false
+NO_CACHE=false
 
 ################################################################################
 # Help
@@ -70,6 +71,7 @@ MODES:
   --nest    Recursively rebuild all base and img containers in subdirectories
             Use --nest . to include the root directory itself
   --regen   Delete all .devcontainer dirs before nest rebuild (forces regeneration)
+  --no-cache  Build base images without layer cache (force full image rebuild)
 
 CATEGORIES:
   --game-dev        Godot, Vulkan, SDL2, GLFW, CUDA
@@ -138,6 +140,10 @@ parse_args() {
                 ;;
             --regen)
                 NEST_REGEN=true
+                shift
+                ;;
+            --no-cache)
+                NO_CACHE=true
                 shift
                 ;;
             --game-dev|--art|--data-science|--streaming|--web-dev|--dev-tools)
@@ -781,7 +787,7 @@ generate_devcontainer_json() {
   "containerEnv": {
     ${container_env}
   },
-  "postCreateCommand": "sudo chown -R ${uid}:${uid} . 2>/dev/null || true && sudo chmod 755 /home/${remote_user} 2>/dev/null || true && sudo chown -R ${uid}:${uid} /home/${remote_user}/.vscode-server 2>/dev/null || true && sudo mkdir -p /run/user/${uid}/gnupg && sudo chown -R ${uid}:${uid} /run/user/${uid} 2>/dev/null || true && ln -sf /tmp/wayland-0 /run/user/${uid}/wayland-0 2>/dev/null || true${git_config_line} && bash -c 'bash /opt/dev-control/scripts/alias-loading.sh <<< A'",
+  "postCreateCommand": "sudo chown -R ${uid}:${uid} . 2>/dev/null || true && sudo chmod 755 /home/${remote_user} 2>/dev/null || true && sudo chown -R ${uid}:${uid} /home/${remote_user}/.vscode-server 2>/dev/null || true && sudo mkdir -p /home/${remote_user}/.gnupg /home/${remote_user}/.ssh /home/${remote_user}/.cache /home/${remote_user}/.config && sudo chown ${uid}:${uid} /home/${remote_user}/.gnupg /home/${remote_user}/.ssh /home/${remote_user}/.cache /home/${remote_user}/.config && sudo chmod 700 /home/${remote_user}/.gnupg /home/${remote_user}/.ssh && sudo chmod 755 /home/${remote_user}/.cache /home/${remote_user}/.config && sudo mkdir -p /run/user/${uid}/gnupg && sudo chown -R ${uid}:${uid} /run/user/${uid} 2>/dev/null || true && ln -sf /tmp/wayland-0 /run/user/${uid}/wayland-0 2>/dev/null || true${git_config_line} && bash -c 'bash /opt/dev-control/scripts/alias-loading.sh <<< A'",
   "customizations": {
     "vscode": {
       "settings": {
@@ -1095,7 +1101,9 @@ build_base_image() {
         echo ""
         
         cd "$devcontainer_dir"
-        if podman build -t "$image_tag" .; then
+        local build_args=()
+        [[ "$NO_CACHE" == "true" ]] && build_args+=("--no-cache")
+        if podman build "${build_args[@]}" -t "$image_tag" .; then
             echo ""
             print_header_success "Base Image Built Successfully!"
             print_kv "Image" "$image_tag"

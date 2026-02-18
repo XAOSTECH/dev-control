@@ -44,18 +44,30 @@ RUN mkdir -p /opt/dev-control && \
     echo 'export PATH=/opt/dev-control/scripts:$PATH' >> /etc/profile.d/dev-control.sh && \
     chmod 644 /etc/profile.d/dev-control.sh
 
-# Pre-create directories with proper permissions
-# .gnupg must exist with correct permissions (700) so VS Code init doesn't fail trying to create it
-# postCreateCommand will remove and recreate it fresh on each container start
-RUN mkdir -p /home/${CATEGORY}/.vscode-server /home/${CATEGORY}/.bash_backups /home/${CATEGORY}/.gnupg && \
-    chown ${CATEGORY}:${CATEGORY} /home/${CATEGORY}/.vscode-server /home/${CATEGORY}/.bash_backups /home/${CATEGORY}/.gnupg && \
+# Pre-create directories with proper permissions before VS Code init runs.
+# VS Code's container setup (pre-postCreateCommand) creates missing dirs as root,
+# which permanently breaks writability for the container user.
+# Pre-creating here with correct ownership prevents that race condition.
+RUN mkdir -p \
+        /home/${CATEGORY}/.vscode-server \
+        /home/${CATEGORY}/.bash_backups \
+        /home/${CATEGORY}/.gnupg \
+        /home/${CATEGORY}/.ssh \
+        /home/${CATEGORY}/.cache \
+        /home/${CATEGORY}/.config && \
+    chown -R ${CATEGORY}:${CATEGORY} \
+        /home/${CATEGORY}/.vscode-server \
+        /home/${CATEGORY}/.bash_backups \
+        /home/${CATEGORY}/.gnupg \
+        /home/${CATEGORY}/.ssh \
+        /home/${CATEGORY}/.cache \
+        /home/${CATEGORY}/.config && \
     chmod 775 /home/${CATEGORY}/.vscode-server && \
     chmod 700 /home/${CATEGORY}/.bash_backups && \
-    chmod 700 /home/${CATEGORY}/.gnupg
-
-# Final permission enforcement (survives --userns remapping)
-RUN chmod -R u+w /home/${CATEGORY}/.ssh /home/${CATEGORY}/.cache 2>/dev/null || true && \
-    chown -R ${CATEGORY}:${CATEGORY} /home/${CATEGORY}/.ssh /home/${CATEGORY}/.cache 2>/dev/null || true
+    chmod 700 /home/${CATEGORY}/.gnupg && \
+    chmod 700 /home/${CATEGORY}/.ssh && \
+    chmod 755 /home/${CATEGORY}/.cache && \
+    chmod 755 /home/${CATEGORY}/.config
 
 USER ${CATEGORY}
 
