@@ -149,56 +149,13 @@ jobs:
           # for all subsequent git pushes, including workflow file references.
           token: ${{ steps.app_token.outputs.token }}
 
-      - name: Register bot GPG key
-        continue-on-error: true
-        env:
-          GPG_PRIVATE_KEY: ${{ secrets.XB_GK }}
-          GPG_PASSPHRASE: ${{ secrets.XB_GP }}
-          # XB_UT: a personal access token (classic) with write:gpg_key scope.
-          # Installation tokens cannot call POST /user/gpg_keys — it is a GitHub
-          # platform limitation regardless of App permissions settings.
-          USER_TOKEN: ${{ secrets.XB_UT }}
-        run: |
-          [[ -z "$GPG_PRIVATE_KEY" ]] && exit 0
-          echo "$GPG_PRIVATE_KEY" | gpg --batch --import --quiet 2>/dev/null || true
-          FINGERPRINT=$(gpg --batch --with-colons --list-secret-keys 2>/dev/null | grep '^fpr' | head -1 | cut -d: -f10)
-          [[ -z "$FINGERPRINT" ]] && exit 0
-          # Add machine user (xaos-bot) noreply email as a UID for GitHub signature verification
-          BOT_EMAIL="262248812+xaos-bot@users.noreply.github.com"
-          if [[ -n "$GPG_PASSPHRASE" ]]; then
-            if ! gpg --list-keys 2>/dev/null | grep -qF "$BOT_EMAIL"; then
-              printf '%s' "$GPG_PASSPHRASE" | gpg --batch --pinentry-mode loopback --passphrase-fd 0 \
-                --quick-add-uid "$FINGERPRINT" "xaos-bot <${BOT_EMAIL}>" 2>/dev/null || true
-            fi
-          fi
-          KEY_ID=$(gpg --list-secret-keys --keyid-format=long 2>/dev/null | grep -oE '[0-9A-F]{16}' | head -1)
-          [[ -z "$KEY_ID" ]] && exit 0
-          GPG_PUBLIC_KEY=$(gpg --armor --export "$KEY_ID" 2>/dev/null || true)
-          [[ -z "$GPG_PUBLIC_KEY" ]] && exit 0
-          # GPG key registration requires a personal user token (classic PAT with write:gpg_key).
-          # Installation tokens get 403 on /user/gpg_keys regardless of App permission settings.
-          if [[ -z "$USER_TOKEN" ]]; then
-            echo "⚠️ XB_UT secret not set — skipping GPG key registration"
-            echo "ℹ️ Add a classic PAT (write:gpg_key scope) as secret XB_UT to enable 'Verified' tags"
-            exit 0
-          fi
-          # Check if the key (by key_id) is already registered under the user account
-          ALREADY_REGISTERED=$(GH_TOKEN="$USER_TOKEN" gh api /user/gpg_keys \
-            --jq ".[] | select(.key_id == \"$KEY_ID\") | .id" 2>/dev/null || true)
-          if [[ "$ALREADY_REGISTERED" =~ ^[0-9]+$ ]]; then
-            echo "✅ GPG public key already registered (id: $ALREADY_REGISTERED) — re-registering to pick up new UIDs"
-            GH_TOKEN="$USER_TOKEN" gh api "/user/gpg_keys/${ALREADY_REGISTERED}" --method DELETE >/dev/null 2>&1 || true
-          fi
-          REGISTER_RESULT=$(GH_TOKEN="$USER_TOKEN" gh api /user/gpg_keys \
-            --method POST \
-            -f armored_public_key="$GPG_PUBLIC_KEY" \
-            --jq '.id' 2>/dev/null) || REGISTER_RESULT=""
-          if [[ "$REGISTER_RESULT" =~ ^[0-9]+$ ]]; then
-            echo "✅ GPG public key registered (id: $REGISTER_RESULT)"
-          else
-            echo "⚠️ GPG key registration failed: $REGISTER_RESULT"
-            echo "ℹ️ Ensure XB_UT is a classic PAT with write:gpg_key scope"
-          fi
+      - name: Setup bot identity
+        uses: ./.github/actions/identity
+        with:
+          gpg-private-key: ${{ secrets.XB_GK }}
+          gpg-passphrase: ${{ secrets.XB_GP }}
+          user-token: ${{ secrets.XB_UT }}
+          bot-name: ${{ vars.BOT_NAME || 'xaos-bot' }}
 
       - name: Determine version
         id: version
@@ -301,55 +258,15 @@ jobs:
             fi
           fi
 
-      - name: Import GPG key (if available)
+      - name: Setup bot identity (for signing)
         id: import_gpg
         if: github.event_name == 'workflow_dispatch'
-        continue-on-error: true
-        env:
-          GPG_PRIVATE_KEY: ${{ secrets.XB_GK }}
-          GPG_PASSPHRASE: ${{ secrets.XB_GP }}
-        run: |
-          if [[ -z "$GPG_PRIVATE_KEY" ]]; then
-            echo "⚠️ GPG key secret not found - tags will be unsigned"
-            echo "outcome=skipped" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-          
-          mkdir -p ~/.gnupg && chmod 700 ~/.gnupg
-          printf 'default-cache-ttl 21600\nmax-cache-ttl 31536000\nallow-preset-passphrase\n' > ~/.gnupg/gpg-agent.conf
-          gpg-connect-agent 'RELOADAGENT' /bye 2>/dev/null || gpgconf --kill gpg-agent 2>/dev/null || true
-          
-          echo "📦 Importing GPG key..."
-          echo "$GPG_PRIVATE_KEY" | gpg --batch --import --quiet 2>/dev/null || true
-          
-          FINGERPRINT=$(gpg --batch --with-colons --list-secret-keys 2>/dev/null | grep '^fpr' | head -1 | cut -d: -f10)
-          if [[ -z "$FINGERPRINT" ]]; then
-            echo "❌ Failed to import GPG key"
-            echo "outcome=failure" >> $GITHUB_OUTPUT
-            exit 1
-          fi
-          
-          # Preset the passphrase for each keygrip
-          KEYGRIPS=$(gpg --batch --with-colons --with-keygrip --list-secret-keys "$FINGERPRINT" 2>/dev/null | grep '^grp' | cut -d: -f10)
-          HEX_PASSPHRASE=$(printf '%s' "$GPG_PASSPHRASE" | xxd -p -u | tr -d '\n')
-          while IFS= read -r KEYGRIP; do
-            [[ -z "$KEYGRIP" ]] && continue
-            gpg-connect-agent "PRESET_PASSPHRASE $KEYGRIP -1 $HEX_PASSPHRASE" /bye 2>/dev/null || true
-          done <<< "$KEYGRIPS"
-          
-          # Add machine user (xaos-bot) noreply email as a UID for GitHub signature verification
-          BOT_EMAIL="262248812+xaos-bot@users.noreply.github.com"
-          if ! gpg --list-keys 2>/dev/null | grep -qF "$BOT_EMAIL"; then
-            gpg --batch --quick-add-uid "$FINGERPRINT" "xaos-bot <${BOT_EMAIL}>" 2>/dev/null || true
-          fi
-          
-          KEY_ID=$(gpg --list-secret-keys --keyid-format=long 2>/dev/null | grep -oE '[0-9A-F]{16}' | head -1)
-          git config --global user.signingkey "$KEY_ID"
-          git config --global commit.gpgsign true
-          git config --global tag.gpgsign true
-          
-          echo "✅ GPG key imported and configured successfully"
-          echo "outcome=success" >> $GITHUB_OUTPUT
+        uses: ./.github/actions/identity
+        with:
+          gpg-private-key: ${{ secrets.XB_GK }}
+          gpg-passphrase: ${{ secrets.XB_GP }}
+          user-token: ${{ secrets.XB_UT }}
+          bot-name: ${{ vars.BOT_NAME || 'xaos-bot' }}
 
       - name: Create tag (manual dispatch only)
         if: github.event_name == 'workflow_dispatch'
@@ -360,13 +277,6 @@ jobs:
           if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
             echo "⚠️ Tag $TAG_NAME already exists, skipping tag creation"
           else
-            # Configure git with bot identity
-            # Set vars.BOT_NAME in repo Settings > Variables for custom display name (e.g. χαος)
-            # Machine user identity (xaos-bot, id: 262248812)
-            DISPLAY_NAME="${{ vars.BOT_NAME || 'xaos-bot' }}"
-            git config user.name "${DISPLAY_NAME}"
-            git config user.email "262248812+xaos-bot@users.noreply.github.com"
-            
             # Create tag (signed if GPG available, annotated otherwise)
             if [[ "${{ steps.import_gpg.outcome }}" == "success" ]]; then
               git tag -s "$TAG_NAME" -m "Release $TAG_NAME"
@@ -641,12 +551,6 @@ jobs:
           GH_TOKEN: ${{ steps.app_token.outputs.token }}
         run: |
           TAG_NAME="${{ steps.version.outputs.tag_name }}"
-          
-          # Configure git identity (required for annotated tag creation)
-          # Machine user identity (xaos-bot, id: 262248812)
-          DISPLAY_NAME="${{ vars.BOT_NAME || 'xaos-bot' }}"
-          git config user.name "${DISPLAY_NAME}"
-          git config user.email "262248812+xaos-bot@users.noreply.github.com"
           
           # Delete existing 'latest' tag (local and remote)
           git tag -d latest 2>/dev/null || true

@@ -459,6 +459,13 @@ select_templates() {
         ((idx++))
     fi
     
+    # actions-templates
+    if [[ -d "$DEV_CONTROL_DIR/actions-templates" ]]; then
+        echo -e "  ${CYAN}$idx)${NC} Actions             - Composite Actions (→ .github/actions/)"
+        TEMPLATE_FOLDERS[$idx]="actions"
+        ((idx++))
+    fi
+    
     # github-templates (issue templates, PR template)
     if [[ -d "$DEV_CONTROL_DIR/github-templates" ]]; then
         echo -e "  ${CYAN}$idx)${NC} GitHub Templates    - Issue & PR templates (→ .github/)"
@@ -477,7 +484,7 @@ select_templates() {
     for dir in "$DEV_CONTROL_DIR"/*-templates; do
         if [[ -d "$dir" ]]; then
             local name=$(basename "$dir")
-            if [[ "$name" != "docs-templates" && "$name" != "workflows-templates" && "$name" != "license-templates" && "$name" != "licenses-templates" && "$name" != "github-templates" ]]; then
+            if [[ "$name" != "docs-templates" && "$name" != "workflows-templates" && "$name" != "actions-templates" && "$name" != "license-templates" && "$name" != "licenses-templates" && "$name" != "github-templates" ]]; then
                 local display=$(get_folder_display_name "$dir")
                 echo -e "  ${CYAN}$idx)${NC} $display"
                 TEMPLATE_FOLDERS[$idx]="${name%-templates}"
@@ -570,6 +577,9 @@ install_templates() {
             workflows)
                 install_workflows_templates "$target_dir"
                 ;;
+            actions)
+                install_actions_templates "$target_dir"
+                ;;
             github)
                 install_github_templates "$target_dir"
                 ;;
@@ -651,6 +661,24 @@ EOF
     }
     mv "$tmp" "$readme_path"
     print_success "Inserted badges into $readme_path"
+}
+
+install_actions_templates() {
+    local target_dir="$1"
+    local act_dir="$DEV_CONTROL_DIR/actions-templates"
+    
+    print_info "Installing composite actions to .github/actions/..."
+    mkdir -p "$target_dir/.github/actions"
+    
+    # Each subdirectory is one action (must contain action.yml)
+    for action_dir in "$act_dir"/*/; do
+        if [[ -d "$action_dir" && -f "${action_dir}action.yml" ]]; then
+            local action_name
+            action_name=$(basename "$action_dir")
+            cp -r "$action_dir" "$target_dir/.github/actions/$action_name"
+            print_success "Created: .github/actions/$action_name/action.yml"
+        fi
+    done
 }
 
 install_workflows_templates() {

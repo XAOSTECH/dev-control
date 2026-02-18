@@ -38,46 +38,13 @@ jobs:
           app-id: ${{ secrets.BOT_APP_ID }}
           private-key: ${{ secrets.BOT_PRIVATE_KEY }}
 
-      - name: Register bot GPG key
-        continue-on-error: true
-        env:
-          GPG_PRIVATE_KEY: ${{ secrets.BOT_GPG_PRIVATE_KEY }}
-          GPG_PASSPHRASE: ${{ secrets.BOT_GPG_PASSPHRASE }}
-          USER_TOKEN: ${{ secrets.BOT_USER_TOKEN }}
-        run: |
-          [[ -z "$GPG_PRIVATE_KEY" ]] && exit 0
-          echo "$GPG_PRIVATE_KEY" | gpg --batch --import --quiet 2>/dev/null || true
-          FINGERPRINT=$(gpg --batch --with-colons --list-secret-keys 2>/dev/null | grep '^fpr' | head -1 | cut -d: -f10)
-          [[ -z "$FINGERPRINT" ]] && exit 0
-          # Add machine user (xaos-bot) noreply email as a UID for GitHub signature verification
-          BOT_EMAIL="262248812+xaos-bot@users.noreply.github.com"
-          if [[ -n "$GPG_PASSPHRASE" ]]; then
-            if ! gpg --list-keys 2>/dev/null | grep -qF "$BOT_EMAIL"; then
-              printf '%s' "$GPG_PASSPHRASE" | gpg --batch --pinentry-mode loopback --passphrase-fd 0 \
-                --quick-add-uid "$FINGERPRINT" "xaos-bot <${BOT_EMAIL}>" 2>/dev/null || true
-            fi
-          fi
-          KEY_ID=$(gpg --list-secret-keys --keyid-format=long 2>/dev/null | grep -oE '[0-9A-F]{16}' | head -1)
-          [[ -z "$KEY_ID" ]] && exit 0
-          GPG_PUBLIC_KEY=$(gpg --armor --export "$KEY_ID" 2>/dev/null || true)
-          [[ -z "$GPG_PUBLIC_KEY" ]] && exit 0
-          # Register to machine user account — requires BOT_USER_TOKEN: classic PAT with write:gpg_key scope
-          if [[ -n "$USER_TOKEN" ]]; then
-            ALREADY=$(GH_TOKEN="$USER_TOKEN" gh api /user/gpg_keys \
-              --jq ".[] | select(.key_id == \"$KEY_ID\") | .id" 2>/dev/null || true)
-            if [[ "$ALREADY" =~ ^[0-9]+$ ]]; then
-              GH_TOKEN="$USER_TOKEN" gh api "/user/gpg_keys/${ALREADY}" --method DELETE >/dev/null 2>&1 || true
-            fi
-            RESULT=$(GH_TOKEN="$USER_TOKEN" gh api /user/gpg_keys \
-              --method POST -f armored_public_key="$GPG_PUBLIC_KEY" --jq '.id' 2>/dev/null) || RESULT=""
-            if [[ "$RESULT" =~ ^[0-9]+$ ]]; then
-              echo "✅ GPG public key registered to xaos-bot (id: $RESULT)"
-            else
-              echo "⚠️ GPG key registration failed: $RESULT"
-            fi
-          else
-            echo "⚠️ BOT_USER_TOKEN not set — skipping GPG key registration"
-          fi
+      - name: Setup bot identity
+        uses: XAOSTECH/dev-control/.github/actions/identity@main
+        with:
+          gpg-private-key: ${{ secrets.BOT_GPG_PRIVATE_KEY }}
+          gpg-passphrase: ${{ secrets.BOT_GPG_PASSPHRASE }}
+          user-token: ${{ secrets.BOT_USER_TOKEN }}
+          bot-name: ${{ vars.BOT_NAME || 'xaos-bot' }}
 
       - name: Validate inputs
         run: |
@@ -167,64 +134,21 @@ jobs:
             echo "needs_pr=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Import GPG key
+      - name: Setup bot identity (if replacement needed)
         id: import_gpg
         if: steps.replace.outputs.needs_pr == 'true'
-        continue-on-error: true
-        env:
-          GPG_PRIVATE_KEY: ${{ secrets.BOT_GPG_PRIVATE_KEY }}
-          GPG_PASSPHRASE: ${{ secrets.BOT_GPG_PASSPHRASE }}
-        run: |
-          [[ -z "$GPG_PRIVATE_KEY" ]] && exit 0
-          
-          mkdir -p ~/.gnupg
-          chmod 700 ~/.gnupg
-          
-          # Configure gpg-agent to allow passphrase presetting
-          printf 'default-cache-ttl 21600\nmax-cache-ttl 31536000\nallow-preset-passphrase\n' > ~/.gnupg/gpg-agent.conf
-          
-          # Reload agent with new config
-          gpg-connect-agent 'RELOADAGENT' /bye 2>/dev/null || gpgconf --kill gpg-agent 2>/dev/null || true
-          
-          # Import the key
-          echo "$GPG_PRIVATE_KEY" | gpg --batch --import --quiet 2>/dev/null || true
-          
-          # Get fingerprint and keygrips
-          FINGERPRINT=$(gpg --batch --with-colons --list-secret-keys 2>/dev/null | grep '^fpr' | head -1 | cut -d: -f10)
-          [[ -z "$FINGERPRINT" ]] && exit 0
-          
-          KEYGRIPS=$(gpg --batch --with-colons --with-keygrip --list-secret-keys "$FINGERPRINT" 2>/dev/null | grep '^grp' | cut -d: -f10)
-          
-          # Preset the passphrase for each keygrip (hex-encoded)
-          HEX_PASSPHRASE=$(printf '%s' "$GPG_PASSPHRASE" | xxd -p -u | tr -d '\n')
-          while IFS= read -r KEYGRIP; do
-            [[ -z "$KEYGRIP" ]] && continue
-            gpg-connect-agent "PRESET_PASSPHRASE $KEYGRIP -1 $HEX_PASSPHRASE" /bye 2>/dev/null || true
-          done <<< "$KEYGRIPS"
-          
-          # Add machine user (xaos-bot) noreply email as a UID for GitHub signature verification
-          BOT_EMAIL="262248812+xaos-bot@users.noreply.github.com"
-          if ! gpg --list-keys 2>/dev/null | grep -qF "$BOT_EMAIL"; then
-            gpg --batch --quick-add-uid "$FINGERPRINT" "xaos-bot <${BOT_EMAIL}>" 2>/dev/null || true
-          fi
-          
-          # Configure git for signing
-          KEY_ID=$(gpg --list-secret-keys --keyid-format=long 2>/dev/null | grep -oE '[0-9A-F]{16}' | head -1)
-          [[ -z "$KEY_ID" ]] && exit 0
-          git config --global user.signingkey "$KEY_ID"
-          git config --global commit.gpgsign true
+        uses: XAOSTECH/dev-control/.github/actions/identity@main
+        with:
+          gpg-private-key: ${{ secrets.BOT_GPG_PRIVATE_KEY }}
+          gpg-passphrase: ${{ secrets.BOT_GPG_PASSPHRASE }}
+          user-token: ${{ secrets.BOT_USER_TOKEN }}
+          bot-name: ${{ vars.BOT_NAME || 'xaos-bot' }}
 
       - name: Create Pull Request
         if: steps.replace.outputs.needs_pr == 'true'
         env:
           GH_TOKEN: ${{ steps.app_token.outputs.token }}
         run: |
-          # Use app bot identity for commits
-          # Machine user identity (xaos-bot, id: 262248812)
-          DISPLAY_NAME="${{ vars.BOT_NAME || 'xaos-bot' }}"
-          git config user.name "${DISPLAY_NAME}"
-          git config user.email "262248812+xaos-bot@users.noreply.github.com"
-          
           git add -A
           
           if git diff --cached --quiet; then
