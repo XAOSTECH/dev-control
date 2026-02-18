@@ -106,12 +106,18 @@ jobs:
     if: needs.guard.outputs.should_merge == 'true'
     runs-on: ubuntu-latest
     steps:
+      - name: Generate App Token
+        id: app_token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_PRIVATE_KEY }}
       - name: Merge PRs
         uses: actions/github-script@v6
         env:
           PR_NUMBERS: ${{ needs.guard.outputs.pr_numbers }}
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ steps.app_token.outputs.token }}
           script: |
             const { owner, repo } = context.repo;
             const prNumbers = JSON.parse(process.env.PR_NUMBERS || '[]');
