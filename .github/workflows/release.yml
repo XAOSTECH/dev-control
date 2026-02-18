@@ -612,8 +612,9 @@ jobs:
           git tag -d latest 2>/dev/null || true
           git push origin :refs/tags/latest 2>/dev/null || true
           
-          # Create new 'latest' tag pointing to this release
-          git tag latest "$TAG_NAME"
+          # Create new 'latest' tag pointing to the commit this release tag resolves to
+          # Use ^{} to dereference the version tag to its commit (avoids a nested tag)
+          git tag -a -m "Latest release: ${TAG_NAME}" latest "${TAG_NAME}^{}"
           git push origin latest
           
           echo "✅ Updated 'latest' tag to point to ${TAG_NAME}"
