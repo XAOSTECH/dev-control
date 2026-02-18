@@ -51,11 +51,11 @@
 #
 #   1. Create feature branch: git checkout -b feat/my-feature
 #   2. Make changes and test locally: ./tests/run_tests.sh
-#   3. Create PR and merge to main
-#   4. Update CHANGELOG.md with version section
-#   5. Commit changelog: git commit -m "chore: update CHANGELOG for v1.0.0"
-#   6. Create signed tag: git tag -s v1.0.0 -m "Release v1.0.0"
-#   7. Push tag: git push origin v1.0.0
+#   3. Create PR and merge to main (use conventional commits: feat/fix/chore/docs)
+#   4. Trigger via Actions → Release → Run workflow
+#      CHANGELOG.md is auto-generated from commits and committed by xaos-bot
+#   OR create a signed tag locally and push to trigger the push path:
+#      git tag -s v1.0.0 -m "Release v1.0.0" && git push origin v1.0.0
 #
 # TO SIGN AN EXISTING TAG RETROACTIVELY:
 #   git tag -s -f v1.0.0 -m "Release v1.0.0"  # Force recreate with signature
@@ -214,7 +214,7 @@ jobs:
             COMMIT_COUNT=$(git log "${PREV_TAG}..HEAD" --oneline | wc -l)
             echo "📊 Commits since ${PREV_TAG}: ${COMMIT_COUNT}"
             
-            # Minimum 2 commits for release (1 for changelog, 1+ for actual changes)
+            # Minimum 2 commits for release (encourages meaningful batching of changes)
             if [[ $COMMIT_COUNT -lt 2 ]]; then
               echo "⚠️ Warning: Only ${COMMIT_COUNT} commit(s) since last release"
               echo "ℹ️ Consider waiting for more changes before releasing"
@@ -229,34 +229,64 @@ jobs:
             echo "📊 Total commits in repository: ${COMMIT_COUNT}"
           fi
 
-      - name: Validate CHANGELOG.md
+      - name: Update CHANGELOG.md
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          
-          if [[ ! -f "CHANGELOG.md" ]]; then
-            echo "⚠️ Warning: CHANGELOG.md not found"
-            echo "ℹ️ Consider adding CHANGELOG.md for better release documentation"
-          else
-            # Check if version appears in CHANGELOG
-            if grep -q "## \[${VERSION}\]" CHANGELOG.md 2>/dev/null || \
-               grep -q "## ${VERSION}" CHANGELOG.md 2>/dev/null; then
-              echo "✅ CHANGELOG.md updated for version ${VERSION}"
-              echo ""
-              echo "📝 Changelog entry:"
-              grep -A 20 "## \[${VERSION}\]" CHANGELOG.md 2>/dev/null || \
-              grep -A 20 "## ${VERSION}" CHANGELOG.md
-            else
-              echo "⚠️ Warning: Version ${VERSION} not found in CHANGELOG.md"
-              echo "ℹ️ Consider adding a changelog entry for this release"
-              echo ""
-              echo "Expected format:"
-              echo "## [${VERSION}] - $(date +%Y-%m-%d)"
-              echo "### Added"
-              echo "- Feature 1"
-              echo "### Fixed"
-              echo "- Fix 1"
-            fi
+
+          # Skip if version already documented
+          if grep -q "## \[${VERSION}\]" CHANGELOG.md 2>/dev/null || \
+             grep -q "## ${VERSION}" CHANGELOG.md 2>/dev/null; then
+            echo "✅ CHANGELOG.md already contains v${VERSION} — skipping"
+            exit 0
           fi
+
+          # Get previous version tag
+          PREV_TAG=$(git tag -l 'v*' --sort=-version:refname | grep -v "^v${VERSION}$" | head -1 || echo "")
+
+          # Collect commits since last tag
+          if [[ -n "$PREV_TAG" ]]; then
+            COMMITS=$(git log "${PREV_TAG}..HEAD" --pretty=format:"%s" 2>/dev/null || true)
+          else
+            COMMITS=$(git log --pretty=format:"%s" -20 2>/dev/null || true)
+          fi
+
+          # Group by conventional commit type
+          ADDED="" FIXED="" CHANGED="" DOCS=""
+          while IFS= read -r line; do
+            [[ -z "$line" ]] && continue
+            msg="${line#*: }"
+            case "$line" in
+              feat:*|feat\(*) ADDED="${ADDED}\n- ${msg}" ;;
+              fix:*|fix\(*) FIXED="${FIXED}\n- ${msg}" ;;
+              docs:*|doc\(*) DOCS="${DOCS}\n- ${msg}" ;;
+              *) CHANGED="${CHANGED}\n- ${line}" ;;
+            esac
+          done <<< "$COMMITS"
+
+          # Build changelog entry
+          DATE=$(date +%Y-%m-%d)
+          {
+            echo "## [${VERSION}] - ${DATE}"
+            [[ -n "$ADDED" ]]   && printf "\n### Added%b\n"         "$ADDED"
+            [[ -n "$FIXED" ]]   && printf "\n### Fixed%b\n"         "$FIXED"
+            [[ -n "$CHANGED" ]] && printf "\n### Changed%b\n"       "$CHANGED"
+            [[ -n "$DOCS" ]]    && printf "\n### Documentation%b\n" "$DOCS"
+          } > /tmp/new_entry.md
+
+          # Insert before first existing ## entry (or append if file is new)
+          FIRST_ENTRY=$(grep -n "^## " CHANGELOG.md 2>/dev/null | head -1 | cut -d: -f1)
+          if [[ -n "$FIRST_ENTRY" ]]; then
+            head -n $((FIRST_ENTRY - 1)) CHANGELOG.md > /tmp/cl_head.txt
+            tail -n +${FIRST_ENTRY} CHANGELOG.md      > /tmp/cl_tail.txt
+            { cat /tmp/cl_head.txt; echo ""; cat /tmp/new_entry.md; echo ""; cat /tmp/cl_tail.txt; } > CHANGELOG.md
+          else
+            { echo ""; cat /tmp/new_entry.md; echo ""; } >> CHANGELOG.md
+          fi
+
+          git add CHANGELOG.md
+          git commit -m "chore: update CHANGELOG for v${VERSION}"
+          git push
+          echo "✅ CHANGELOG.md updated for v${VERSION}"
 
       - name: Setup bot identity (for signing)
         id: import_gpg
