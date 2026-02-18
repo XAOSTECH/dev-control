@@ -116,7 +116,6 @@ on:
 
 permissions:
   contents: write
-  workflows: write
 
 env:
   GUM_VERSION: '0.17.0'
