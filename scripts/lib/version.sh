@@ -9,7 +9,7 @@
 #   - Version comparison utilities
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
-# SPDX-FileCopyrightText: 2024-2026 xaoscience
+# SPDX-FileCopyrightText: 2025-2026 xaoscience
 
 # Get script directory
 _VERSION_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
