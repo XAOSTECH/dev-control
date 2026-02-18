@@ -95,8 +95,8 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to release (e.g., 1.0.0 without v prefix)'
-        required: true
+        description: 'Version to release without v prefix (leave blank to auto-increment patch from latest release)'
+        required: false
         type: string
       prerelease:
         description: 'Mark as pre-release'
@@ -116,6 +116,7 @@ on:
 
 permissions:
   contents: write
+  workflows: write
 
 env:
   GUM_VERSION: '0.17.0'
@@ -169,14 +170,31 @@ jobs:
 
       - name: Determine version
         id: version
+        env:
+          GH_TOKEN: ${{ steps.app_token.outputs.token }}
         run: |
           if [[ "${{ github.event_name }}" == "push" ]]; then
             # Extract version from tag (remove 'v' prefix)
             VERSION="${GITHUB_REF#refs/tags/v}"
             TAG_NAME="${GITHUB_REF#refs/tags/}"
           else
-            # Manual dispatch - use input
+            # Manual dispatch - use input or auto-detect next patch
             VERSION="${{ github.event.inputs.version }}"
+            if [[ -z "$VERSION" ]]; then
+              LATEST=$(gh api repos/${{ github.repository }}/releases/latest --jq '.tag_name' 2>/dev/null || \
+                       git tag --list 'v*' --sort=-version:refname | grep -vE 'latest|alpha|beta|rc' | head -1)
+              LATEST=${LATEST#v}
+              if [[ "$LATEST" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
+                MAJOR=${BASH_REMATCH[1]}
+                MINOR=${BASH_REMATCH[2]}
+                PATCH=${BASH_REMATCH[3]}
+                VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))"
+                echo "🔢 Auto-detected next version: ${VERSION} (from latest: v${LATEST})"
+              else
+                echo "❌ Could not determine latest version to auto-increment"
+                exit 1
+              fi
+            fi
             TAG_NAME="v${VERSION}"
           fi
           
@@ -552,6 +570,8 @@ jobs:
           
           # Create new 'latest' tag pointing to the commit this release tag resolves to
           # Use ^{} to dereference the version tag to its commit (avoids a nested tag)
+          # Use app token for push so the GitHub App's workflows permission is applied
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}"
           git tag -a -m "Latest release: ${TAG_NAME}" latest "${TAG_NAME}^{}"
           git push origin latest
           
