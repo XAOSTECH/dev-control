@@ -202,32 +202,33 @@ jobs:
           fi
           echo "✅ Version format valid: $VERSION"
 
-      - name: Validate commit count
+      - name: Gather commit history
+        id: commits
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          TAG_NAME="${{ steps.version.outputs.tag_name }}"
-          
-          # Get previous tag (if any)
-          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-          
+
+          # Previous release tag — excludes the version being released (doesn't exist yet)
+          PREV_TAG=$(git tag -l 'v*' --sort=-version:refname | grep -v "^v${VERSION}$" | head -1 || echo "")
+
           if [[ -n "$PREV_TAG" ]]; then
             COMMIT_COUNT=$(git log "${PREV_TAG}..HEAD" --oneline | wc -l)
             echo "📊 Commits since ${PREV_TAG}: ${COMMIT_COUNT}"
-            
             # Minimum 2 commits for release (encourages meaningful batching of changes)
             if [[ $COMMIT_COUNT -lt 2 ]]; then
               echo "⚠️ Warning: Only ${COMMIT_COUNT} commit(s) since last release"
               echo "ℹ️ Consider waiting for more changes before releasing"
               echo "ℹ️ Current practice: aim for 3+ commits per release"
-              # Don't fail - allow manual override for hotfixes
             fi
-            
             git log "${PREV_TAG}..HEAD" --oneline
+            git log "${PREV_TAG}..HEAD" --pretty=format:"%s" > .commits-subjects.txt
           else
-            echo "📊 Initial release - no previous tags"
+            echo "📊 Initial release"
             COMMIT_COUNT=$(git log --oneline | wc -l)
-            echo "📊 Total commits in repository: ${COMMIT_COUNT}"
+            echo "📊 Total commits: ${COMMIT_COUNT}"
+            git log --pretty=format:"%s" -20 > .commits-subjects.txt
           fi
+
+          echo "prev_tag=${PREV_TAG}" >> $GITHUB_OUTPUT
 
       - name: Update CHANGELOG.md
         run: |
@@ -240,17 +241,7 @@ jobs:
             exit 0
           fi
 
-          # Get previous version tag
-          PREV_TAG=$(git tag -l 'v*' --sort=-version:refname | grep -v "^v${VERSION}$" | head -1 || echo "")
-
-          # Collect commits since last tag
-          if [[ -n "$PREV_TAG" ]]; then
-            COMMITS=$(git log "${PREV_TAG}..HEAD" --pretty=format:"%s" 2>/dev/null || true)
-          else
-            COMMITS=$(git log --pretty=format:"%s" -20 2>/dev/null || true)
-          fi
-
-          # Group by conventional commit type
+          # Group commits (written by 'Gather commit history') by conventional commit type
           ADDED="" FIXED="" CHANGED="" DOCS=""
           while IFS= read -r line; do
             [[ -z "$line" ]] && continue
@@ -261,7 +252,7 @@ jobs:
               docs:*|doc\(*) DOCS="${DOCS}\n- ${msg}" ;;
               *) CHANGED="${CHANGED}\n- ${line}" ;;
             esac
-          done <<< "$COMMITS"
+          done < .commits-subjects.txt
 
           # Build changelog entry
           DATE=$(date +%Y-%m-%d)
@@ -488,10 +479,10 @@ jobs:
           VERSION="${{ steps.version.outputs.version }}"
           TAG_NAME="${{ steps.version.outputs.tag_name }}"
           
-          # Get previous version tag (v*), sorted by version (excludes 'latest' tag)
-          PREV_TAG=$(git tag -l 'v*' --sort=-version:refname | head -2 | tail -1 || echo "")
-          
-          # Generate changelog
+          # Previous version tag — sourced from 'Gather commit history' step
+          PREV_TAG="${{ steps.commits.outputs.prev_tag }}"
+
+          # Generate release notes
           NOTES_FILE=$(mktemp)
           
           cat > "$NOTES_FILE" << EOF
