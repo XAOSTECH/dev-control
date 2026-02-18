@@ -5,6 +5,60 @@ All notable changes to Dev-Control will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
+## [0.5.4] - 2026-02-18
+
+### Added
+- auto-generate CHANGELOG.md in release workflow
+- extract bot identity into composite action
+- attribute bot commits/merges to GitHub App identity
+- auto-merge any xaos[bot] PRs without requiring automerge label
+- add text replacement workflow
+
+### Fixed
+- skip GPG re-registration if key already present
+- prevent set -e crash in GPG registration step
+- use machine user (xaos-bot) identity for GPG signing and git attribution
+- use personal PAT (XB_UT) for GPG key registration, fix check logic
+- expose GPG key registration failures and attribute release to bot
+- generate app token before checkout so credential helper uses app identity
+- configure app token remote once at workflow start for all pushes
+- remove invalid workflows permission key from release workflow
+- workflows permission, app token push, and auto-version for release
+- set git identity in Update latest tag step
+- correct latest tag creation in release workflow
+- apply bot identity and GPG verification to release workflow
+- correct bot display name and GPG commit verification
+- correct single-quote escaping in anglicise grep patterns
+- use perl negative lookahead instead of whole-line filename skip
+- use app display name for git user.name instead of ASCII slug
+- support --auto-resolve=value and AUTO_RESOLVE=THEIRS in fix-history
+- register bot GPG key unconditionally on every workflow run
+- use gpg-connect-agent PRESET_PASSPHRASE for correct CI/CD signing
+- use absolute PATH and ensure wrapper is accessible in commit step
+- replace heredoc with printf for YAML compliance
+- create GPG wrapper script for pinentry mode
+- simplify GPG signing and remove .git default from exclude paths
+- pass GPG environment variables to commit step
+- replace heredoc with printf for valid YAML syntax
+- implement proper GPG signing with passphrase caching
+- add GPG_PINENTRY_MODE=loopback to enable non-interactive signing
+- enable GPG signing in CI/CD with loopback pinentry mode
+
+### Changed
+- refactor: deduplicate commit-fetching into shared gather step
+- docs(readme): update intro + usage
+- Merge pull request #33 from XAOSTECH/anglicise/20260218-003720
+- chore: convert American spellings to British English
+- Merge pull request #32 from XAOSTECH/anglicise/20260218-001511
+- chore: convert American spellings to British English
+- Merge pull request #31 from XAOSTECH/replace/20260217-235313
+- refactor: use xxd -p -u for cleaner hex passphrase encoding
+- chore: replace text across repository
+- chore: update workflows with GitHub App token integration
+- chore: change anglicise workflow to run monthly and on-demand only
+- docs(security): version
+
 ## [0.5.2] - 2026-02-11
 
 ### Fixed
