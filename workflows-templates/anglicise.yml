@@ -417,19 +417,21 @@ jobs:
             # Process line by line to preserve case and skip certain patterns
             while IFS= read -r line || [[ -n "$line" ]]; do
               # Skip lines containing:
-              # - Filenames with extensions (colors.sh, config.yaml)
               # - HTML attributes (align="center", style="color:")
               # - CLI flags with values (--align center, --foreground color)
               # - Gum/TUI commands and options
               # - Variable references ($color, ${color}, COLOR_VAR)
               # - Assignment patterns (color=, center=)
               # - Escaped line continuations (trailing backslash)
-              if echo "$line" | grep -qE '([a-zA-Z0-9_-]+\.[a-zA-Z]{1,4}\b|=["'\''](center|color)|types:[[:space:]]*\[[^]]+\]|--[a-z-]+ (center|color|gray)|--color|--center|\$\{?(color|center|gray)|\b(COLOR|CENTER|GRAY)[_A-Z]*|gum |\\$)'; then
+              # NOTE: filename exclusion is handled in the perl regex via (?!\.)
+              # so that 'colors' in a comment is fixed even if 'colours.sh' appears on the same line
+              if echo "$line" | grep -qE '(=["\'](center|color)|types:[[:space:]]*\[[^]]+\]|--[a-z-]+ (center|color|gray)|--color|--center|\$\{?(color|center|gray)|\b(COLOR|CENTER|GRAY)[_A-Z]*=|gum |\\$)'; then
                 echo "$line"
               else
                 # Apply case-preserving replacement using perl
+                # (?!\.) prevents replacing when the word is directly followed by a dot (e.g. colors.sh)
                 echo "$line" | perl -pe "
-                  s/\\b${american}\\b/
+                  s/\\b${american}\\b(?!\\.)/
                     my \$match = \$&;
                     my \$repl = '${british}';
                     if (\$match =~ \/^[A-Z]+\$\/) {
@@ -458,8 +460,8 @@ jobs:
               [[ -z "$file" ]] && continue
               
               # Check if file contains the word (case-insensitive, whole word)
-              # Exclude lines containing filenames, HTML attributes, CLI flags, or code patterns
-              if grep -inw "$american" "$file" 2>/dev/null | grep -qvE '([a-zA-Z0-9_-]+\.[a-zA-Z]{1,4}\b|"Authorization": "Bearer|types:[[:space:]]*\[[^]]+\]|=["'\''](center|color)|--[a-z-]+ (center|color|gray)|--color|--center|\$\{?(color|center|gray)|\b(COLOR|CENTER|GRAY)[_A-Z]*|gum |\\$)'; then
+              # Exclude lines where the match is inside a code/CLI pattern (filename exclusion handled by perl (?!\.))
+              if grep -inw "$american" "$file" 2>/dev/null | grep -qvE '("Authorization": "Bearer|types:[[:space:]]*\[[^]]+\]|=["\'](center|color)|--[a-z-]+ (center|color|gray)|--color|--center|\$\{?(color|center|gray)|\b(COLOR|CENTER|GRAY)[_A-Z]*|gum |\\$)'; then
                 case_preserve_replace "$file" "$american" "$british"
                 echo "  ✓ Fixed in: $file"
                 FIXED_COUNT=$((FIXED_COUNT + 1))
