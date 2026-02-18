@@ -166,14 +166,31 @@ jobs:
           [[ -z "$KEY_ID" ]] && exit 0
           git config --global user.signingkey "$KEY_ID"
           git config --global commit.gpgsign true
+          
+          # Upload GPG public key to bot's GitHub profile (enables Verified badge on commits)
+          GPG_PUBLIC_KEY=$(gpg --armor --export "$KEY_ID" 2>/dev/null || true)
+          if [[ -n "$GPG_PUBLIC_KEY" ]]; then
+            GH_TOKEN="${{ steps.app_token.outputs.token }}" gh api /user/gpg_keys \
+              --method POST \
+              -f armored_public_key="$GPG_PUBLIC_KEY" \
+              2>/dev/null || true
+          fi
 
       - name: Create Pull Request
         if: steps.replace.outputs.needs_pr == 'true'
         env:
           GH_TOKEN: ${{ steps.app_token.outputs.token }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # Use app bot identity for commits
+          APP_SLUG="${{ steps.app_token.outputs.app-slug }}"
+          BOT_ID=$(gh api "/users/${APP_SLUG}[bot]" --jq '.id' 2>/dev/null || echo "")
+          if [[ -n "$BOT_ID" ]]; then
+            git config user.name "${APP_SLUG}[bot]"
+            git config user.email "${BOT_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+          fi
           
           git add -A
           
