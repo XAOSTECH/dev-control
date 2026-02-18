@@ -154,6 +154,10 @@ jobs:
         env:
           GPG_PRIVATE_KEY: ${{ secrets.XB_GK }}
           GPG_PASSPHRASE: ${{ secrets.XB_GP }}
+          # XB_UT: a personal access token (classic) with write:gpg_key scope.
+          # Installation tokens cannot call POST /user/gpg_keys — it is a GitHub
+          # platform limitation regardless of App permissions settings.
+          USER_TOKEN: ${{ secrets.XB_UT }}
         run: |
           [[ -z "$GPG_PRIVATE_KEY" ]] && exit 0
           echo "$GPG_PRIVATE_KEY" | gpg --batch --import --quiet 2>/dev/null || true
@@ -173,23 +177,29 @@ jobs:
           [[ -z "$KEY_ID" ]] && exit 0
           GPG_PUBLIC_KEY=$(gpg --armor --export "$KEY_ID" 2>/dev/null || true)
           [[ -z "$GPG_PUBLIC_KEY" ]] && exit 0
-          # Check if this key fingerprint is already registered to avoid duplicates
-          ALREADY_REGISTERED=$(GH_TOKEN="${{ steps.app_token.outputs.token }}" gh api /user/gpg_keys --jq ".[] | select(.key_id == \"$KEY_ID\") | .id" 2>/dev/null || true)
-          if [[ -n "$ALREADY_REGISTERED" ]]; then
-            echo "✅ GPG public key already registered for bot profile (id: $ALREADY_REGISTERED)"
+          # GPG key registration requires a personal user token (classic PAT with write:gpg_key).
+          # Installation tokens get 403 on /user/gpg_keys regardless of App permission settings.
+          if [[ -z "$USER_TOKEN" ]]; then
+            echo "⚠️ XB_UT secret not set — skipping GPG key registration"
+            echo "ℹ️ Add a classic PAT (write:gpg_key scope) as secret XB_UT to enable 'Verified' tags"
+            exit 0
+          fi
+          # Check if the key (by key_id) is already registered under the user account
+          ALREADY_REGISTERED=$(GH_TOKEN="$USER_TOKEN" gh api /user/gpg_keys \
+            --jq ".[] | select(.key_id == \"$KEY_ID\") | .id" 2>/dev/null || true)
+          if [[ "$ALREADY_REGISTERED" =~ ^[0-9]+$ ]]; then
+            echo "✅ GPG public key already registered (id: $ALREADY_REGISTERED) — re-registering to pick up new UIDs"
+            GH_TOKEN="$USER_TOKEN" gh api "/user/gpg_keys/${ALREADY_REGISTERED}" --method DELETE 2>/dev/null || true
+          fi
+          REGISTER_RESULT=$(GH_TOKEN="$USER_TOKEN" gh api /user/gpg_keys \
+            --method POST \
+            -f armored_public_key="$GPG_PUBLIC_KEY" \
+            --jq '.id' 2>&1)
+          if [[ "$REGISTER_RESULT" =~ ^[0-9]+$ ]]; then
+            echo "✅ GPG public key registered (id: $REGISTER_RESULT)"
           else
-            # NOTE: requires 'GPG Keys: Read and write' under Account permissions in the GitHub App settings
-            REGISTER_RESULT=$(GH_TOKEN="${{ steps.app_token.outputs.token }}" gh api /user/gpg_keys \
-              --method POST \
-              -f armored_public_key="$GPG_PUBLIC_KEY" \
-              --jq '.id' 2>&1)
-            if [[ "$REGISTER_RESULT" =~ ^[0-9]+$ ]]; then
-              echo "✅ GPG public key registered for bot profile (id: $REGISTER_RESULT)"
-            else
-              echo "⚠️ GPG key registration failed: $REGISTER_RESULT"
-              echo "ℹ️ Ensure the GitHub App has 'GPG Keys: Read and write' under Account permissions"
-              echo "ℹ️ Tags will still be signed locally but may not show as Verified on GitHub"
-            fi
+            echo "⚠️ GPG key registration failed: $REGISTER_RESULT"
+            echo "ℹ️ Ensure XB_UT is a classic PAT with write:gpg_key scope"
           fi
 
       - name: Determine version
