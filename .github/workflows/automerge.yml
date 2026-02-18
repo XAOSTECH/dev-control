@@ -46,21 +46,23 @@ jobs:
               prNumbers = [context.payload.pull_request.number];
             }
             
+            const isXaosBot = (login) => /xaos.*\[bot\]/i.test(login);
+
             if (prNumbers.length === 0) {
-              core.info('No PR numbers found, scanning open PRs with automerge label.');
+              core.info('No PR numbers found, scanning open PRs with automerge label or xaos[bot] author.');
               try {
-                const issues = await github.rest.issues.listForRepo({
-                  owner,
-                  repo,
-                  state: 'open',
-                  labels: 'automerge',
-                  per_page: 100
+                const allOpen = await github.rest.pulls.list({
+                  owner, repo, state: 'open', per_page: 100
                 });
-                prNumbers = issues.data
-                  .filter(issue => issue.pull_request)
-                  .map(issue => issue.number);
+                const labeledPRs = allOpen.data
+                  .filter(pr => pr.labels.some(l => l.name === 'automerge'))
+                  .map(pr => pr.number);
+                const xaosPRs = allOpen.data
+                  .filter(pr => isXaosBot(pr.user && pr.user.login))
+                  .map(pr => pr.number);
+                prNumbers = [...new Set([...labeledPRs, ...xaosPRs])];
               } catch (error) {
-                core.info(`Failed to list PRs by label: ${error.message}`);
+                core.info(`Failed to list PRs: ${error.message}`);
               }
             }
 
@@ -86,11 +88,14 @@ jobs:
                 const isLabel = labels.includes('automerge');
                 const isTrustedAuthor = isDependabot || isRepoOwner || isCloudflare || isPages || isGitHubActions;
 
-                if (isLabel && isTrustedAuthor) {
+                if (isXaosBot(author)) {
                   validPRs.push(prNum);
-                  core.info(`PR #${prNum} valid (author=${author}, label=automerge, isDependabot=${isDependabot}, isRepoOwner=${isRepoOwner}, isCloudflare=${isCloudflare}, isPages=${isPages}, isGitHubActions=${isGitHubActions})`);
+                  core.info(`PR #${prNum} auto-approved (xaos bot author: ${author})`);
+                } else if (isLabel && isTrustedAuthor) {
+                  validPRs.push(prNum);
+                  core.info(`PR #${prNum} valid (author=${author}, label=automerge)`);
                 } else {
-                  core.info(`PR #${prNum} skipped (requires automerge label AND trusted author - hasLabel=${isLabel}, isTrusted=${isTrustedAuthor})`);
+                  core.info(`PR #${prNum} skipped (requires xaos bot author, OR automerge label + trusted author - hasLabel=${isLabel}, isTrusted=${isTrustedAuthor}, author=${author})`);
                 }
               } catch (error) {
                 core.info(`PR #${prNum} not found or error: ${error.message}`);
