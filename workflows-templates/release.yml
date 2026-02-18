@@ -165,11 +165,24 @@ jobs:
           [[ -z "$KEY_ID" ]] && exit 0
           GPG_PUBLIC_KEY=$(gpg --armor --export "$KEY_ID" 2>/dev/null || true)
           [[ -z "$GPG_PUBLIC_KEY" ]] && exit 0
-          GH_TOKEN="${{ steps.app_token.outputs.token }}" gh api /user/gpg_keys \
-            --method POST \
-            -f armored_public_key="$GPG_PUBLIC_KEY" \
-            2>/dev/null || true
-          echo "✅ GPG public key registered for bot profile"
+          # Check if this key fingerprint is already registered to avoid duplicates
+          ALREADY_REGISTERED=$(GH_TOKEN="${{ steps.app_token.outputs.token }}" gh api /user/gpg_keys --jq ".[] | select(.key_id == \"$KEY_ID\") | .id" 2>/dev/null || true)
+          if [[ -n "$ALREADY_REGISTERED" ]]; then
+            echo "✅ GPG public key already registered for bot profile (id: $ALREADY_REGISTERED)"
+          else
+            # NOTE: requires 'GPG Keys: Read and write' under Account permissions in the GitHub App settings
+            REGISTER_RESULT=$(GH_TOKEN="${{ steps.app_token.outputs.token }}" gh api /user/gpg_keys \
+              --method POST \
+              -f armored_public_key="$GPG_PUBLIC_KEY" \
+              --jq '.id' 2>&1)
+            if [[ "$REGISTER_RESULT" =~ ^[0-9]+$ ]]; then
+              echo "✅ GPG public key registered for bot profile (id: $REGISTER_RESULT)"
+            else
+              echo "⚠️ GPG key registration failed: $REGISTER_RESULT"
+              echo "ℹ️ Ensure the GitHub App has 'GPG Keys: Read and write' under Account permissions"
+              echo "ℹ️ Tags will still be signed locally but may not show as Verified on GitHub"
+            fi
+          fi
 
       - name: Determine version
         id: version
@@ -530,7 +543,7 @@ jobs:
 
       - name: Create GitHub Release
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.app_token.outputs.token }}
         run: |
           TAG_NAME="${{ steps.version.outputs.tag_name }}"
           VERSION="${{ steps.version.outputs.version }}"
@@ -573,7 +586,13 @@ jobs:
           
           # Create new 'latest' tag pointing to the commit this release tag resolves to
           # Use ^{} to dereference the version tag to its commit (avoids a nested tag)
-          git tag -a -m "Latest release: ${TAG_NAME}" latest "${TAG_NAME}^{}"
+          if [[ "${{ steps.import_gpg.outcome }}" == "success" ]]; then
+            git tag -s -m "Latest release: ${TAG_NAME}" latest "${TAG_NAME}^{}"
+            echo "✅ Created signed 'latest' tag pointing to ${TAG_NAME}"
+          else
+            git tag -a -m "Latest release: ${TAG_NAME}" latest "${TAG_NAME}^{}"
+            echo "ℹ️ Created unsigned 'latest' tag pointing to ${TAG_NAME} (add GPG secret for signed tags)"
+          fi
           git push origin latest
           
           echo "✅ Updated 'latest' tag to point to ${TAG_NAME}"
