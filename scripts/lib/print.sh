@@ -7,7 +7,7 @@
 #   source "${SCRIPT_DIR}/lib/colours.sh"
 #   source "${SCRIPT_DIR}/lib/print.sh"
 #
-# Note: colours.sh must be sourced first for colors to be available
+# Note: colours.sh must be sourced first for colours to be available
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025-2026 xaoscience

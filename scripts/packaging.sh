@@ -19,7 +19,7 @@
 #   ./packaging.sh --snap                    # Build snap package
 #   ./packaging.sh --debian                  # Build Debian package
 #   ./packaging.sh --docker                  # Build Docker image
-#   ./packaging.sh --init                    # Initialize packaging config
+#   ./packaging.sh --init                    # Initialise packaging config
 #   ./packaging.sh --theme matrix            # Set theme (matrix/hacker/cyber)
 #
 # Aliases: dc-package, dc-pkg
@@ -94,7 +94,7 @@ USAGE:
   packaging.sh [OPTIONS]
 
 OPTIONS:
-  --init                Initialize packaging configuration (.dc-package.yaml)
+  --init                Initialise packaging configuration (.dc-package.yaml)
   --all                 Build all package types
   --tarball             Build release tarball
   --homebrew            Generate Homebrew formula

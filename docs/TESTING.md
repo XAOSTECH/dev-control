@@ -2,7 +2,7 @@
 
 ## Overview
 
-Dev-Control uses [bats-core](https://github.com/bats-core/bats-core) for testing. Tests are organized by component:
+Dev-Control uses [bats-core](https://github.com/bats-core/bats-core) for testing. Tests are organised by component:
 
 ```
 tests/
