@@ -214,13 +214,37 @@ jobs:
           GH_TOKEN: ${{ steps.app_token.outputs.token }}
         run: |
           TAG_NAME="${{ steps.version.outputs.tag_name }}"
+          RERELEASE="false"
+
           if gh release view "$TAG_NAME" &>/dev/null; then
-            echo "⏭️ Release $TAG_NAME already exists — skipping build"
-            echo "exists=true" >> $GITHUB_OUTPUT
+            if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+              # Only allow re-release if this is the latest published release
+              LATEST_TAG=$(gh api "repos/${{ github.repository }}/releases/latest" --jq '.tag_name' 2>/dev/null || echo "")
+              if [[ "$LATEST_TAG" == "$TAG_NAME" ]]; then
+                echo "🔄 Re-release: $TAG_NAME is latest — cleaning up existing release, version tag, and latest tag"
+                gh release delete "$TAG_NAME" --yes 2>/dev/null || true
+                git push origin ":refs/tags/${TAG_NAME}" 2>/dev/null || true
+                git tag -d "$TAG_NAME" 2>/dev/null || true
+                git push origin :refs/tags/latest 2>/dev/null || true
+                git tag -d latest 2>/dev/null || true
+                echo "✅ Cleaned up — will rebuild and republish"
+                RERELEASE="true"
+                echo "exists=false" >> $GITHUB_OUTPUT
+              else
+                echo "⚠️ Release $TAG_NAME exists but is not the latest (latest: $LATEST_TAG)"
+                echo "ℹ️ Only the latest release can be re-released via manual dispatch"
+                echo "exists=true" >> $GITHUB_OUTPUT
+              fi
+            else
+              echo "⏭️ Release $TAG_NAME already exists — skipping build (push trigger)"
+              echo "exists=true" >> $GITHUB_OUTPUT
+            fi
           else
             echo "🆕 Release $TAG_NAME not yet published — proceeding"
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
+
+          echo "rerelease=${RERELEASE}" >> $GITHUB_OUTPUT
 
       - name: Gather commit history
         id: commits
@@ -255,15 +279,10 @@ jobs:
         if: steps.check_release.outputs.exists != 'true'
         run: |
           VERSION="${{ steps.version.outputs.version }}"
+          RERELEASE="${{ steps.check_release.outputs.rerelease }}"
+          TODAY=$(date +%Y-%m-%d)
 
-          # Skip if version already documented
-          if grep -q "## \[${VERSION}\]" CHANGELOG.md 2>/dev/null || \
-             grep -q "## ${VERSION}" CHANGELOG.md 2>/dev/null; then
-            echo "✅ CHANGELOG.md already contains v${VERSION} — skipping"
-            exit 0
-          fi
-
-          # Group commits (written by 'Gather commit history') by conventional commit type
+          # Build grouped commit categories from .commits-subjects.txt
           ADDED="" FIXED="" CHANGED="" DOCS=""
           while IFS= read -r line; do
             [[ -z "$line" ]] && continue
@@ -276,28 +295,65 @@ jobs:
             esac
           done < .commits-subjects.txt
 
-          # Build changelog entry
-          DATE=$(date +%Y-%m-%d)
+          # Determine heading and insertion mode
+          if [[ "$RERELEASE" == "true" ]]; then
+            ENTRY_LINE=$(grep -n "^## \[${VERSION}\]\|^## ${VERSION}" CHANGELOG.md 2>/dev/null | head -1 | cut -d: -f1)
+            ENTRY_DATE=$(sed -n "${ENTRY_LINE}p" CHANGELOG.md 2>/dev/null | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | head -1)
+            if [[ -n "$ENTRY_LINE" && "$ENTRY_DATE" == "$TODAY" ]]; then
+              HEADING="## [${VERSION}] - ${TODAY}"
+              MODE="overwrite"
+              echo "♻️ Same-day re-release: overwriting CHANGELOG section for v${VERSION}"
+            else
+              HEADING="## [${VERSION}] - ${TODAY} (re-release)"
+              MODE="prepend"
+              echo "🔄 Re-release on new day: prepending CHANGELOG section for v${VERSION}"
+            fi
+          else
+            # Normal release: skip if version already documented
+            if grep -q "^## \[${VERSION}\]" CHANGELOG.md 2>/dev/null || \
+               grep -q "^## ${VERSION}" CHANGELOG.md 2>/dev/null; then
+              echo "✅ CHANGELOG.md already contains v${VERSION} — skipping"
+              exit 0
+            fi
+            HEADING="## [${VERSION}] - ${TODAY}"
+            MODE="prepend"
+          fi
+
+          # Build the new entry
           {
-            echo "## [${VERSION}] - ${DATE}"
+            echo "$HEADING"
             [[ -n "$ADDED" ]]   && printf "\n### Added%b\n"         "$ADDED"
             [[ -n "$FIXED" ]]   && printf "\n### Fixed%b\n"         "$FIXED"
             [[ -n "$CHANGED" ]] && printf "\n### Changed%b\n"       "$CHANGED"
             [[ -n "$DOCS" ]]    && printf "\n### Documentation%b\n" "$DOCS"
           } > /tmp/new_entry.md
 
-          # Insert before first existing ## entry (or append if file is new)
-          FIRST_ENTRY=$(grep -n "^## " CHANGELOG.md 2>/dev/null | head -1 | cut -d: -f1)
-          if [[ -n "$FIRST_ENTRY" ]]; then
-            head -n $((FIRST_ENTRY - 1)) CHANGELOG.md > /tmp/cl_head.txt
-            tail -n +${FIRST_ENTRY} CHANGELOG.md      > /tmp/cl_tail.txt
+          if [[ "$MODE" == "overwrite" ]]; then
+            # Replace the existing section: everything before it + new entry + everything from next ## on
+            NEXT_SECTION=$(tail -n +$((ENTRY_LINE + 1)) CHANGELOG.md | grep -n "^## " | head -1 | cut -d: -f1)
+            head -n $((ENTRY_LINE - 1)) CHANGELOG.md > /tmp/cl_head.txt
+            if [[ -n "$NEXT_SECTION" ]]; then
+              tail -n +$((ENTRY_LINE + NEXT_SECTION - 1)) CHANGELOG.md > /tmp/cl_tail.txt
+            else
+              echo "" > /tmp/cl_tail.txt
+            fi
             { cat /tmp/cl_head.txt; echo ""; cat /tmp/new_entry.md; echo ""; cat /tmp/cl_tail.txt; } > CHANGELOG.md
           else
-            { echo ""; cat /tmp/new_entry.md; echo ""; } >> CHANGELOG.md
+            # Insert before first existing ## entry (or append if file is new)
+            FIRST_ENTRY=$(grep -n "^## " CHANGELOG.md 2>/dev/null | head -1 | cut -d: -f1)
+            if [[ -n "$FIRST_ENTRY" ]]; then
+              head -n $((FIRST_ENTRY - 1)) CHANGELOG.md > /tmp/cl_head.txt
+              tail -n +${FIRST_ENTRY} CHANGELOG.md      > /tmp/cl_tail.txt
+              { cat /tmp/cl_head.txt; echo ""; cat /tmp/new_entry.md; echo ""; cat /tmp/cl_tail.txt; } > CHANGELOG.md
+            else
+              { echo ""; cat /tmp/new_entry.md; echo ""; } >> CHANGELOG.md
+            fi
           fi
 
+          COMMIT_MSG="chore: update CHANGELOG for v${VERSION}"
+          [[ "$RERELEASE" == "true" ]] && COMMIT_MSG="chore: update CHANGELOG for v${VERSION} (re-release)"
           git add CHANGELOG.md
-          git commit -m "chore: update CHANGELOG for v${VERSION}"
+          git commit -m "$COMMIT_MSG"
           git push
           echo "✅ CHANGELOG.md updated for v${VERSION}"
 
