@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - add text replacement workflow
 
 ### Fixed
+- fix user setup and switch to wget
+- remove GPG_TTY literal and conflicting socket bind mount
+- pre-create .ssh/.cache/.config in image; restore .gnupg chown in postCreateCommand; add --no-cache to dc-contain --base
 - support v-prefixed version input, strip if present
 - normalise CHANGELOG blank lines with cat -s after each edit
 - add per-tag concurrency and idempotent release creation
@@ -50,6 +53,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - enable GPG signing in CI/CD with loopback pinentry mode
 
 ### Changed
+- chore: update CHANGELOG for v0.5.4 (re-release)
 - chore: update CHANGELOG for v0.5.4 (re-release)
 - perf: skip build steps on duplicate run via early release check
 - chore: update CHANGELOG for v0.5.4
