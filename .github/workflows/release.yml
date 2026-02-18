@@ -103,7 +103,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to release without v prefix (leave blank to auto-increment patch from latest release)'
+        description: 'Version (leave blank to autoincrement, use current to rerelease)'
         required: false
         type: string
       prerelease:
@@ -175,6 +175,7 @@ jobs:
           else
             # Manual dispatch - use input or auto-detect next patch
             VERSION="${{ github.event.inputs.version }}"
+            VERSION="${VERSION#v}"  # strip leading 'v' if present
             if [[ -z "$VERSION" ]]; then
               LATEST=$(gh api repos/${{ github.repository }}/releases/latest --jq '.tag_name' 2>/dev/null || \
                        git tag --list 'v*' --sort=-version:refname | grep -vE 'latest|alpha|beta|rc' | head -1)
