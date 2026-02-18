@@ -55,7 +55,7 @@ dc licenses      # Audit license compliance across repos
 dc mcp           # Configure AI coding assistants (MCP servers)
 dc contain       # Generate devcontainer.json for VS Code
 dc package       # Build tarballs, Homebrew, Snap, Deb, Nix, Docker
-dca-alias        # sync new alias and reload bashrc
+dca-alias        # Sync (all) new alias and reload bashrc
 
 ```
 
@@ -176,10 +176,12 @@ dc pr --draft --label bug
 Safely rewrite commits—edit messages, sign, fix dates, drop commits.
 
 ```bash
-dc fix                              # Interactive (last 10 commits)
-dc fix --sign --range HEAD=all      # GPG-sign entire branch
-dc fix --dry-run --range main..HEAD # Preview changes
-dc fix --restore                    # Recover from backup bundle
+dc fix                                                          # Interactive (last 10 commits)
+dc fix --sign --range HEAD=all                                  # GPG-sign entire branch
+dc fix --dry-run --range main..HEAD                             # Preview changes
+dc fix --restore                                                # Recover from backup bundle
+dc fix --drop hash                                              # Surgically drop commit by hash
+dc fix --sign --atomic-preserve --auto-resolve --range HEAD=5   # Preserve merge topology and autoresolve merge conflicts
 ```
 
 ### `dc modules` — Submodule Management
@@ -216,8 +218,13 @@ dc mcp --test                       # Verify GitHub MCP connection
 Generate a complete `.devcontainer/` setup for VS Code.
 
 ```bash
-dc container                        # Interactive
-dc container --image mcr.microsoft.com/devcontainers/base:ubuntu
+dc contain                                                        # Interactive
+dc contain --image mcr.microsoft.com/devcontainers/base:ubuntu    
+dc contain --base --dev-tools --defaults && \
+  cd subfolder && dc contain --img --dev-tools                    # Use the previous container image (tag=dev-tools) as a base
+dc contain --nest  <<< y                                          # Discover, update and rebuild all containers recursively
+dc contain --nest --regen                                         # Agressively do same (remove config files and containers)
+dc contain --nest --regen .                                       # Include root in same
 ```
 
 ### `dc package` — Multi-Platform Packaging
