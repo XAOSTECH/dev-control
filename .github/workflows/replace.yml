@@ -43,30 +43,41 @@ jobs:
         env:
           GPG_PRIVATE_KEY: ${{ secrets.XB_GK }}
           GPG_PASSPHRASE: ${{ secrets.XB_GP }}
+          USER_TOKEN: ${{ secrets.XB_UT }}
         run: |
           [[ -z "$GPG_PRIVATE_KEY" ]] && exit 0
           echo "$GPG_PRIVATE_KEY" | gpg --batch --import --quiet 2>/dev/null || true
           FINGERPRINT=$(gpg --batch --with-colons --list-secret-keys 2>/dev/null | grep '^fpr' | head -1 | cut -d: -f10)
           [[ -z "$FINGERPRINT" ]] && exit 0
-          # Add bot's noreply email as a UID so GitHub can verify signed commits
-          APP_SLUG="${{ steps.app_token.outputs.app-slug }}"
-          BOT_ID=$(GH_TOKEN="${{ steps.app_token.outputs.token }}" gh api "/users/${APP_SLUG}[bot]" --jq '.id' 2>/dev/null || echo "")
-          if [[ -n "$BOT_ID" && -n "$GPG_PASSPHRASE" ]]; then
-            BOT_EMAIL="${BOT_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
+          # Add machine user (xaos-bot) noreply email as a UID for GitHub signature verification
+          BOT_EMAIL="262248812+xaos-bot@users.noreply.github.com"
+          if [[ -n "$GPG_PASSPHRASE" ]]; then
             if ! gpg --list-keys 2>/dev/null | grep -qF "$BOT_EMAIL"; then
               printf '%s' "$GPG_PASSPHRASE" | gpg --batch --pinentry-mode loopback --passphrase-fd 0 \
-                --quick-add-uid "$FINGERPRINT" "${APP_SLUG}[bot] <${BOT_EMAIL}>" 2>/dev/null || true
+                --quick-add-uid "$FINGERPRINT" "xaos-bot <${BOT_EMAIL}>" 2>/dev/null || true
             fi
           fi
           KEY_ID=$(gpg --list-secret-keys --keyid-format=long 2>/dev/null | grep -oE '[0-9A-F]{16}' | head -1)
           [[ -z "$KEY_ID" ]] && exit 0
           GPG_PUBLIC_KEY=$(gpg --armor --export "$KEY_ID" 2>/dev/null || true)
           [[ -z "$GPG_PUBLIC_KEY" ]] && exit 0
-          GH_TOKEN="${{ steps.app_token.outputs.token }}" gh api /user/gpg_keys \
-            --method POST \
-            -f armored_public_key="$GPG_PUBLIC_KEY" \
-            2>/dev/null || true
-          echo "✅ GPG public key registered for bot profile"
+          # Register to machine user account — requires XB_UT: classic PAT with write:gpg_key scope
+          if [[ -n "$USER_TOKEN" ]]; then
+            ALREADY=$(GH_TOKEN="$USER_TOKEN" gh api /user/gpg_keys \
+              --jq ".[] | select(.key_id == \"$KEY_ID\") | .id" 2>/dev/null || true)
+            if [[ "$ALREADY" =~ ^[0-9]+$ ]]; then
+              GH_TOKEN="$USER_TOKEN" gh api "/user/gpg_keys/${ALREADY}" --method DELETE 2>/dev/null || true
+            fi
+            RESULT=$(GH_TOKEN="$USER_TOKEN" gh api /user/gpg_keys \
+              --method POST -f armored_public_key="$GPG_PUBLIC_KEY" --jq '.id' 2>&1)
+            if [[ "$RESULT" =~ ^[0-9]+$ ]]; then
+              echo "✅ GPG public key registered to xaos-bot (id: $RESULT)"
+            else
+              echo "⚠️ GPG key registration failed: $RESULT"
+            fi
+          else
+            echo "⚠️ XB_UT not set — skipping GPG key registration"
+          fi
 
       - name: Validate inputs
         run: |
@@ -191,14 +202,10 @@ jobs:
             gpg-connect-agent "PRESET_PASSPHRASE $KEYGRIP -1 $HEX_PASSPHRASE" /bye 2>/dev/null || true
           done <<< "$KEYGRIPS"
           
-          # Ensure bot's noreply email is a UID on the key (required for GitHub commit verification)
-          APP_SLUG="${{ steps.app_token.outputs.app-slug }}"
-          BOT_ID=$(GH_TOKEN="${{ steps.app_token.outputs.token }}" gh api "/users/${APP_SLUG}[bot]" --jq '.id' 2>/dev/null || echo "")
-          if [[ -n "$BOT_ID" ]]; then
-            BOT_EMAIL="${BOT_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
-            if ! gpg --list-keys 2>/dev/null | grep -qF "$BOT_EMAIL"; then
-              gpg --batch --quick-add-uid "$FINGERPRINT" "${APP_SLUG}[bot] <${BOT_EMAIL}>" 2>/dev/null || true
-            fi
+          # Add machine user (xaos-bot) noreply email as a UID for GitHub signature verification
+          BOT_EMAIL="262248812+xaos-bot@users.noreply.github.com"
+          if ! gpg --list-keys 2>/dev/null | grep -qF "$BOT_EMAIL"; then
+            gpg --batch --quick-add-uid "$FINGERPRINT" "xaos-bot <${BOT_EMAIL}>" 2>/dev/null || true
           fi
           
           # Configure git for signing
@@ -213,18 +220,10 @@ jobs:
           GH_TOKEN: ${{ steps.app_token.outputs.token }}
         run: |
           # Use app bot identity for commits
-          # APP_SLUG is the ASCII machine slug (used in email for attribution)
-          # DISPLAY_NAME: set vars.BOT_NAME in repo settings for a custom display name (e.g. χαος)
-          APP_SLUG="${{ steps.app_token.outputs.app-slug }}"
-          DISPLAY_NAME="${{ vars.BOT_NAME || steps.app_token.outputs.app-slug }}"
-          BOT_ID=$(gh api "/users/${APP_SLUG}[bot]" --jq '.id' 2>/dev/null || echo "")
-          if [[ -n "$BOT_ID" ]]; then
-            git config user.name "${DISPLAY_NAME}[bot]"
-            git config user.email "${BOT_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
-          else
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-          fi
+          # Machine user identity (xaos-bot, id: 262248812)
+          DISPLAY_NAME="${{ vars.BOT_NAME || 'xaos-bot' }}"
+          git config user.name "${DISPLAY_NAME}"
+          git config user.email "262248812+xaos-bot@users.noreply.github.com"
           
           git add -A
           
