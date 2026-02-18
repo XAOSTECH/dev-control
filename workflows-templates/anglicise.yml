@@ -528,10 +528,13 @@ jobs:
           GH_TOKEN: ${{ steps.app_token.outputs.token }}
         run: |
           # Use app bot identity for commits
+          # APP_SLUG is the ASCII machine slug (used in email for attribution)
+          # APP_NAME is the display name (may contain Unicode e.g. χαος)
           APP_SLUG="${{ steps.app_token.outputs.app-slug }}"
           BOT_ID=$(gh api "/users/${APP_SLUG}[bot]" --jq '.id' 2>/dev/null || echo "")
+          APP_NAME=$(gh api /app --jq '.name' 2>/dev/null || echo "")
           if [[ -n "$BOT_ID" ]]; then
-            git config user.name "${APP_SLUG}[bot]"
+            git config user.name "${APP_NAME:-${APP_SLUG}}[bot]"
             git config user.email "${BOT_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
           else
             git config user.name "github-actions[bot]"
