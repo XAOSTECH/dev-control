@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# SPDX-FileCopyrightText: 2024-2026 xaoscience
+# SPDX-FileCopyrightText: 2025-2026 xaoscience
 #
 # REUSE.toml - FSFE REUSE Specification 3.0 compliant configuration
 # See: https://reuse.software/spec/
@@ -9,34 +9,34 @@ version = 1
 [[annotations]]
 path = ["scripts/**/*.sh"]
 SPDX-License-Identifier = "GPL-3.0-or-later"
-SPDX-FileCopyrightText = "2024-2026 xaoscience"
+SPDX-FileCopyrightText = "2025-2026 xaoscience"
 
 [[annotations]]
 path = ["scripts/lib/*.sh"]
 SPDX-License-Identifier = "GPL-3.0-or-later"
-SPDX-FileCopyrightText = "2024-2026 xaoscience"
+SPDX-FileCopyrightText = "2025-2026 xaoscience"
 
 [[annotations]]
 path = ["docs-templates/**"]
 SPDX-License-Identifier = "CC-BY-4.0"
-SPDX-FileCopyrightText = "2024-2026 xaoscience"
+SPDX-FileCopyrightText = "2025-2026 xaoscience"
 
 [[annotations]]
 path = ["github-templates/**"]
 SPDX-License-Identifier = "CC0-1.0"
-SPDX-FileCopyrightText = "2024-2026 xaoscience"
+SPDX-FileCopyrightText = "2025-2026 xaoscience"
 
 [[annotations]]
 path = ["license-templates/**"]
 SPDX-License-Identifier = "CC0-1.0"
-SPDX-FileCopyrightText = "2024-2026 xaoscience"
+SPDX-FileCopyrightText = "2025-2026 xaoscience"
 
 [[annotations]]
 path = ["workflows-templates/**"]
 SPDX-License-Identifier = "CC0-1.0"
-SPDX-FileCopyrightText = "2024-2026 xaoscience"
+SPDX-FileCopyrightText = "2025-2026 xaoscience"
 
 [[annotations]]
 path = ["*.md", "docs/*.md"]
 SPDX-License-Identifier = "CC-BY-4.0"
-SPDX-FileCopyrightText = "2024-2026 xaoscience"
+SPDX-FileCopyrightText = "2025-2026 xaoscience"

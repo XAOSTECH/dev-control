@@ -7,7 +7,7 @@
 #   source "${SCRIPT_DIR}/lib/git/backup.sh"
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
-# SPDX-FileCopyrightText: 2024-2026 xaoscience
+# SPDX-FileCopyrightText: 2025-2026 xaoscience
 
 # Ensure print functions are available (source print.sh before this)
 # shellcheck disable=SC2034

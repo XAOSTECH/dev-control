@@ -10,7 +10,7 @@
 # Note: colours.sh must be sourced first for colors to be available
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
-# SPDX-FileCopyrightText: 2024-2026 xaoscience
+# SPDX-FileCopyrightText: 2025-2026 xaoscience
 
 LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${LIB_DIR}/colours.sh"
