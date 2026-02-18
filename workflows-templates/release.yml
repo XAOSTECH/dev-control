@@ -344,6 +344,8 @@ jobs:
 
           COMMIT_MSG="chore: update CHANGELOG for v${VERSION}"
           [[ "$RERELEASE" == "true" ]] && COMMIT_MSG="chore: update CHANGELOG for v${VERSION} (re-release)"
+          # Collapse any consecutive blank lines down to one
+          cat -s CHANGELOG.md > /tmp/cl_normalized.md && mv /tmp/cl_normalized.md CHANGELOG.md
           git add CHANGELOG.md
           git commit -m "$COMMIT_MSG"
           git push
