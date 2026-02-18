@@ -200,8 +200,23 @@ jobs:
           fi
           echo "✅ Version format valid: $VERSION"
 
+      - name: Check if release already published
+        id: check_release
+        env:
+          GH_TOKEN: ${{ steps.app_token.outputs.token }}
+        run: |
+          TAG_NAME="${{ steps.version.outputs.tag_name }}"
+          if gh release view "$TAG_NAME" &>/dev/null; then
+            echo "⏭️ Release $TAG_NAME already exists — skipping build"
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "🆕 Release $TAG_NAME not yet published — proceeding"
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Gather commit history
         id: commits
+        if: steps.check_release.outputs.exists != 'true'
         run: |
           VERSION="${{ steps.version.outputs.version }}"
 
@@ -229,6 +244,7 @@ jobs:
           echo "prev_tag=${PREV_TAG}" >> $GITHUB_OUTPUT
 
       - name: Update CHANGELOG.md
+        if: steps.check_release.outputs.exists != 'true'
         run: |
           VERSION="${{ steps.version.outputs.version }}"
 
@@ -311,6 +327,7 @@ jobs:
           fi
 
       - name: Update package version in config
+        if: steps.check_release.outputs.exists != 'true'
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           
@@ -347,6 +364,7 @@ jobs:
           fi
 
       - name: Install Gum
+        if: steps.check_release.outputs.exists != 'true'
         run: |
           curl -fsSL "https://github.com/charmbracelet/gum/releases/download/v${GUM_VERSION}/gum_${GUM_VERSION}_Linux_x86_64.tar.gz" \
             | tar xz --strip-components=1 -C /tmp "gum_${GUM_VERSION}_Linux_x86_64/gum"
@@ -354,6 +372,7 @@ jobs:
           echo "✅ Installed Gum v${GUM_VERSION}"
 
       - name: Build full tarball
+        if: steps.check_release.outputs.exists != 'true'
         run: |
           chmod +x scripts/packaging.sh scripts/lib/*.sh 2>/dev/null || true
           bash scripts/packaging.sh --tarball --verbose
@@ -399,6 +418,7 @@ jobs:
       # ========================================================================
 
       - name: List build artifacts
+        if: steps.check_release.outputs.exists != 'true'
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           echo "📦 Build artifacts:"
@@ -423,6 +443,7 @@ jobs:
 
       - name: Generate release notes
         id: release_notes
+        if: steps.check_release.outputs.exists != 'true'
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           TAG_NAME="${{ steps.version.outputs.tag_name }}"
@@ -478,6 +499,7 @@ jobs:
           cat "$NOTES_FILE"
 
       - name: Create GitHub Release
+        if: steps.check_release.outputs.exists != 'true'
         env:
           GH_TOKEN: ${{ steps.app_token.outputs.token }}
         run: |
@@ -506,7 +528,15 @@ jobs:
           GH_TOKEN: ${{ steps.app_token.outputs.token }}
         run: |
           TAG_NAME="${{ steps.version.outputs.tag_name }}"
-          
+
+          # Skip if 'latest' already points to this tag's commit (idempotent)
+          LATEST_COMMIT=$(git rev-parse refs/tags/latest^{} 2>/dev/null || echo "")
+          TARGET_COMMIT=$(git rev-parse "${TAG_NAME}^{}" 2>/dev/null || echo "")
+          if [[ -n "$LATEST_COMMIT" && "$LATEST_COMMIT" == "$TARGET_COMMIT" ]]; then
+            echo "✅ 'latest' already points to ${TAG_NAME} — skipping"
+            exit 0
+          fi
+
           # Delete existing 'latest' tag (local and remote)
           git tag -d latest 2>/dev/null || true
           git push origin :refs/tags/latest 2>/dev/null || true
