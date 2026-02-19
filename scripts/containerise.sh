@@ -700,16 +700,20 @@ generate_devcontainer_json() {
         mounts+="\"source=/usr/lib/x86_64-linux-gnu/libnvidia-encode.so.1,target=/usr/lib/x86_64-linux-gnu/libnvidia-encode.so.1,type=bind,readonly\""
     fi
     
-    # Build NVIDIA device mounts if enabled
-    # Always include --userns=keep-id for rootless podman socket permission compatibility
-    local run_args="\"--userns=keep-id\""
+    # Build NVIDIA device mounts if enabled.
+    # Note: --userns=keep-id is intentionally omitted here.
+    # VS Code Dev Containers automatically adds it for Podman when the container
+    # user UID matches the host UID, so including it in runArgs causes duplication
+    # (podman run --userns=keep-id --userns=keep-id) which breaks user namespace
+    # mapping and produces EACCES errors on .gnupg / .ssh / .cache at runtime.
+    local run_args=""
     if [[ "$CFG_ENABLE_NVIDIA_DEVICES" == "true" ]]; then
-        run_args+=",\"--shm-size=1g\",\"--device=/dev/dri\",\"--device=/dev/nvidia0\",\"--device=/dev/nvidiactl\",\"--device=/dev/nvidia-modeset\",\"--device=/dev/nvidia-uvm\",\"--device=/dev/nvidia-uvm-tools\""
+        run_args="\"--shm-size=1g\",\"--device=/dev/dri\",\"--device=/dev/nvidia0\",\"--device=/dev/nvidiactl\",\"--device=/dev/nvidia-modeset\",\"--device=/dev/nvidia-uvm\",\"--device=/dev/nvidia-uvm-tools\""
     fi
     
     # Streaming category: Always enable NVIDIA devices, DRI/KMS access, and USB capture device
     if [[ "$category" == "streaming" ]]; then
-        run_args="\"--userns=keep-id\",\"--shm-size=1g\",\"--device=/dev/dri\",\"--device=/dev/nvidia0\",\"--device=/dev/nvidiactl\",\"--device=/dev/nvidia-modeset\",\"--device=/dev/nvidia-uvm\",\"--device=/dev/nvidia-uvm-tools\",\"--group-add=video\",\"--group-add=render\",\"--security-opt=label=disable\",\"--device=/dev/usb-video-capture1\""
+        run_args="\"--shm-size=1g\",\"--device=/dev/dri\",\"--device=/dev/nvidia0\",\"--device=/dev/nvidiactl\",\"--device=/dev/nvidia-modeset\",\"--device=/dev/nvidia-uvm\",\"--device=/dev/nvidia-uvm-tools\",\"--group-add=video\",\"--group-add=render\",\"--security-opt=label=disable\",\"--device=/dev/usb-video-capture1\""
     fi
     
     # Build extensions array (default + category-specific)
@@ -1518,6 +1522,26 @@ run_nest_mode() {
         echo ""
     fi
     
+    # During --regen, prune all stale VS Code UID-wrapper images (vsc-*-uid) upfront
+    # BEFORE any base images are built. This makes the prune order-independent and
+    # predictable: it fires once here, not after whichever base happened to build first.
+    # (The per-build prune in build_base_image() remains for standalone --base runs.)
+    if [[ "$NEST_REGEN" == true ]]; then
+        local stale_wrappers=()
+        mapfile -t stale_wrappers < <(
+            podman images --format "{{.Repository}}" 2>/dev/null \
+                | grep "^localhost/vsc-" || true
+        )
+        if [[ ${#stale_wrappers[@]} -gt 0 ]]; then
+            print_info "Pruning ${#stale_wrappers[@]} stale VS Code UID-wrapper image(s) before rebuild..."
+            for wrapper in "${stale_wrappers[@]}"; do
+                podman rmi --force "$wrapper" 2>/dev/null || true
+            done
+            print_success "Pruned. VS Code will rebuild wrappers from new base images."
+            echo ""
+        fi
+    fi
+
     # Execute builds (only known projects)
     print_header "Building recognised containers"
     echo ""
