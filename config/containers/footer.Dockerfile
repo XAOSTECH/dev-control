@@ -48,6 +48,8 @@ RUN mkdir -p /opt/dev-control && \
 # VS Code's container setup (pre-postCreateCommand) creates missing dirs as root,
 # which permanently breaks writability for the container user.
 # Pre-creating here with correct ownership prevents that race condition.
+# BUILD_DATE busts this layer's cache on each build so permissions are always applied fresh.
+ARG BUILD_DATE
 RUN mkdir -p \
         /home/${CATEGORY}/.vscode-server \
         /home/${CATEGORY}/.bash_backups \

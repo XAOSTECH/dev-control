@@ -1118,6 +1118,7 @@ build_base_image() {
         cd "$devcontainer_dir"
         local build_args=()
         [[ "$NO_CACHE" == "true" ]] && build_args+=("--no-cache")
+        build_args+=("--build-arg" "BUILD_DATE=$(date +%Y%m%d)")
         if podman build "${build_args[@]}" -t "$image_tag" .; then
             echo ""
             print_header_success "Base Image Built Successfully!"
