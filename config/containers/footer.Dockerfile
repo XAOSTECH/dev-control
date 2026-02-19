@@ -69,6 +69,11 @@ RUN mkdir -p \
     chmod 755 /home/${CATEGORY}/.cache && \
     chmod 755 /home/${CATEGORY}/.config
 
+# Metadata label for container discovery and category identification
+LABEL dev-control.category="${CATEGORY}" \
+      dev-control.type="base-image" \
+      dev-control.source="https://github.com/xaostech/dev-control"
+
 USER ${CATEGORY}
 
 WORKDIR /workspaces

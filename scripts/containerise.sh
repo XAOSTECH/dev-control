@@ -694,6 +694,12 @@ generate_devcontainer_json() {
         mounts+="\"source=/usr/lib/x86_64-linux-gnu/libnvcuvid.so.1,target=/usr/lib/x86_64-linux-gnu/libnvcuvid.so.1,type=bind,readonly\""
     fi
     
+    # Streaming category: Add NVENC encoding library mount
+    if [[ "$category" == "streaming" ]]; then
+        if [[ -n "$mounts" ]]; then mounts+=","; fi
+        mounts+="\"source=/usr/lib/x86_64-linux-gnu/libnvidia-encode.so.1,target=/usr/lib/x86_64-linux-gnu/libnvidia-encode.so.1,type=bind,readonly\""
+    fi
+    
     # Build NVIDIA device mounts if enabled
     # Always include --userns=keep-id for rootless podman socket permission compatibility
     local run_args="\"--userns=keep-id\""
@@ -701,9 +707,9 @@ generate_devcontainer_json() {
         run_args+=",\"--shm-size=1g\",\"--device=/dev/dri\",\"--device=/dev/nvidia0\",\"--device=/dev/nvidiactl\",\"--device=/dev/nvidia-modeset\",\"--device=/dev/nvidia-uvm\",\"--device=/dev/nvidia-uvm-tools\""
     fi
     
-    # Streaming category: Always enable NVIDIA devices and DRI/KMS access
+    # Streaming category: Always enable NVIDIA devices, DRI/KMS access, and USB capture device
     if [[ "$category" == "streaming" ]]; then
-        run_args="\"--userns=keep-id\",\"--shm-size=1g\",\"--device=/dev/dri\",\"--device=/dev/nvidia0\",\"--device=/dev/nvidiactl\",\"--device=/dev/nvidia-modeset\",\"--device=/dev/nvidia-uvm\",\"--device=/dev/nvidia-uvm-tools\",\"--group-add=video\",\"--group-add=render\",\"--security-opt=label=disable\""
+        run_args="\"--userns=keep-id\",\"--shm-size=1g\",\"--device=/dev/dri\",\"--device=/dev/nvidia0\",\"--device=/dev/nvidiactl\",\"--device=/dev/nvidia-modeset\",\"--device=/dev/nvidia-uvm\",\"--device=/dev/nvidia-uvm-tools\",\"--group-add=video\",\"--group-add=render\",\"--security-opt=label=disable\",\"--device=/dev/usb-video-capture1\""
     fi
     
     # Build extensions array (default + category-specific)
