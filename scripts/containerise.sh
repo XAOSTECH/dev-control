@@ -1121,6 +1121,25 @@ build_base_image() {
             echo ""
             print_info "Verify: ${CYAN}podman images | grep ${image_tag%%:*}${NC}"
             print_info "Use in other projects: ${CYAN}dc-contain --img --$category${NC}"
+            echo ""
+            # Prune stale VS Code UID-wrapper images (vsc-*-uid).
+            # VS Code names these by a hash of devcontainer.json content, not the
+            # image digest. Podman's layer cache resolves the FROM mutable tag to
+            # the OLD digest when rebuilding, so the wrapper is silently built from
+            # the pre-fix base image. Pruning forces VS Code to rebuild the wrapper
+            # transparently from the new base on next container open (~5s rebuild).
+            local stale_wrappers=()
+            mapfile -t stale_wrappers < <(
+                podman images --format "{{.Repository}}" 2>/dev/null \
+                    | grep "^localhost/vsc-" || true
+            )
+            if [[ ${#stale_wrappers[@]} -gt 0 ]]; then
+                print_info "Pruning ${#stale_wrappers[@]} stale VS Code UID-wrapper image(s)..."
+                for wrapper in "${stale_wrappers[@]}"; do
+                    podman rmi --force "$wrapper" 2>/dev/null || true
+                done
+                print_success "Pruned. VS Code will rebuild wrappers from the new base on next open."
+            fi
         else
             echo ""
             print_error "Build failed"
