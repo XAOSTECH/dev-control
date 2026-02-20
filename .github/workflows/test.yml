@@ -44,7 +44,7 @@ jobs:
         uses: actions/checkout@v4
       
       - name: Shellcheck
-        uses: ludeeus/action-shellcheck@master
+        uses: ludeeus/action-shellcheck@0a0fc8d6ded45b42e41fb4bae3e1ec9f4f1a2cb0
         with:
           scandir: './scripts'
           severity: warning

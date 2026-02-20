@@ -98,28 +98,28 @@ jobs:
         id: vars
         run: |
           # Repository info from calling repo
-          echo "repo_name=${{ github.event.repository.name }}" >> $GITHUB_OUTPUT
-          echo "repo_owner=${{ github.repository_owner }}" >> $GITHUB_OUTPUT
-          echo "repo_url=https://github.com/${{ github.repository }}" >> $GITHUB_OUTPUT
+          echo "repo_name=${{ github.event.repository.name }}" >> "$GITHUB_OUTPUT"
+          echo "repo_owner=${{ github.repository_owner }}" >> "$GITHUB_OUTPUT"
+          echo "repo_url=https://github.com/${{ github.repository }}" >> "$GITHUB_OUTPUT"
           
           # Project name
           PROJECT_NAME="${{ inputs.project_name }}"
           if [ -z "$PROJECT_NAME" ]; then
             PROJECT_NAME="${{ github.event.repository.name }}"
           fi
-          echo "project_name=$PROJECT_NAME" >> $GITHUB_OUTPUT
+          echo "project_name=$PROJECT_NAME" >> "$GITHUB_OUTPUT"
           
           # Stability color
           case "${{ inputs.stability }}" in
-            experimental) echo "stability_color=orange" >> $GITHUB_OUTPUT ;;
-            beta) echo "stability_color=yellow" >> $GITHUB_OUTPUT ;;
-            stable) echo "stability_color=green" >> $GITHUB_OUTPUT ;;
-            mature) echo "stability_color=blue" >> $GITHUB_OUTPUT ;;
-            *) echo "stability_color=orange" >> $GITHUB_OUTPUT ;;
+            experimental) echo "stability_color=orange" >> "$GITHUB_OUTPUT" ;;
+            beta) echo "stability_color=yellow" >> "$GITHUB_OUTPUT" ;;
+            stable) echo "stability_color=green" >> "$GITHUB_OUTPUT" ;;
+            mature) echo "stability_color=blue" >> "$GITHUB_OUTPUT" ;;
+            *) echo "stability_color=orange" >> "$GITHUB_OUTPUT" ;;
           esac
           
-          echo "current_year=$(date +%Y)" >> $GITHUB_OUTPUT
-          echo "branch_name=chore/init-templates-$(date +%Y%m%d%H%M%S)" >> $GITHUB_OUTPUT
+          echo "current_year=$(date +%Y)" >> "$GITHUB_OUTPUT"
+          echo "branch_name=chore/init-templates-$(date +%Y%m%d%H%M%S)" >> "$GITHUB_OUTPUT"
       
       - name: Process and copy templates
         id: process
@@ -226,7 +226,7 @@ jobs:
           # Cleanup
           rm -rf .dev-control-templates
           
-          echo "installed=${INSTALLED%,}" >> $GITHUB_OUTPUT
+          echo "installed=${INSTALLED%,}" >> "$GITHUB_OUTPUT"
       
       - name: Create Pull Request
         id: create-pr
@@ -269,7 +269,7 @@ jobs:
         run: |
           if [[ -z "$GPG_PRIVATE_KEY" ]]; then
             echo "ℹ️ GPG_PRIVATE_KEY not configured - commits will be unsigned"
-            echo "outcome=skipped" >> $GITHUB_OUTPUT
+            echo "outcome=skipped" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           
@@ -286,7 +286,7 @@ jobs:
           if [[ -z "$KEY_ID" ]]; then
             echo "⚠️ Could not extract GPG key ID, but import may have succeeded"
             echo "ℹ️ Commits will be unsigned"
-            echo "outcome=partial" >> $GITHUB_OUTPUT
+            echo "outcome=partial" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           
@@ -294,7 +294,7 @@ jobs:
           git config --global commit.gpgsign true
           
           echo "✅ GPG key imported and configured successfully"
-          echo "outcome=success" >> $GITHUB_OUTPUT
+          echo "outcome=success" >> "$GITHUB_OUTPUT"
           exit 0
       
       - name: Direct commit
