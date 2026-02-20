@@ -26,28 +26,40 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Setup bot identity
+      - name: Generate security app token
+        id: app_token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.XSS_AI }}
+          private-key: ${{ secrets.XSS_PK }}
+
+      - name: Setup bot identity for signing
         id: identity
         uses: XAOSTECH/dev-control/.github/actions/identity@e148b60d6180ab099ba4df07d2b1b1b35f9b8f4c
         with:
           gpg-private-key: ${{ secrets.XB_GK }}
           gpg-passphrase: ${{ secrets.XB_GP }}
+          user-token: ${{ secrets.XB_UT }}
+          bot-name: xaos-bot
 
       - name: Configure Git
         env:
           BOT_NAME: ${{ steps.identity.outputs.name }}
           BOT_EMAIL: ${{ steps.identity.outputs.email }}
+          APP_TOKEN: ${{ steps.app_token.outputs.token }}
         run: |
           git config --global user.name "$BOT_NAME"
           git config --global user.email "$BOT_EMAIL"
           git config --global commit.gpgsign true
+          
+          # Configure git to use app token for authentication
+          git remote set-url origin "https://x-access-token:${APP_TOKEN}@github.com/${{ github.repository }}.git"
 
       - name: Fetch and analyze CodeQL alerts
         id: alerts
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app_token.outputs.token }}
         run: |
           # Fetch open security alerts
           ALERTS=$(gh api repos/${{ github.repository }}/code-scanning/alerts?state=open \
@@ -106,7 +118,7 @@ jobs:
       - name: Create security fix PR
         if: steps.fixes.outputs.code_injection_found == 'true' || steps.fixes.outputs.needs_manual_review == 'true'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app_token.outputs.token }}
         run: |
           # Create feature branch
           BRANCH="security/autofix-$(date +%s)"
@@ -154,7 +166,7 @@ $(cat /tmp/alerts.json | jq -r '.[] | \"- [\(.severity | ascii_upcase)] \(.rule)
       - name: Create GitHub Issue for manual review
         if: steps.alerts.outputs.fixable_count > 0
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app_token.outputs.token }}
         run: |
           # Check if similar issue already exists
           EXISTING=$(gh issue list --state open --label security-review --json number --jq 'length')
