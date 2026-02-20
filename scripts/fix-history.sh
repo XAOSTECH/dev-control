@@ -1531,21 +1531,22 @@ sign_mode() {
         fi
     fi
 
-    echo -e "${BOLD}Sign/Author Mode${NC}"
-    echo -e "Range: ${CYAN}$RANGE${NC}"
+    # If --reauthor provided a target, include that commit in range to ensure merges are rewritten
+    if [[ "$REAUTHOR_MODE" == "true" && -n "$REAUTHOR_TARGET" ]]; then
+        if [[ "$REAUTHOR_TARGET" == *".."* ]]; then
+            RANGE="$REAUTHOR_TARGET"
+        else
+            RANGE="$REAUTHOR_TARGET^..HEAD"
+        fi
+    fi
+
     # Normalise simple ranges like HEAD=5 into HEAD=5..HEAD for clarity
     if [[ "$RANGE" != *".."* ]]; then
         RANGE="$RANGE..HEAD"
     fi
 
-    # If --reauthor provided a target, set range from that commit to HEAD (unless a range was explicitly provided)
-    if [[ "$REAUTHOR_MODE" == "true" && -n "$REAUTHOR_TARGET" ]]; then
-        if [[ "$REAUTHOR_TARGET" == *".."* ]]; then
-            RANGE="$REAUTHOR_TARGET"
-        else
-            RANGE="$REAUTHOR_TARGET..HEAD"
-        fi
-    fi
+    echo -e "${BOLD}Sign/Author Mode${NC}"
+    echo -e "Range: ${CYAN}$RANGE${NC}"
 
     # In harness mode we auto-confirm to allow non-interactive testing (especially with --dry-run)
     if [[ "$HARNESS_MODE" == "true" ]]; then
