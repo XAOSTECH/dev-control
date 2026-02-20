@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - prune stale vsc-*-uid wrapper images after base build
 
 ### Changed
+- Merge pull request #34 from XAOSTECH/anglicise/20260220-215059
+- chore: convert American spellings to British English
+- Fix anglicise grep quoting and ignore test-repo
+- chore: update CHANGELOG for v0.5.5 (re-release)
 - Add defaults-only mode for template loading
 - Add app token secret name templating
 - Template workflow secret name placeholders
