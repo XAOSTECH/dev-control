@@ -267,6 +267,18 @@ get_repo_info() {
             USER_TOKEN_SECRET="$cached_user_token_secret"
         fi
         
+        local cached_security_app_id_secret
+        cached_security_app_id_secret=$(git config --local dc-init.security-app-id-secret 2>/dev/null || echo "")
+        if [[ -n "$cached_security_app_id_secret" ]]; then
+            SECURITY_APP_ID_SECRET="$cached_security_app_id_secret"
+        fi
+        
+        local cached_security_private_key_secret
+        cached_security_private_key_secret=$(git config --local dc-init.security-private-key-secret 2>/dev/null || echo "")
+        if [[ -n "$cached_security_private_key_secret" ]]; then
+            SECURITY_PRIVATE_KEY_SECRET="$cached_security_private_key_secret"
+        fi
+        
         local cached_stability
         cached_stability=$(git config --local dc-init.stability 2>/dev/null || echo "")
         if [[ -n "$cached_stability" ]]; then
@@ -513,6 +525,20 @@ collect_project_info() {
         read -rp "Bot user-token (secret name, e.g. MY_GITHUB_TOKEN): " USER_TOKEN_SECRET
     fi
     
+    if [[ -n "$SECURITY_APP_ID_SECRET" ]]; then
+        read -rp "Security app-id [$SECURITY_APP_ID_SECRET]: " input
+        SECURITY_APP_ID_SECRET="${input:-$SECURITY_APP_ID_SECRET}"
+    else
+        read -rp "Security app-id (secret name, e.g. SECURITY_APP_ID): " SECURITY_APP_ID_SECRET
+    fi
+    
+    if [[ -n "$SECURITY_PRIVATE_KEY_SECRET" ]]; then
+        read -rp "Security private-key [$SECURITY_PRIVATE_KEY_SECRET]: " input
+        SECURITY_PRIVATE_KEY_SECRET="${input:-$SECURITY_PRIVATE_KEY_SECRET}"
+    else
+        read -rp "Security private-key (secret name, e.g. SECURITY_PRIVATE_KEY): " SECURITY_PRIVATE_KEY_SECRET
+    fi
+    
     CURRENT_YEAR=$(date +%Y)
 }
 
@@ -545,6 +571,8 @@ process_template() {
         -e "s|{{GPG_PRIVATE_KEY_SECRET}}|${GPG_PRIVATE_KEY_SECRET:-}|g" \
         -e "s|{{GPG_PASSPHRASE_SECRET}}|${GPG_PASSPHRASE_SECRET:-}|g" \
         -e "s|{{USER_TOKEN_SECRET}}|${USER_TOKEN_SECRET:-}|g" \
+        -e "s|{{SECURITY_APP_ID_SECRET}}|${SECURITY_APP_ID_SECRET:-}|g" \
+        -e "s|{{SECURITY_PRIVATE_KEY_SECRET}}|${SECURITY_PRIVATE_KEY_SECRET:-}|g" \
         "$src" > "$dest"
     
     print_success "Created: $dest"
@@ -1266,6 +1294,8 @@ save_project_metadata() {
         [[ -n "$GPG_PRIVATE_KEY_SECRET" ]] && git config --local dc-init.gpg-private-key-secret "$GPG_PRIVATE_KEY_SECRET" 2>/dev/null || true
         [[ -n "$GPG_PASSPHRASE_SECRET" ]] && git config --local dc-init.gpg-passphrase-secret "$GPG_PASSPHRASE_SECRET" 2>/dev/null || true
         [[ -n "$USER_TOKEN_SECRET" ]] && git config --local dc-init.user-token-secret "$USER_TOKEN_SECRET" 2>/dev/null || true
+        [[ -n "$SECURITY_APP_ID_SECRET" ]] && git config --local dc-init.security-app-id-secret "$SECURITY_APP_ID_SECRET" 2>/dev/null || true
+        [[ -n "$SECURITY_PRIVATE_KEY_SECRET" ]] && git config --local dc-init.security-private-key-secret "$SECURITY_PRIVATE_KEY_SECRET" 2>/dev/null || true
     fi
 }
 
