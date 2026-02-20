@@ -6,10 +6,10 @@
     <img alt="GitHub repo" src="https://img.shields.io/badge/GitHub-xaostech%2Fdev--control-181717?style=for-the-badge&logo=github">
   </a>
   <a href="https://github.com/xaostech/dev-control/releases">
-    <img alt="GitHub release" src="https://img.shields.io/github/v/release/xaostech/dev-control?style=for-the-badge&logo=semantic-release&colour=blue">
+    <img alt="GitHub release" src="https://img.shields.io/github/v/release/xaostech/dev-control?style=for-the-badge&logo=semantic-release&color=blue">
   </a>
   <a href="https://github.com/xaostech/dev-control/blob/main/LICENSE">
-    <img alt="License" src="https://img.shields.io/github/license/xaostech/dev-control?style=for-the-badge&colour=green">
+    <img alt="License" src="https://img.shields.io/github/license/xaostech/dev-control?style=for-the-badge&color=green">
   </a>
 </p>
 
@@ -18,13 +18,13 @@
     <img alt="CI Status" src="https://github.com/xaostech/dev-control/actions/workflows/bash-lint.yml/badge.svg?branch=Main">
   </a>
   <a href="https://github.com/xaostech/dev-control/issues">
-    <img alt="Issues" src="https://img.shields.io/github/issues/xaostech/dev-control?style=flat-square&logo=github&colour=yellow">
+    <img alt="Issues" src="https://img.shields.io/github/issues/xaostech/dev-control?style=flat-square&logo=github&color=yellow">
   </a>
   <a href="https://github.com/xaostech/dev-control/pulls">
-    <img alt="Pull Requests" src="https://img.shields.io/github/issues-pr/xaostech/dev-control?style=flat-square&logo=github&colour=purple">
+    <img alt="Pull Requests" src="https://img.shields.io/github/issues-pr/xaostech/dev-control?style=flat-square&logo=github&color=purple">
   </a>
   <a href="https://github.com/xaostech/dev-control/stargazers">
-    <img alt="Stars" src="https://img.shields.io/github/stars/xaostech/dev-control?style=flat-square&logo=github&colour=gold">
+    <img alt="Stars" src="https://img.shields.io/github/stars/xaostech/dev-control?style=flat-square&logo=github&color=gold">
   </a>
 </p>
 
