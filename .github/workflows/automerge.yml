@@ -120,7 +120,9 @@ jobs:
       - name: Checkout base branch
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          # Shallow clone - automerge only needs base ref, not PR history
+          # Reduces attack surface by not fetching untrusted PR commits
+          fetch-depth: 1
           token: ${{ steps.app_token.outputs.token }}
 
       - name: Setup bot identity
