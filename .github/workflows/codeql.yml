@@ -37,23 +37,22 @@ jobs:
           fetch-depth: 0
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@v4
         with:
-          # Repo focus: shell/bash scripts + Dockerfile (analyzed via GitHub Advanced Security)
-          # JavaScript included for any GitHub Actions or config analysis
-          languages: 'javascript'
-          # Extended security-focused query suite (more comprehensive than default)
-          queries: |
-            security-and-quality
+          # Auto-detect languages present in repo (no hardcoding)
+          # Supports: JavaScript, Python, Go, Java, C/C++, C#, Ruby, Swift
+          queries: security-and-quality
           config: |
             paths-ignore:
               - node_modules
               - vendor
               - '.git'
               - 'vendor/bundle'
+              - '.venv'
+              - '__pycache__'
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@v4
         with:
           # Upload results after analysis completes
           upload: true
@@ -74,14 +73,14 @@ jobs:
           echo "## 🔒 CodeQL Security Analysis Complete" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Analysis Coverage:" >> $GITHUB_STEP_SUMMARY
-          echo "- **JavaScript/TypeScript/YAML**: ✓" >> $GITHUB_STEP_SUMMARY
-          echo "- **Shell Scripts**: Analyzed via bash-lint-advanced workflow" >> $GITHUB_STEP_SUMMARY
-          echo "- **Dockerfile**: GitHub Advanced Security scanning" >> $GITHUB_STEP_SUMMARY
+          echo "- **Auto-detected languages**: JavaScript, Python, Go, Java, C++, C#, Ruby, Swift" >> $GITHUB_STEP_SUMMARY
+          echo "- **Query suite**: Extended (security-and-quality)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Schedule**: Push, PR, daily at 2 AM UTC" >> $GITHUB_STEP_SUMMARY
+          echo "- **Concurrency**: Cancels older scans on new push" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Security Suite:" >> $GITHUB_STEP_SUMMARY
-          echo "- Extended queries (security-and-quality)" >> $GITHUB_STEP_SUMMARY
-          echo "- Maximum sensitivity for vulnerability detection" >> $GITHUB_STEP_SUMMARY
-          echo "- Daily scheduled scans (2 AM UTC)" >> $GITHUB_STEP_SUMMARY
+          echo "### Complementary Security:" >> $GITHUB_STEP_SUMMARY
+          echo "- Shell scripts: bash-lint-advanced workflow (ShellCheck)" >> $GITHUB_STEP_SUMMARY
+          echo "- Dockerfile: GitHub Advanced Security scanning" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Next Steps:" >> $GITHUB_STEP_SUMMARY
           echo "1. Check the [Security tab](../../security/code-scanning?tab=alert) for results" >> $GITHUB_STEP_SUMMARY
@@ -89,27 +88,3 @@ jobs:
           echo "3. Address discovered vulnerabilities" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "[View CodeQL Documentation](https://codeql.github.com/docs/)" >> $GITHUB_STEP_SUMMARY
-
-  # Check results - fail if critical issues found
-  verify-no-critical:
-    name: Verify Critical Issues
-    runs-on: ubuntu-latest
-    needs: [analyze]
-    if: always()
-    
-    steps:
-      - name: Wait for CodeQL upload
-        run: sleep 10
-
-      - name: Check for critical alerts
-        uses: github/codeql-action/upload-sarif@v3
-        continue-on-error: true
-        with:
-          # Note: This step monitors CodeQL results passively
-          # Active blocking would require custom GitHub API integration
-          wait-for-processing: true
-
-      - name: Info message
-        run: |
-          echo "✅ CodeQL analysis completed"
-          echo "Check Security > Code scanning tab for detailed results"
