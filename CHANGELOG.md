@@ -5,6 +5,14 @@ All notable changes to Dev-Control will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.5] - 2026-02-20
+
+### Fixed
+- pre-create ~/.devcontainer so postCreateCommand marker can be written
+- bust permissions layer cache with BUILD_DATE ARG
+- remove --userns=keep-id from runArgs + prune before nest loop
+- prune stale vsc-*-uid wrapper images after base build
+
 ## [0.5.4] - 2026-02-18
 
 ### Added
