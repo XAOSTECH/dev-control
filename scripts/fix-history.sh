@@ -58,6 +58,9 @@ NO_CLEANUP=false
 CLEANUP_ONLY=false
 SIGN_MODE=false
 TIMED_SIGN_MODE=false  # Space out PR signing by minute boundaries
+RESIGN_MODE=false       # Force re-sign even if already signed
+REAUTHOR_MODE=false
+REAUTHOR_TARGET=""
 DROP_COMMIT=""
 # Auto-resolve strategy: empty|ours|theirs
 # Can be set via environment (AUTO_RESOLVE=ours|theirs|OURS|THEIRS) or via --auto-resolve <mode|=mode>
@@ -161,6 +164,9 @@ Options:
   --sign                     Re-sign commits in the selected range (requires GPG)
                              Rewrites history to apply signatures and preserves dates
                              Automatically force-pushes to remote after signing (atomic)
+    --resign                   Force re-sign commits even if already signed (use with --sign)
+    --reauthor <commit|range>  Reset author to current git user for a commit or range
+                                                         If a single commit is provided, rewrites from that commit to HEAD
   --atomic-preserve          Deterministic preserve: recreate commits (including merges) with
                              `git commit-tree`, immediately sign and set author/committer dates (atomic)
   --drop COMMIT              Drop (remove) a single non-root commit from history
@@ -244,6 +250,16 @@ parse_args() {
             --sign)
                 SIGN_MODE=true
                 shift
+                ;;
+            --resign)
+                RESIGN_MODE=true
+                SIGN_MODE=true
+                shift
+                ;;
+            --reauthor)
+                REAUTHOR_MODE=true
+                REAUTHOR_TARGET="$2"
+                shift 2
                 ;;
             --timed-sign)
                 SIGN_MODE=true
@@ -1502,22 +1518,33 @@ sign_mode() {
     ORIGINAL_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
     print_info "Original branch recorded: $ORIGINAL_BRANCH"
 
-    # Validate GPG setup
-    local signingkey
-    signingkey="$(git config user.signingkey 2>/dev/null || echo '')"
-    if ! command -v gpg &>/dev/null || [[ -z "$signingkey" ]] || [[ "$signingkey" == "none" ]]; then
-        print_warning "GPG not found or signing key not configured properly. Aborting sign operation."
-        if [[ "$signingkey" == "none" ]]; then
-            print_error "Signing key is set to 'none'. Check: git config --list | grep user.signingkey"
+    # Validate GPG setup (only required when signing)
+    if [[ "$SIGN_MODE" == "true" ]]; then
+        local signingkey
+        signingkey="$(git config user.signingkey 2>/dev/null || echo '')"
+        if ! command -v gpg &>/dev/null || [[ -z "$signingkey" ]] || [[ "$signingkey" == "none" ]]; then
+            print_warning "GPG not found or signing key not configured properly. Aborting sign operation."
+            if [[ "$signingkey" == "none" ]]; then
+                print_error "Signing key is set to 'none'. Check: git config --list | grep user.signingkey"
+            fi
+            exit 1
         fi
-        exit 1
     fi
 
-    echo -e "${BOLD}Sign Mode${NC}"
+    echo -e "${BOLD}Sign/Author Mode${NC}"
     echo -e "Range: ${CYAN}$RANGE${NC}"
     # Normalise simple ranges like HEAD=5 into HEAD=5..HEAD for clarity
     if [[ "$RANGE" != *".."* ]]; then
         RANGE="$RANGE..HEAD"
+    fi
+
+    # If --reauthor provided a target, set range from that commit to HEAD (unless a range was explicitly provided)
+    if [[ "$REAUTHOR_MODE" == "true" && -n "$REAUTHOR_TARGET" ]]; then
+        if [[ "$REAUTHOR_TARGET" == *".."* ]]; then
+            RANGE="$REAUTHOR_TARGET"
+        else
+            RANGE="$REAUTHOR_TARGET..HEAD"
+        fi
     fi
 
     # In harness mode we auto-confirm to allow non-interactive testing (especially with --dry-run)
@@ -1555,7 +1582,7 @@ sign_mode() {
     # Check for merge commits; rebase -i with merges is risky for automated operations
     if git rev-list --merges "$RANGE" | grep -q .; then
         # If PRESERVE_TOPOLOGY is already set, skip the menu
-        if [[ "${PRESERVE_TOPOLOGY:-}" == [Tt][Rr][Uu][Ee] ]]; then
+        if [[ "${PRESERVE_TOPOLOGY:-}" == [Tt][Rr][Uu][Ee] && "$REAUTHOR_MODE" != "true" ]]; then
             print_info "PRESERVE_TOPOLOGY=true; retaining merge topology and signing directly via rebase"
             
             # DEFAULT: Skip leading signed commits, rebase from first unsigned onwards
@@ -1563,7 +1590,7 @@ sign_mode() {
             local commit_info
             commit_info=$(git log --reverse --format="%h %G?" "$RANGE" 2>/dev/null)
             
-            if [[ -n "$commit_info" ]] && ! echo "$commit_info" | grep -q '[NE]'; then
+            if [[ -n "$commit_info" ]] && ! echo "$commit_info" | grep -q '[NE]' && "$RESIGN_MODE" != "true" ]]; then
                 # All commits in range are already signed
                 local total
                 total=$(echo "$commit_info" | wc -l)
@@ -1575,7 +1602,11 @@ sign_mode() {
             local first_unsigned=""
             local leading_signed_count=0
             if [[ -n "$commit_info" ]]; then
-                first_unsigned=$(echo "$commit_info" | grep -m1 '[NE]' | awk '{print $1}')
+                if [[ "$RESIGN_MODE" == "true" ]]; then
+                    first_unsigned=$(echo "$commit_info" | head -n1 | awk '{print $1}')
+                else
+                    first_unsigned=$(echo "$commit_info" | grep -m1 '[NE]' | awk '{print $1}')
+                fi
                 if [[ -n "$first_unsigned" ]]; then
                     leading_signed_count=$(echo "$commit_info" | grep -B999 "^${first_unsigned}" | grep "^[^ ]* G" | wc -l)
                 fi
@@ -1657,7 +1688,14 @@ sign_mode() {
     fi
 
     # Prepare sequence editor to insert an exec to re-sign after each pick and merge
-    local seq_editor_cmd="sed -i -e '/^pick /a exec git commit --amend --no-edit -n -S' -e '/^merge /a exec git commit --amend --no-edit -n -S'"
+    local amend_cmd="git commit --amend --no-edit -n"
+    if [[ "$REAUTHOR_MODE" == "true" ]]; then
+        amend_cmd+=" --reset-author"
+    fi
+    if [[ "$SIGN_MODE" == "true" ]]; then
+        amend_cmd+=" -S"
+    fi
+    local seq_editor_cmd="sed -i -e '/^pick /a exec ${amend_cmd}' -e '/^merge /a exec ${amend_cmd}'"
 
     # Clean up any stale rebase state from previous failures
     if [[ -d ".git/rebase-merge" || -d ".git/rebase-apply" ]]; then
@@ -2597,7 +2635,7 @@ main() {
     fi
 
     # Handle sign mode (re-sign commits in a range)
-    if [[ "$SIGN_MODE" == "true" ]]; then
+    if [[ "$SIGN_MODE" == "true" || "$REAUTHOR_MODE" == "true" ]]; then
         sign_mode
         exit 0
     fi
