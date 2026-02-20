@@ -227,6 +227,36 @@ get_repo_info() {
         if [[ -n "$cached_bot_email" ]]; then
             BOT_EMAIL="$cached_bot_email"
         fi
+        
+        local cached_gpg_private_key_secret
+        cached_gpg_private_key_secret=$(git config --local dc-init.gpg-private-key-secret 2>/dev/null || echo "")
+        if [[ -n "$cached_gpg_private_key_secret" ]]; then
+            GPG_PRIVATE_KEY_SECRET="$cached_gpg_private_key_secret"
+        fi
+        
+        local cached_gpg_passphrase_secret
+        cached_gpg_passphrase_secret=$(git config --local dc-init.gpg-passphrase-secret 2>/dev/null || echo "")
+        if [[ -n "$cached_gpg_passphrase_secret" ]]; then
+            GPG_PASSPHRASE_SECRET="$cached_gpg_passphrase_secret"
+        fi
+        
+        local cached_user_token_secret
+        cached_user_token_secret=$(git config --local dc-init.user-token-secret 2>/dev/null || echo "")
+        if [[ -n "$cached_user_token_secret" ]]; then
+            USER_TOKEN_SECRET="$cached_user_token_secret"
+        fi
+        
+        local cached_stability
+        cached_stability=$(git config --local dc-init.stability 2>/dev/null || echo "")
+        if [[ -n "$cached_stability" ]]; then
+            STABILITY="$cached_stability"
+        fi
+        
+        local cached_stability_color
+        cached_stability_color=$(git config --local dc-init.stability-color 2>/dev/null || echo "")
+        if [[ -n "$cached_stability_color" ]]; then
+            STABILITY_COLOR="$cached_stability_color"
+        fi
     fi
 
     # If we have an org and repo slug, try to fetch repo metadata from GitHub (only if not cached)
@@ -377,15 +407,25 @@ collect_project_info() {
                 ;;
         esac
         
-        # Stability
+        # Stability — use cached value as default if available
         echo ""
         echo "Select stability level:"
         echo "  1) experimental (orange)"
         echo "  2) beta (yellow)"
         echo "  3) stable (green)"
         echo "  4) mature (blue)"
-        read -rp "Choice [1]: " stability_choice
-        case "${stability_choice:-1}" in
+        local default_stability_choice=1
+        if [[ -n "$STABILITY" ]]; then
+            case "${STABILITY,,}" in
+                experimental) default_stability_choice=1 ;;
+                beta) default_stability_choice=2 ;;
+                stable) default_stability_choice=3 ;;
+                mature) default_stability_choice=4 ;;
+                *) default_stability_choice=1 ;;
+            esac
+        fi
+        read -rp "Choice [${default_stability_choice}]: " stability_choice
+        case "${stability_choice:-$default_stability_choice}" in
             1) STABILITY="experimental"; STABILITY_COLOR="orange" ;;
             2) STABILITY="beta"; STABILITY_COLOR="yellow" ;;
             3) STABILITY="stable"; STABILITY_COLOR="green" ;;
@@ -417,6 +457,27 @@ collect_project_info() {
         fi
     fi
     
+    if [[ -n "$GPG_PRIVATE_KEY_SECRET" ]]; then
+        read -rp "Bot gpg-private-key [$GPG_PRIVATE_KEY_SECRET]: " input
+        GPG_PRIVATE_KEY_SECRET="${input:-$GPG_PRIVATE_KEY_SECRET}"
+    else
+        read -rp "Bot gpg-private-key (secret name, e.g. MY_GPG_KEY): " GPG_PRIVATE_KEY_SECRET
+    fi
+    
+    if [[ -n "$GPG_PASSPHRASE_SECRET" ]]; then
+        read -rp "Bot gpg-passphrase [$GPG_PASSPHRASE_SECRET]: " input
+        GPG_PASSPHRASE_SECRET="${input:-$GPG_PASSPHRASE_SECRET}"
+    else
+        read -rp "Bot gpg-passphrase (secret name, e.g. MY_GPG_PASSPHRASE): " GPG_PASSPHRASE_SECRET
+    fi
+    
+    if [[ -n "$USER_TOKEN_SECRET" ]]; then
+        read -rp "Bot user-token [$USER_TOKEN_SECRET]: " input
+        USER_TOKEN_SECRET="${input:-$USER_TOKEN_SECRET}"
+    else
+        read -rp "Bot user-token (secret name, e.g. MY_GITHUB_TOKEN): " USER_TOKEN_SECRET
+    fi
+    
     CURRENT_YEAR=$(date +%Y)
 }
 
@@ -444,6 +505,9 @@ process_template() {
         -e "s|{{CURRENT_YEAR}}|$CURRENT_YEAR|g" \
         -e "s|{{BOT_NAME}}|${BOT_NAME:-}|g" \
         -e "s|{{BOT_EMAIL}}|${BOT_EMAIL:-}|g" \
+        -e "s|{{GPG_PRIVATE_KEY_SECRET}}|${GPG_PRIVATE_KEY_SECRET:-}|g" \
+        -e "s|{{GPG_PASSPHRASE_SECRET}}|${GPG_PASSPHRASE_SECRET:-}|g" \
+        -e "s|{{USER_TOKEN_SECRET}}|${USER_TOKEN_SECRET:-}|g" \
         "$src" > "$dest"
     
     print_success "Created: $dest"
@@ -1155,9 +1219,14 @@ save_project_metadata() {
         git config --local dc-init.description "$SHORT_DESCRIPTION" 2>/dev/null || true
         git config --local dc-init.long-description "$LONG_DESCRIPTION" 2>/dev/null || true
         git config --local dc-init.license-type "$LICENSE_TYPE" 2>/dev/null || true
+        git config --local dc-init.stability "$STABILITY" 2>/dev/null || true
+        git config --local dc-init.stability-color "$STABILITY_COLOR" 2>/dev/null || true
         [[ -n "$WEBSITE_URL" ]] && git config --local dc-init.website-url "$WEBSITE_URL" 2>/dev/null || true
         [[ -n "$BOT_NAME" ]] && git config --local dc-init.bot-name "$BOT_NAME" 2>/dev/null || true
         [[ -n "$BOT_EMAIL" ]] && git config --local dc-init.bot-email "$BOT_EMAIL" 2>/dev/null || true
+        [[ -n "$GPG_PRIVATE_KEY_SECRET" ]] && git config --local dc-init.gpg-private-key-secret "$GPG_PRIVATE_KEY_SECRET" 2>/dev/null || true
+        [[ -n "$GPG_PASSPHRASE_SECRET" ]] && git config --local dc-init.gpg-passphrase-secret "$GPG_PASSPHRASE_SECRET" 2>/dev/null || true
+        [[ -n "$USER_TOKEN_SECRET" ]] && git config --local dc-init.user-token-secret "$USER_TOKEN_SECRET" 2>/dev/null || true
     fi
 }
 
