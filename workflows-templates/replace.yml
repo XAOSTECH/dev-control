@@ -41,10 +41,10 @@ jobs:
       - name: Setup bot identity
         uses: XAOSTECH/dev-control/.github/actions/identity@main
         with:
-          gpg-private-key: ${{ secrets.BOT_GPG_PRIVATE_KEY }}
-          gpg-passphrase: ${{ secrets.BOT_GPG_PASSPHRASE }}
-          user-token: ${{ secrets.BOT_USER_TOKEN }}
-          bot-name: ${{ vars.BOT_NAME || 'xaos-bot' }}
+          gpg-private-key: ${{ secrets['{{GPG_PRIVATE_KEY_SECRET}}'] }}
+          gpg-passphrase: ${{ secrets['{{GPG_PASSPHRASE_SECRET}}'] }}
+          user-token: ${{ secrets['{{USER_TOKEN_SECRET}}'] }}
+          bot-name: ${{ vars.BOT_NAME || '{{BOT_NAME}}' }}
 
       - name: Validate inputs
         run: |
@@ -139,10 +139,10 @@ jobs:
         if: steps.replace.outputs.needs_pr == 'true'
         uses: XAOSTECH/dev-control/.github/actions/identity@main
         with:
-          gpg-private-key: ${{ secrets.BOT_GPG_PRIVATE_KEY }}
-          gpg-passphrase: ${{ secrets.BOT_GPG_PASSPHRASE }}
-          user-token: ${{ secrets.BOT_USER_TOKEN }}
-          bot-name: ${{ vars.BOT_NAME || 'xaos-bot' }}
+          gpg-private-key: ${{ secrets['{{GPG_PRIVATE_KEY_SECRET}}'] }}
+          gpg-passphrase: ${{ secrets['{{GPG_PASSPHRASE_SECRET}}'] }}
+          user-token: ${{ secrets['{{USER_TOKEN_SECRET}}'] }}
+          bot-name: ${{ vars.BOT_NAME || '{{BOT_NAME}}' }}
 
       - name: Create Pull Request
         if: steps.replace.outputs.needs_pr == 'true'

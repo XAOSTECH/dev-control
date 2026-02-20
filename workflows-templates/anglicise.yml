@@ -30,10 +30,10 @@ jobs:
       - name: Setup bot identity
         uses: XAOSTECH/dev-control/.github/actions/identity@main
         with:
-          gpg-private-key: ${{ secrets.BOT_GPG_PRIVATE_KEY }}
-          gpg-passphrase: ${{ secrets.BOT_GPG_PASSPHRASE }}
-          user-token: ${{ secrets.BOT_USER_TOKEN }}
-          bot-name: ${{ vars.BOT_NAME || 'xaos-bot' }}
+          gpg-private-key: ${{ secrets['{{GPG_PRIVATE_KEY_SECRET}}'] }}
+          gpg-passphrase: ${{ secrets['{{GPG_PASSPHRASE_SECRET}}'] }}
+          user-token: ${{ secrets['{{USER_TOKEN_SECRET}}'] }}
+          bot-name: ${{ vars.BOT_NAME || '{{BOT_NAME}}' }}
 
       - name: Check for American spellings
         id: check
@@ -467,10 +467,10 @@ jobs:
         if: steps.check.outputs.needs_fix == 'true'
         uses: XAOSTECH/dev-control/.github/actions/identity@main
         with:
-          gpg-private-key: ${{ secrets.BOT_GPG_PRIVATE_KEY }}
-          gpg-passphrase: ${{ secrets.BOT_GPG_PASSPHRASE }}
-          user-token: ${{ secrets.BOT_USER_TOKEN }}
-          bot-name: ${{ vars.BOT_NAME || 'xaos-bot' }}
+          gpg-private-key: ${{ secrets['{{GPG_PRIVATE_KEY_SECRET}}'] }}
+          gpg-passphrase: ${{ secrets['{{GPG_PASSPHRASE_SECRET}}'] }}
+          user-token: ${{ secrets['{{USER_TOKEN_SECRET}}'] }}
+          bot-name: ${{ vars.BOT_NAME || '{{BOT_NAME}}' }}
 
       - name: Ensure automerge label exists
         if: steps.check.outputs.needs_fix == 'true'

@@ -181,9 +181,11 @@ get_repo_info() {
     if [[ -z "$ORG_NAME" ]] && command -v gh &>/dev/null; then
         local gh_user
         gh_user=$(gh api user --jq .login 2>/dev/null || true)
-        if [[ -n "$gh_user" ]]; then
+        if [[ "$gh_user" =~ ^[A-Za-z0-9-]+$ ]]; then
             ORG_NAME="$gh_user"
             print_info "Detected GitHub user from gh CLI: $ORG_NAME"
+        elif [[ -n "$gh_user" ]]; then
+            print_warning "gh CLI returned unexpected output; skipping auto-detected owner"
         fi
     fi
 
