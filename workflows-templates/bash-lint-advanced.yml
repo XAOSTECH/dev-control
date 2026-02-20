@@ -33,6 +33,9 @@ jobs:
   shellcheck-analysis:
     name: ShellCheck Analysis & Suggestions
     runs-on: ubuntu-latest
+    outputs:
+      errors: ${{ steps.shellcheck.outputs.errors }}
+      warnings: ${{ steps.shellcheck.outputs.warnings }}
     permissions:
       contents: read
       pull-requests: write
@@ -156,13 +159,22 @@ jobs:
     steps:
       - name: Create summary
         run: |
+          ERRORS="${{ needs.shellcheck-analysis.outputs.errors }}"
+          WARNINGS="${{ needs.shellcheck-analysis.outputs.warnings }}"
           echo "## 📊 Bash Linting Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Errors**: ${{ needs.shellcheck-analysis.outputs.errors }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Warnings**: ${{ needs.shellcheck-analysis.outputs.warnings }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Errors**: ${ERRORS:-0}" >> $GITHUB_STEP_SUMMARY
+          echo "**Warnings**: ${WARNINGS:-0}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Next Steps:" >> $GITHUB_STEP_SUMMARY
           echo "1. Review issues in workflow annotations" >> $GITHUB_STEP_SUMMARY
           echo "2. Check PR comments for detailed suggestions" >> $GITHUB_STEP_SUMMARY
           echo "3. Follow linked wiki pages for explanations" >> $GITHUB_STEP_SUMMARY
           echo "4. Create PR with fixes" >> $GITHUB_STEP_SUMMARY
+          
+          # Fail if there are errors
+          if [[ "${ERRORS:-0}" -gt 0 ]]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "❌ **Errors found - please fix**" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
