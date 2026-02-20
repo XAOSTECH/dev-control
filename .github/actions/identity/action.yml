@@ -24,6 +24,10 @@ inputs:
     description: Git display name for commits and tags (vars.BOT_NAME)
     required: false
     default: 'xaos-bot'
+  bot-email:
+    description: Bot GitHub noreply email (e.g., 12345+bot@users.noreply.github.com)
+    required: false
+    default: '262248812+xaos-bot@users.noreply.github.com'
 
 outputs:
   gpg-outcome:
@@ -39,17 +43,18 @@ runs:
         GPG_PRIVATE_KEY: ${{ inputs.gpg-private-key }}
         GPG_PASSPHRASE: ${{ inputs.gpg-passphrase }}
         USER_TOKEN: ${{ inputs.user-token }}
+        BOT_NAME: ${{ inputs.bot-name }}
+        BOT_EMAIL: ${{ inputs.bot-email }}
       run: |
         [[ -z "$GPG_PRIVATE_KEY" ]] && exit 0
         echo "$GPG_PRIVATE_KEY" | gpg --batch --import --quiet 2>/dev/null || true
         FINGERPRINT=$(gpg --batch --with-colons --list-secret-keys 2>/dev/null | grep '^fpr' | head -1 | cut -d: -f10)
         [[ -z "$FINGERPRINT" ]] && exit 0
         # Add machine user noreply email as a UID for GitHub signature verification
-        BOT_EMAIL="262248812+xaos-bot@users.noreply.github.com"
         if [[ -n "$GPG_PASSPHRASE" ]]; then
           if ! gpg --list-keys 2>/dev/null | grep -qF "$BOT_EMAIL"; then
             printf '%s' "$GPG_PASSPHRASE" | gpg --batch --pinentry-mode loopback --passphrase-fd 0 \
-              --quick-add-uid "$FINGERPRINT" "xaos-bot <${BOT_EMAIL}>" 2>/dev/null || true
+              --quick-add-uid "$FINGERPRINT" "${BOT_NAME} <${BOT_EMAIL}>" 2>/dev/null || true
           fi
         fi
         KEY_ID=$(gpg --list-secret-keys --keyid-format=long 2>/dev/null | grep -oE '[0-9A-F]{16}' | head -1)
@@ -82,6 +87,8 @@ runs:
       env:
         GPG_PRIVATE_KEY: ${{ inputs.gpg-private-key }}
         GPG_PASSPHRASE: ${{ inputs.gpg-passphrase }}
+        BOT_NAME: ${{ inputs.bot-name }}
+        BOT_EMAIL: ${{ inputs.bot-email }}
       run: |
         if [[ -z "$GPG_PRIVATE_KEY" ]]; then
           echo "⚠️ GPG key not provided — skipping import, tags will be unsigned"
@@ -104,9 +111,8 @@ runs:
           [[ -z "$KEYGRIP" ]] && continue
           gpg-connect-agent "PRESET_PASSPHRASE $KEYGRIP -1 $HEX_PASSPHRASE" /bye 2>/dev/null || true
         done <<< "$KEYGRIPS"
-        BOT_EMAIL="262248812+xaos-bot@users.noreply.github.com"
         if ! gpg --list-keys 2>/dev/null | grep -qF "$BOT_EMAIL"; then
-          gpg --batch --quick-add-uid "$FINGERPRINT" "xaos-bot <${BOT_EMAIL}>" 2>/dev/null || true
+          gpg --batch --quick-add-uid "$FINGERPRINT" "${BOT_NAME} <${BOT_EMAIL}>" 2>/dev/null || true
         fi
         KEY_ID=$(gpg --list-secret-keys --keyid-format=long 2>/dev/null | grep -oE '[0-9A-F]{16}' | head -1)
         if [[ -z "$KEY_ID" ]]; then
@@ -123,8 +129,8 @@ runs:
       shell: bash
       env:
         BOT_NAME: ${{ inputs.bot-name }}
+        BOT_EMAIL: ${{ inputs.bot-email }}
       run: |
-        BOT_EMAIL="262248812+xaos-bot@users.noreply.github.com"
         git config --global user.name "${BOT_NAME}"
         git config --global user.email "${BOT_EMAIL}"
         echo "✅ Git identity configured: ${BOT_NAME} <${BOT_EMAIL}>"

@@ -215,6 +215,18 @@ get_repo_info() {
             WEBSITE_URL="$cached_website"
             print_info "Loaded website URL from git config: $WEBSITE_URL"
         fi
+        
+        local cached_bot_name
+        cached_bot_name=$(git config --local dc-init.bot-name 2>/dev/null || echo "")
+        if [[ -n "$cached_bot_name" ]]; then
+            BOT_NAME="$cached_bot_name"
+        fi
+        
+        local cached_bot_email
+        cached_bot_email=$(git config --local dc-init.bot-email 2>/dev/null || echo "")
+        if [[ -n "$cached_bot_email" ]]; then
+            BOT_EMAIL="$cached_bot_email"
+        fi
     fi
 
     # If we have an org and repo slug, try to fetch repo metadata from GitHub (only if not cached)
@@ -382,6 +394,29 @@ collect_project_info() {
         esac
     fi
     
+    # Bot configuration (for actions/workflows that need bot identity)
+    echo ""
+    echo "Bot configuration (optional - for GitHub Actions identity setup):"
+    if [[ -n "$BOT_NAME" ]]; then
+        read -rp "Bot name [$BOT_NAME]: " input
+        BOT_NAME="${input:-$BOT_NAME}"
+    else
+        read -rp "Bot name (optional, e.g., my-bot): " BOT_NAME
+    fi
+    
+    if [[ -n "$BOT_EMAIL" ]]; then
+        read -rp "Bot email [$BOT_EMAIL]: " input
+        BOT_EMAIL="${input:-$BOT_EMAIL}"
+    else
+        if [[ -n "$BOT_NAME" ]]; then
+            # Try to construct a default bot email suggestion
+            local suggested_email="${BOT_NAME}@users.noreply.github.com"
+            read -rp "Bot email (e.g., 12345+${BOT_NAME}@users.noreply.github.com): " BOT_EMAIL
+        else
+            read -rp "Bot email (optional): " BOT_EMAIL
+        fi
+    fi
+    
     CURRENT_YEAR=$(date +%Y)
 }
 
@@ -407,6 +442,8 @@ process_template() {
         -e "s|{{STABILITY}}|$STABILITY|g" \
         -e "s|{{STABILITY_COLOR}}|$STABILITY_COLOR|g" \
         -e "s|{{CURRENT_YEAR}}|$CURRENT_YEAR|g" \
+        -e "s|{{BOT_NAME}}|${BOT_NAME:-}|g" \
+        -e "s|{{BOT_EMAIL}}|${BOT_EMAIL:-}|g" \
         "$src" > "$dest"
     
     print_success "Created: $dest"
@@ -675,8 +712,19 @@ install_actions_templates() {
         if [[ -d "$action_dir" && -f "${action_dir}action.yml" ]]; then
             local action_name
             action_name=$(basename "$action_dir")
-            cp -r "$action_dir" "$target_dir/.github/actions/$action_name"
-            print_success "Created: .github/actions/$action_name/action.yml"
+            mkdir -p "$target_dir/.github/actions/$action_name"
+            
+            # Process action.yml with placeholder replacement
+            process_template "${action_dir}action.yml" "$target_dir/.github/actions/$action_name/action.yml"
+            
+            # Copy any other files in the action directory (without processing)
+            for file in "$action_dir"*; do
+                local filename
+                filename=$(basename "$file")
+                if [[ -f "$file" && "$filename" != "action.yml" ]]; then
+                    cp "$file" "$target_dir/.github/actions/$action_name/$filename"
+                fi
+            done
         fi
     done
 }
@@ -693,8 +741,7 @@ install_workflows_templates() {
             local filename=$(basename "$file")
             # Skip init.yml and remote-init.yml (those are for manual copy)
             if [[ "$filename" != "init.yml" && "$filename" != "remote-init.yml" ]]; then
-                cp "$file" "$target_dir/.github/workflows/$filename"
-                print_success "Created: .github/workflows/$filename"
+                process_template "$file" "$target_dir/.github/workflows/$filename"
             fi
         fi
     done
@@ -1109,6 +1156,8 @@ save_project_metadata() {
         git config --local dc-init.long-description "$LONG_DESCRIPTION" 2>/dev/null || true
         git config --local dc-init.license-type "$LICENSE_TYPE" 2>/dev/null || true
         [[ -n "$WEBSITE_URL" ]] && git config --local dc-init.website-url "$WEBSITE_URL" 2>/dev/null || true
+        [[ -n "$BOT_NAME" ]] && git config --local dc-init.bot-name "$BOT_NAME" 2>/dev/null || true
+        [[ -n "$BOT_EMAIL" ]] && git config --local dc-init.bot-email "$BOT_EMAIL" 2>/dev/null || true
     fi
 }
 
