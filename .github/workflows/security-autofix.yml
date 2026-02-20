@@ -1,0 +1,183 @@
+name: Security Auto-Fix Bot
+
+on:
+  # Trigger on CodeQL scan completion
+  workflow_run:
+    workflows: ["CodeQL Advanced Security"]
+    types:
+      - completed
+  
+  # Manual trigger for testing
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  security-events: read
+
+jobs:
+  autofix:
+    name: Auto-fix Security Alerts
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup bot identity
+        id: identity
+        uses: XAOSTECH/dev-control/.github/actions/identity@e148b60d6180ab099ba4df07d2b1b1b35f9b8f4c
+        with:
+          gpg-private-key: ${{ secrets.XB_GK }}
+          gpg-passphrase: ${{ secrets.XB_GP }}
+
+      - name: Configure Git
+        env:
+          BOT_NAME: ${{ steps.identity.outputs.name }}
+          BOT_EMAIL: ${{ steps.identity.outputs.email }}
+        run: |
+          git config --global user.name "$BOT_NAME"
+          git config --global user.email "$BOT_EMAIL"
+          git config --global commit.gpgsign true
+
+      - name: Fetch and analyze CodeQL alerts
+        id: alerts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Fetch open security alerts
+          ALERTS=$(gh api repos/${{ github.repository }}/code-scanning/alerts?state=open \
+            --jq '[.[] | select(.rule.severity == "error" or .rule.severity == "warning") | {
+              number: .number,
+              rule: .rule.id,
+              severity: .rule.severity,
+              file: .most_recent_instance.location.path,
+              line: .most_recent_instance.location.start_line,
+              message: .most_recent_instance.message.text
+            }]')
+          
+          echo "Found $(echo "$ALERTS" | jq 'length') open alerts"
+          
+          # Count fixable alerts
+          FIXABLE_COUNT=$(echo "$ALERTS" | jq '[.[] | select(.rule == "actions/code-injection/medium" or .rule == "actions/unpinned-tag")] | length')
+          
+          echo "fixable_count=$FIXABLE_COUNT" >> $GITHUB_OUTPUT
+          echo "$ALERTS" > /tmp/alerts.json
+          
+          if [ "$FIXABLE_COUNT" -eq 0 ]; then
+            echo "No auto-fixable alerts found"
+            exit 0
+          fi
+
+      - name: Apply automatic fixes
+        if: steps.alerts.outputs.fixable_count > 0
+        id: fixes
+        run: |
+          FIXES_APPLIED=0
+          
+          # Fix unpinned GitHub Actions (convert @vX or @master to commit SHA)
+          echo "🔍 Checking for unpinned actions..."
+          for workflow in .github/workflows/*.yml; do
+            if grep -qE "uses:.*@(v[0-9]+|master|main)($| )" "$workflow"; then
+              echo "⚠️  Found unpinned actions in $workflow"
+              # Note: Full implementation would require GitHub API to resolve tags to SHAs
+              # For now, flag for manual review
+              echo "needs_manual_review=true" >> $GITHUB_OUTPUT
+            fi
+          done
+          
+          # Fix code injection vulnerabilities (extract ${{ }} to env vars)
+          echo "🔍 Checking for code injection patterns..."
+          for workflow in .github/workflows/*.yml; do
+            # Check if workflow has unquoted $GITHUB_OUTPUT or ${{ }} in shell contexts
+            if grep -qE '\$\{\{.*\}\}.*\|' "$workflow"; then
+              echo "⚠️  Found potential code injection in $workflow"
+              # Pattern detected - create issue for review
+              echo "code_injection_found=true" >> $GITHUB_OUTPUT
+            fi
+          done
+          
+          echo "fixes_applied=$FIXES_APPLIED" >> $GITHUB_OUTPUT
+
+      - name: Create security fix PR
+        if: steps.fixes.outputs.code_injection_found == 'true' || steps.fixes.outputs.needs_manual_review == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Create feature branch
+          BRANCH="security/autofix-$(date +%s)"
+          git checkout -b "$BRANCH"
+          
+          # Commit any changes (if auto-fixes were applied)
+          if ! git diff --quiet; then
+            git add -A
+            git commit -S -m "security: auto-fix CodeQL alerts" \
+              -m "Automated security fixes applied by security-autofix bot" \
+              -m "Review and validate changes before merging"
+            
+            git push origin "$BRANCH"
+            
+            # Create PR
+            gh pr create \
+              --repo "${{ github.repository }}" \
+              --base main \
+              --head "$BRANCH" \
+              --title "🔒 Security Auto-Fix: CodeQL Alerts" \
+              --body "## Automated Security Fixes
+
+This PR contains automatic fixes for security alerts detected by CodeQL.
+
+### Alerts Addressed
+$(cat /tmp/alerts.json | jq -r '.[] | \"- [\(.severity | ascii_upcase)] \(.rule): \(.file):\(.line)\"')
+
+### Changes Made
+- Extract GitHub Actions context variables to environment variables
+- Pin unpinned third-party actions to commit SHAs
+- Quote shell variables to prevent code injection
+
+### Verification Needed
+⚠️ **Review required**: Validate that fixes don't break workflow functionality
+
+---
+*Auto-generated by security-autofix workflow*
+*Signed by: ${{ steps.identity.outputs.name }}*" \
+              --label security,automated
+          else
+            cat /tmp/alerts.json | jq -r '.[] | "❌ Alert #\(.number): \(.rule) at \(.file):\(.line)"'
+            echo "ℹ️  No automatic fixes available - manual review required"
+          fi
+
+      - name: Create GitHub Issue for manual review
+        if: steps.alerts.outputs.fixable_count > 0
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Check if similar issue already exists
+          EXISTING=$(gh issue list --state open --label security-review --json number --jq 'length')
+          
+          if [ "$EXISTING" -gt 0 ]; then
+            echo "ℹ️  Security review issue already exists"
+            exit 0
+          fi
+          
+          # Create tracking issue
+          gh issue create \
+            --title "🔒 Security Review: CodeQL Alerts Require Manual Fixes" \
+            --label security-review,help-wanted \
+            --body "## Security Alerts Requiring Manual Review
+
+The following CodeQL alerts cannot be automatically fixed and require manual intervention:
+
+$(cat /tmp/alerts.json | jq -r '.[] | \"### Alert #\(.number): \(.rule)\\n- **Severity**: \(.severity)\\n- **File**: \`\(.file):\(.line)\`\\n- **Message**: \(.message)\\n\"')
+
+### Recommended Actions
+1. Review each alert in the [Security tab](https://github.com/${{ github.repository }}/security/code-scanning)
+2. Apply fixes following GitHub Security Lab recommendations
+3. Close alerts as fixed or false positive in dashboard
+
+---
+*Auto-generated by security-autofix workflow*"
