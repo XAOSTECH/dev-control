@@ -138,6 +138,7 @@ jobs:
         if: steps.identity.outputs.gpg-outcome == 'success'
         env:
           PR_NUMBERS: ${{ needs.guard.outputs.pr_numbers }}
+          GH_TOKEN: ${{ steps.app_token.outputs.token }}
         run: |
           set -euo pipefail
           pr_numbers=$(echo "$PR_NUMBERS" | tr -d '[]' | tr ',' ' ')
