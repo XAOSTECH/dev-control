@@ -123,26 +123,37 @@ jobs:
       
       - name: Process and copy templates
         id: process
+        env:
+          PROJECT_NAME: ${{ steps.vars.outputs.project_name }}
+          REPO_SLUG: ${{ steps.vars.outputs.repo_name }}
+          ORG_NAME: ${{ steps.vars.outputs.repo_owner }}
+          REPO_URL: ${{ steps.vars.outputs.repo_url }}
+          SHORT_DESC: ${{ inputs.short_description }}
+          LICENSE_TYPE: ${{ inputs.license_type }}
+          STABILITY: ${{ inputs.stability }}
+          STABILITY_COLOR: ${{ steps.vars.outputs.stability_color }}
+          CURRENT_YEAR: ${{ steps.vars.outputs.current_year }}
         run: |
           TEMPLATES="${{ inputs.templates }}"
           DC_DIR=".dev-control-templates"
           INSTALLED=""
           
           # Function to process a file with placeholder replacement
+          # Variables are extracted as environment variables to prevent code injection
           process_file() {
             local src="$1"
             local dest="$2"
             sed \
-              -e "s|{{PROJECT_NAME}}|${{ steps.vars.outputs.project_name }}|g" \
-              -e "s|{{REPO_SLUG}}|${{ steps.vars.outputs.repo_name }}|g" \
-              -e "s|{{ORG_NAME}}|${{ steps.vars.outputs.repo_owner }}|g" \
-              -e "s|{{REPO_URL}}|${{ steps.vars.outputs.repo_url }}|g" \
-              -e "s|{{SHORT_DESCRIPTION}}|${{ inputs.short_description }}|g" \
-              -e "s|{{LONG_DESCRIPTION}}|${{ inputs.short_description }}|g" \
-              -e "s|{{LICENSE_TYPE}}|${{ inputs.license_type }}|g" \
-              -e "s|{{STABILITY}}|${{ inputs.stability }}|g" \
-              -e "s|{{STABILITY_COLOR}}|${{ steps.vars.outputs.stability_color }}|g" \
-              -e "s|{{CURRENT_YEAR}}|${{ steps.vars.outputs.current_year }}|g" \
+              -e "s|{{PROJECT_NAME}}|$PROJECT_NAME|g" \
+              -e "s|{{REPO_SLUG}}|$REPO_SLUG|g" \
+              -e "s|{{ORG_NAME}}|$ORG_NAME|g" \
+              -e "s|{{REPO_URL}}|$REPO_URL|g" \
+              -e "s|{{SHORT_DESCRIPTION}}|$SHORT_DESC|g" \
+              -e "s|{{LONG_DESCRIPTION}}|$SHORT_DESC|g" \
+              -e "s|{{LICENSE_TYPE}}|$LICENSE_TYPE|g" \
+              -e "s|{{STABILITY}}|$STABILITY|g" \
+              -e "s|{{STABILITY_COLOR}}|$STABILITY_COLOR|g" \
+              -e "s|{{CURRENT_YEAR}}|$CURRENT_YEAR|g" \
               "$src" > "$dest"
           }
           
