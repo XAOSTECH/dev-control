@@ -56,20 +56,23 @@ RUN mkdir -p \
         /home/${CATEGORY}/.gnupg \
         /home/${CATEGORY}/.ssh \
         /home/${CATEGORY}/.cache \
-        /home/${CATEGORY}/.config && \
+        /home/${CATEGORY}/.config \
+        /home/${CATEGORY}/.devcontainer && \
     chown -R ${CATEGORY}:${CATEGORY} \
         /home/${CATEGORY}/.vscode-server \
         /home/${CATEGORY}/.bash_backups \
         /home/${CATEGORY}/.gnupg \
         /home/${CATEGORY}/.ssh \
         /home/${CATEGORY}/.cache \
-        /home/${CATEGORY}/.config && \
+        /home/${CATEGORY}/.config \
+        /home/${CATEGORY}/.devcontainer && \
     chmod 775 /home/${CATEGORY}/.vscode-server && \
     chmod 700 /home/${CATEGORY}/.bash_backups && \
     chmod 700 /home/${CATEGORY}/.gnupg && \
     chmod 700 /home/${CATEGORY}/.ssh && \
     chmod 755 /home/${CATEGORY}/.cache && \
-    chmod 755 /home/${CATEGORY}/.config
+    chmod 755 /home/${CATEGORY}/.config && \
+    chmod 700 /home/${CATEGORY}/.devcontainer
 
 # Metadata label for container discovery and category identification
 LABEL dev-control.category="${CATEGORY}" \
