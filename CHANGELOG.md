@@ -8,10 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.5.5] - 2026-02-20
 
 ### Fixed
+- correct shields.io badge parameters and refine anglicise exclusions
 - pre-create ~/.devcontainer so postCreateCommand marker can be written
 - bust permissions layer cache with BUILD_DATE ARG
 - remove --userns=keep-id from runArgs + prune before nest loop
 - prune stale vsc-*-uid wrapper images after base build
+
+### Changed
+- docs(readme): readability
+- chore: update CHANGELOG for v0.5.5
 
 ## [0.5.4] - 2026-02-18
 
