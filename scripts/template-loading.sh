@@ -229,6 +229,18 @@ get_repo_info() {
         if [[ -n "$cached_bot_email" ]]; then
             BOT_EMAIL="$cached_bot_email"
         fi
+
+        local cached_bot_app_id_secret
+        cached_bot_app_id_secret=$(git config --local dc-init.bot-app-id-secret 2>/dev/null || echo "")
+        if [[ -n "$cached_bot_app_id_secret" ]]; then
+            BOT_APP_ID_SECRET="$cached_bot_app_id_secret"
+        fi
+
+        local cached_bot_private_key_secret
+        cached_bot_private_key_secret=$(git config --local dc-init.bot-private-key-secret 2>/dev/null || echo "")
+        if [[ -n "$cached_bot_private_key_secret" ]]; then
+            BOT_PRIVATE_KEY_SECRET="$cached_bot_private_key_secret"
+        fi
         
         local cached_gpg_private_key_secret
         cached_gpg_private_key_secret=$(git config --local dc-init.gpg-private-key-secret 2>/dev/null || echo "")
@@ -458,6 +470,20 @@ collect_project_info() {
             read -rp "Bot email (optional): " BOT_EMAIL
         fi
     fi
+
+    if [[ -n "$BOT_APP_ID_SECRET" ]]; then
+        read -rp "Bot app-id [$BOT_APP_ID_SECRET]: " input
+        BOT_APP_ID_SECRET="${input:-$BOT_APP_ID_SECRET}"
+    else
+        read -rp "Bot app-id (secret name, e.g. MY_BOT_APP_ID): " BOT_APP_ID_SECRET
+    fi
+
+    if [[ -n "$BOT_PRIVATE_KEY_SECRET" ]]; then
+        read -rp "Bot private-key [$BOT_PRIVATE_KEY_SECRET]: " input
+        BOT_PRIVATE_KEY_SECRET="${input:-$BOT_PRIVATE_KEY_SECRET}"
+    else
+        read -rp "Bot private-key (secret name, e.g. MY_BOT_PRIVATE_KEY): " BOT_PRIVATE_KEY_SECRET
+    fi
     
     if [[ -n "$GPG_PRIVATE_KEY_SECRET" ]]; then
         read -rp "Bot gpg-private-key [$GPG_PRIVATE_KEY_SECRET]: " input
@@ -507,6 +533,8 @@ process_template() {
         -e "s|{{CURRENT_YEAR}}|$CURRENT_YEAR|g" \
         -e "s|{{BOT_NAME}}|${BOT_NAME:-}|g" \
         -e "s|{{BOT_EMAIL}}|${BOT_EMAIL:-}|g" \
+        -e "s|{{BOT_APP_ID_SECRET}}|${BOT_APP_ID_SECRET:-}|g" \
+        -e "s|{{BOT_PRIVATE_KEY_SECRET}}|${BOT_PRIVATE_KEY_SECRET:-}|g" \
         -e "s|{{GPG_PRIVATE_KEY_SECRET}}|${GPG_PRIVATE_KEY_SECRET:-}|g" \
         -e "s|{{GPG_PASSPHRASE_SECRET}}|${GPG_PASSPHRASE_SECRET:-}|g" \
         -e "s|{{USER_TOKEN_SECRET}}|${USER_TOKEN_SECRET:-}|g" \
@@ -1226,6 +1254,8 @@ save_project_metadata() {
         [[ -n "$WEBSITE_URL" ]] && git config --local dc-init.website-url "$WEBSITE_URL" 2>/dev/null || true
         [[ -n "$BOT_NAME" ]] && git config --local dc-init.bot-name "$BOT_NAME" 2>/dev/null || true
         [[ -n "$BOT_EMAIL" ]] && git config --local dc-init.bot-email "$BOT_EMAIL" 2>/dev/null || true
+        [[ -n "$BOT_APP_ID_SECRET" ]] && git config --local dc-init.bot-app-id-secret "$BOT_APP_ID_SECRET" 2>/dev/null || true
+        [[ -n "$BOT_PRIVATE_KEY_SECRET" ]] && git config --local dc-init.bot-private-key-secret "$BOT_PRIVATE_KEY_SECRET" 2>/dev/null || true
         [[ -n "$GPG_PRIVATE_KEY_SECRET" ]] && git config --local dc-init.gpg-private-key-secret "$GPG_PRIVATE_KEY_SECRET" 2>/dev/null || true
         [[ -n "$GPG_PASSPHRASE_SECRET" ]] && git config --local dc-init.gpg-passphrase-secret "$GPG_PASSPHRASE_SECRET" 2>/dev/null || true
         [[ -n "$USER_TOKEN_SECRET" ]] && git config --local dc-init.user-token-secret "$USER_TOKEN_SECRET" 2>/dev/null || true

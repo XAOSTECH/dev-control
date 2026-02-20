@@ -135,8 +135,8 @@ jobs:
         id: app_token
         uses: actions/create-github-app-token@v1
         with:
-          app-id: ${{ secrets.BOT_APP_ID }}
-          private-key: ${{ secrets.BOT_PRIVATE_KEY }}
+          app-id: ${{ secrets['{{BOT_APP_ID_SECRET}}'] }}
+          private-key: ${{ secrets['{{BOT_PRIVATE_KEY_SECRET}}'] }}
 
       - name: Checkout repository
         uses: actions/checkout@v4
