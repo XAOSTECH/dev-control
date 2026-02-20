@@ -7,7 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.5.5] - 2026-02-20
 
+### Added
+- add automated security fix bot workflow
+
 ### Fixed
+- use xaostech-security[bot] credentials in security-autofix
 - correct shields.io badge parameters and refine anglicise exclusions
 - pre-create ~/.devcontainer so postCreateCommand marker can be written
 - bust permissions layer cache with BUILD_DATE ARG
@@ -15,6 +19,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - prune stale vsc-*-uid wrapper images after base build
 
 ### Changed
+- security: fix YAML syntax error and pin create-pull-request action
+- security: fix code injection in central-loader sed replacements
+- security: fix code injection vulnerabilities in workflows
+- Update CodeQL Action to v4 with automatic patch management
+- Simplify CodeQL to focus on repo languages (JavaScript/YAML only)
+- chore: rename codeQL
+- Add auto-fix PR creation to bash-lint-advanced with xaostech-security[bot] credentials
+- Fix bash-lint-advanced job outputs and create advanced CodeQL security workflow
+- Fix CodeQL untrusted-checkout alert: fetch PR head from official repo
+- Fix --reauthor to include target commit and detect merge topology
+- Add reauthor and force resign options to dc-fix
+- Sign automerge merges with xaos-bot
+- chore: update CHANGELOG for v0.5.5 (re-release)
 - Merge pull request #34 from XAOSTECH/anglicise/20260220-215059
 - chore: convert American spellings to British English
 - Fix anglicise grep quoting and ignore test-repo
