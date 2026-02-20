@@ -39,7 +39,9 @@
 
 ## TL;DR
 
-**Dev-Control** is a modular CLI toolkit that automates customising and setting up repos (100% community standards), nested gitmodules, centralised and cleaned up .tmp and .bak folders, nested rootless podman docker containers, vscode mcp-servers, GitHub release (with lib tarbal, automated version tagging and signed latest + version tag), app packages and attempts to make arduous CLI and Git tasks (such as signing woktrees with topology and surgically dropping commits) easy and robust, so you can focus on your code - while, ironically, I focus on optimising this. All functions have a --dry-run option, so test it out and feel free to let me know of any issues or requests! Contributions are also lauded!  
+**Dev-Control** is a modular CLI toolkit that automates customising and setting up repos (100% community standards), nested gitmodules, centralised and cleaned up .tmp and .bak folders, nested rootless podman docker containers, vscode mcp-servers, GitHub release (with lib tarbal, automated version tagging and signed latest + version tag) and app packages.
+
+This attempts to make arduous CLI and Git tasks (such as signing woktrees with topology and surgically dropping commits) easy and robust, so you can focus on your code - while, ironically, I focus on optimising this. All functions have a --dry-run option, so test it out and feel free to let me know of any issues or requests! Contributions are also lauded!  
 
 ```bash
 # Install
