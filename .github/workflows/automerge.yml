@@ -136,7 +136,6 @@ jobs:
         if: steps.identity.outputs.gpg-outcome == 'success'
         env:
           PR_NUMBERS: ${{ needs.guard.outputs.pr_numbers }}
-          GH_TOKEN: ${{ steps.app_token.outputs.token }}
         run: |
           set -euo pipefail
           pr_numbers=$(echo "$PR_NUMBERS" | tr -d '[]' | tr ',' ' ')
@@ -144,13 +143,11 @@ jobs:
             echo "🔀 Merging PR #${pr_number} with signed commit"
             pr_json=$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${pr_number}")
             base_ref=$(echo "$pr_json" | jq -r '.base.ref')
-            head_repo=$(echo "$pr_json" | jq -r '.head.repo.full_name')
-            head_ref=$(echo "$pr_json" | jq -r '.head.ref')
             head_sha=$(echo "$pr_json" | jq -r '.head.sha')
 
             git fetch origin "$base_ref"
             git checkout -B "$base_ref" "origin/$base_ref"
-            git fetch "https://x-access-token:${GH_TOKEN}@github.com/${head_repo}.git" "$head_ref":"refs/remotes/pr/${pr_number}"
+            git fetch origin "pull/${pr_number}/head":"refs/remotes/pr/${pr_number}"
 
             if ! git merge --no-ff --no-edit "refs/remotes/pr/${pr_number}"; then
               echo "❌ Merge conflict for PR #${pr_number}. Aborting."
