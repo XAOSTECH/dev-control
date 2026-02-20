@@ -274,7 +274,7 @@ get_repo_info() {
         fi
         
         local cached_stability_color
-        cached_stability_color=$(git config --local dc-init.stability-color 2>/dev/null || echo "")
+        cached_stability_color=$(git config --local dc-init.stability-colour 2>/dev/null || echo "")
         if [[ -n "$cached_stability_color" ]]; then
             STABILITY_COLOR="$cached_stability_color"
         fi
@@ -1257,7 +1257,7 @@ save_project_metadata() {
         git config --local dc-init.long-description "$LONG_DESCRIPTION" 2>/dev/null || true
         git config --local dc-init.license-type "$LICENSE_TYPE" 2>/dev/null || true
         git config --local dc-init.stability "$STABILITY" 2>/dev/null || true
-        git config --local dc-init.stability-color "$STABILITY_COLOR" 2>/dev/null || true
+        git config --local dc-init.stability-colour "$STABILITY_COLOR" 2>/dev/null || true
         [[ -n "$WEBSITE_URL" ]] && git config --local dc-init.website-url "$WEBSITE_URL" 2>/dev/null || true
         [[ -n "$BOT_NAME" ]] && git config --local dc-init.bot-name "$BOT_NAME" 2>/dev/null || true
         [[ -n "$BOT_EMAIL" ]] && git config --local dc-init.bot-email "$BOT_EMAIL" 2>/dev/null || true
