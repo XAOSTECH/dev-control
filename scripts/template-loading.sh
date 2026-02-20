@@ -38,6 +38,8 @@ source "$SCRIPT_DIR/lib/print.sh"
 CLI_FILES=""
 CLI_OVERWRITE=false
 CLI_HELP=false
+# Use cached/default values and skip config prompts
+DEFAULTS_ONLY=false
 # Batch mode options
 BATCH_MODE=false
 REUSE_OWNER=false
@@ -66,6 +68,7 @@ show_help() {
     echo "Options:"
     echo "  -f, --files FILE1,FILE2    Only process specific files (comma-separated)"
     echo "  -o, --overwrite            Overwrite existing files without prompting"
+    echo "      --defaults             Use cached/default values and skip config prompts (template selection still shown)"
     echo "  -b, --batch                Batch mode: initialise multiple repositories (provide directories or use '*' to select all subdirs)"
     echo "      --reuse-owner          Prompt for repository owner once and reuse for all repos in the batch"
     echo "  -y, --yes                  Assume defaults and run non-interactively in batch mode"
@@ -98,6 +101,10 @@ parse_args() {
                 ;;
             -o|--overwrite)
                 CLI_OVERWRITE=true
+                shift
+                ;;
+            --defaults)
+                DEFAULTS_ONLY=true
                 shift
                 ;;
             -b|--batch)
@@ -1344,7 +1351,7 @@ main() {
         get_repo_info
         
         # Collect project info (or use defaults for quick mode)
-        if [[ "$CLI_OVERWRITE" == "true" ]]; then
+        if [[ "$CLI_OVERWRITE" == "true" || "$DEFAULTS_ONLY" == "true" ]]; then
             # Quick mode - use defaults from git
             PROJECT_NAME="${PROJECT_NAME:-$(basename "$(pwd)")}"
             SHORT_DESCRIPTION="${SHORT_DESCRIPTION:-A project by $ORG_NAME}"
@@ -1389,7 +1396,24 @@ main() {
     fi
     
     get_repo_info
-    collect_project_info
+    if [[ "$DEFAULTS_ONLY" == "true" ]]; then
+        PROJECT_NAME="${PROJECT_NAME:-$(basename "$(pwd)")}" 
+        REPO_SLUG="${REPO_SLUG:-$PROJECT_NAME}"
+        REPO_OWNER="${REPO_OWNER:-$ORG_NAME}"
+        ORG_NAME="${ORG_NAME:-$REPO_OWNER}"
+        if [[ -n "$ORG_NAME" && -z "$REPO_URL" ]]; then
+            REPO_URL="https://github.com/${ORG_NAME}/${REPO_SLUG}"
+        fi
+        SHORT_DESCRIPTION="${SHORT_DESCRIPTION:-A project by $ORG_NAME}"
+        LONG_DESCRIPTION="${LONG_DESCRIPTION:-$SHORT_DESCRIPTION}"
+        LICENSE_TYPE="${LICENSE_TYPE:-MIT}"
+        STABILITY="${STABILITY:-experimental}"
+        STABILITY_COLOR="${STABILITY_COLOR:-orange}"
+        CURRENT_YEAR=$(date +%Y)
+        print_info "Using cached/default values (template selection still required)"
+    else
+        collect_project_info
+    fi
     
     # Call select_templates directly (avoids subshell)
     select_templates
