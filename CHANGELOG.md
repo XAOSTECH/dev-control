@@ -15,6 +15,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - prune stale vsc-*-uid wrapper images after base build
 
 ### Changed
+- Add defaults-only mode for template loading
+- Add app token secret name templating
+- Template workflow secret name placeholders
+- Add secret name and stability caching to template-loading.sh
+- chore: update CHANGELOG for v0.5.5 (re-release)
 - Add bot-email input and template-loading integration for bot values
 - Replace xaos-bot specific values with placeholders in action template
 - chore: update CHANGELOG for v0.5.5 (re-release)
