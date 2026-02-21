@@ -219,13 +219,16 @@ jobs:
           
           # Create commit
           echo "Creating commit..."
-          PARENTS_JSON="[\"$MAIN_SHA\"]"
-          COMMIT_SHA=$(gh api "/repos/$REPO/git/commits" \
-            -X POST \
-            -f message="security: auto-fix CodeQL alerts" \
-            -f tree="$TREE_SHA" \
-            --raw-field parents="$PARENTS_JSON" \
-            --jq '.sha')
+          COMMIT_PAYLOAD=$(jq -n \
+            --arg message "security: auto-fix CodeQL alerts" \
+            --arg tree "$TREE_SHA" \
+            --arg parent "$MAIN_SHA" \
+            '{message: $message, tree: $tree, parents: [$parent]}')
+          if ! COMMIT_SHA=$(printf '%s' "$COMMIT_PAYLOAD" | gh api "/repos/$REPO/git/commits" -X POST --input - --jq '.sha'); then
+            echo "Commit creation failed. Debug info:"
+            echo "COMMIT_PAYLOAD=$COMMIT_PAYLOAD"
+            exit 1
+          fi
           echo "Commit SHA: $COMMIT_SHA"
           
           # Create branch reference
