@@ -44,14 +44,15 @@ jobs:
           GH_TOKEN: ${{ steps.app_token.outputs.token }}
         run: |
           echo "=== Testing token permissions ==="
-          echo "1. Testing workflows permission (read):"
-          gh api /repos/${{ github.repository }}/actions/workflows 2>&1 | head -5 || echo "FAILED: Cannot read workflows"
+          echo "1. Can token push to branch protection bypass?"
+          gh api /repos/${{ github.repository }} --jq '.permissions' || echo "Failed"
           echo ""
-          echo "2. Testing contents permission (read):"
-          gh api /repos/${{ github.repository }}/contents/.github/workflows/security-autofix.yml 2>&1 | head -5 || echo "FAILED: Cannot read file contents"  
-          echo ""
-          echo "3. Checking app installation:"
-          gh api /repos/${{ github.repository }}/installation 2>&1 | jq '{app_id, app_slug, permissions}' || echo "FAILED: No installation found"
+          echo "2. Try creating a test file via API:"
+          echo "test content" | gh api /repos/${{ github.repository }}/contents/.test-permission-check \
+            -X PUT \
+            -f message="test: check write permission" \
+            -f content=@- \
+            --jq '{name: .content.name, sha: .content.sha}' 2>&1 || echo "WRITE PERMISSION DENIED"
 
       - name: Setup bot identity for signing
         id: identity
