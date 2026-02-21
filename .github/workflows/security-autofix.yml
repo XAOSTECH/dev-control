@@ -205,17 +205,16 @@ jobs:
           # Create new tree
           echo "Creating git tree..."
           # GitHub API expects: POST /repos/{owner}/{repo}/git/trees
-          # Body: { "base_tree": "SHA", "tree": [ {...}, {...} ] }
-          TREE_SHA=$(gh api "/repos/$REPO/git/trees" \
-            -X POST \
-            --field base_tree="$BASE_TREE" \
-            --raw-field tree="$TREE_JSON" \
-            --jq '.sha' 2>&1 || {
-              echo "Tree creation failed. Debug info:"
-              echo "BASE_TREE=$BASE_TREE"
-              echo "TREE_JSON=$TREE_JSON"
-              exit 1
-            })
+          # Body: {"base_tree":"SHA","tree":[{"path":...,"mode":...,"type":...,"sha":...}]}
+          TREE_PAYLOAD=$(jq -n --arg base_tree "$BASE_TREE" --argjson tree "$TREE_JSON" \
+            '{base_tree: $base_tree, tree: $tree}')
+          if ! TREE_SHA=$(printf '%s' "$TREE_PAYLOAD" | gh api "/repos/$REPO/git/trees" -X POST --input - --jq '.sha'); then
+            echo "Tree creation failed. Debug info:"
+            echo "BASE_TREE=$BASE_TREE"
+            echo "TREE_JSON=$TREE_JSON"
+            echo "TREE_PAYLOAD=$TREE_PAYLOAD"
+            exit 1
+          fi
           echo "New tree SHA: $TREE_SHA"
           
           # Create commit
