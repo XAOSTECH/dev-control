@@ -96,21 +96,27 @@ jobs:
       
       - name: Set up variables
         id: vars
+        env:
+          REPO_NAME_INPUT: ${{ github.event.repository.name }}
+          REPO_OWNER_INPUT: ${{ github.repository_owner }}
+          REPO_FULL: ${{ github.repository }}
+          PROJECT_NAME_INPUT: ${{ inputs.project_name }}
+          STABILITY_INPUT: ${{ inputs.stability }}
         run: |
           # Repository info from calling repo
-          echo "repo_name=${{ github.event.repository.name }}" >> "$GITHUB_OUTPUT"
-          echo "repo_owner=${{ github.repository_owner }}" >> "$GITHUB_OUTPUT"
-          echo "repo_url=https://github.com/${{ github.repository }}" >> "$GITHUB_OUTPUT"
+          echo "repo_name=$REPO_NAME_INPUT" >> "$GITHUB_OUTPUT"
+          echo "repo_owner=$REPO_OWNER_INPUT" >> "$GITHUB_OUTPUT"
+          echo "repo_url=https://github.com/$REPO_FULL" >> "$GITHUB_OUTPUT"
           
           # Project name
-          PROJECT_NAME="${{ inputs.project_name }}"
+          PROJECT_NAME="$PROJECT_NAME_INPUT"
           if [ -z "$PROJECT_NAME" ]; then
-            PROJECT_NAME="${{ github.event.repository.name }}"
+            PROJECT_NAME="$REPO_NAME_INPUT"
           fi
           echo "project_name=$PROJECT_NAME" >> "$GITHUB_OUTPUT"
           
           # Stability color
-          case "${{ inputs.stability }}" in
+          case "$STABILITY_INPUT" in
             experimental) echo "stability_color=orange" >> "$GITHUB_OUTPUT" ;;
             beta) echo "stability_color=yellow" >> "$GITHUB_OUTPUT" ;;
             stable) echo "stability_color=green" >> "$GITHUB_OUTPUT" ;;
