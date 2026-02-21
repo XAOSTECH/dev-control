@@ -5,6 +5,54 @@ All notable changes to Dev-Control will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.5] - 2026-02-21 (re-release)
+
+### Added
+- use GitHub-style merge messages in automerge
+- add automated security fix bot workflow
+
+### Fixed
+- restore GH_TOKEN to automerge merge step
+- use xaostech-security[bot] credentials in security-autofix
+- correct shields.io badge parameters and refine anglicise exclusions
+- pre-create ~/.devcontainer so postCreateCommand marker can be written
+- bust permissions layer cache with BUILD_DATE ARG
+- remove --userns=keep-id from runArgs + prune before nest loop
+- prune stale vsc-*-uid wrapper images after base build
+
+### Changed
+- Merge remote-tracking branch 'refs/remotes/pr/36'
+- chore: convert American spellings to British English
+- security: reduce automerge checkout attack surface
+- chore: update CHANGELOG for v0.5.5 (re-release)
+- security: fix YAML syntax error and pin create-pull-request action
+- security: fix code injection in central-loader sed replacements
+- security: fix code injection vulnerabilities in workflows
+- Update CodeQL Action to v4 with automatic patch management
+- Simplify CodeQL to focus on repo languages (JavaScript/YAML only)
+- chore: rename codeQL
+- Add auto-fix PR creation to bash-lint-advanced with xaostech-security[bot] credentials
+- Fix bash-lint-advanced job outputs and create advanced CodeQL security workflow
+- Fix CodeQL untrusted-checkout alert: fetch PR head from official repo
+- Fix --reauthor to include target commit and detect merge topology
+- Add reauthor and force resign options to dc-fix
+- Sign automerge merges with xaos-bot
+- chore: update CHANGELOG for v0.5.5 (re-release)
+- Merge pull request #34 from XAOSTECH/anglicise/20260220-215059
+- chore: convert American spellings to British English
+- Fix anglicise grep quoting and ignore test-repo
+- chore: update CHANGELOG for v0.5.5 (re-release)
+- Add defaults-only mode for template loading
+- Add app token secret name templating
+- Template workflow secret name placeholders
+- Add secret name and stability caching to template-loading.sh
+- chore: update CHANGELOG for v0.5.5 (re-release)
+- Add bot-email input and template-loading integration for bot values
+- Replace xaos-bot specific values with placeholders in action template
+- chore: update CHANGELOG for v0.5.5 (re-release)
+- docs(readme): readability
+- chore: update CHANGELOG for v0.5.5
+
 ## [0.5.5] - 2026-02-20
 
 ### Added
