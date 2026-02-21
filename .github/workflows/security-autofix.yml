@@ -178,6 +178,11 @@ jobs:
           # Create blobs for modified files and build tree JSON using jq
           echo "Creating file blobs..."
           TREE_JSON="[]"
+
+          if [[ -z "${{ steps.fixes.outputs.modified_files }}" ]]; then
+            echo "No files were modified. Skipping PR creation."
+            exit 0
+          fi
           
           for file in $(echo "${{ steps.fixes.outputs.modified_files }}" | xargs -n1 | sort -u); do
             if [[ -f "$file" ]]; then
