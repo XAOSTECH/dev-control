@@ -175,9 +175,9 @@ jobs:
           MAIN_SHA=$(gh api "/repos/$REPO/git/ref/heads/main" --jq '.object.sha')
           echo "Main branch SHA: $MAIN_SHA"
           
-          # Create blobs for modified files
+          # Create blobs for modified files and build tree JSON using jq
           echo "Creating file blobs..."
-          TREE_ITEMS=()
+          TREE_JSON="[]"
           
           for file in $(echo "${{ steps.fixes.outputs.modified_files }}" | xargs -n1 | sort -u); do
             if [[ -f "$file" ]]; then
@@ -189,13 +189,12 @@ jobs:
                 -f encoding="utf-8" \
                 --jq '.sha')
               
-              # Add to tree items (using jq to build JSON)
-              TREE_ITEMS+=("{\"path\":\"$file\",\"mode\":\"100644\",\"type\":\"blob\",\"sha\":\"$BLOB_SHA\"}")
+              # Add to tree array using jq for proper JSON construction
+              TREE_JSON=$(echo "$TREE_JSON" | jq --arg path "$file" --arg sha "$BLOB_SHA" \
+                '. += [{"path": $path, "mode": "100644", "type": "blob", "sha": $sha}]')
             fi
           done
           
-          # Build tree items JSON array
-          TREE_JSON=$(printf '%s\n' "${TREE_ITEMS[@]}" | jq -s '.')
           echo "Tree JSON built with $(echo "$TREE_JSON" | jq 'length') items"
           
           # Get the base tree SHA
