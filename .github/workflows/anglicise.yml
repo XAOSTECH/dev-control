@@ -309,8 +309,8 @@ jobs:
             ! -path "./license-templates/*" \
             2>/dev/null | sort)
 
-          echo "## British English Spelling Check" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## British English Spelling Check" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "🔍 Checking $(echo "$FILES" | wc -l) files for American spellings..." | tee -a $GITHUB_STEP_SUMMARY
           echo ""
 
@@ -358,21 +358,21 @@ jobs:
           echo ""
           if [[ $ISSUES_FOUND -gt 0 ]]; then
             echo "❌ Found $ISSUES_FOUND American spelling(s) in ${#FILES_TO_FIX[@]} file(s)"
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "❌ **Found $ISSUES_FOUND American spelling(s) to convert**" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "| Location | American 🇺🇸 | British 🇬🇧 | Pattern |" >> $GITHUB_STEP_SUMMARY
-            echo "|----------|-------------|------------|---------|" >> $GITHUB_STEP_SUMMARY
-            echo "$ISSUE_OUTPUT" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "🔧 **A pull request will be created with automatic fixes.**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "❌ **Found $ISSUES_FOUND American spelling(s) to convert**" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "| Location | American 🇺🇸 | British 🇬🇧 | Pattern |" >> "$GITHUB_STEP_SUMMARY"
+            echo "|----------|-------------|------------|---------|" >> "$GITHUB_STEP_SUMMARY"
+            echo "$ISSUE_OUTPUT" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "🔧 **A pull request will be created with automatic fixes.**" >> "$GITHUB_STEP_SUMMARY"
             
-            echo "needs_fix=true" >> $GITHUB_OUTPUT
+            echo "needs_fix=true" >> "$GITHUB_OUTPUT"
           else
             echo "✅ All spellings conform to British English standards."
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "✅ **All spellings conform to British English standards.**" >> $GITHUB_STEP_SUMMARY
-            echo "needs_fix=false" >> $GITHUB_OUTPUT
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "✅ **All spellings conform to British English standards.**" >> "$GITHUB_STEP_SUMMARY"
+            echo "needs_fix=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Apply British English fixes

@@ -38,7 +38,7 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           fetch-depth: 0
 
@@ -61,8 +61,8 @@ jobs:
           ERRORS=$(jq '[.[] | select(.level=="error")] | length' /tmp/lint/results.json 2>/dev/null || echo "0")
           WARNINGS=$(jq '[.[] | select(.level=="warning")] | length' /tmp/lint/results.json 2>/dev/null || echo "0")
           
-          echo "errors=$ERRORS" >> $GITHUB_OUTPUT
-          echo "warnings=$WARNINGS" >> $GITHUB_OUTPUT
+          echo "errors=$ERRORS" >> "$GITHUB_OUTPUT"
+          echo "warnings=$WARNINGS" >> "$GITHUB_OUTPUT"
           
           cat /tmp/lint/results.json
 
@@ -102,7 +102,7 @@ jobs:
 
       - name: Suggest fixes on PR
         if: github.event_name == 'pull_request' && (steps.shellcheck.outputs.errors > 0 || steps.shellcheck.outputs.warnings > 0)
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
         with:
           script: |
             const fs = require('fs');
@@ -152,7 +152,7 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           fetch-depth: 0
 
@@ -163,7 +163,7 @@ jobs:
 
       - name: Generate security app token
         id: app_token
-        uses: actions/create-github-app-token@v1
+        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547
         with:
           app-id: ${{ secrets.XSS_AI }}
           private-key: ${{ secrets.XSS_PK }}
@@ -185,8 +185,8 @@ jobs:
             -exec shellcheck -f json {} + > /tmp/lint/results.json 2>&1 || true
           
           ERRORS=$(jq '[.[] | select(.level=="error")] | length' /tmp/lint/results.json 2>/dev/null || echo "0")
-          echo "errors=$ERRORS" >> $GITHUB_OUTPUT
-          [[ "$ERRORS" -gt 0 ]] && echo "has_fixes=true" >> $GITHUB_OUTPUT || echo "has_fixes=false" >> $GITHUB_OUTPUT
+          echo "errors=$ERRORS" >> "$GITHUB_OUTPUT"
+          [[ "$ERRORS" -gt 0 ]] && echo "has_fixes=true" >> "$GITHUB_OUTPUT" || echo "has_fixes=false" >> "$GITHUB_OUTPUT"
 
       - name: Apply style fixes with shfmt
         if: steps.check.outputs.has_fixes == 'true'
@@ -253,20 +253,20 @@ jobs:
         run: |
           ERRORS="${{ needs.shellcheck-analysis.outputs.errors }}"
           WARNINGS="${{ needs.shellcheck-analysis.outputs.warnings }}"
-          echo "## 📊 Bash Linting Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Errors**: ${ERRORS:-0}" >> $GITHUB_STEP_SUMMARY
-          echo "**Warnings**: ${WARNINGS:-0}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Next Steps:" >> $GITHUB_STEP_SUMMARY
-          echo "1. Review issues in workflow annotations" >> $GITHUB_STEP_SUMMARY
-          echo "2. Check PR comments for detailed suggestions" >> $GITHUB_STEP_SUMMARY
-          echo "3. Follow linked wiki pages for explanations" >> $GITHUB_STEP_SUMMARY
-          echo "4. Create PR with fixes" >> $GITHUB_STEP_SUMMARY
+          echo "## 📊 Bash Linting Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Errors**: ${ERRORS:-0}" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Warnings**: ${WARNINGS:-0}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Next Steps:" >> "$GITHUB_STEP_SUMMARY"
+          echo "1. Review issues in workflow annotations" >> "$GITHUB_STEP_SUMMARY"
+          echo "2. Check PR comments for detailed suggestions" >> "$GITHUB_STEP_SUMMARY"
+          echo "3. Follow linked wiki pages for explanations" >> "$GITHUB_STEP_SUMMARY"
+          echo "4. Create PR with fixes" >> "$GITHUB_STEP_SUMMARY"
           
           # Fail if there are errors
           if [[ "${ERRORS:-0}" -gt 0 ]]; then
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "❌ **Errors found - please fix**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "❌ **Errors found - please fix**" >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi

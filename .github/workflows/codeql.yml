@@ -70,21 +70,21 @@ jobs:
 
       - name: Generate security summary
         run: |
-          echo "## 🔒 CodeQL Security Analysis Complete" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Analysis Coverage:" >> $GITHUB_STEP_SUMMARY
-          echo "- **Auto-detected languages**: JavaScript, Python, Go, Java, C++, C#, Ruby, Swift" >> $GITHUB_STEP_SUMMARY
-          echo "- **Query suite**: Extended (security-and-quality)" >> $GITHUB_STEP_SUMMARY
-          echo "- **Schedule**: Push, PR, daily at 2 AM UTC" >> $GITHUB_STEP_SUMMARY
-          echo "- **Concurrency**: Cancels older scans on new push" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Complementary Security:" >> $GITHUB_STEP_SUMMARY
-          echo "- Shell scripts: bash-lint-advanced workflow (ShellCheck)" >> $GITHUB_STEP_SUMMARY
-          echo "- Dockerfile: GitHub Advanced Security scanning" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Next Steps:" >> $GITHUB_STEP_SUMMARY
-          echo "1. Check the [Security tab](../../security/code-scanning?tab=alert) for results" >> $GITHUB_STEP_SUMMARY
-          echo "2. Review any alerts in detail" >> $GITHUB_STEP_SUMMARY
-          echo "3. Address discovered vulnerabilities" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "[View CodeQL Documentation](https://codeql.github.com/docs/)" >> $GITHUB_STEP_SUMMARY
+          echo "## 🔒 CodeQL Security Analysis Complete" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Analysis Coverage:" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Auto-detected languages**: JavaScript, Python, Go, Java, C++, C#, Ruby, Swift" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Query suite**: Extended (security-and-quality)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Schedule**: Push, PR, daily at 2 AM UTC" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Concurrency**: Cancels older scans on new push" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Complementary Security:" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Shell scripts: bash-lint-advanced workflow (ShellCheck)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Dockerfile: GitHub Advanced Security scanning" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Next Steps:" >> "$GITHUB_STEP_SUMMARY"
+          echo "1. Check the [Security tab](../../security/code-scanning?tab=alert) for results" >> "$GITHUB_STEP_SUMMARY"
+          echo "2. Review any alerts in detail" >> "$GITHUB_STEP_SUMMARY"
+          echo "3. Address discovered vulnerabilities" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "[View CodeQL Documentation](https://codeql.github.com/docs/)" >> "$GITHUB_STEP_SUMMARY"

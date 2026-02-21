@@ -194,8 +194,8 @@ jobs:
             TAG_NAME="v${VERSION}"
           fi
           
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
-          echo "tag_name=${TAG_NAME}" >> $GITHUB_OUTPUT
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag_name=${TAG_NAME}" >> "$GITHUB_OUTPUT"
           echo "📦 Release version: ${VERSION}"
           echo "🏷️ Tag: ${TAG_NAME}"
 
@@ -230,22 +230,22 @@ jobs:
                 git tag -d latest 2>/dev/null || true
                 echo "✅ Cleaned up — will rebuild and republish"
                 RERELEASE="true"
-                echo "exists=false" >> $GITHUB_OUTPUT
+                echo "exists=false" >> "$GITHUB_OUTPUT"
               else
                 echo "⚠️ Release $TAG_NAME exists but is not the latest (latest: $LATEST_TAG)"
                 echo "ℹ️ Only the latest release can be re-released via manual dispatch"
-                echo "exists=true" >> $GITHUB_OUTPUT
+                echo "exists=true" >> "$GITHUB_OUTPUT"
               fi
             else
               echo "⏭️ Release $TAG_NAME already exists — skipping build (push trigger)"
-              echo "exists=true" >> $GITHUB_OUTPUT
+              echo "exists=true" >> "$GITHUB_OUTPUT"
             fi
           else
             echo "🆕 Release $TAG_NAME not yet published — proceeding"
-            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
 
-          echo "rerelease=${RERELEASE}" >> $GITHUB_OUTPUT
+          echo "rerelease=${RERELEASE}" >> "$GITHUB_OUTPUT"
 
       - name: Gather commit history
         id: commits
@@ -274,7 +274,7 @@ jobs:
             git log --pretty=format:"%s" -20 > .commits-subjects.txt
           fi
 
-          echo "prev_tag=${PREV_TAG}" >> $GITHUB_OUTPUT
+          echo "prev_tag=${PREV_TAG}" >> "$GITHUB_OUTPUT"
 
       - name: Update CHANGELOG.md
         if: steps.check_release.outputs.exists != 'true'
@@ -537,12 +537,12 @@ jobs:
           # Get full tarball info
           TARBALL=$(ls dist/dev-control-${VERSION}.tar.gz 2>/dev/null || ls dist/*.tar.gz 2>/dev/null | grep -v lib | head -1)
           if [[ -n "$TARBALL" ]]; then
-            echo "tarball_path=${TARBALL}" >> $GITHUB_ENV
-            echo "tarball_name=$(basename "$TARBALL")" >> $GITHUB_ENV
+            echo "tarball_path=${TARBALL}" >> "$GITHUB_ENV"
+            echo "tarball_name=$(basename "$TARBALL")" >> "$GITHUB_ENV"
             
             if [[ -f "${TARBALL}.sha256" ]]; then
               SHA256=$(cat "${TARBALL}.sha256" | awk '{print $1}')
-              echo "tarball_sha256=${SHA256}" >> $GITHUB_ENV
+              echo "tarball_sha256=${SHA256}" >> "$GITHUB_ENV"
               echo "🔐 Full tarball SHA256: ${SHA256}"
             fi
           fi
@@ -550,11 +550,11 @@ jobs:
           # Get lib tarball info
           LIB_TARBALL="dist/dev-control-lib-${VERSION}.tar.gz"
           if [[ -f "$LIB_TARBALL" ]]; then
-            echo "lib_tarball_name=dev-control-lib-${VERSION}.tar.gz" >> $GITHUB_ENV
+            echo "lib_tarball_name=dev-control-lib-${VERSION}.tar.gz" >> "$GITHUB_ENV"
             
             if [[ -f "${LIB_TARBALL}.sha256" ]]; then
               LIB_SHA256=$(cat "${LIB_TARBALL}.sha256" | awk '{print $1}')
-              echo "lib_tarball_sha256=${LIB_SHA256}" >> $GITHUB_ENV
+              echo "lib_tarball_sha256=${LIB_SHA256}" >> "$GITHUB_ENV"
               echo "🔐 Lib tarball SHA256: ${LIB_SHA256}"
             fi
           fi
@@ -628,7 +628,7 @@ jobs:
           EOF
           
           # Output for next step
-          echo "notes_file=${NOTES_FILE}" >> $GITHUB_OUTPUT
+          echo "notes_file=${NOTES_FILE}" >> "$GITHUB_OUTPUT"
           
           echo "📝 Release notes generated"
           cat "$NOTES_FILE"
@@ -694,20 +694,20 @@ jobs:
           VERSION="${{ steps.version.outputs.version }}"
           TAG_NAME="${{ steps.version.outputs.tag_name }}"
           
-          echo "## 🎉 Release Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
-          echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Version | ${VERSION} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Tag | ${TAG_NAME} |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Artifacts" >> $GITHUB_STEP_SUMMARY
-          echo "| Package | File | SHA256 |" >> $GITHUB_STEP_SUMMARY
-          echo "|---------|------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Full Toolkit | ${tarball_name} | \`${tarball_sha256:0:16}...\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Library Only | ${lib_tarball_name} | \`${lib_tarball_sha256:0:16}...\` |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Links" >> $GITHUB_STEP_SUMMARY
-          echo "- [Release](https://github.com/$GITHUB_REPOSITORY/releases/tag/${TAG_NAME})" >> $GITHUB_STEP_SUMMARY
-          echo "- [Full Toolkit](https://github.com/$GITHUB_REPOSITORY/releases/download/${TAG_NAME}/${tarball_name})" >> $GITHUB_STEP_SUMMARY
-          echo "- [Library Only](https://github.com/$GITHUB_REPOSITORY/releases/download/${TAG_NAME}/${lib_tarball_name})" >> $GITHUB_STEP_SUMMARY
+          echo "## 🎉 Release Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Item | Value |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|------|-------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Version | ${VERSION} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Tag | ${TAG_NAME} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Artifacts" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Package | File | SHA256 |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---------|------|--------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Full Toolkit | ${tarball_name} | \`${tarball_sha256:0:16}...\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Library Only | ${lib_tarball_name} | \`${lib_tarball_sha256:0:16}...\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Links" >> "$GITHUB_STEP_SUMMARY"
+          echo "- [Release](https://github.com/$GITHUB_REPOSITORY/releases/tag/${TAG_NAME})" >> "$GITHUB_STEP_SUMMARY"
+          echo "- [Full Toolkit](https://github.com/$GITHUB_REPOSITORY/releases/download/${TAG_NAME}/${tarball_name})" >> "$GITHUB_STEP_SUMMARY"
+          echo "- [Library Only](https://github.com/$GITHUB_REPOSITORY/releases/download/${TAG_NAME}/${lib_tarball_name})" >> "$GITHUB_STEP_SUMMARY"
