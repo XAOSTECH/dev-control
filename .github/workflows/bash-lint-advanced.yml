@@ -198,13 +198,13 @@ jobs:
 
       - name: Create fix PR
         if: steps.check.outputs.has_fixes == 'true' && steps.identity.outputs.gpg-outcome == 'success'
+        env:
+          GH_TOKEN: ${{ steps.app_token.outputs.token }}
         run: |
           set -euo pipefail
           
-          # Configure git for commits
-          git config user.name "xaos-bot"
-          git config user.email "dev@xaostech.com"
-          git config user.signingkey "$(git config user.signingkey)"
+          # Configure git to use app token for authentication
+          git remote set-url origin \"https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git\"
           
           # Check if there are changes
           if git diff --quiet; then

@@ -43,19 +43,6 @@ jobs:
           user-token: ${{ secrets.XB_UT }}
           bot-name: xaos-bot
 
-      - name: Configure Git
-        env:
-          BOT_NAME: ${{ steps.identity.outputs.name }}
-          BOT_EMAIL: ${{ steps.identity.outputs.email }}
-          APP_TOKEN: ${{ steps.app_token.outputs.token }}
-        run: |
-          git config --global user.name "$BOT_NAME"
-          git config --global user.email "$BOT_EMAIL"
-          git config --global commit.gpgsign true
-          
-          # Configure git to use app token for authentication
-          git remote set-url origin "https://x-access-token:${APP_TOKEN}@github.com/${{ github.repository }}.git"
-
       - name: Fetch and analyze CodeQL alerts
         id: alerts
         env:
@@ -185,6 +172,9 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.app_token.outputs.token }}
         run: |
+          # Configure git to use app token for authentication
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+          
           # Create feature branch
           BRANCH="security/autofix-$(date +%s)"
           git checkout -b "$BRANCH"
