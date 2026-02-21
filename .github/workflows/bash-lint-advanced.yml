@@ -241,8 +241,6 @@ jobs:
             --label "automated" \
             --label "bash-linting" \
             || echo "PR may already exist for this branch"
-        env:
-          GH_TOKEN: ${{ steps.app_token.outputs.token }}
 
   summary:
     name: Linting Summary
