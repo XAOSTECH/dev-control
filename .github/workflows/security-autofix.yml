@@ -196,6 +196,7 @@ jobs:
           done
           
           echo "Tree JSON built with $(echo "$TREE_JSON" | jq 'length') items"
+          echo "Tree JSON sample: $(echo "$TREE_JSON" | jq '.[0]' 2>/dev/null || echo 'empty')"
           
           # Get the base tree SHA
           BASE_TREE=$(gh api "/repos/$REPO/git/commits/$MAIN_SHA" --jq '.tree.sha')
@@ -203,11 +204,18 @@ jobs:
           
           # Create new tree
           echo "Creating git tree..."
+          # GitHub API expects: POST /repos/{owner}/{repo}/git/trees
+          # Body: { "base_tree": "SHA", "tree": [ {...}, {...} ] }
           TREE_SHA=$(gh api "/repos/$REPO/git/trees" \
             -X POST \
-            -f base_tree="$BASE_TREE" \
+            --field base_tree="$BASE_TREE" \
             --raw-field tree="$TREE_JSON" \
-            --jq '.sha')
+            --jq '.sha' 2>&1 || {
+              echo "Tree creation failed. Debug info:"
+              echo "BASE_TREE=$BASE_TREE"
+              echo "TREE_JSON=$TREE_JSON"
+              exit 1
+            })
           echo "New tree SHA: $TREE_SHA"
           
           # Create commit
