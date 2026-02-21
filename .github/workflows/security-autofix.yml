@@ -37,6 +37,14 @@ jobs:
           permission-contents: write
           permission-pull-requests: write
 
+      - name: Debug token permissions
+        env:
+          GH_TOKEN: ${{ steps.app_token.outputs.token }}
+        run: |
+          echo "Checking token permissions..."
+          gh api /installation/repositories --jq '{permissions: .repositories[0].permissions}' || echo "Failed to check via repositories endpoint"
+          gh api /repos/${{ github.repository }} --jq '.permissions' || echo "Failed to check via repo endpoint"
+
       - name: Setup bot identity for signing
         id: identity
         uses: ./.github/actions/identity
