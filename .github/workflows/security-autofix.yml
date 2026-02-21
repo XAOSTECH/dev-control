@@ -97,7 +97,7 @@ jobs:
           # Read alerts
           ALERTS=$(cat /tmp/alerts.json)
           
-          # Pattern 1: Fix code injection - Extract ${{ ... }} to env vars
+          # Pattern 1: Fix code injection - Extract GitHub expressions to env vars
           # Note: Complex YAML manipulation requires manual review
           # This pattern detects but defers to PR for automated fixes
           echo "🔧 Detecting code injection vulnerabilities..."
