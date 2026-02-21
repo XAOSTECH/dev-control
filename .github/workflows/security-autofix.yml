@@ -289,7 +289,7 @@ jobs:
           echo "" >> /tmp/issue_body.md
           echo "The following CodeQL alerts cannot be automatically fixed and require manual intervention:" >> /tmp/issue_body.md
           echo "" >> /tmp/issue_body.md
-          cat /tmp/alerts.json | jq -r '.[] | "### Alert #\(.number): \(.rule)\n- **Severity**: \(.severity)\n- **File**: \`\(.file):\(.line)\`\n- **Message**: \(.message)\n"' >> /tmp/issue_body.md
+          jq -r '.[] | "### Alert #\(.number): \(.rule)\n- **Severity**: \(.severity)\n- **File**: `\(.file):\(.line)`\n- **Message**: \(.message)\n"' /tmp/alerts.json >> /tmp/issue_body.md
           echo "" >> /tmp/issue_body.md
           echo "### Recommended Actions" >> /tmp/issue_body.md
           echo "1. Review each alert in the [Security tab](https://github.com/${{ github.repository }}/security/code-scanning)" >> /tmp/issue_body.md
