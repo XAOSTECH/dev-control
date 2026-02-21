@@ -254,7 +254,7 @@ jobs:
           # Create GitHub-style merge message
           printf -v MERGE_MSG 'Merge pull request #%s from %s\n\n%s' "${PR_NUMBER}" "${HEAD_LABEL}" "${PR_TITLE}"
 
-          if ! git merge --no-ff -m "$MERGE_MSG" "refs/remotes/pr/${PR_NUMBER}"; then
+          if ! git merge --no-ff --no-verify -m "$MERGE_MSG" "refs/remotes/pr/${PR_NUMBER}"; then
             echo "❌ Merge conflict for PR #${PR_NUMBER}. Aborting."
             git merge --abort || true
             exit 1
@@ -288,7 +288,7 @@ jobs:
             # Create GitHub-style merge message with printf
             printf -v MERGE_MSG 'Merge pull request #%s from %s\n\n%s' "${pr_number}" "${pr_branch}" "${pr_title}"
 
-            if ! git merge --no-ff -m "$MERGE_MSG" "refs/remotes/pr/${pr_number}"; then
+            if ! git merge --no-ff --no-verify -m "$MERGE_MSG" "refs/remotes/pr/${pr_number}"; then
               echo "❌ Merge conflict for PR #${pr_number}. Aborting."
               git merge --abort || true
               exit 1

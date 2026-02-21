@@ -137,10 +137,10 @@ jobs:
           SHORT_DESC: ${{ inputs.short_description }}
           LICENSE_TYPE: ${{ inputs.license_type }}
           STABILITY: ${{ inputs.stability }}
+          TEMPLATES: ${{ inputs.templates }}
           STABILITY_COLOR: ${{ steps.vars.outputs.stability_color }}
           CURRENT_YEAR: ${{ steps.vars.outputs.current_year }}
         run: |
-          TEMPLATES="${{ inputs.templates }}"
           DC_DIR=".dev-control-templates"
           INSTALLED=""
           
