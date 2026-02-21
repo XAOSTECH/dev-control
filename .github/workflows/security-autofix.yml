@@ -196,26 +196,31 @@ jobs:
           
           # Build tree items JSON array
           TREE_JSON=$(printf '%s\n' "${TREE_ITEMS[@]}" | jq -s '.')
+          echo "Tree JSON built with $(echo "$TREE_JSON" | jq 'length') items"
           
           # Get the base tree SHA
           BASE_TREE=$(gh api "/repos/$REPO/git/commits/$MAIN_SHA" --jq '.tree.sha')
+          echo "Base tree: $BASE_TREE"
           
           # Create new tree
           echo "Creating git tree..."
           TREE_SHA=$(gh api "/repos/$REPO/git/trees" \
             -X POST \
             -f base_tree="$BASE_TREE" \
-            -f tree="$TREE_JSON" \
+            --raw-field tree="$TREE_JSON" \
             --jq '.sha')
+          echo "New tree SHA: $TREE_SHA"
           
           # Create commit
           echo "Creating commit..."
+          PARENTS_JSON="[\"$MAIN_SHA\"]"
           COMMIT_SHA=$(gh api "/repos/$REPO/git/commits" \
             -X POST \
             -f message="security: auto-fix CodeQL alerts" \
             -f tree="$TREE_SHA" \
-            -f parents[]="$MAIN_SHA" \
+            --raw-field parents="$PARENTS_JSON" \
             --jq '.sha')
+          echo "Commit SHA: $COMMIT_SHA"
           
           # Create branch reference
           echo "Creating branch $BRANCH..."
