@@ -147,12 +147,19 @@ jobs:
             pr_json=$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${pr_number}")
             base_ref=$(echo "$pr_json" | jq -r '.base.ref')
             head_sha=$(echo "$pr_json" | jq -r '.head.sha')
+            pr_title=$(echo "$pr_json" | jq -r '.title')
+            pr_branch=$(echo "$pr_json" | jq -r '.head.label')
 
             git fetch origin "$base_ref"
             git checkout -B "$base_ref" "origin/$base_ref"
             git fetch origin "pull/${pr_number}/head":"refs/remotes/pr/${pr_number}"
 
-            if ! git merge --no-ff --no-edit "refs/remotes/pr/${pr_number}"; then
+            # Create GitHub-style merge message
+            MERGE_MSG="Merge pull request #${pr_number} from ${pr_branch}
+
+${pr_title}"
+
+            if ! git merge --no-ff -m "$MERGE_MSG" "refs/remotes/pr/${pr_number}"; then
               echo "❌ Merge conflict for PR #${pr_number}. Aborting."
               git merge --abort || true
               exit 1
