@@ -60,7 +60,7 @@ jobs:
           # Count fixable alerts
           FIXABLE_COUNT=$(echo "$ALERTS" | jq '[.[] | select(.rule == "actions/code-injection/medium" or .rule == "actions/unpinned-tag")] | length')
           
-          echo "fixable_count=$FIXABLE_COUNT" >> $GITHUB_OUTPUT
+          echo "fixable_count=$FIXABLE_COUNT" >> "$GITHUB_OUTPUT"
           echo "$ALERTS" > /tmp/alerts.json
           
           if [ "$FIXABLE_COUNT" -eq 0 ]; then
@@ -155,10 +155,10 @@ jobs:
             fi
           done
           
-          echo "fixes_applied=$FIXES_APPLIED" >> $GITHUB_OUTPUT
-          echo "modified_files<<EOF" >> $GITHUB_OUTPUT
-          echo "$MODIFIED_FILES" | xargs -n1 | sort -u >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          echo "fixes_applied=$FIXES_APPLIED" >> "$GITHUB_OUTPUT"
+          echo "modified_files<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$MODIFIED_FILES" | xargs -n1 | sort -u >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
           
           echo ""
           echo "📊 Summary: Applied $FIXES_APPLIED fixes across $(echo "$MODIFIED_FILES" | xargs -n1 | sort -u | wc -l) files"
