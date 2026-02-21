@@ -29,10 +29,12 @@ jobs:
 
       - name: Generate security app token
         id: app_token
-        uses: actions/create-github-app-token@v1
+        uses: actions/create-github-app-token@v2
         with:
           app-id: ${{ secrets.XSS_AI }}
           private-key: ${{ secrets.XSS_PK }}
+          permission-actions: read
+          permission-security-events: read
           permission-workflows: write
           permission-contents: write
           permission-pull-requests: write
@@ -41,9 +43,15 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.app_token.outputs.token }}
         run: |
-          echo "Checking token permissions..."
-          gh api /installation/repositories --jq '{permissions: .repositories[0].permissions}' || echo "Failed to check via repositories endpoint"
-          gh api /repos/${{ github.repository }} --jq '.permissions' || echo "Failed to check via repo endpoint"
+          echo "=== Testing token permissions ==="
+          echo "1. Testing workflows permission (read):"
+          gh api /repos/${{ github.repository }}/actions/workflows 2>&1 | head -5 || echo "FAILED: Cannot read workflows"
+          echo ""
+          echo "2. Testing contents permission (read):"
+          gh api /repos/${{ github.repository }}/contents/.github/workflows/security-autofix.yml 2>&1 | head -5 || echo "FAILED: Cannot read file contents"  
+          echo ""
+          echo "3. Checking app installation:"
+          gh api /repos/${{ github.repository }}/installation 2>&1 | jq '{app_id, app_slug, permissions}' || echo "FAILED: No installation found"
 
       - name: Setup bot identity for signing
         id: identity
