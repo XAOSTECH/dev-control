@@ -33,6 +33,9 @@ jobs:
         with:
           app-id: ${{ secrets.XSS_AI }}
           private-key: ${{ secrets.XSS_PK }}
+          permission-workflows: write
+          permission-contents: write
+          permission-pull-requests: write
 
       - name: Setup bot identity for signing
         id: identity
