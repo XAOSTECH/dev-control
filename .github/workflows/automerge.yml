@@ -73,7 +73,7 @@ jobs:
         id: extract
         run: |
           if [ ! -f pr-validation.zip ]; then
-            echo "should_merge=false" >> $GITHUB_OUTPUT
+            echo "should_merge=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           
@@ -83,29 +83,29 @@ jobs:
           # Verify artifact contains numeric PR number
           if [ ! -f pr-validation/NUMBER ]; then
             echo "❌ Missing PR number in validation artifact"
-            echo "should_merge=false" >> $GITHUB_OUTPUT
+            echo "should_merge=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           
           PR_NUMBER=$(cat pr-validation/NUMBER)
           if ! [[ "$PR_NUMBER" =~ ^[0-9]+$ ]]; then
             echo "❌ Invalid PR number: $PR_NUMBER"
-            echo "should_merge=false" >> $GITHUB_OUTPUT
+            echo "should_merge=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           
-          echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
-          echo "should_merge=true" >> $GITHUB_OUTPUT
-          echo "head_sha=$(cat pr-validation/HEAD_SHA)" >> $GITHUB_OUTPUT
-          echo "base_ref=$(cat pr-validation/BASE_REF)" >> $GITHUB_OUTPUT
-          echo "head_label=$(cat pr-validation/HEAD_LABEL)" >> $GITHUB_OUTPUT
+          echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "should_merge=true" >> "$GITHUB_OUTPUT"
+          echo "head_sha=$(cat pr-validation/HEAD_SHA)" >> "$GITHUB_OUTPUT"
+          echo "base_ref=$(cat pr-validation/BASE_REF)" >> "$GITHUB_OUTPUT"
+          echo "head_label=$(cat pr-validation/HEAD_LABEL)" >> "$GITHUB_OUTPUT"
           
           # Handle multi-line PR title
           {
             echo 'pr_title<<EOF'
             cat pr-validation/TITLE
             echo EOF
-          } >> $GITHUB_OUTPUT
+          } >> "$GITHUB_OUTPUT"
           
           echo "✅ Validated PR #$PR_NUMBER from artifact"
           echo "   Reason: $(cat pr-validation/REASON)"
@@ -334,4 +334,3 @@ jobs:
                 core.setFailed(`❌ Failed to merge PR #${prNumber}: ${error.message}`);
               }
             }
-
