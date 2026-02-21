@@ -252,12 +252,7 @@ jobs:
           git fetch origin "pull/${PR_NUMBER}/head":"refs/remotes/pr/${PR_NUMBER}"
 
           # Create GitHub-style merge message
-          MERGE_MSG=$(cat <<EOFMSG
-Merge pull request #${PR_NUMBER} from ${HEAD_LABEL}
-
-${PR_TITLE}
-EOFMSG
-)
+          printf -v MERGE_MSG 'Merge pull request #%s from %s\n\n%s' "${PR_NUMBER}" "${HEAD_LABEL}" "${PR_TITLE}"
 
           if ! git merge --no-ff -m "$MERGE_MSG" "refs/remotes/pr/${PR_NUMBER}"; then
             echo "❌ Merge conflict for PR #${PR_NUMBER}. Aborting."
