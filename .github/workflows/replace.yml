@@ -91,14 +91,14 @@ jobs:
           CHANGED_FILES=0
           TOTAL_REPLACEMENTS=0
           
-          echo "## Text Replacement Report" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "🔍 **Search:** \`$SEARCH_TEXT\`" >> $GITHUB_STEP_SUMMARY
-          echo "🔄 **Replace:** \`$REPLACE_TEXT\`" >> $GITHUB_STEP_SUMMARY
-          echo "🚫 **Excluded:** \`$EXCLUDE_PATHS\`" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Text Replacement Report" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "🔍 **Search:** \`$SEARCH_TEXT\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "🔄 **Replace:** \`$REPLACE_TEXT\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "🚫 **Excluded:** \`$EXCLUDE_PATHS\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "📊 Scanning $TOTAL_FILES files..." | tee -a $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "" >> "$GITHUB_STEP_SUMMARY"
           
           # Process each file
           while IFS= read -r file; do
@@ -114,24 +114,24 @@ jobs:
               sed -i "s|$(echo "$SEARCH_TEXT" | sed 's/[\/&]/\\&/g')|$(echo "$REPLACE_TEXT" | sed 's/[\/&]/\\&/g')|g" "$file"
               
               echo "  ✓ $file ($COUNT replacement(s))"
-              echo "- \`$file\` - $COUNT occurrence(s)" >> $GITHUB_STEP_SUMMARY
+              echo "- \`$file\` - $COUNT occurrence(s)" >> "$GITHUB_STEP_SUMMARY"
               
               CHANGED_FILES=$((CHANGED_FILES + 1))
               TOTAL_REPLACEMENTS=$((TOTAL_REPLACEMENTS + COUNT))
             fi
           done <<< "$FILES"
           
-          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "" >> "$GITHUB_STEP_SUMMARY"
           
           if [[ $CHANGED_FILES -gt 0 ]]; then
             echo "✅ Replaced $TOTAL_REPLACEMENTS occurrence(s) in $CHANGED_FILES file(s)"
-            echo "### Summary" >> $GITHUB_STEP_SUMMARY
-            echo "✅ **$TOTAL_REPLACEMENTS** replacement(s) in **$CHANGED_FILES** file(s)" >> $GITHUB_STEP_SUMMARY
-            echo "needs_pr=true" >> $GITHUB_OUTPUT
+            echo "### Summary" >> "$GITHUB_STEP_SUMMARY"
+            echo "✅ **$TOTAL_REPLACEMENTS** replacement(s) in **$CHANGED_FILES** file(s)" >> "$GITHUB_STEP_SUMMARY"
+            echo "needs_pr=true" >> "$GITHUB_OUTPUT"
           else
             echo "ℹ️ No occurrences found"
-            echo "ℹ️ **No occurrences found**" >> $GITHUB_STEP_SUMMARY
-            echo "needs_pr=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ **No occurrences found**" >> "$GITHUB_STEP_SUMMARY"
+            echo "needs_pr=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Setup bot identity (if replacement needed)
