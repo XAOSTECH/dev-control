@@ -19,14 +19,17 @@ extract_commits_json() {
     local branch="${1:-HEAD}"
     local max_commits="${2:-500}"  # Limit for performance
     
-    # Get commits with all needed data
+    # Get commits with all needed data - use jq to properly escape subject
     git log "$branch" \
         --all \
         --max-count="$max_commits" \
         --date=iso-strict \
-        --pretty=format:'{"sha":"%H","short":"%h","parents":"%P","author":"%an","email":"%ae","date":"%ad","timestamp":%at,"subject":"%s","refs":"%D"}' \
+        --pretty=format:'%H%n%h%n%P%n%an%n%ae%n%ad%n%at%n%s%n%D' \
         2>/dev/null | \
-        awk 'BEGIN{print "["} {if(NR>1)print","; printf "%s",$0} END{print "]"}'
+        paste -d'|' - - - - - - - - - | \
+        awk -F'|' '{print}' | \
+        jq -R 'split("|") | {sha: .[0], short: .[1], parents: .[2], author: .[3], email: .[4], date: .[5], timestamp: (.[6] | tonumber), subject: .[7], refs: .[8]}' | \
+        jq -s '.' || echo '[]'
 }
 
 # Extract branch information
@@ -129,10 +132,10 @@ calculate_tree_positions() {
     
     # Use jq-based fractal layout (pure bash/jq, no python)
     if command -v jq &>/dev/null; then
-        calculate_tree_positions_bash "$input_json" "$output_file"
+        calculate_tree_positions_bash "$input_json" "$output_file" >/dev/null
     else
         # Fallback: simple vertical layout without jq
-        calculate_tree_positions_simple "$input_json" "$output_file"
+        calculate_tree_positions_simple "$input_json" "$output_file" >/dev/null
     fi
     
     echo "$output_file"

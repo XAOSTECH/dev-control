@@ -18,30 +18,23 @@ calculate_tree_positions_bash() {
     # Use jq for simple spiral/grid positioning (no trigonometry needed)
     # Just arrange commits in a spiral pattern from center outward
     jq '
-        # Get metrics for sizing
+        # Grid layout: 5 columns per row
         (.commits | length) as $total_commits |
         
-        # Enhance commits with simple positions
+        # Enhance commits with simple grid positions
         .commits |= (
-            # Sort by timestamp (newest first = front, oldest = back)
             sort_by(.timestamp) | reverse |
-            
-            # Calculate positions using spiral pattern
             to_entries | map(
                 .value as $commit |
                 .key as $idx |
                 
-                # Calculate position in spiral
-                # x = center + (idx % cols) * spacing
-                # y = center + (idx / cols) * spacing
-                # But arrange in a pseudo-circular way
-                
-                (($total_commits | sqrt | floor) + 1) as $cols |
+                # Simple 5-column grid
+                5 as $cols |
                 ($idx / $cols | floor) as $row |
                 ($idx % $cols) as $col |
                 
-                (50 + ($col * 120)) as $x |
-                (100 + ($row * 100)) as $y |
+                (50 + ($col * 250)) as $x |
+                (100 + ($row * 120)) as $y |
                 
                 # Add position data to commit
                 $commit + {
