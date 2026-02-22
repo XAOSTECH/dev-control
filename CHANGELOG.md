@@ -5,6 +5,79 @@ All notable changes to Dev-Control will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.6] - 2026-02-22
+
+### Added
+- amend security review issues instead of creating duplicates
+- add automerge label to security-fix PRs
+
+### Fixed
+- restore correct variables in PR body template
+- remove self-referential env vars and use correct shell syntax
+- disable autofix automatic trigger to prevent infinite loop
+- autofix script should skip env: sections and revert broken changes
+- break up ${{ in env var echo to prevent parser interpretation
+- prevent parser from interpreting bash array syntax as expression
+- workflow validation errors
+- prevent duplicate env sections and inline security script
+- prevent duplicate security review issues and fix inverted logic
+- trim spaces from expression capture and handle git diff errors
+- security-autofix script input handling and consistency
+- add env section before run when extracting vulnerable expressions
+- remove expression syntax from comment
+- remove ellipsis from JSON comment to avoid expression parser error
+- use head/tail instead of awk to avoid GitHub Actions expression parsing
+- skip PR creation when no files modified
+- prevent jq backtick parsing in issue body
+- ensure labels exist before PR creation
+- send commit payload via gh api input
+- send git tree payload via gh api input
+- allow workflow_dispatch to bypass workflow_run guard
+- build tree JSON properly with jq instead of string concat
+- send parents as JSON array in commit API call
+- use GitHub API instead of git push for workflow changes
+- use create-github-app-token@v2 with all required permissions
+- add explicit permission grants for GitHub App token
+- remove duplicate env block in bash-lint-advanced.yml
+- remove redundant git config - identity action handles this
+- use relative path for local identity action
+- remove invalid expression syntax from comment
+- eliminate ALL multiline strings from workflow YAML
+- remove heredoc syntax from workflows - use temp files
+- use heredoc syntax for multiline strings in workflows
+- remove broken Python code from security-autofix workflow
+
+### Changed
+- refactor: replace peter-evans/create-pull-request with gh CLI
+- security: fix untrusted-checkout vulnerabilities in automerge workflow
+- Merge pull request #91 from XAOSTECH:security/autofix-1771727196
+- security: auto-fix CodeQL alerts
+- Merge branch 'main' of https://github.com/XAOSTECH/dev-control
+- Merge pull request #75 from XAOSTECH:security/autofix-1771725722
+- Merge pull request #77 from XAOSTECH:security/autofix-1771725763
+- security: auto-fix CodeQL alerts
+- security: auto-fix CodeQL alerts
+- Merge pull request #71 from XAOSTECH:security/autofix-1771725675
+- security: auto-fix CodeQL alerts
+- Merge branch 'main' of https://github.com/XAOSTECH/dev-control
+- security: replace insecure regex with explicit bot allowlist + label requirement
+- Merge pull request #45 from XAOSTECH/security/autofix-1771725086
+- security: auto-fix CodeQL alerts
+- chore: make security-autofix script executable
+- refactor: move complex script to external file to avoid expression parsing issues
+- chore: whitespace - trigger workflow reload
+- refactor: replace Python with robust shell script for code-injection fixes
+- refactor: use Python for robust code-injection vulnerability fixing
+- Merge pull request #37 from XAOSTECH:security/autofix-1771640641
+- security: auto-fix CodeQL alerts
+- debug: add tree JSON inspection output
+- sync: update security-autofix template with API approach
+- debug: test API write permission
+- debug: add token permission check
+- sync: update security-autofix template with permission grants
+- chore: sync security-autofix template with fixed workflow
+- security: fix code injection in central-loader variables
+
 ## [0.5.5] - 2026-02-21 (re-release)
 
 ### Added
