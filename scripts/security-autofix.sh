@@ -44,10 +44,14 @@ while IFS= read -r alert_b64; do
     escaped_expr=$(printf '%s\n' "$var_expr" | sed 's/[&/\]/\\&/g' | sed 's/\[\|\]\|\.\|\*\|\^\|\$/\\&/g')
     sed -i "s/\${{ *$escaped_expr *}}/\$$var_name/g" "$file"
     
+    # Find the line with our replacement
     linenum=$(grep -n "\$$var_name" "$file" | head -1 | cut -d: -f1)
     if [[ -n "$linenum" ]]; then
-      runline=$(awk -v start="$linenum" 'NR > start && /^        run:/ {print NR; exit}' "$file")
+      # Search backwards from linenum to find the "run:" line that contains this variable
+      runline=$(awk -v target="$linenum" 'NR < target && /^        run:/ {last=NR} END {print last}' "$file")
+      
       if [[ -n "$runline" ]]; then
+        # Insert env: before run:
         {
           head -n $((runline - 1)) "$file"
           echo "        env:"
