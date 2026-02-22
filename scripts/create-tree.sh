@@ -131,10 +131,14 @@ if [[ "$EMBED_README" == "true" && "$GENERATE_SVG" == "true" ]]; then
     
     # Find README
     README=""
+    README_REL_PATH=".github/tree-viz"  # Default: from repo root
+    
     if [[ -f "$REPO_ROOT/README.md" ]]; then
         README="$REPO_ROOT/README.md"
+        README_REL_PATH=".github/tree-viz"
     elif [[ -f "$REPO_ROOT/docs/README.md" ]]; then
         README="$REPO_ROOT/docs/README.md"
+        README_REL_PATH="../.github/tree-viz"  # One level up from docs/
     fi
     
     if [[ -n "$README" ]]; then
@@ -143,11 +147,11 @@ if [[ "$EMBED_README" == "true" && "$GENERATE_SVG" == "true" ]]; then
             # Replace existing section
             print_info "Updating existing tree visualization in README..."
             # Create temp file with new content
-            awk -v svg="$SVG_FILE" '
+            awk -v path="$README_REL_PATH" '
                 /<!-- TREE-VIZ-START -->/ {
                     print $0
                     print ""
-                    print "![Git Tree Visualization](" svg ")"
+                    print "![Git Tree Visualization](" path "/git-tree.svg)"
                     print ""
                     in_tree=1
                     next
@@ -167,9 +171,9 @@ if [[ "$EMBED_README" == "true" && "$GENERATE_SVG" == "true" ]]; then
 
 ## Git Tree Visualization
 
-![Git Tree Visualization](.github/tree-viz/git-tree.svg)
+![Git Tree Visualization]($README_REL_PATH/git-tree.svg)
 
-[Interactive version](.github/tree-viz/git-tree.html) • [View data](.github/tree-viz/git-tree-data.json)
+[Interactive version]($README_REL_PATH/git-tree.html) • [View data]($README_REL_PATH/git-tree-data.json)
 
 <!-- TREE-VIZ-END -->
 EOF

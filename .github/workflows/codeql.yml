@@ -1,18 +1,13 @@
 name: CodeQL Advanced Security
 
 on:
-  push:
-    branches:
-      - main
-      - master
-      - develop
   pull_request:
     branches:
       - main
       - master
       - develop
   schedule:
-    # Run at 2 AM UTC daily
+    # Run daily at 2 AM UTC (avoids rate limits on high-commit days)
     - cron: '0 2 * * *'
   workflow_dispatch:
 
