@@ -587,9 +587,7 @@ jobs:
             git log --pretty=format:"- %s (%h)" -10 >> "$NOTES_FILE"
           fi
           
-          # Add installation instructions only if tarballs exist
-          if [[ -n "${tarball_name:-}" && -n "${tarball_sha256:-}" ]]; then
-            cat >> "$NOTES_FILE" << EOF
+          cat >> "$NOTES_FILE" << EOF
           
           ## Installation
           
@@ -599,6 +597,11 @@ jobs:
           cd dev-control-${VERSION}
           ./install.sh
           \`\`\`
+          EOF
+          
+          # Add lib-only instructions only if lib tarball was built
+          if [[ -n "${lib_tarball_name:-}" && -n "${lib_tarball_sha256:-}" ]]; then
+            cat >> "$NOTES_FILE" << EOF
           
           ### Library Only (lightweight)
           For projects that only need the TUI/print/colour utilities (~27KB vs ~180KB):
@@ -610,6 +613,10 @@ jobs:
           source "./dev-control-lib-${VERSION}/print.sh"
           print_header "My Script"
           \`\`\`
+          EOF
+          fi
+          
+          cat >> "$NOTES_FILE" << EOF
           
           ### Homebrew (coming soon)
           \`\`\`bash
@@ -622,8 +629,11 @@ jobs:
           | File | SHA256 |
           |------|--------|
           | ${tarball_name} | \`${tarball_sha256}\` |
-          | ${lib_tarball_name} | \`${lib_tarball_sha256}\` |
           EOF
+          
+          # Add lib tarball checksum only if it was built
+          if [[ -n "${lib_tarball_name:-}" && -n "${lib_tarball_sha256:-}" ]]; then
+            echo "| ${lib_tarball_name} | \`${lib_tarball_sha256}\` |" >> "$NOTES_FILE"
           fi
           
           cat >> "$NOTES_FILE" << EOF
