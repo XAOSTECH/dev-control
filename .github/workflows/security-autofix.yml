@@ -115,14 +115,13 @@ jobs:
                 RUNLINE=$(awk -v start="$LINENUM" 'NR > start && /^        run:/ {print NR; exit}' "$FILE")
                 
                 if [[ -n "$RUNLINE" ]]; then
-                  # Use awk to insert env: and env var lines before run:
-                  awk -v envname="$VAR_NAME" -v envexpr="$VAR_EXPR" -v runline="$RUNLINE" '
-                    NR == runline {
-                      print "        env:"
-                      print "          " envname ": ${{ " envexpr " }}"
-                    }
-                    { print }
-                  ' "$FILE" > "$FILE.tmp" && mv "$FILE.tmp" "$FILE"
+                  # Insert env: section before run: using a temp file approach
+                  {
+                    head -n $((RUNLINE - 1)) "$FILE"
+                    echo "        env:"
+                    echo "          $VAR_NAME: \${{ $VAR_EXPR }}"
+                    tail -n +$RUNLINE "$FILE"
+                  } > "$FILE.tmp" && mv "$FILE.tmp" "$FILE"
                 fi
               fi
               
