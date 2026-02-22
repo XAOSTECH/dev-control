@@ -119,7 +119,7 @@ jobs:
         env:
           FIX_STEPS_VARS_OUTPUTS_PROJECT_N: $FIX_STEPS_VARS_OUTPUTS_PROJECT_N
         env:
-          FIX_INPUTS_TEMPLATES: ${{ inputs.templates }}
+          FIX_INPUTS_TEMPLATES: $FIX_INPUTS_TEMPLATES
         run: |
           # Repository info from calling repo
           echo "repo_name=$REPO_NAME_INPUT" >> "$GITHUB_OUTPUT"
