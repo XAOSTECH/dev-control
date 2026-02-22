@@ -116,8 +116,8 @@ on:
         required: false
         type: boolean
         default: false
-      skip_lib:
-        description: 'Skip building lib-only tarball'
+      skip_tarball:
+        description: 'Skip building tarball (release notes only)'
         required: false
         type: boolean
         default: false
@@ -439,8 +439,23 @@ jobs:
           echo "✅ Installed Gum v${GUM_VERSION}"
 
       - name: Build full tarball
-        if: steps.check_release.outputs.exists != 'true'
+        if: steps.check_release.outputs.exists != 'true' && github.event.inputs.skip_tarball != 'true' && github.event_name == 'workflow_dispatch'
         run: |
+          if [[ ! -f "scripts/packaging.sh" ]]; then
+            echo "⚠️ No packaging.sh found - skipping tarball build"
+            exit 0
+          fi
+          chmod +x scripts/packaging.sh scripts/lib/*.sh 2>/dev/null || true
+          bash scripts/packaging.sh --tarball --verbose
+          echo "✅ Full tarball built successfully"
+
+      - name: Build full tarball (push trigger)
+        if: steps.check_release.outputs.exists != 'true' && github.event_name == 'push'
+        run: |
+          if [[ ! -f "scripts/packaging.sh" ]]; then
+            echo "⚠️ No packaging.sh found - skipping tarball build"
+            exit 0
+          fi
           chmod +x scripts/packaging.sh scripts/lib/*.sh 2>/dev/null || true
           bash scripts/packaging.sh --tarball --verbose
           echo "✅ Full tarball built successfully"
@@ -587,7 +602,9 @@ jobs:
             git log --pretty=format:"- %s (%h)" -10 >> "$NOTES_FILE"
           fi
           
-          cat >> "$NOTES_FILE" << EOF
+          # Add installation instructions only if tarballs exist
+          if [[ -n "${tarball_name:-}" && -n "${tarball_sha256:-}" ]]; then
+            cat >> "$NOTES_FILE" << EOF
           
           ## Installation
           
@@ -621,6 +638,10 @@ jobs:
           |------|--------|
           | ${tarball_name} | \`${tarball_sha256}\` |
           | ${lib_tarball_name} | \`${lib_tarball_sha256}\` |
+          EOF
+          fi
+          
+          cat >> "$NOTES_FILE" << EOF
           
           ---
           
