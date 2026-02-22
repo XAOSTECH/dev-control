@@ -189,6 +189,7 @@ jobs:
           # Ensure labels exist before creating PR
           gh label create security --color D73A4A --description "Security-related changes" --force || true
           gh label create automated --color 0E8A16 --description "Automated changes" --force || true
+          gh label create automerge --color 32BF6F --description "Auto-merge this PR" --force || true
 
           gh pr create \
             --repo "$REPO" \
@@ -196,7 +197,7 @@ jobs:
             --head "$BRANCH" \
             --title "🔒 Security Auto-Fix: CodeQL Alerts" \
             --body-file /tmp/pr_body.md \
-            --label security,automated
+            --label security,automated,automerge
 
       - name: Create GitHub Issue for manual review
         if: steps.alerts.outputs.fixable_count > 0
