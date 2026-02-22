@@ -196,6 +196,16 @@ get_repo_info() {
         fi
     fi
 
+    # Load global defaults from repoVars.env (if it exists)
+    # This takes precedence over built-in defaults but is overridden by repo-specific git config
+    local global_vars_file="$DEV_CONTROL_DIR/config/profiles/repoVars.env"
+    if [[ -f "$global_vars_file" ]]; then
+        # Source the file to load environment variables
+        # shellcheck source=/dev/null
+        source "$global_vars_file"
+        print_info "Loaded global defaults from repoVars.env"
+    fi
+
     # Load cached metadata from git config (set by previous dc-init runs)
     # Only load from LOCAL config if a local .git directory exists
     if [[ -d ".git" ]]; then
