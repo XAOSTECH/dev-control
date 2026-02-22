@@ -1,11 +1,12 @@
 name: Security Auto-Fix Bot
 
 on:
+  # TEMPORARILY DISABLED to prevent infinite loop while alerts still exist
   # Trigger on CodeQL scan completion
-  workflow_run:
-    workflows: ["CodeQL Advanced Security"]
-    types:
-      - completed
+  # workflow_run:
+  #   workflows: ["CodeQL Advanced Security"]
+  #   types:
+  #     - completed
   
   # Manual trigger for testing
   workflow_dispatch:
