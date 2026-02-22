@@ -129,7 +129,7 @@ jobs:
               
               # Replace expression with variable in file
               escaped_expr=$(printf '%s\n' "$var_expr" | sed 's/[&/\]/\\&/g' | sed 's/\[\|\]\|\.\|\*\|\^\|\$/\\&/g')
-              sed -i "s/\${{ *$escaped_expr *}}/\$$var_name/g" "$file"
+              sed -i "s/\$"'{{'" *$escaped_expr *}}/\$$var_name/g" "$file"
               
               # Store mapping for later env insertion (append to file's list)
               if [[ -z "${file_vars[$file]:-}" ]]; then
