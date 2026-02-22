@@ -77,9 +77,138 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.app_token.outputs.token }}
         run: |
-          chmod +x scripts/security-autofix.sh
-          scripts/security-autofix.sh "${{ github.repository }}" "$GH_TOKEN" /tmp/alerts.json > /tmp/fixes_output.txt 2>&1
-          cat /tmp/fixes_output.txt
+          set -eu
+          trap 'echo "Error on line $LINENO"; exit 1' ERR
+          
+          REPO="${{ github.repository }}"
+          TOKEN="$GH_TOKEN"
+          ALERTS_FILE="/tmp/alerts.json"
+          
+          FIXES_APPLIED=0
+          
+          echo "🔧 Processing security alerts from $ALERTS_FILE..."
+          
+          if [[ ! -f "$ALERTS_FILE" ]]; then
+            echo "❌ Alerts file not found: $ALERTS_FILE"
+            exit 1
+          fi
+          
+          ALERTS=$(cat "$ALERTS_FILE") || { echo "❌ Failed to read alerts file"; exit 1; }
+          echo "Loaded alerts: $(echo "$ALERTS" | jq -r 'length') total"
+          
+          # Pattern 1: Fix code injection - Extract GitHub expressions to env vars
+          echo "🔧 Fixing code injection vulnerabilities..."
+          
+          CODE_INJECTION_ALERTS=$(echo "$ALERTS" | jq '[.[] | select(.rule == "actions/code-injection/medium")]' 2>/dev/null || echo "[]")
+          CODE_INJECTION_COUNT=$(echo "$CODE_INJECTION_ALERTS" | jq 'length')
+          echo "Found $CODE_INJECTION_COUNT code-injection alerts"
+          
+          # Group alerts by file to avoid duplicate env sections
+          declare -A file_vars
+          declare -A file_exprs
+          
+          echo "$CODE_INJECTION_ALERTS" | jq -c '.[]' | while IFS= read -r alert_json; do
+            [[ -z "$alert_json" ]] && continue
+            
+            file=$(echo "$alert_json" | jq -r '.file // empty')
+            msg=$(echo "$alert_json" | jq -r '.message // empty')
+            rule=$(echo "$alert_json" | jq -r '.rule // empty')
+            
+            [[ -z "$file" ]] || [[ ! -f "$file" ]] && continue
+            [[ "$rule" != "actions/code-injection/medium" ]] && continue
+            [[ -z "$msg" ]] && continue
+            
+            if [[ "$msg" =~ \$\{\{\s*([^}]+)\s*\}\} ]]; then
+              var_expr="${BASH_REMATCH[1]}"
+              # Trim spaces from captured expression
+              var_expr=$(echo "$var_expr" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+              var_name="FIX_$(echo "$var_expr" | sed 's/[^a-zA-Z0-9_]/_/g' | tr '[:lower:]' '[:upper:]')"
+              var_name="${var_name:0:32}"
+              
+              echo "  📝 Processing $file: $var_expr → $var_name"
+              
+              # Replace expression with variable in file
+              escaped_expr=$(printf '%s\n' "$var_expr" | sed 's/[&/\]/\\&/g' | sed 's/\[\|\]\|\.\|\*\|\^\|\$/\\&/g')
+              sed -i "s/\${{ *$escaped_expr *}}/\$$var_name/g" "$file"
+              
+              # Store mapping for later env insertion (append to file's list)
+              if [[ -z "${file_vars[$file]:-}" ]]; then
+                file_vars[$file]="$var_name"
+                file_exprs[$file]="$var_expr"
+              else
+                file_vars[$file]="${file_vars[$file]}|$var_name"
+                file_exprs[$file]="${file_exprs[$file]}|$var_expr"
+              fi
+              
+              FIXES_APPLIED=$((FIXES_APPLIED + 1))
+            fi
+          done
+          
+          # Now insert consolidated env sections per file
+          for file in "${!file_vars[@]}"; do
+            echo "  🔧 Adding consolidated env section to $file"
+            
+            # Find the first run: line in the file that uses any of our variables
+            IFS='|' read -ra VARNAMES <<< "${file_vars[$file]}"
+            for var_name in "${VARNAMES[@]}"; do
+              linenum=$(grep -n "\$$var_name" "$file" | head -1 | cut -d: -f1)
+              if [[ -n "$linenum" ]]; then
+                # Search backwards to find the run: line
+                runline=$(awk -v target="$linenum" 'NR < target && /^        run:/ {last=NR} END {print last}' "$file")
+                
+                if [[ -n "$runline" ]]; then
+                  # Build env section with ALL variables for this file
+                  {
+                    head -n $((runline - 1)) "$file"
+                    echo "        env:"
+                    IFS='|' read -ra VARNAMES <<< "${file_vars[$file]}"
+                    IFS='|' read -ra EXPRS <<< "${file_exprs[$file]}"
+                    for i in "${!VARNAMES[@]}"; do
+                      echo "          ${VARNAMES[$i]}: \${{ ${EXPRS[$i]} }}"
+                    done
+                    tail -n +$runline "$file"
+                  } > "$file.tmp" && mv "$file.tmp" "$file"
+                  echo "  ✅ Fixed $file with ${#VARNAMES[@]} variables"
+                  break
+                fi
+              fi
+            done
+          done
+          
+          # Pattern 2: Fix unpinned actions
+          echo "🔧 Fixing unpinned actions..."
+          
+          echo "$ALERTS" | jq -c '.[] | select(.rule == "actions/unpinned-tag")' | while IFS= read -r alert_json; do
+            file=$(echo "$alert_json" | jq -r '.file // empty')
+            rule=$(echo "$alert_json" | jq -r '.rule // empty')
+            
+            [[ ! -f "$file" ]] && continue
+            [[ "$rule" != "actions/unpinned-tag" ]] && continue
+            
+            while IFS= read -r line_content; do
+              if [[ "$line_content" =~ uses:\ ([^@]+)@(master|main|v[0-9]+)($|\ ) ]]; then
+                action="${BASH_REMATCH[1]}"
+                ref="${BASH_REMATCH[2]}"
+                
+                [[ "$action" == ./* ]] && continue
+                [[ "$action" != */* ]] && continue
+                
+                owner=$(echo "$action" | cut -d/ -f1)
+                repo=$(echo "$action" | cut -d/ -f2-)
+                
+                sha=$(GH_TOKEN="$TOKEN" gh api "repos/$owner/$repo/commits/$ref" --jq '.sha' 2>/dev/null | head -c 40)
+                
+                if [[ -n "$sha" && "$sha" =~ ^[0-9a-f]{40}$ ]]; then
+                  sed -i "s|uses: $action@$ref|uses: $action@$sha|g" "$file"
+                  FIXES_APPLIED=$((FIXES_APPLIED + 1))
+                  echo "  ✅ Pinned $action@$ref → $sha"
+                fi
+              fi
+            done < "$file"
+          done
+          
+          echo "✓ Total fixes applied: $FIXES_APPLIED"
+          git diff --name-only 2>/dev/null || true
           
           # Export modified files
           MODIFIED=$(git diff --name-only || true)
