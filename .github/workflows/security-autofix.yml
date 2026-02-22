@@ -164,7 +164,9 @@ jobs:
                     IFS='|' read -ra VARNAMES <<< "${file_vars[$file]}"
                     IFS='|' read -ra EXPRS <<< "${file_exprs[$file]}"
                     for i in "${!VARNAMES[@]}"; do
-                      echo "          ${VARNAMES[$i]}: \${{ ${EXPRS[$i]} }}"
+                      var_name="${VARNAMES[$i]}"
+                      var_expr="${EXPRS[$i]}"
+                      printf "          %s: \${{ %s }}\n" "$var_name" "$var_expr"
                     done
                     tail -n +$runline "$file"
                   } > "$file.tmp" && mv "$file.tmp" "$file"
