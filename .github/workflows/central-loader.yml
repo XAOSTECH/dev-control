@@ -103,21 +103,23 @@ jobs:
           PROJECT_NAME_INPUT: $FIX_INPUTS_PROJECT_NAME
           STABILITY_INPUT: $FIX_INPUTS_STABILITY
         env:
-          FIX_STEPS_VARS_OUTPUTS_CURRENT_Y: ${{ steps.vars.outputs.current_year }}
+          FIX_STEPS_VARS_OUTPUTS_CURRENT_Y: $FIX_STEPS_VARS_OUTPUTS_CURRENT_Y
         env:
-          FIX_STEPS_VARS_OUTPUTS_STABILITY: ${{ steps.vars.outputs.stability_color }}
+          FIX_STEPS_VARS_OUTPUTS_STABILITY: $FIX_STEPS_VARS_OUTPUTS_STABILITY
         env:
-          FIX_INPUTS_LICENSE_TYPE: ${{ inputs.license_type }}
+          FIX_INPUTS_LICENSE_TYPE: $FIX_INPUTS_LICENSE_TYPE
         env:
           FIX_INPUTS_SHORT_DESCRIPTION: $FIX_INPUTS_SHORT_DESCRIPTION
         env:
-          FIX_STEPS_VARS_OUTPUTS_REPO_URL: ${{ steps.vars.outputs.repo_url }}
+          FIX_STEPS_VARS_OUTPUTS_REPO_URL: $FIX_STEPS_VARS_OUTPUTS_REPO_URL
         env:
-          FIX_STEPS_VARS_OUTPUTS_REPO_OWNE: ${{ steps.vars.outputs.repo_owner }}
+          FIX_STEPS_VARS_OUTPUTS_REPO_OWNE: $FIX_STEPS_VARS_OUTPUTS_REPO_OWNE
         env:
-          FIX_STEPS_VARS_OUTPUTS_REPO_NAME: ${{ steps.vars.outputs.repo_name }}
+          FIX_STEPS_VARS_OUTPUTS_REPO_NAME: $FIX_STEPS_VARS_OUTPUTS_REPO_NAME
         env:
-          FIX_STEPS_VARS_OUTPUTS_PROJECT_N: ${{ steps.vars.outputs.project_name }}
+          FIX_STEPS_VARS_OUTPUTS_PROJECT_N: $FIX_STEPS_VARS_OUTPUTS_PROJECT_N
+        env:
+          FIX_INPUTS_TEMPLATES: $FIX_INPUTS_TEMPLATES
         run: |
           # Repository info from calling repo
           echo "repo_name=$REPO_NAME_INPUT" >> "$GITHUB_OUTPUT"
@@ -156,7 +158,7 @@ jobs:
           STABILITY_COLOR: $FIX_STEPS_VARS_OUTPUTS_STABILITY
           CURRENT_YEAR: $FIX_STEPS_VARS_OUTPUTS_CURRENT_Y
         env:
-          FIX_INPUTS_TEMPLATES: ${{ inputs.templates }}
+          FIX_INPUTS_TEMPLATES: $FIX_INPUTS_TEMPLATES
         run: |
           TEMPLATES="$FIX_INPUTS_TEMPLATES"
           DC_DIR=".dev-control-templates"
