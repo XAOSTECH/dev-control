@@ -139,21 +139,30 @@ jobs:
               prNumbers = [context.payload.pull_request.number];
             }
             
-            const isXaosBot = (login) => /xaos.*\[bot\]/i.test(login);
+            const ALLOWED_BOTS = [
+              'cloudflare-workers-and-pages[bot]',
+              'github-actions[bot]',
+              'xaostech-security[bot]',
+              'xaos-bot',
+              'xaostech[bot]'
+            ];
+            const isAllowedBot = (login) => ALLOWED_BOTS.includes(login);
 
             if (prNumbers.length === 0) {
-              core.info('No PR numbers found, scanning open PRs with automerge label or xaos[bot] author.');
+              core.info('No PR numbers found, scanning open PRs with automerge label + allowed bot/author.');
               try {
                 const allOpen = await github.rest.pulls.list({
                   owner, repo, state: 'open', per_page: 100
                 });
                 const labeledPRs = allOpen.data
-                  .filter(pr => pr.labels.some(l => l.name === 'automerge'))
+                  .filter(pr => {
+                    const hasLabel = pr.labels.some(l => l.name === 'automerge');
+                    const author = pr.user && pr.user.login;
+                    const isAllowed = isAllowedBot(author) || author === owner || author === 'dependabot[bot]';
+                    return hasLabel && isAllowed;
+                  })
                   .map(pr => pr.number);
-                const xaosPRs = allOpen.data
-                  .filter(pr => isXaosBot(pr.user && pr.user.login))
-                  .map(pr => pr.number);
-                prNumbers = [...new Set([...labeledPRs, ...xaosPRs])];
+                prNumbers = [...new Set([...labeledPRs])];
               } catch (error) {
                 core.info(`Failed to list PRs: ${error.message}`);
               }
@@ -181,14 +190,11 @@ jobs:
                 const isLabel = labels.includes('automerge');
                 const isTrustedAuthor = isDependabot || isRepoOwner || isCloudflare || isPages || isGitHubActions;
 
-                if (isXaosBot(author)) {
+                if (isLabel && (isAllowedBot(author) || isDependabot || isRepoOwner)) {
                   validPRs.push(prNum);
-                  core.info(`PR #${prNum} auto-approved (xaos bot author: ${author})`);
-                } else if (isLabel && isTrustedAuthor) {
-                  validPRs.push(prNum);
-                  core.info(`PR #${prNum} valid (author=${author}, label=automerge)`);
+                  core.info(`PR #${prNum} auto-approved (${author} + automerge label)`);
                 } else {
-                  core.info(`PR #${prNum} skipped (requires xaos bot author, OR automerge label + trusted author - hasLabel=${isLabel}, isTrusted=${isTrustedAuthor}, author=${author})`);
+                  core.info(`PR #${prNum} skipped (requires automerge label + allowed author - hasLabel=${isLabel}, isAllowed=${isAllowedBot(author)}, isDependabot=${isDependabot}, isOwner=${isRepoOwner}, author=${author})`);
                 }
               } catch (error) {
                 core.info(`PR #${prNum} not found or error: ${error.message}`);
