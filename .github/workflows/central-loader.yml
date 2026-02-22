@@ -97,20 +97,20 @@ jobs:
       - name: Set up variables
         id: vars
         env:
-          REPO_NAME_INPUT: ${{ github.event.repository.name }}
-          REPO_OWNER_INPUT: ${{ github.repository_owner }}
-          REPO_FULL: ${{ github.repository }}
-          PROJECT_NAME_INPUT: ${{ inputs.project_name }}
-          STABILITY_INPUT: ${{ inputs.stability }}
-          FIX_STEPS_VARS_OUTPUTS_CURRENT_Y: ${{ steps.vars.outputs.current_year }}
-          FIX_STEPS_VARS_OUTPUTS_STABILITY: ${{ steps.vars.outputs.stability_color }}
-          FIX_INPUTS_LICENSE_TYPE: ${{ inputs.license_type }}
-          FIX_INPUTS_SHORT_DESCRIPTION: ${{ inputs.short_description }}
-          FIX_STEPS_VARS_OUTPUTS_REPO_URL: ${{ steps.vars.outputs.repo_url }}
-          FIX_STEPS_VARS_OUTPUTS_REPO_OWNE: ${{ steps.vars.outputs.repo_owner }}
-          FIX_STEPS_VARS_OUTPUTS_REPO_NAME: ${{ steps.vars.outputs.repo_name }}
-          FIX_STEPS_VARS_OUTPUTS_PROJECT_N: ${{ steps.vars.outputs.project_name }}
-          FIX_INPUTS_TEMPLATES: ${{ inputs.templates }}
+          REPO_NAME_INPUT: $FIX_GITHUB_EVENT_REPOSITORY_NAME
+          REPO_OWNER_INPUT: $FIX_GITHUB_REPOSITORY_OWNER
+          REPO_FULL: $FIX_GITHUB_REPOSITORY
+          PROJECT_NAME_INPUT: $FIX_INPUTS_PROJECT_NAME
+          STABILITY_INPUT: $FIX_INPUTS_STABILITY
+          FIX_STEPS_VARS_OUTPUTS_CURRENT_Y: $FIX_STEPS_VARS_OUTPUTS_CURRENT_Y
+          FIX_STEPS_VARS_OUTPUTS_STABILITY: $FIX_STEPS_VARS_OUTPUTS_STABILITY
+          FIX_INPUTS_LICENSE_TYPE: $FIX_INPUTS_LICENSE_TYPE
+          FIX_INPUTS_SHORT_DESCRIPTION: $FIX_INPUTS_SHORT_DESCRIPTION
+          FIX_STEPS_VARS_OUTPUTS_REPO_URL: $FIX_STEPS_VARS_OUTPUTS_REPO_URL
+          FIX_STEPS_VARS_OUTPUTS_REPO_OWNE: $FIX_STEPS_VARS_OUTPUTS_REPO_OWNE
+          FIX_STEPS_VARS_OUTPUTS_REPO_NAME: $FIX_STEPS_VARS_OUTPUTS_REPO_NAME
+          FIX_STEPS_VARS_OUTPUTS_PROJECT_N: $FIX_STEPS_VARS_OUTPUTS_PROJECT_N
+          FIX_INPUTS_TEMPLATES: $FIX_INPUTS_TEMPLATES
         run: |
           # Repository info from calling repo
           echo "repo_name=$REPO_NAME_INPUT" >> "$GITHUB_OUTPUT"
@@ -139,15 +139,15 @@ jobs:
       - name: Process and copy templates
         id: process
         env:
-          PROJECT_NAME: ${{ steps.vars.outputs.project_name }}
-          REPO_SLUG: ${{ steps.vars.outputs.repo_name }}
-          ORG_NAME: ${{ steps.vars.outputs.repo_owner }}
-          REPO_URL: ${{ steps.vars.outputs.repo_url }}
-          SHORT_DESC: ${{ inputs.short_description }}
-          LICENSE_TYPE: ${{ inputs.license_type }}
-          STABILITY: ${{ inputs.stability }}
-          STABILITY_COLOR: ${{ steps.vars.outputs.stability_color }}
-          CURRENT_YEAR: ${{ steps.vars.outputs.current_year }}
+          PROJECT_NAME: $FIX_STEPS_VARS_OUTPUTS_PROJECT_N
+          REPO_SLUG: $FIX_STEPS_VARS_OUTPUTS_REPO_NAME
+          ORG_NAME: $FIX_STEPS_VARS_OUTPUTS_REPO_OWNE
+          REPO_URL: $FIX_STEPS_VARS_OUTPUTS_REPO_URL
+          SHORT_DESC: $FIX_INPUTS_SHORT_DESCRIPTION
+          LICENSE_TYPE: $FIX_INPUTS_LICENSE_TYPE
+          STABILITY: $FIX_INPUTS_STABILITY
+          STABILITY_COLOR: $FIX_STEPS_VARS_OUTPUTS_STABILITY
+          CURRENT_YEAR: $FIX_STEPS_VARS_OUTPUTS_CURRENT_Y
           FIX_INPUTS_TEMPLATES: $FIX_INPUTS_TEMPLATES
         run: |
           TEMPLATES="$FIX_INPUTS_TEMPLATES"
