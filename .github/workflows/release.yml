@@ -5,7 +5,7 @@
 # This is the release workflow for the dev-control project itself.
 # For the reusable template, see: workflows-templates/release.yml
 #
-# REPOSITORY: https://github.com/xaoscience/dev-control
+# REPOSITORY: https://github.com/XAOSTECH/dev-control
 #
 # ============================================================================
 #
@@ -481,9 +481,9 @@ jobs:
             echo ""
             echo "This library package was extracted from the dev-control toolkit."
             echo ""
-            echo "- **Source Repository**: https://github.com/xaoscience/dev-control"
+            echo "- **Source Repository**: https://github.com/XAOSTECH/dev-control"
             echo "- **Version**: ${VERSION}"
-            echo "- **Full Toolkit**: https://github.com/xaoscience/dev-control/releases"
+            echo "- **Full Toolkit**: https://github.com/XAOSTECH/dev-control/releases"
             echo ""
             echo "## Description"
             echo ""
@@ -513,7 +513,7 @@ jobs:
             echo "## Full Documentation"
             echo ""
             echo "See README.md in this package or visit:"
-            echo "https://github.com/xaoscience/dev-control/tree/main/scripts/lib"
+            echo "https://github.com/XAOSTECH/dev-control/tree/main/scripts/lib"
           } > "$LIB_DIR/INSTALL.md"
           
           # Create version file

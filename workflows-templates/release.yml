@@ -2,9 +2,9 @@
 # Release Workflow Template (release.yml)
 # ============================================================================
 #
-# ORIGIN: https://github.com/xaoscience/dev-control
+# ORIGIN: https://github.com/XAOSTECH/dev-control
 # This workflow template is part of the dev-control toolkit.
-# See: https://github.com/xaoscience/dev-control/blob/main/workflows-templates/
+# See: https://github.com/XAOSTECH/dev-control/blob/main/workflows-templates/
 #
 # ============================================================================
 #
@@ -557,6 +557,24 @@ jobs:
           |------|--------|
           | ${tarball_name} | \`${tarball_sha256}\` |
           EOF
+          else
+            # No custom tarball - show git installation
+            cat >> "$NOTES_FILE" << EOF
+          
+          ## Installation
+          
+          ### From Source
+          \`\`\`bash
+          git clone https://github.com/$GITHUB_REPOSITORY.git
+          cd $(basename $GITHUB_REPOSITORY)
+          git checkout ${TAG_NAME}
+          \`\`\`
+          
+          ### Download Release Archive
+          \`\`\`bash
+          curl -fsSL https://github.com/$GITHUB_REPOSITORY/archive/refs/tags/${TAG_NAME}.tar.gz | tar xz
+          \`\`\`
+          EOF
           fi
           
           cat >> "$NOTES_FILE" << EOF
@@ -566,7 +584,7 @@ jobs:
           **Full Changelog**: https://github.com/$GITHUB_REPOSITORY/compare/${PREV_TAG}...${TAG_NAME}
           
           ---
-          *Release workflow powered by [dev-control](https://github.com/xaoscience/dev-control)*
+          *Release workflow powered by [dev-control](https://github.com/XAOSTECH/dev-control)*
           EOF
           
           # Output for next step
@@ -661,4 +679,4 @@ jobs:
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "---" >> $GITHUB_STEP_SUMMARY
-          echo "*Workflow template from [dev-control](https://github.com/xaoscience/dev-control)*" >> $GITHUB_STEP_SUMMARY
+          echo "*Workflow template from [dev-control](https://github.com/XAOSTECH/dev-control)*" >> $GITHUB_STEP_SUMMARY
