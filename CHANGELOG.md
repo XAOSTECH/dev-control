@@ -8,10 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.5.6] - 2026-02-22
 
 ### Added
+- add fractal git tree visualization (create-tree.sh)
+- add security branch cleanup and --auto-sign flag
 - amend security review issues instead of creating duplicates
 - add automerge label to security-fix PRs
 
 ### Fixed
+- SVG info transform arithmetic calculation
+- tree-viz JSON escaping and duplicate echo bugs
+- tree visualization - CodeQL schedule, SVG rendering, relative paths
 - restore correct variables in PR body template
 - remove self-referential env vars and use correct shell syntax
 - disable autofix automatic trigger to prevent infinite loop
@@ -48,6 +53,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - remove broken Python code from security-autofix workflow
 
 ### Changed
+- chore: update CHANGELOG for v0.5.6 (re-release)
 - refactor: replace ludeeus/action-shellcheck with native shellcheck
 - chore: update CHANGELOG for v0.5.6
 - refactor: replace peter-evans/create-pull-request with gh CLI
