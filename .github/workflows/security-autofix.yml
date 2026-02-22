@@ -252,7 +252,7 @@ jobs:
           # Create new tree
           echo "Creating git tree..."
           # GitHub API expects: POST /repos/{owner}/{repo}/git/trees
-          # Body: {"base_tree":"SHA","tree":[{"path":...,"mode":...,"type":...,"sha":...}]}
+          # Body: {base_tree: SHA, tree: [{path: string, mode: string, type: string, sha: string}]}
           TREE_PAYLOAD=$(jq -n --arg base_tree "$BASE_TREE" --argjson tree "$TREE_JSON" \
             '{base_tree: $base_tree, tree: $tree}')
           if ! TREE_SHA=$(printf '%s' "$TREE_PAYLOAD" | gh api "/repos/$REPO/git/trees" -X POST --input - --jq '.sha'); then
