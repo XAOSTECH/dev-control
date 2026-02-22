@@ -16,35 +16,35 @@
 # REFERENCE DISCOVERY
 # ============================================================================
 
-# Get local tags matching tmp/backup/restore/anglicise patterns
+# Get local tags matching tmp/backup/restore/anglicise/security patterns
 # Usage: local_tags=$(get_tmp_backup_tags)
 get_tmp_backup_tags() {
-    git tag -l 2>/dev/null | grep -iE 'tmp|backup|restore|anglicise' || true
+    git tag -l 2>/dev/null | grep -iE 'tmp|backup|restore|anglicise|security' || true
 }
 
-# Get local branches matching tmp/backup/restore/anglicise patterns (excluding current)
+# Get local branches matching tmp/backup/restore/anglicise/security patterns (excluding current)
 # Usage: local_branches=$(get_tmp_backup_branches)
 get_tmp_backup_branches() {
-    git branch --list 2>/dev/null | grep -iE 'tmp|backup|restore|anglicise' | sed 's/^[* ]*//' || true
+    git branch --list 2>/dev/null | grep -iE 'tmp|backup|restore|anglicise|security' | sed 's/^[* ]*//' || true
 }
 
-# Get remote tags matching tmp/backup/restore/anglicise patterns
+# Get remote tags matching tmp/backup/restore/anglicise/security patterns
 # Usage: remote_tags=$(get_remote_tmp_backup_tags [remote])
 get_remote_tmp_backup_tags() {
     local remote="${1:-origin}"
     git ls-remote --tags "$remote" 2>/dev/null | \
-        grep -iE 'tmp|backup|restore|anglicise' | \
+        grep -iE 'tmp|backup|restore|anglicise|security' | \
         sed 's/.*refs\/tags\///' | \
         sed 's/\^{}//' | \
         sort -u || true
 }
 
-# Get remote branches matching tmp/backup/restore/anglicise patterns
+# Get remote branches matching tmp/backup/restore/anglicise/security patterns
 # Usage: remote_branches=$(get_remote_tmp_backup_branches [remote])
 get_remote_tmp_backup_branches() {
     local remote="${1:-origin}"
     git branch -r 2>/dev/null | \
-        grep -iE 'tmp|backup|restore|anglicise' | \
+        grep -iE 'tmp|backup|restore|anglicise|security' | \
         grep "$remote/" | \
         sed "s/.*$remote\///" || true
 }
@@ -78,7 +78,7 @@ get_merged_local_branches() {
     git branch --merged "$base_branch" 2>/dev/null | \
         sed 's/^[* ]*//' | \
         grep -vE "^($current_branch|$base_branch|Main|main|master|develop)$" | \
-        grep -viE 'tmp|backup|restore|anglicise' || true
+        grep -viE 'tmp|backup|restore|anglicise|security' || true
 }
 
 # Get remote branches that are fully merged into base branch
@@ -93,7 +93,7 @@ get_merged_remote_branches() {
         grep "$remote/" | \
         sed "s/.*$remote\///" | \
         grep -vE "^($base_branch|Main|main|master|develop|HEAD)$" | \
-        grep -viE 'tmp|backup|restore|anglicise' || true
+        grep -viE 'tmp|backup|restore|anglicise|security' || true
 }
 
 # ============================================================================

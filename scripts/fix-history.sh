@@ -59,6 +59,7 @@ CLEANUP_ONLY=false
 SIGN_MODE=false
 TIMED_SIGN_MODE=false  # Space out PR signing by minute boundaries
 RESIGN_MODE=false       # Force re-sign even if already signed
+AUTO_SIGN_MODE=false    # Auto-sign: detect unsigned commits, confirm, then auto-configure flags
 REAUTHOR_MODE=false
 REAUTHOR_TARGET=""
 DROP_COMMIT=""
@@ -165,6 +166,9 @@ Options:
                              Rewrites history to apply signatures and preserves dates
                              Automatically force-pushes to remote after signing (atomic)
     --resign                   Force re-sign commits even if already signed (use with --sign)
+    --auto-sign                Detect unverified commits and auto-configure secure signing
+                               (Automatically sets: --sign, PRESERVE_TOPOLOGY, AUTO_RESOLVE=ours, NO_EDIT_MODE)
+                               Prompts for confirmation before proceeding
     --reauthor <commit|range>  Reset author to current git user for a commit or range
                                                          If a single commit is provided, rewrites from that commit to HEAD
   --atomic-preserve          Deterministic preserve: recreate commits (including merges) with
@@ -249,6 +253,10 @@ parse_args() {
                 ;;
             --sign)
                 SIGN_MODE=true
+                shift
+                ;;
+            --auto-sign)
+                AUTO_SIGN_MODE=true
                 shift
                 ;;
             --resign)
@@ -1507,6 +1515,98 @@ reconstruct_history_without_commit() {
 } 
 
 # ---------------------------------------------------------------------------
+# Auto-sign mode: detect unsigned commits and auto-configure secure signing
+# ---------------------------------------------------------------------------
+auto_sign_detect() {
+    print_header
+    check_git_repo
+    
+    print_info "Scanning repository for unverified commits..."
+    
+    # Normalise RANGE (same as sign_mode does)
+    if [[ -n "$RANGE" ]]; then
+        if [[ "${RANGE,,}" =~ ^head[=~]all$ ]]; then
+            ROOT_COMMIT=$(git rev-list --max-parents=0 HEAD 2>/dev/null || true)
+            if [[ -n "$ROOT_COMMIT" ]]; then
+                RANGE="$ROOT_COMMIT..HEAD"
+            fi
+        elif [[ "$RANGE" =~ ^HEAD=([0-9]+)$ ]]; then
+            RANGE="HEAD~${BASH_REMATCH[1]}"
+        fi
+    fi
+    
+    # Normalise to ..HEAD format
+    if [[ "$RANGE" != *".."* ]]; then
+        RANGE="$RANGE..HEAD"
+    fi
+    
+    # Check for unsigned commits
+    local commit_info
+    commit_info=$(git log --reverse --format="%h %G? %s" "$RANGE" 2>/dev/null || true)
+    
+    if [[ -z "$commit_info" ]]; then
+        print_error "No commits found in range: $RANGE"
+        exit 1
+    fi
+    
+    local unsigned_commits
+    unsigned_commits=$(echo "$commit_info" | grep -E ' [NE] ' || true)
+    local unsigned_count
+    unsigned_count=$(echo "$unsigned_commits" | grep -c . || echo 0)
+    
+    if [[ "$unsigned_count" -eq 0 ]]; then
+        print_success "All commits in range $RANGE are already signed (verified)"
+        echo "No action needed."
+        exit 0
+    fi
+    
+    # Show unsigned commits to user
+    echo ""
+    print_warning "Found $unsigned_count unsigned/unverified commit(s) in range: $RANGE"
+    echo ""
+    echo "Unsigned commits:"
+    echo "$unsigned_commits" | sed 's/^/  /'
+    echo ""
+    
+    # Explain what auto-sign will do
+    echo "${BOLD}Auto-sign will:${NC}"
+    echo "  • Enable commit signing (GPG required)"
+    echo "  • Preserve merge topology (retain branch structure)"
+    echo "  • Auto-resolve conflicts using 'ours' strategy"
+    echo "  • Skip interactive menus (fully automated)"
+    echo "  • Sign only unsigned commits (skip already-signed)"
+    echo ""
+    
+    # Confirm with user
+    local confirm
+    read -rp "Proceed with auto-sign? [y/N]: " confirm
+    
+    if [[ ! "$confirm" =~ ^[Yy] ]]; then
+        print_info "Auto-sign cancelled by user"
+        exit 0
+    fi
+    
+    # Auto-configure flags for secure, non-interactive signing
+    print_info "Configuring auto-sign flags..."
+    SIGN_MODE=true
+    export PRESERVE_TOPOLOGY=true
+    AUTO_RESOLVE=ours
+    NO_EDIT_MODE=true
+    ATOMIC_PRESERVE=true
+    
+    print_success "Auto-sign configured:"
+    echo "  SIGN_MODE=true"
+    echo "  PRESERVE_TOPOLOGY=true"
+    echo "  AUTO_RESOLVE=ours"
+    echo "  NO_EDIT_MODE=true"
+    echo "  ATOMIC_PRESERVE=true"
+    echo ""
+    
+    # Now proceed to sign_mode which will do the actual work
+    print_info "Proceeding to sign commits..."
+}
+
+# ---------------------------------------------------------------------------
 # Sign mode: re-sign commits across a range and restore dates
 # ---------------------------------------------------------------------------
 sign_mode() {
@@ -2633,6 +2733,13 @@ main() {
             list_backups_and_restore
             exit 0
         fi
+    fi
+
+    # Handle auto-sign mode (detect unsigned commits and auto-configure)
+    if [[ "$AUTO_SIGN_MODE" == "true" ]]; then
+        auto_sign_detect
+        # After auto_sign_detect returns, SIGN_MODE is set to true
+        # Fall through to sign_mode below
     fi
 
     # Handle sign mode (re-sign commits in a range)
