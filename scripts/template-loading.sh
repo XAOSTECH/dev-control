@@ -720,7 +720,7 @@ install_templates() {
         if [[ "$folder_type" == "docs" && -n "$suffix" ]]; then
             # If suffix contains X -> add badges after title
             if [[ "$suffix" =~ [Xx] ]]; then
-                add_badges_after_title "$target_dir/README.md"
+                add_badges_after_title "$target_dir/docs/README.md"
                 # if only X present, continue to next selection
                 if [[ ! "$suffix" =~ [AaBbCcDd] ]]; then
                     continue
@@ -734,10 +734,11 @@ install_templates() {
             [[ "$suffix" =~ [Dd] ]] && docs_files+=("SECURITY.md")
             
             if [[ "${#docs_files[@]}" -gt 0 ]]; then
+                mkdir -p "$target_dir/docs"
                 for f in "${docs_files[@]}"; do
                     local tpl="$DEV_CONTROL_DIR/docs-templates/$f"
                     if [[ -f "$tpl" ]]; then
-                        process_template "$tpl" "$target_dir/$f"
+                        process_template "$tpl" "$target_dir/docs/$f"
                     else
                         print_warning "Template not found: $f"
                     fi
@@ -776,12 +777,13 @@ install_docs_templates() {
     local target_dir="$1"
     local docs_dir="$DEV_CONTROL_DIR/docs-templates"
     
-    print_info "Installing documentation templates..."
+    print_info "Installing documentation templates to docs/..."
+    mkdir -p "$target_dir/docs"
     
     for file in "$docs_dir"/*.md; do
         if [[ -f "$file" ]]; then
             local filename=$(basename "$file")
-            process_template "$file" "$target_dir/$filename"
+            process_template "$file" "$target_dir/docs/$filename"
         fi
     done
 }
@@ -816,6 +818,7 @@ EOF
 
     # If README doesn't exist, create from template if available
     if [[ ! -f "$readme_path" ]]; then
+        mkdir -p "$(dirname "$readme_path")"
         if [[ -f "$DEV_CONTROL_DIR/docs-templates/README.md" ]]; then
             process_template "$DEV_CONTROL_DIR/docs-templates/README.md" "$readme_path"
         else
