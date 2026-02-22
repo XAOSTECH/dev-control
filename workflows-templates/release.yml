@@ -627,6 +627,42 @@ jobs:
             echo "✅ Release created: $TAG_NAME"
           fi
 
+      - name: Add source archive checksums
+        if: steps.check_release.outputs.exists != 'true'
+        env:
+          GH_TOKEN: ${{ steps.app_token.outputs.token }}
+        run: |
+          TAG_NAME="${{ steps.version.outputs.tag_name }}"
+          VERSION="${{ steps.version.outputs.version }}"
+          
+          # Only add checksums if no custom tarball was built
+          if [[ -z "${tarball_name:-}" ]]; then
+            echo "📦 Calculating SHA256 for GitHub-generated source archives..."
+            
+            # Download and checksum the archives
+            TAR_URL="https://github.com/$GITHUB_REPOSITORY/archive/refs/tags/${TAG_NAME}.tar.gz"
+            ZIP_URL="https://github.com/$GITHUB_REPOSITORY/archive/refs/tags/${TAG_NAME}.zip"
+            
+            TAR_SHA=$(curl -fsSL "$TAR_URL" | sha256sum | awk '{print $1}')
+            ZIP_SHA=$(curl -fsSL "$ZIP_URL" | sha256sum | awk '{print $1}')
+            
+            echo "🔐 Source archive SHA256:"
+            echo "  tar.gz: $TAR_SHA"
+            echo "  zip: $ZIP_SHA"
+            
+            # Get current release notes and append checksums
+            CURRENT_NOTES=$(gh release view "$TAG_NAME" --json body --jq '.body')
+            
+            # Update release notes with checksums table
+            printf -v NEW_NOTES "%s\n\n## Checksums\n\n| File | SHA256 |\n|------|--------|\n| Source code (tar.gz) | \`%s\` |\n| Source code (zip) | \`%s\` |\n" \
+              "$CURRENT_NOTES" "$TAR_SHA" "$ZIP_SHA"
+            
+            gh release edit "$TAG_NAME" --notes "$NEW_NOTES"
+            echo "✅ Updated release notes with source archive checksums"
+          else
+            echo "⏭️ Custom tarball exists - source archive checksums not needed"
+          fi
+
       - name: Update 'latest' tag
         env:
           GH_TOKEN: ${{ steps.app_token.outputs.token }}
