@@ -44,6 +44,8 @@ echo "$CODE_INJECTION_ALERTS" | jq -c '.[]' | while IFS= read -r alert_json; do
   
   if [[ "$msg" =~ \$\{\{\s*([^}]+)\s*\}\} ]]; then
     var_expr="${BASH_REMATCH[1]}"
+    # Trim spaces from captured expression
+    var_expr=$(echo "$var_expr" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
     var_name="FIX_$(echo "$var_expr" | sed 's/[^a-zA-Z0-9_]/_/g' | tr '[:lower:]' '[:upper:]')"
     var_name="${var_name:0:32}"
     
@@ -107,4 +109,4 @@ echo "$ALERTS" | jq -c '.[] | select(.rule == "actions/unpinned-tag")' | while I
 done
 
 echo "✓ Total fixes applied: $FIXES_APPLIED"
-git diff --name-only
+git diff --name-only 2>/dev/null || true
