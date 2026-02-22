@@ -1,5 +1,7 @@
 #!/bin/bash
-set -euo pipefail
+set -eu
+
+trap 'echo "Error on line $LINENO"; exit 1' ERR
 
 # Security auto-fix script for CodeQL alerts
 # This script fixes common CodeQL security issues automatically
@@ -18,16 +20,22 @@ if [[ ! -f "$ALERTS_FILE" ]]; then
   exit 1
 fi
 
-ALERTS=$(cat "$ALERTS_FILE")
+ALERTS=$(cat "$ALERTS_FILE") || { echo "❌ Failed to read alerts file"; exit 1; }
+echo "Loaded alerts: $(echo "$ALERTS" | jq -r 'length') total"
 
 # Pattern 1: Fix code injection - Extract GitHub expressions to env vars
 echo "🔧 Fixing code injection vulnerabilities..."
 
+CODE_INJECTION_ALERTS=$(echo "$ALERTS" | jq '[.[] | select(.rule == "actions/code-injection/medium")]' 2>/dev/null || echo "[]")
+CODE_INJECTION_COUNT=$(echo "$CODE_INJECTION_ALERTS" | jq 'length')
+echo "Found $CODE_INJECTION_COUNT code-injection alerts"
+
 FIXES_APPLIED=0
-while IFS= read -r alert_b64; do
-  alert_json=$(echo "$alert_b64" | base64 --decode)
+echo "$CODE_INJECTION_ALERTS" | jq -c '.[]' | while IFS= read -r alert_json; do
+  [[ -z "$alert_json" ]] && continue
+  
   file=$(echo "$alert_json" | jq -r '.file // empty')
-  msg=$(echo "$alert_json" | jq -r '.msg // empty')
+  msg=$(echo "$alert_json" | jq -r '.message // empty')
   rule=$(echo "$alert_json" | jq -r '.rule // empty')
   
   [[ -z "$file" ]] || [[ ! -f "$file" ]] && continue
@@ -64,15 +72,17 @@ while IFS= read -r alert_b64; do
     FIXES_APPLIED=$((FIXES_APPLIED + 1))
     echo "  ✅ Fixed"
   fi
-done < <(echo "$ALERTS" | jq -r '.[] | select(.rule == "actions/code-injection/medium") | @base64')
+done
 
 # Pattern 2: Fix unpinned actions
 echo "🔧 Fixing unpinned actions..."
 
-for alert in $(echo "$ALERTS" | jq -r '.[] | select(.rule == "actions/unpinned-tag") | @base64'); do
-  file=$(echo "$alert" | base64 --decode | jq -r '.file')
+echo "$ALERTS" | jq -c '.[] | select(.rule == "actions/unpinned-tag")' | while IFS= read -r alert_json; do
+  file=$(echo "$alert_json" | jq -r '.file // empty')
+  rule=$(echo "$alert_json" | jq -r '.rule // empty')
   
   [[ ! -f "$file" ]] && continue
+  [[ "$rule" != "actions/unpinned-tag" ]] && continue
   
   while IFS= read -r line_content; do
     if [[ "$line_content" =~ uses:\ ([^@]+)@(master|main|v[0-9]+)($|\ ) ]]; then
