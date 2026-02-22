@@ -81,15 +81,83 @@ jobs:
           ALERTS=$(cat /tmp/alerts.json)
           
           # Pattern 1: Fix code injection - Extract GitHub expressions to env vars
-          # Note: Complex YAML manipulation requires manual review
-          # This pattern detects but defers to PR for automated fixes
-          echo "🔧 Detecting code injection vulnerabilities..."
-          CODE_INJECTION_COUNT=$(echo "$ALERTS" | jq '[.[] | select(.rule == "actions/code-injection/medium")] | length')
+          echo "🔧 Fixing code injection vulnerabilities..."
+          python3 << 'PYSCRIPT'
+import json
+import re
+from pathlib import Path
+
+with open('/tmp/alerts.json') as f:
+    alerts = json.load(f)
+
+fixes = 0
+for alert in alerts:
+    if alert.get('rule') != 'actions/code-injection/medium':
+        continue
+    
+    filepath = alert.get('file')
+    if not Path(filepath).exists():
+        continue
+    
+    msg = alert.get('msg', '')
+    match = re.search(r'\$\{\{\s*([^}]+)\s*\}\}', msg)
+    if not match:
+        continue
+    
+    var_expr = match.group(1).strip()
+    var_name = f"FIX_{re.sub(r'[^a-zA-Z0-9_]', '_', var_expr).upper()[:30]}"
+    
+    with open(filepath, 'r') as f:
+        content = f.read()
+    
+    # Replace ${{ var_expr }} with $VAR_NAME in the file
+    pattern = r'\$\{\{\s*' + re.escape(var_expr) + r'\s*\}\}'
+    new_content = re.sub(pattern, f'${var_name}', content)
+    
+    if new_content != content:
+        # Find where to add env var - look for existing env: section in same step
+        lines = new_content.split('\n')
+        inserted = False
+        
+        for i in range(len(lines)):
+            if f'${var_name}' in lines[i]:
+                # Found usage, scan backwards for env: or - name:
+                for j in range(i, max(-1, i-50), -1):
+                    if '        env:' in lines[j] and not inserted:
+                        # Check if var already there
+                        found_var = False
+                        for k in range(j+1, min(len(lines), j+20)):
+                            if lines[k].startswith('        ') and ':' not in lines[k][:lines[k].find(':') if ':' in lines[k] else 0]:
+                                continue
+                            if var_name in lines[k]:
+                                found_var = True
+                                break
+                            if lines[k].strip() == '' or (lines[k][0] not in ' '):
+                                break
+                        if not found_var:
+                            lines.insert(j+1, f'          {var_name}: ${{{{ {var_expr} }}}}')
+                            inserted = True
+                            break
+                    elif '      - name:' in lines[j] and not inserted:
+                        # No env section, insert one
+                        lines.insert(j+1, f'        env:')
+                        lines.insert(j+2, f'          {var_name}: ${{{{ {var_expr} }}}}')
+                        inserted = True
+                        break
+                if inserted:
+                    break
+        
+        with open(filepath, 'w') as f:
+            f.write('\n'.join(lines))
+        
+        fixes += 1
+        print(f"  ✅ Fixed {var_expr} → {var_name} in {filepath}")
+
+print(f"✓ Code-injection fixes applied: {fixes}")
+PYSCRIPT
           
-          if [ "$CODE_INJECTION_COUNT" -gt 0 ]; then
-            echo "  ⚠️  Found $CODE_INJECTION_COUNT code injection patterns"
-            echo "code_injection_found=true" >> "$GITHUB_OUTPUT"
-          fi
+          # Collect modified files from git
+          MODIFIED_FILES=$(git diff --name-only 2>/dev/null || echo "")
           
           # Pattern 2: Fix unpinned actions
           echo "🔧 Fixing unpinned actions..."
@@ -280,11 +348,11 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.app_token.outputs.token }}
         run: |
-          # Check if similar issue already exists
-          EXISTING=$(gh issue list --state open --label security-review --json number --jq 'length')
+          # Check if similar issue already exists with same label
+          EXISTING=$(gh issue list --state open --label security-review --json number,updatedAt --jq '[.[] | select(.updatedAt > (now - 3600))] | length')
           
           if [ "$EXISTING" -gt 0 ]; then
-            echo "ℹ️  Security review issue already exists"
+            echo "ℹ️  Security review issue was recently created, skipping duplicate"
             exit 0
           fi
           
