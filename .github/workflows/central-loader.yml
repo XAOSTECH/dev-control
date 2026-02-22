@@ -102,15 +102,6 @@ jobs:
           REPO_FULL: ${{ github.repository }}
           PROJECT_NAME_INPUT: ${{ inputs.project_name }}
           STABILITY_INPUT: ${{ inputs.stability }}
-          FIX_STEPS_VARS_OUTPUTS_CURRENT_Y: ${{ steps.vars.outputs.current_year }}
-          FIX_STEPS_VARS_OUTPUTS_STABILITY: ${{ steps.vars.outputs.stability_color }}
-          FIX_INPUTS_LICENSE_TYPE: ${{ inputs.license_type }}
-          FIX_INPUTS_SHORT_DESCRIPTION: ${{ inputs.short_description }}
-          FIX_STEPS_VARS_OUTPUTS_REPO_URL: ${{ steps.vars.outputs.repo_url }}
-          FIX_STEPS_VARS_OUTPUTS_REPO_OWNE: ${{ steps.vars.outputs.repo_owner }}
-          FIX_STEPS_VARS_OUTPUTS_REPO_NAME: ${{ steps.vars.outputs.repo_name }}
-          FIX_STEPS_VARS_OUTPUTS_PROJECT_N: ${{ steps.vars.outputs.project_name }}
-          FIX_INPUTS_TEMPLATES: ${{ inputs.templates }}
         run: |
           # Repository info from calling repo
           echo "repo_name=$REPO_NAME_INPUT" >> "$GITHUB_OUTPUT"
@@ -148,9 +139,9 @@ jobs:
           STABILITY: ${{ inputs.stability }}
           STABILITY_COLOR: ${{ steps.vars.outputs.stability_color }}
           CURRENT_YEAR: ${{ steps.vars.outputs.current_year }}
-          FIX_INPUTS_TEMPLATES: $FIX_INPUTS_TEMPLATES
+          TEMPLATES_INPUT: ${{ inputs.templates }}
         run: |
-          TEMPLATES="$FIX_INPUTS_TEMPLATES"
+          TEMPLATES="$TEMPLATES_INPUT"
           DC_DIR=".dev-control-templates"
           INSTALLED=""
           
