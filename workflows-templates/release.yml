@@ -108,8 +108,8 @@ on:
         required: false
         type: boolean
         default: false
-      skip_tarball:
-        description: 'Skip building tarball (release notes only)'
+      skip_lib:
+        description: 'Skip building lib-only tarball'
         required: false
         type: boolean
         default: false
@@ -431,21 +431,11 @@ jobs:
           echo "✅ Installed Gum v${GUM_VERSION}"
 
       - name: Build full tarball
-        if: steps.check_release.outputs.exists != 'true' && github.event.inputs.skip_tarball != 'true' && github.event_name == 'workflow_dispatch'
+        if: steps.check_release.outputs.exists != 'true'
         run: |
           if [[ ! -f "scripts/packaging.sh" ]]; then
             echo "⚠️ No packaging.sh found - skipping tarball build"
-            exit 0
-          fi
-          chmod +x scripts/packaging.sh scripts/lib/*.sh 2>/dev/null || true
-          bash scripts/packaging.sh --tarball --verbose
-          echo "✅ Full tarball built successfully"
-
-      - name: Build full tarball (push trigger)
-        if: steps.check_release.outputs.exists != 'true' && github.event_name == 'push'
-        run: |
-          if [[ ! -f "scripts/packaging.sh" ]]; then
-            echo "⚠️ No packaging.sh found - skipping tarball build"
+            echo "build_skipped=true" >> $GITHUB_ENV
             exit 0
           fi
           chmod +x scripts/packaging.sh scripts/lib/*.sh 2>/dev/null || true
@@ -495,11 +485,18 @@ jobs:
         if: steps.check_release.outputs.exists != 'true'
         run: |
           VERSION="${{ steps.version.outputs.version }}"
+          
+          if [[ ! -d "dist" ]]; then
+            echo "⚠️ No dist/ directory - no tarballs were built"
+            echo "tarball_count=0" >> $GITHUB_ENV
+            exit 0
+          fi
+          
           echo "📦 Build artifacts:"
-          ls -la dist/
+          ls -la dist/ || true
           
           # Get main tarball info (first .tar.gz that's not a sub-package)
-          TARBALL=$(ls dist/*.tar.gz 2>/dev/null | head -1)
+          TARBALL=$(ls dist/*.tar.gz 2>/dev/null | head -1 || echo "")
           if [[ -n "$TARBALL" ]]; then
             echo "tarball_path=${TARBALL}" >> $GITHUB_ENV
             echo "tarball_name=$(basename "$TARBALL")" >> $GITHUB_ENV
@@ -512,7 +509,7 @@ jobs:
           fi
           
           # Count all tarballs for summary
-          TARBALL_COUNT=$(ls dist/*.tar.gz 2>/dev/null | wc -l)
+          TARBALL_COUNT=$(ls dist/*.tar.gz 2>/dev/null | wc -l || echo "0")
           echo "tarball_count=${TARBALL_COUNT}" >> $GITHUB_ENV
 
       - name: Generate release notes
@@ -587,19 +584,28 @@ jobs:
           VERSION="${{ steps.version.outputs.version }}"
           NOTES_FILE="${{ steps.release_notes.outputs.notes_file }}"
           
-          # Build file list
-          FILES=$(find dist/ -name "*.tar.gz" -o -name "*.sha256" 2>/dev/null | tr '\n' ' ')
+          # Build file list (may be empty if no tarb alls)
+          FILES=$(find dist/ -name "*.tar.gz" -o -name "*.sha256" 2>/dev/null | tr '\n' ' ' || echo "")
           
           # Create release (idempotent — skip if already exists)
           if gh release view "$TAG_NAME" &>/dev/null; then
-            echo "✅ Release $TAG_NAME already exists — skipping creation"
+            echo "✅ Release $TAG_NAME already exists— skipping creation"
           else
-            gh release create "$TAG_NAME" \
-              --title "Release $TAG_NAME" \
-              --notes-file "$NOTES_FILE" \
-              ${{ github.event.inputs.draft == 'true' && '--draft' || '' }} \
-              ${{ github.event.inputs.prerelease == 'true' && '--prerelease' || '' }} \
-              $FILES
+            if [[ -n "$FILES" ]]; then
+              gh release create "$TAG_NAME" \
+                --title "Release $TAG_NAME" \
+                --notes-file "$NOTES_FILE" \
+                ${{ github.event.inputs.draft == 'true' && '--draft' || '' }} \
+                ${{ github.event.inputs.prerelease == 'true' && '--prerelease' || '' }} \
+                $FILES
+            else
+              # Release without attachments (notes only)
+              gh release create "$TAG_NAME" \
+                --title "Release $TAG_NAME" \
+                --notes-file "$NOTES_FILE" \
+                ${{ github.event.inputs.draft == 'true' && '--draft' || '' }} \
+                ${{ github.event.inputs.prerelease == 'true' && '--prerelease' || '' }}
+            fi
             echo "✅ Release created: $TAG_NAME"
           fi
 
@@ -638,6 +644,7 @@ jobs:
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           TAG_NAME="${{ steps.version.outputs.tag_name }}"
+          TARBALL_COUNT="${tarball_count:-0}"
           
           echo "## 🎉 Release Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -645,11 +652,13 @@ jobs:
           echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
           echo "| Version | ${VERSION} |" >> $GITHUB_STEP_SUMMARY
           echo "| Tag | ${TAG_NAME} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Artifacts | ${tarball_count} tarball(s) |" >> $GITHUB_STEP_SUMMARY
+          echo "| Artifacts | ${TARBALL_COUNT} tarball(s) |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Links" >> $GITHUB_STEP_SUMMARY
           echo "- [Release](https://github.com/$GITHUB_REPOSITORY/releases/tag/${TAG_NAME})" >> $GITHUB_STEP_SUMMARY
-          echo "- [Download](https://github.com/$GITHUB_REPOSITORY/releases/download/${TAG_NAME}/${tarball_name})" >> $GITHUB_STEP_SUMMARY
+          if [[ -n "${tarball_name:-}" ]]; then
+            echo "- [Download](https://github.com/$GITHUB_REPOSITORY/releases/download/${TAG_NAME}/${tarball_name})" >> $GITHUB_STEP_SUMMARY
+          fi
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "---" >> $GITHUB_STEP_SUMMARY
           echo "*Workflow template from [dev-control](https://github.com/xaoscience/dev-control)*" >> $GITHUB_STEP_SUMMARY
