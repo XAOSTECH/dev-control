@@ -66,9 +66,9 @@ jobs:
       - name: Save validation result
         if: steps.check.outputs.should_merge == 'true'
         env:
-          FIX_GITHUB_EVENT_PULL_REQUEST_TI: ${{ github.event.pull_request.title }}
+          FIX_GITHUB_EVENT_PULL_REQUEST_TI: $FIX_GITHUB_EVENT_PULL_REQUEST_TI
         env:
-          FIX_GITHUB_EVENT_PULL_REQUEST_HE: ${{ github.event.pull_request.head.label }}
+          FIX_GITHUB_EVENT_PULL_REQUEST_HE: $FIX_GITHUB_EVENT_PULL_REQUEST_HE
         run: |
           mkdir -p ./pr-validation
           echo "${{ steps.check.outputs.pr_number }}" > ./pr-validation/NUMBER
