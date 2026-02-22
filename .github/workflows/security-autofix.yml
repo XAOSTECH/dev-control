@@ -93,7 +93,7 @@ jobs:
             [[ -z "$FILE" ]] || [[ ! -f "$FILE" ]] && continue
             [[ -z "$MSG" ]] && continue
             
-            # Extract ${{ ... }} expression from message
+            # Extract GitHub action expression from message
             if [[ "$MSG" =~ \$\{\{\s*([^}]+)\s*\}\} ]]; then
               VAR_EXPR="${BASH_REMATCH[1]}"
               # Convert to safe shell variable name
