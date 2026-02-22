@@ -376,3 +376,13 @@ GPL-3.0. See [LICENSE](../LICENSE).
 <p align="center">
   <a href="#dev-control">⬆️ Back to Top</a>
 </p>
+
+<!-- TREE-VIZ-START -->
+
+## Git Tree Visualization
+
+![Git Tree Visualization](../.github/tree-viz/git-tree.svg)
+
+[Interactive version](../.github/tree-viz/git-tree.html) • [View data](../.github/tree-viz/git-tree-data.json)
+
+<!-- TREE-VIZ-END -->

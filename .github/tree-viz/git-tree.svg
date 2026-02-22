@@ -1,0 +1,560 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" 
+     xmlns:xlink="http://www.w3.org/1999/xlink"
+     width="1250" height="1456" 
+     viewBox="0 0 1250 1456">
+  <defs>
+    <!-- Gradients for fractal effect -->
+    <radialGradient id="leafGradient">
+      <stop offset="0%" style="stop-color:#22c55e;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#16a34a;stop-opacity:0.8" />
+    </radialGradient>
+    
+    <radialGradient id="mergeGradient">
+      <stop offset="0%" style="stop-color:#a78bfa;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#7c3aed;stop-opacity:0.8" />
+    </radialGradient>
+    
+    <!-- Branch line style -->
+    <style>
+      .branch-line { stroke: #64748b; stroke-width: 2; fill: none; opacity: 0.7; }
+      .commit-leaf { cursor: pointer; }
+      .commit-leaf:hover { filter: brightness(1.5); }
+      .commit-text { font-family: monospace; font-size: 11px; fill: #1e293b; }
+      .branch-label { font-family: sans-serif; font-size: 12px; font-weight: bold; fill: #0f172a; }
+    </style>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1250" height="1456" fill="#f8fafc"/>
+  
+  <!-- Grid pattern for depth visualization -->
+  <defs>
+    <pattern id="grid" width="100" height="100" patternUnits="userSpaceOnUse">
+      <path d="M 100 0 L 0 0 0 100" fill="none" stroke="#e2e8f0" stroke-width="0.5" opacity="0.3"/>
+    </pattern>
+  </defs>
+  <rect width="1250" height="1456" fill="url(#grid)"/>
+  
+  <!-- Branch lines -->
+  <g id="branches" class="branch-line">
+    <circle cx="50" cy="100" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="5d852a9: fix: SVG info transform arithmetic calculation"/>
+    <circle cx="300" cy="100" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="19a4b98: fix: tree-viz JSON escaping and duplicate echo bugs"/>
+    <circle cx="550" cy="100" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="4a39c17: fix: tree visualization - CodeQL schedule, SVG rendering, relative paths"/>
+    <circle cx="800" cy="100" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="4131135: feat: add fractal git tree visualization (create-tree.sh)"/>
+    <circle cx="1050" cy="100" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="b2a96a6: feat: add security branch cleanup and --auto-sign flag"/>
+    <circle cx="50" cy="220" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="41403dd: chore: update CHANGELOG for v0.5.6 (re-release)"/>
+    <circle cx="300" cy="220" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="ce6a753: chore: update CHANGELOG for v0.5.6"/>
+    <circle cx="550" cy="220" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="223da66: refactor: replace ludeeus/action-shellcheck with native shellcheck"/>
+    <circle cx="800" cy="220" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="82693e5: refactor: replace peter-evans/create-pull-request with gh CLI"/>
+    <circle cx="1050" cy="220" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="c8470aa: security: fix untrusted-checkout vulnerabilities in automerge workflow"/>
+    <circle cx="50" cy="340" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="eb4f8e2: fix: restore correct variables in PR body template"/>
+    <circle cx="300" cy="340" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="837d676: fix: remove self-referential env vars and use correct shell syntax"/>
+    <circle cx="550" cy="340" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="0a630d1: fix: disable autofix automatic trigger to prevent infinite loop"/>
+    <circle cx="800" cy="340" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="687ab3e: fix: autofix script should skip env: sections and revert broken changes"/>
+    <circle cx="1050" cy="340" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="2aa1820: Merge pull request #91 from XAOSTECH:security/autofix-1771727196"/>
+    <circle cx="50" cy="460" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="7f1f4ac: security: auto-fix CodeQL alerts"/>
+    <circle cx="300" cy="460" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="0f4ab1e: fix: break up ${{ in env var echo to prevent parser interpretation"/>
+    <circle cx="550" cy="460" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="42df46b: fix: prevent parser from interpreting bash array syntax as expression"/>
+    <circle cx="800" cy="460" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="e67d419: fix: workflow validation errors"/>
+    <circle cx="1050" cy="460" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="38cc5ed: fix: prevent duplicate env sections and inline security script"/>
+    <circle cx="50" cy="580" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="5b3c9f5: feat: amend security review issues instead of creating duplicates"/>
+    <circle cx="300" cy="580" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="ed42e70: Merge branch 'main' of https://github.com/XAOSTECH/dev-control"/>
+    <circle cx="550" cy="580" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="317ff94: fix: prevent duplicate security review issues and fix inverted logic"/>
+    <circle cx="800" cy="580" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="49aa827: security: auto-fix CodeQL alerts"/>
+    <circle cx="1050" cy="580" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="297282e: Merge pull request #75 from XAOSTECH:security/autofix-1771725722"/>
+    <circle cx="50" cy="700" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="7ba15e3: Merge pull request #77 from XAOSTECH:security/autofix-1771725763"/>
+    <circle cx="300" cy="700" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="9d63f7f: security: auto-fix CodeQL alerts"/>
+    <circle cx="550" cy="700" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="7f0edea: security: auto-fix CodeQL alerts"/>
+    <circle cx="800" cy="700" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="9c9aedd: security: auto-fix CodeQL alerts"/>
+    <circle cx="1050" cy="700" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="9007125: security: auto-fix CodeQL alerts"/>
+    <circle cx="50" cy="820" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="a285150: Merge pull request #71 from XAOSTECH:security/autofix-1771725675"/>
+    <circle cx="300" cy="820" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="d3ed992: security: auto-fix CodeQL alerts"/>
+    <circle cx="550" cy="820" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="4ed930b: security: auto-fix CodeQL alerts"/>
+    <circle cx="800" cy="820" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="d797ea1: security: auto-fix CodeQL alerts"/>
+    <circle cx="1050" cy="820" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="48778de: security: auto-fix CodeQL alerts"/>
+    <circle cx="50" cy="940" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="3ac9cac: Merge branch 'main' of https://github.com/XAOSTECH/dev-control"/>
+    <circle cx="300" cy="940" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="95eed72: security: replace insecure regex with explicit bot allowlist + label requirement"/>
+    <circle cx="550" cy="940" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="392a172: security: auto-fix CodeQL alerts"/>
+    <circle cx="800" cy="940" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="44570da: security: auto-fix CodeQL alerts"/>
+    <circle cx="1050" cy="940" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="7d831e6: security: auto-fix CodeQL alerts"/>
+    <circle cx="50" cy="1060" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="3936f18: security: auto-fix CodeQL alerts"/>
+    <circle cx="300" cy="1060" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="42d360a: security: auto-fix CodeQL alerts"/>
+    <circle cx="550" cy="1060" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="2287308: feat: add automerge label to security-fix PRs"/>
+    <circle cx="800" cy="1060" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="32f8d79: security: auto-fix CodeQL alerts"/>
+    <circle cx="1050" cy="1060" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="f2e9a07: security: auto-fix CodeQL alerts"/>
+    <circle cx="50" cy="1180" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="e23b574: security: auto-fix CodeQL alerts"/>
+    <circle cx="300" cy="1180" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="f1939af: security: auto-fix CodeQL alerts"/>
+    <circle cx="550" cy="1180" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="7f6644e: security: auto-fix CodeQL alerts"/>
+    <circle cx="800" cy="1180" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="56d40f9: Merge pull request #45 from XAOSTECH/security/autofix-1771725086"/>
+    <circle cx="1050" cy="1180" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="7e35584: security: auto-fix CodeQL alerts"/>
+    <circle cx="50" cy="1300" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="ec6b6cc: security: auto-fix CodeQL alerts"/>
+    <circle cx="300" cy="1300" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="e379ba9: fix: trim spaces from expression capture and handle git diff errors"/>
+    <circle cx="550" cy="1300" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="725cf89: fix: security-autofix script input handling and consistency"/>
+    <circle cx="800" cy="1300" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="7dab5c8: fix: add env section before run when extracting vulnerable expressions"/>
+    <circle cx="1050" cy="1300" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="4655db8: chore: make security-autofix script executable"/>
+    <circle cx="50" cy="1420" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="956083a: refactor: move complex script to external file to avoid expression parsing issues"/>
+    <circle cx="300" cy="1420" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="f83a370: fix: remove expression syntax from comment"/>
+    <circle cx="550" cy="1420" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="8b7c5a2: fix: remove ellipsis from JSON comment to avoid expression parser error"/>
+    <circle cx="800" cy="1420" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="a54ad83: chore: whitespace - trigger workflow reload"/>
+    <circle cx="1050" cy="1420" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="04b1c29: fix: use head/tail instead of awk to avoid GitHub Actions expression parsing"/>
+    <circle cx="50" cy="1540" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="e85e41e: refactor: replace Python with robust shell script for code-injection fixes"/>
+    <circle cx="300" cy="1540" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="b57d892: refactor: use Python for robust code-injection vulnerability fixing"/>
+    <circle cx="550" cy="1540" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="759666f: fix: skip PR creation when no files modified"/>
+    <circle cx="800" cy="1540" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="96e2dd8: security: auto-fix CodeQL alerts"/>
+    <circle cx="1050" cy="1540" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="b96d279: fix: ensure labels exist before PR creation"/>
+    <circle cx="50" cy="1660" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="f66fa45: Merge pull request #37 from XAOSTECH:security/autofix-1771640641"/>
+    <circle cx="300" cy="1660" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="12eca20: fix: prevent jq backtick parsing in issue body"/>
+    <circle cx="550" cy="1660" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="f812a81: revert: remove --no-verify from git merge in automerge.yml"/>
+    <circle cx="800" cy="1660" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="2890ee4: security: fix CodeQL alerts - code injection and untrusted checkout"/>
+    <circle cx="1050" cy="1660" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="9f9e1cf: Initial plan"/>
+    <circle cx="50" cy="1780" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="226c72e: fix: skip PR creation when no files modified"/>
+    <circle cx="300" cy="1780" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="034faad: fix: prevent jq backtick parsing in issue body"/>
+    <circle cx="550" cy="1780" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="0d36343: Merge pull request #37 from XAOSTECH:security/autofix-1771640641"/>
+    <circle cx="800" cy="1780" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="ad36f8b: security: auto-fix CodeQL alerts"/>
+    <circle cx="1050" cy="1780" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="20feada: fix: ensure labels exist before PR creation"/>
+    <circle cx="50" cy="1900" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="3fb0ee8: security: auto-fix CodeQL alerts"/>
+    <circle cx="300" cy="1900" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="f4e8ac2: fix: send commit payload via gh api input"/>
+    <circle cx="550" cy="1900" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="bd68599: fix: send git tree payload via gh api input"/>
+    <circle cx="800" cy="1900" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="c057d55: fix: allow workflow_dispatch to bypass workflow_run guard"/>
+    <circle cx="1050" cy="1900" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="81a2623: debug: add tree JSON inspection output"/>
+    <circle cx="50" cy="2020" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="8369a4f: fix: build tree JSON properly with jq instead of string concat"/>
+    <circle cx="300" cy="2020" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="41142d0: fix: send parents as JSON array in commit API call"/>
+    <circle cx="550" cy="2020" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="c33c2d7: sync: update security-autofix template with API approach"/>
+    <circle cx="800" cy="2020" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="2a518f8: fix: use GitHub API instead of git push for workflow changes"/>
+    <circle cx="1050" cy="2020" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="25f2815: debug: test API write permission"/>
+    <circle cx="50" cy="2140" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="34e46dd: fix: use create-github-app-token@v2 with all required permissions"/>
+    <circle cx="300" cy="2140" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="0a0afb7: debug: add token permission check"/>
+    <circle cx="550" cy="2140" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="64a73b6: sync: update security-autofix template with permission grants"/>
+    <circle cx="800" cy="2140" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="30e3798: fix: add explicit permission grants for GitHub App token"/>
+    <circle cx="1050" cy="2140" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="c002d10: fix: remove duplicate env block in bash-lint-advanced.yml"/>
+    <circle cx="50" cy="2260" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="1320a58: fix: remove redundant git config - identity action handles this"/>
+    <circle cx="300" cy="2260" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="d6f3a86: fix: use relative path for local identity action"/>
+    <circle cx="550" cy="2260" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="6e31c5b: fix: remove invalid expression syntax from comment"/>
+    <circle cx="800" cy="2260" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="1a45db8: fix: eliminate ALL multiline strings from workflow YAML"/>
+    <circle cx="1050" cy="2260" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="8aa9e5b: fix: remove heredoc syntax from workflows - use temp files"/>
+    <circle cx="50" cy="2380" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="b1b0f77: fix: use heredoc syntax for multiline strings in workflows"/>
+    <circle cx="300" cy="2380" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="5e218cc: chore: sync security-autofix template with fixed workflow"/>
+    <circle cx="550" cy="2380" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="9e34978: fix: remove broken Python code from security-autofix workflow"/>
+    <circle cx="800" cy="2380" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="5688f94: security: fix code injection in central-loader variables"/>
+    <circle cx="1050" cy="2380" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="a8650b2: security: implement workflow_run pattern for automerge"/>
+    <circle cx="50" cy="2500" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="260f985: chore: update CHANGELOG for v0.5.5 (re-release)"/>
+    <circle cx="300" cy="2500" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="14ff10d: feat: use GitHub-style merge messages in automerge"/>
+    <circle cx="550" cy="2500" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="288bedc: Merge remote-tracking branch 'refs/remotes/pr/36'"/>
+    <circle cx="800" cy="2500" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="f206108: chore: convert American spellings to British English"/>
+    <circle cx="1050" cy="2500" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="5bb6009: fix: restore GH_TOKEN to automerge merge step"/>
+    <circle cx="50" cy="2620" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="a379fe2: security: reduce automerge checkout attack surface"/>
+    <circle cx="300" cy="2620" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="f7a7b38: chore: convert American spellings to British English"/>
+    <circle cx="550" cy="2620" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="273d282: chore: update CHANGELOG for v0.5.5 (re-release)"/>
+    <circle cx="800" cy="2620" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="7e03dce: fix: use xaostech-security[bot] credentials in security-autofix"/>
+    <circle cx="1050" cy="2620" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="b189e3a: feat: add automated security fix bot workflow"/>
+    <circle cx="50" cy="2740" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="ea70839: security: fix YAML syntax error and pin create-pull-request action"/>
+    <circle cx="300" cy="2740" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="1b79451: security: fix code injection in central-loader sed replacements"/>
+    <circle cx="550" cy="2740" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="80fbe1b: security: fix code injection vulnerabilities in workflows"/>
+    <circle cx="800" cy="2740" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="e148b60: Update CodeQL Action to v4 with automatic patch management"/>
+    <circle cx="1050" cy="2740" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="876f63e: Simplify CodeQL to focus on repo languages (JavaScript/YAML only)"/>
+    <circle cx="50" cy="2860" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="01efbb6: chore: rename codeQL"/>
+    <circle cx="300" cy="2860" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="355edeb: Add auto-fix PR creation to bash-lint-advanced with xaostech-security[bot] credentials"/>
+    <circle cx="550" cy="2860" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="6053dfe: Fix bash-lint-advanced job outputs and create advanced CodeQL security workflow"/>
+    <circle cx="800" cy="2860" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="11784cb: Fix CodeQL untrusted-checkout alert: fetch PR head from official repo"/>
+    <circle cx="1050" cy="2860" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="c204a5d: Fix CodeQL untrusted-checkout alert: fetch PR head from official repo"/>
+    <circle cx="50" cy="2980" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="15f31b4: chore: convert American spellings to British English"/>
+    <circle cx="300" cy="2980" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="bb14c48: Merge pull request #34 from XAOSTECH/anglicise/20260220-215059"/>
+    <circle cx="550" cy="2980" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="429ed52: chore: update CHANGELOG for v0.5.5 (re-release)"/>
+    <circle cx="800" cy="2980" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="f94620b: Sign automerge merges with xaos-bot"/>
+    <circle cx="1050" cy="2980" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="4628b57: Add reauthor and force resign options to dc-fix"/>
+    <circle cx="50" cy="3100" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="f1cadbf: Fix --reauthor to include target commit and detect merge topology"/>
+    <circle cx="300" cy="3100" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="8490694: Fix --reauthor to include target commit and detect merge topology"/>
+    <circle cx="550" cy="3100" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="743fea8: Add reauthor and force resign options to dc-fix"/>
+    <circle cx="800" cy="3100" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="3673887: chore: update CHANGELOG for v0.5.5 (re-release)"/>
+    <circle cx="1050" cy="3100" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="61e2cf3: Sign automerge merges with xaos-bot"/>
+    <circle cx="50" cy="3220" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="09da5da: Merge pull request #34 from XAOSTECH/anglicise/20260220-215059"/>
+    <circle cx="300" cy="3220" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="c1dc402: chore: convert American spellings to British English"/>
+    <circle cx="550" cy="3220" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="b919cd8: Fix anglicise grep quoting and ignore test-repo"/>
+    <circle cx="800" cy="3220" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="ff85a3c: chore: update CHANGELOG for v0.5.5 (re-release)"/>
+    <circle cx="1050" cy="3220" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="8324153: Add defaults-only mode for template loading"/>
+    <circle cx="50" cy="3340" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="be9f6dc: Add app token secret name templating"/>
+    <circle cx="300" cy="3340" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="4a373dc: Template workflow secret name placeholders"/>
+    <circle cx="550" cy="3340" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="4681ca5: Add secret name and stability caching to template-loading.sh"/>
+    <circle cx="800" cy="3340" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="ab1a234: chore: update CHANGELOG for v0.5.5 (re-release)"/>
+    <circle cx="1050" cy="3340" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="9f8a876: Add bot-email input and template-loading integration for bot values"/>
+    <circle cx="50" cy="3460" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="2a96bad: Replace xaos-bot specific values with placeholders in action template"/>
+    <circle cx="300" cy="3460" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="7571944: chore: update CHANGELOG for v0.5.5 (re-release)"/>
+    <circle cx="550" cy="3460" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="ff22c5e: fix: correct shields.io badge parameters and refine anglicise exclusions"/>
+    <circle cx="800" cy="3460" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="8a57dd0: docs(readme): readability"/>
+    <circle cx="1050" cy="3460" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="11f4b9f: chore: update CHANGELOG for v0.5.5"/>
+    <circle cx="50" cy="3580" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="012c706: fix(footer.Dockerfile): pre-create ~/.devcontainer so postCreateCommand marker can be written"/>
+    <circle cx="300" cy="3580" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="2a000fc: fix(footer.Dockerfile): bust permissions layer cache with BUILD_DATE ARG"/>
+    <circle cx="550" cy="3580" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="3d861ef: fix(containerise): remove --userns=keep-id from runArgs + prune before nest loop"/>
+    <circle cx="800" cy="3580" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="e7278df: fix(containerise): prune stale vsc-*-uid wrapper images after base build"/>
+    <circle cx="1050" cy="3580" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="201e98c: feat(containers): add metadata LABEL to base images + streaming GPU/device passthrough"/>
+    <circle cx="50" cy="3700" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="f82a21d: chore: update CHANGELOG for v0.5.4 (re-release)"/>
+    <circle cx="300" cy="3700" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="1c4d5af: docs(readme): update command examples"/>
+    <circle cx="550" cy="3700" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="43fdd90: chore: update CHANGELOG for v0.5.4 (re-release)"/>
+    <circle cx="800" cy="3700" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="26b2dae: fix(footer.Dockerfile): fix user setup and switch to wget"/>
+    <circle cx="1050" cy="3700" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="01a74b8: fix: remove GPG_TTY literal and conflicting socket bind mount"/>
+    <circle cx="50" cy="3820" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="8609c92: fix(container): pre-create .ssh/.cache/.config in image; restore .gnupg chown in postCreateCommand; add --no-cache to dc-contain --base"/>
+    <circle cx="300" cy="3820" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="974abfe: chore: update CHANGELOG for v0.5.4 (re-release)"/>
+    <circle cx="550" cy="3820" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="a86ff82: chore: convert American spellings to British English"/>
+    <circle cx="800" cy="3820" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="a0291af: fix: correct single-quote escaping in anglicise grep patterns"/>
+    <circle cx="1050" cy="3820" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="e9849e1: Merge pull request #33 from XAOSTECH/anglicise/20260218-003720"/>
+    <circle cx="50" cy="3940" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="6d2bd2d: fix: correct bot display name and GPG commit verification"/>
+    <circle cx="300" cy="3940" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="f712da5: fix: apply bot identity and GPG verification to release workflow"/>
+    <circle cx="550" cy="3940" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="4464dc6: fix: correct latest tag creation in release workflow"/>
+    <circle cx="800" cy="3940" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="8c48681: fix: set git identity in Update latest tag step"/>
+    <circle cx="1050" cy="3940" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="c7a0691: fix: workflows permission, app token push, and auto-version for release"/>
+    <circle cx="50" cy="4060" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="aca9217: fix: remove invalid workflows permission key from release workflow"/>
+    <circle cx="300" cy="4060" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="84fcb30: fix: configure app token remote once at workflow start for all pushes"/>
+    <circle cx="550" cy="4060" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="68e214b: fix: generate app token before checkout so credential helper uses app identity"/>
+    <circle cx="800" cy="4060" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="ae15fdf: fix: expose GPG key registration failures and attribute release to bot"/>
+    <circle cx="1050" cy="4060" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="608c720: fix: use personal PAT (XB_UT) for GPG key registration, fix check logic"/>
+    <circle cx="50" cy="4180" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="758a975: fix: use machine user (xaos-bot) identity for GPG signing and git attribution"/>
+    <circle cx="300" cy="4180" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="0817b1e: fix: prevent set -e crash in GPG registration step"/>
+    <circle cx="550" cy="4180" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="a4062d1: feat: extract bot identity into composite action"/>
+    <circle cx="800" cy="4180" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="c72dfea: fix: skip GPG re-registration if key already present"/>
+    <circle cx="1050" cy="4180" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="ae65eeb: docs(readme): update intro + usage"/>
+    <circle cx="50" cy="4300" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="4fe7962: feat: auto-generate CHANGELOG.md in release workflow"/>
+    <circle cx="300" cy="4300" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="6596398: refactor: deduplicate commit-fetching into shared gather step"/>
+    <circle cx="550" cy="4300" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="adf0f50: chore: update CHANGELOG for v0.5.4"/>
+    <circle cx="800" cy="4300" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="599eaaa: fix: use GITHUB_TOKEN to push tag in dispatch path to prevent re-trigger"/>
+    <circle cx="1050" cy="4300" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="f9cfcf3: fix: add per-tag concurrency and idempotent release creation"/>
+    <circle cx="50" cy="4420" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="7ed6442: perf: skip build steps on duplicate run via early release check"/>
+    <circle cx="300" cy="4420" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="869e4cd: feat: automate re-release and smart CHANGELOG handling"/>
+    <circle cx="550" cy="4420" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="d9f274d: chore: update CHANGELOG for v0.5.4 (re-release)"/>
+    <circle cx="800" cy="4420" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="f9c9d14: fix: normalise CHANGELOG blank lines with cat -s after each edit"/>
+    <circle cx="1050" cy="4420" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="8cbd262: fix: support v-prefixed version input, strip if present"/>
+    <circle cx="50" cy="4540" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="77ef752: fix: use perl negative lookahead instead of whole-line filename skip"/>
+    <circle cx="300" cy="4540" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="7807b62: fix: use app display name for git user.name instead of ASCII slug"/>
+    <circle cx="550" cy="4540" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="e1eb36b: chore: convert American spellings to British English"/>
+    <circle cx="800" cy="4540" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="ed98c53: feat: attribute bot commits/merges to GitHub App identity"/>
+    <circle cx="1050" cy="4540" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="d03652d: Merge pull request #32 from XAOSTECH/anglicise/20260218-001511"/>
+    <circle cx="50" cy="4660" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="664ff25: fix: register bot GPG key unconditionally on every workflow run"/>
+    <circle cx="300" cy="4660" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="dfaa60e: fix: support --auto-resolve=value and AUTO_RESOLVE=THEIRS in fix-history"/>
+    <circle cx="550" cy="4660" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="6ae9fd2: chore: replace text across repository"/>
+    <circle cx="800" cy="4660" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="4e0c90d: refactor: use xxd -p -u for cleaner hex passphrase encoding"/>
+    <circle cx="1050" cy="4660" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="b63d9cb: Merge pull request #31 from XAOSTECH/replace/20260217-235313"/>
+    <circle cx="50" cy="4780" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="f62e697: fix: use gpg-connect-agent PRESET_PASSPHRASE for correct CI/CD signing"/>
+    <circle cx="300" cy="4780" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="6e493d9: feat: auto-merge any xaos[bot] PRs without requiring automerge label"/>
+    <circle cx="550" cy="4780" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="d9c6969: chore: replace text across repository"/>
+    <circle cx="800" cy="4780" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="9e043da: fix: use gpg-connect-agent PRESET_PASSPHRASE for correct CI/CD signing"/>
+    <circle cx="1050" cy="4780" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="ceddf85: fix: use absolute PATH and ensure wrapper is accessible in commit step"/>
+    <circle cx="50" cy="4900" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="ecfd66f: fix: replace heredoc with printf for YAML compliance"/>
+    <circle cx="300" cy="4900" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="d70e17a: fix: create GPG wrapper script for pinentry mode"/>
+    <circle cx="550" cy="4900" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="9ebb777: fix: simplify GPG signing and remove .git default from exclude paths"/>
+    <circle cx="800" cy="4900" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="eb7bff1: fix: pass GPG environment variables to commit step"/>
+    <circle cx="1050" cy="4900" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="3800f84: fix: replace heredoc with printf for valid YAML syntax"/>
+    <circle cx="50" cy="5020" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="4c02f34: fix: implement proper GPG signing with passphrase caching"/>
+    <circle cx="300" cy="5020" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="4a1da2a: fix: add GPG_PINENTRY_MODE=loopback to enable non-interactive signing"/>
+    <circle cx="550" cy="5020" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="80c4986: fix: enable GPG signing in CI/CD with loopback pinentry mode"/>
+    <circle cx="800" cy="5020" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="80db8b2: chore: update workflows with GitHub App token integration"/>
+    <circle cx="1050" cy="5020" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="c0f60e8: feat: add text replacement workflow"/>
+    <circle cx="50" cy="5140" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="224b406: chore: change anglicise workflow to run monthly and on-demand only"/>
+    <circle cx="300" cy="5140" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="33e28e6: docs(security): version"/>
+    <circle cx="550" cy="5140" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="5644168: docs(readme): intro"/>
+    <circle cx="800" cy="5140" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="9fe7add: fix(containerise/docker-footer): replace curl retry loop with wget"/>
+    <circle cx="1050" cy="5140" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="668d71b: docs(workflows): add GPG tag signing instructions and fix example URLs"/>
+    <circle cx="50" cy="5260" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="6cbccf9: fix(module-nesting): unquote find pattern for proper argument expansion"/>
+    <circle cx="300" cy="5260" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="ef7ba17: fix(containerise): exclude .tmp/.bak directories from nest scanning"/>
+    <circle cx="550" cy="5260" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="0169d58: fix: correct dev-control GitHub URL and add curl retry for reliability"/>
+    <circle cx="800" cy="5260" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="0967c91: fix: chmod 755 /home/${CATEGORY} to allow postCreateCommand file I/O"/>
+    <circle cx="1050" cy="5260" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="1317198: fix: pre-create .gnupg with 700 permissions to prevent VS Code init failure"/>
+    <circle cx="50" cy="5380" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="90cb6d0: fix(containerise): remove baked runtime commands from Dockerfile, defer to postCreateCommand"/>
+    <circle cx="300" cy="5380" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="281df56: feat: add container deletion to --nest --regen to remove stale containers"/>
+    <circle cx="550" cy="5380" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="8ed74d9: chore(containerise): postStart -> postCreate + deduplicate git config therein"/>
+    <circle cx="800" cy="5380" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="7b01fc2: chore(containerise): remove metadata logic (using README)"/>
+    <circle cx="1050" cy="5380" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="dbf246b: chore: colors.sh -> colours.sh"/>
+    <circle cx="50" cy="5500" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="76fc081: fix(workflows): use TAG_NAME instead of HEAD in release notes generation"/>
+    <circle cx="300" cy="5500" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="4116b7e: fix(workflows): use TAG_NAME instead of HEAD in release notes generation"/>
+    <circle cx="550" cy="5500" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="32567bc: chore: update CHANGELOG for v0.5.2"/>
+    <circle cx="800" cy="5500" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="c5315e8: fix(devcontainer): match UID 1000 for --userns=keep-id compatibility"/>
+    <circle cx="1050" cy="5500" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="8037e6d: refactor(containerise): remove inline JSON comments - README handles all documentation"/>
+    <circle cx="50" cy="5620" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="56bafd5: fix(docker): enforce .gnupg write permissions before USER switch to survive --userns remapping"/>
+    <circle cx="300" cy="5620" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="97723cc: fix(docker): perform GPG cleanup as root before USER switch to avoid permission errors"/>
+    <circle cx="550" cy="5620" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="12dd28b: fix(docker): recreate .gnupg immediately after cleanup to preserve permissions"/>
+    <circle cx="800" cy="5620" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="3f14aad: chore(workflows): redact GPG key IDs from all workflow logs"/>
+    <circle cx="1050" cy="5620" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="f4c6087: chore(workflows): redact GPG key IDs from logs"/>
+    <circle cx="50" cy="5740" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="a37cb59: fix(workflows): handle GPG import gracefully with robust key extraction"/>
+    <circle cx="300" cy="5740" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="b364c1a: fix(containerise): remove invalid JSON comments, preserve docs in README"/>
+    <circle cx="550" cy="5740" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="9ad656f: fix: resolve modularization issues breaking GPG and postCreateCommand"/>
+    <circle cx="800" cy="5740" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="fb0afd5: fix: restore monolith comment-based category system in devcontainer.json"/>
+    <circle cx="1050" cy="5740" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="7a57db9: fix: improve category detection with metadata field and fallback chain"/>
+    <circle cx="50" cy="5860" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="353572d: fix: correct heredoc syntax for metadata field"/>
+    <circle cx="300" cy="5860" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="9ac4000: feat: improve category detection with smart fallback chain"/>
+    <circle cx="550" cy="5860" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="9efbaf8: fix: improve category detection with folder name inference and metadata persistence"/>
+    <circle cx="800" cy="5860" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="0f53401: Revert "feat: improve category detection with smart fallback chain" and "fix: improve category detection with folder name inference""/>
+    <circle cx="1050" cy="5860" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="a79d810: feat: add --regen flag to nest mode for deleting existing devcontainers"/>
+    <circle cx="50" cy="5980" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="d035a2f: chore(containerise): add safety filter so --regen skips any .devcontainer under .tmp or .bak."/>
+    <circle cx="300" cy="5980" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="17aa203: feat(nest): fix legacy project detection and add interactive category assignment"/>
+    <circle cx="550" cy="5980" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="4b30021: fix(nest): remove invented logic, keep --delete, use only comment-based category detection"/>
+    <circle cx="800" cy="5980" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="d093aca: feat(nest): implement proper metadata hierarchy with README generation"/>
+    <circle cx="1050" cy="5980" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="70962d1: fix(nest): use grep/perl regex for robust JSON parsing from nest.json"/>
+    <circle cx="50" cy="6100" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="4464772: fix(parse_args): remove duplicate --regen case preventing deletion notification"/>
+    <circle cx="300" cy="6100" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="b3f8f0f: fix(nest): exclude .bak and .tmp from --regen deletion list"/>
+    <circle cx="550" cy="6100" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="4a74e32: feat(nest): make --regen auto-rebuild without second confirmation"/>
+    <circle cx="800" cy="6100" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="8e61ae2: fix(nest): rebuild all projects after --regen deletion"/>
+    <circle cx="1050" cy="6100" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="f3e911b: chore: convert American spellings to British English"/>
+    <circle cx="50" cy="6220" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="7b94b87: fix(nest): disable set -e during --regen deletion loop"/>
+    <circle cx="300" cy="6220" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="0dfaecc: Merge pull request #30 from XAOSTECH/anglicise/20260209-203619"/>
+    <circle cx="550" cy="6220" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="2e44ce0: feat(readme): centralize devcontainer README generation"/>
+    <circle cx="800" cy="6220" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="07b31f2: refactor(readme): add latest download URL and clarify img/base flow"/>
+    <circle cx="1050" cy="6220" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="f4f5f23: fix(gpg): remove gpg-connect-agent from postCreate to preserve .gnupg permissions"/>
+    <circle cx="50" cy="6340" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="2d08291: fix(dc-fix): improve GPG validation logic and check for 'none' key"/>
+    <circle cx="300" cy="6340" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="eda9ac9: fix(containerise): use UIDs instead of usernames in postCreateCommand"/>
+    <circle cx="550" cy="6340" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="6841b51: fix(containerise): resolve gnupg permission denied by clearing corrupted state first"/>
+    <circle cx="800" cy="6340" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="13cdb48: fix(anglicise): ensure automerge label exists before creating pr"/>
+    <circle cx="1050" cy="6340" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="93b5b0f: fix(workflows): align automerge triggers and anglicise exclusions"/>
+    <circle cx="50" cy="6460" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="2ea87e8: chore: convert American spellings to British English"/>
+    <circle cx="300" cy="6460" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="b38200a: fix(automerge): trigger on anglicise runs and scan labeled prs"/>
+    <circle cx="550" cy="6460" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="9aaf3ac: Merge pull request #28 from XAOSTECH/anglicise/20260209-151906"/>
+    <circle cx="800" cy="6460" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="a781765: feat(cluster): add full-stack cluster setup with selection window"/>
+    <circle cx="1050" cy="6460" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="676b09d: fix(anglicise/mcp-setup): exclude authorization bearer lines from anglicise checks + americanise auth header + normalise indent"/>
+    <circle cx="50" cy="6580" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="b7e9ca9: fix(mcp-setup): move firecrawl npm cache to /tmp"/>
+    <circle cx="300" cy="6580" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="98c6853: fix(mcp-setup): avoid npm cache permission errors"/>
+    <circle cx="550" cy="6580" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="abd2432: fix(containerise): restore GPG mount permissions in postCreateCommand"/>
+    <circle cx="800" cy="6580" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="69a31f0: fix(mcp-setup): ensure Firecrawl MCP PATH is resolvable"/>
+    <circle cx="1050" cy="6580" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="17ed1be: fix(containerise): remove ~/.gnupg destruction from containerise postCreateCommand"/>
+    <circle cx="50" cy="6700" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="54f4205: fix(mcp): use dynamic NVM sourcing for firecrawl instead of hardcoded path"/>
+    <circle cx="300" cy="6700" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="47e7fc4: fix(containerise): remove duplicate git config from postCreateCommand"/>
+    <circle cx="550" cy="6700" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="c867c39: fix(print): use echo -e instead of printf for header middle lines"/>
+    <circle cx="800" cy="6700" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="ba52e93: feat(workflows): add GPG signing to all commit-creating workflows"/>
+    <circle cx="1050" cy="6700" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="6f7604d: fix(gpg): provide passphrase when exporting private key"/>
+    <circle cx="50" cy="6820" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="00705b7: debug(gpg): add verbose error output for key export failures"/>
+    <circle cx="300" cy="6820" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="987b40a: chore: change GPG key expiration to 1 day for testing"/>
+    <circle cx="550" cy="6820" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="34de103: fix(gpg): extract correct key fingerprint from generation output"/>
+    <circle cx="800" cy="6820" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="2f19a18: fix(gpg): validate private key export before uploading secret"/>
+    <circle cx="1050" cy="6820" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="bda3629: refactor(workflows): replace third-party actions with native implementations"/>
+    <circle cx="50" cy="6940" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="29aa928: fix: correct GPG secret check in release workflow"/>
+    <circle cx="300" cy="6940" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="ecbfa81: fix: detect container environment and recommend running on host"/>
+    <circle cx="550" cy="6940" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="9e01bc1: fix: improve GPG key generation error handling and diagnostics"/>
+    <circle cx="800" cy="6940" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="36eba25: feat: automate GPG bot key generation for GitHub Actions"/>
+    <circle cx="1050" cy="6940" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="85477c3: feat: add GPG tag signing support to release workflows"/>
+    <circle cx="50" cy="7060" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="c64b71c: fix: skip uncommitted changes check in cleanup-only mode"/>
+    <circle cx="300" cy="7060" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="2340cad: feat: include anglicise branches in cleanup operations"/>
+    <circle cx="550" cy="7060" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="0d7756e: fix: handle no changes gracefully in anglicise workflow"/>
+    <circle cx="800" cy="7060" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="e7d1a32: security: require automerge label AND trusted author"/>
+    <circle cx="1050" cy="7060" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="8bbae3e: chore(automerge): missing sheep"/>
+    <circle cx="50" cy="7180" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="594d353: Merge pull request #23 from XAOSTECH/anglicise/20260208-211857"/>
+    <circle cx="300" cy="7180" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="e9e0b63: chore: convert American spellings to British English"/>
+    <circle cx="550" cy="7180" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="4e61ef5: feat(nest): add . flag to include root directory in container scan"/>
+    <circle cx="800" cy="7180" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="95373e8: fix(gpg): aggressive .gnupg recreation in postCreateCommand"/>
+    <circle cx="1050" cy="7180" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="ead8621: fix(gpg): restore .gnupg pre-creation in base image footer"/>
+    <circle cx="50" cy="7300" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="5c272cd: chore(release): angl. + reorder lib copy"/>
+    <circle cx="300" cy="7300" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="fc46587: docs: release v0.5.0 changelog"/>
+    <circle cx="550" cy="7300" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="5ac931b: docs: release v0.5.0 changelog"/>
+    <circle cx="800" cy="7300" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="91c292e: fix(locale): use full LOCALE in sed pattern, not %.*"/>
+    <circle cx="1050" cy="7300" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="b20031b: fix(locale): use full LOCALE in sed pattern, not %.*"/>
+    <circle cx="50" cy="7420" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="a8f280c: fix(gpg): ensure .gnupg is writable in postCreateCommand"/>
+    <circle cx="300" cy="7420" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="1b8a563: fix(gpg): ensure .gnupg is writable in postCreateCommand"/>
+    <circle cx="550" cy="7420" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="1e74c4e: fix(container): dynamic locale/TZ, GPG socket dir, npx PATH for MCP"/>
+    <circle cx="800" cy="7420" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="ad76b17: fix(container): dynamic locale/TZ, GPG socket dir, npx PATH for MCP"/>
+    <circle cx="1050" cy="7420" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="e3e2a20: fix(container): escape ampersands in git config sed substitution"/>
+    <circle cx="50" cy="7540" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="075e867: feat(web-dev): install Wrangler globally for Cloudflare Workers development"/>
+    <circle cx="300" cy="7540" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="c35b55b: feat(containerise): complete modularization of Dockerfile generation"/>
+    <circle cx="550" cy="7540" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="b4cdc83: feat(dc-fix): auto-push after signing (atomic commit + push)"/>
+    <circle cx="800" cy="7540" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="1dbcaee: Merge pull request #22 from XAOSTECH/refactor/modularise-containerise"/>
+    <circle cx="1050" cy="7540" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="ffbc01a: docs: complete example.container.yaml with missing config fields"/>
+    <circle cx="50" cy="7660" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="de880b3: feat: add _example and _minimal config variant generation"/>
+    <circle cx="300" cy="7660" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="edbebb0: refactor: rewrite containerise.sh to source extracted modules"/>
+    <circle cx="550" cy="7660" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="3f13951: feat: add NVM/Node.js to common.Dockerfile for MCP server support"/>
+    <circle cx="800" cy="7660" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="7fe9e67: refactor: extract reusable container functions to lib/container.sh"/>
+    <circle cx="1050" cy="7660" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="355666a: refactor: extract Dockerfile templates to config/containers/"/>
+    <circle cx="50" cy="7780" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="bb52a82: refactor: extract category metadata to config/containers/categories.yaml"/>
+    <circle cx="300" cy="7780" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="75c12e2: chore: anglicise colors.sh -> colours.sh"/>
+    <circle cx="550" cy="7780" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="57057bb: fix(containerise): add streaming GPU support and fix shell syntax errors"/>
+    <circle cx="800" cy="7780" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="f910a6e: chore: apply small fixes to README"/>
+    <circle cx="1050" cy="7780" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="24369cc: refactor(containerise): extract git configuration into reusable functions"/>
+    <circle cx="50" cy="7900" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="541d97c: refactor(containerise): move dev-control to system-wide /opt and consolidate setup"/>
+    <circle cx="300" cy="7900" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="ada3e4f: fix(containerise): refactor conda env setup and improve permissions"/>
+    <circle cx="550" cy="7900" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="6dfa6c0: refactor(containerise): replace pip with Miniforge conda for data-science"/>
+    <circle cx="800" cy="7900" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="0d555a7: feat(containerise): expand data-science, add category extensions and nest mode"/>
+    <circle cx="1050" cy="7900" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="f9a2158: fix(containerise): improve remote user detection and vscode-server permissions"/>
+    <circle cx="50" cy="8020" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="da8df03: security(workflows): add explicit permissions declarations to all workflows"/>
+    <circle cx="300" cy="8020" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="afd279f: Merge pull request #21 from XAOSTECH/anglicise/20260204-212606"/>
+    <circle cx="550" cy="8020" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="1aa2c12: chore: convert American spellings to British English"/>
+    <circle cx="800" cy="8020" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="931997c: chore: update CHANGELOG for v0.4.0"/>
+    <circle cx="1050" cy="8020" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="5416fa7: feat(containerise): add multi-category base image support with streaming/CUDA features"/>
+    <circle cx="50" cy="8140" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="bfadb84: chore: update CHANGELOG for v0.3.0"/>
+    <circle cx="300" cy="8140" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="d8293e1: fix: improve license detection for multi-line patterns and debian packaging dependencies"/>
+    <circle cx="550" cy="8140" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="0de1259: chore(README) Significantly improved"/>
+    <circle cx="800" cy="8140" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="260ac11: fix(anglicise): succeed instead of fail when no changes made"/>
+    <circle cx="1050" cy="8140" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="c79e3cb: refactor(release): separate template from dev-control-specific workflow"/>
+    <circle cx="50" cy="8260" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="18b3b77: Merge pull request #20 from xaoscience/anglicise/20260124-212407"/>
+    <circle cx="300" cy="8260" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="f2cf574: chore: convert American spellings to British English"/>
+    <circle cx="550" cy="8260" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="7ffc090: fix(anglicise): expand exclusions for CLI flags and code patterns"/>
+    <circle cx="800" cy="8260" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="be40e72: fix(tui): use American spelling 'center' for gum --align"/>
+    <circle cx="1050" cy="8260" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="c43a9a6: fix(release): fix YAML syntax in heredoc for lib INSTALL.md"/>
+    <circle cx="50" cy="8380" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="43a58f2: ci: sync simplified release workflow"/>
+    <circle cx="300" cy="8380" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="f88c176: refactor(release): simplify lib tarball as artifact on main release"/>
+    <circle cx="550" cy="8380" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="93b14fc: ci: sync release workflow with lib release support"/>
+    <circle cx="800" cy="8380" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="5c7e438: feat(release): add dev-control-lib standalone release package"/>
+    <circle cx="1050" cy="8380" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="4e6e31b: feat(git/rename): add branch renaming tool with local repo support"/>
+    <circle cx="50" cy="8500" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="0de1cd6: feat(containerise/create-repo): set default branch to main"/>
+    <circle cx="300" cy="8500" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="c9ddc67: Merge pull request #14 from xaoscience/anglicise/20260123-011743"/>
+    <circle cx="550" cy="8500" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="b2c57d0: chore: convert American spellings to British English"/>
+    <circle cx="800" cy="8500" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="0711b19: fix(anglicise): exclude HTML attributes and CLI flags"/>
+    <circle cx="1050" cy="8500" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="bcb985f: chore: convert American spellings to British English"/>
+    <circle cx="50" cy="8620" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="38a17f7: fix(anglicise): skip any line containing filename with extension"/>
+    <circle cx="300" cy="8620" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="360530f: fix(anglicise): preserve case and skip file references"/>
+    <circle cx="550" cy="8620" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="9c938f1: chore: convert American spellings to British English"/>
+    <circle cx="800" cy="8620" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="c7da6f4: chore: convert American spellings to British English"/>
+    <circle cx="1050" cy="8620" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="4561bb1: feat: add verbose output and PR auto-creation to anglicise workflow"/>
+    <circle cx="50" cy="8740" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="5853215: fix: exclude workflows-templates from anglicise checks"/>
+    <circle cx="300" cy="8740" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="f01bb85: feat: add British English spelling check workflow"/>
+    <circle cx="550" cy="8740" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="d36f6bb: docs(lib/git): document new history rewriting modules"/>
+    <circle cx="800" cy="8740" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="6e471cd: Merge pull request #11 from xaoscience/refactor/extract-fix-history-modules"/>
+    <circle cx="1050" cy="8740" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="52c8ee7: refactor(lib): extract rewrite utilities to lib/git/rewrite.sh"/>
+    <circle cx="50" cy="8860" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="6954e13: refactor(lib): extract harness utilities to lib/git/harness.sh"/>
+    <circle cx="300" cy="8860" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="562f4fb: refactor(lib): extract topology utilities to lib/git/topology.sh"/>
+    <circle cx="550" cy="8860" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="a64a700: refactor(lib): extract date utilities to lib/git/dates.sh"/>
+    <circle cx="800" cy="8860" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="c0e5bd3: Merge pull request #10 from xaoscience/refactor/extract-lib-helpers"/>
+    <circle cx="1050" cy="8860" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="0b62655: docs(lib): add README for lib/git module structure"/>
+    <circle cx="50" cy="8980" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="a4e5658: refactor(lib): add git backup utilities to lib/git/backup.sh"/>
+    <circle cx="300" cy="8980" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="89909d0: refactor(lib): extract worktree utilities to lib/git/worktree.sh"/>
+    <circle cx="550" cy="8980" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="78fe5db: refactor(lib): reorganize git libs into lib/git/ directory"/>
+    <circle cx="800" cy="8980" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="7c91080: fix(containerise): add node bin to PATH for VS Code MCP discovery"/>
+    <circle cx="1050" cy="8980" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="04b32bb: refactor(module-nesting): use shared git-utils.sh library"/>
+    <circle cx="50" cy="9100" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="aa77cd4: refactor(mcp-setup): remove redundant require_gh_cli()"/>
+    <circle cx="300" cy="9100" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="1079bd6: refactor(lib): extract git cleanup utilities to shared library"/>
+    <circle cx="550" cy="9100" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="ebbffeb: feat(fix-history): add merged branch cleanup with --cleanup-merged flag"/>
+    <circle cx="800" cy="9100" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="cb885bf: feat(ci): add release validation safeguards to workflow"/>
+    <circle cx="1050" cy="9100" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="963b5b1: feat(ci): add automated release workflow"/>
+    <circle cx="50" cy="9220" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="9d9f636: docs: add packaging section with TUI theming documentation"/>
+    <circle cx="300" cy="9220" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="0f52e9d: docs(config): add example packaging configuration"/>
+    <circle cx="550" cy="9220" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="11423a5: fix(tui): prevent set -e exit on gum check, update gum to v0.17.0"/>
+    <circle cx="800" cy="9220" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="720eb29: feat(tui): add Gum-based TUI library with theming support"/>
+    <circle cx="1050" cy="9220" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="c26402d: feat(tui): add theme configuration file with 3 presets"/>
+    <circle cx="50" cy="9340" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="e31cc03: feat(packaging): integrate Gum TUI theming into all package formats"/>
+    <circle cx="300" cy="9340" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="cda2559: Merge pull request #9 from xaoscience/feat/gum-tui-themes"/>
+    <circle cx="550" cy="9340" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="1342156: feat(packaging): integrate Gum TUI theming into all package formats"/>
+    <circle cx="800" cy="9340" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="61868f7: feat(tui): add theme configuration file with 3 presets"/>
+    <circle cx="1050" cy="9340" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="f09a191: feat(tui): add Gum-based TUI library with theming support"/>
+    <circle cx="50" cy="9460" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="22a7833: fix(fix-history): improve cleanup to separate local/remote refs"/>
+    <circle cx="300" cy="9460" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="d9d7b56: feat(containerise): add editor (nano) installation and default editor config + consolidate redundant baked in git config"/>
+    <circle cx="550" cy="9460" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="e9ad159: feat(fix-history): add timed merge pr commits to preserve order"/>
+    <circle cx="800" cy="9460" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="97b2c34: feat: add packaging.sh for multi-platform package automation"/>
+    <circle cx="1050" cy="9460" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="562f812: feat: integrate packaging.sh with dev-control menu and aliases"/>
+    <circle cx="50" cy="9580" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="2285606: refactor: simplify packaging alias to dc-pkg only"/>
+    <circle cx="300" cy="9580" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="edae3de: Merge pull request #8 from xaoscience/feat/packaging-automation"/>
+    <circle cx="550" cy="9580" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="d5dc639: feat: add git-control.sh wrapper for unified git services"/>
+    <circle cx="800" cy="9580" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="ff0bacc: Merge pull request #7 from xaoscience/refactor/git-control-wrapper"/>
+    <circle cx="1050" cy="9580" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="5ef6eda: feat: add packaging.sh for multi-platform package automation"/>
+    <circle cx="50" cy="9700" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="6704bbd: feat: integrate packaging.sh with dev-control menu and aliases"/>
+    <circle cx="300" cy="9700" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="2cbd6ba: refactor: simplify packaging alias to dc-pkg only"/>
+    <circle cx="550" cy="9700" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="6accb0a: Merge pull request #8 from xaoscience/feat/packaging-automation"/>
+    <circle cx="800" cy="9700" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="10240b6: feat: add git-control.sh wrapper for unified git services"/>
+    <circle cx="1050" cy="9700" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="fe6be08: Merge pull request #7 from xaoscience/refactor/git-control-wrapper"/>
+    <circle cx="50" cy="9820" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="da0ff68: Merge pull request #8 from xaoscience/feat/packaging-automation"/>
+    <circle cx="300" cy="9820" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="9c4a71c: refactor: simplify packaging alias to dc-pkg only"/>
+    <circle cx="550" cy="9820" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="239e9d8: feat: integrate packaging.sh with dev-control menu and aliases"/>
+    <circle cx="800" cy="9820" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="d084b2c: feat: add packaging.sh for multi-platform package automation"/>
+    <circle cx="1050" cy="9820" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="24ccee8: Merge pull request #7 from xaoscience/refactor/git-control-wrapper"/>
+    <circle cx="50" cy="9940" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="1bd8fe3: feat: add git-control.sh wrapper for unified git services"/>
+    <circle cx="300" cy="9940" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="20cd9b6: feat/fix(gc-mcp): include absolute node path to mcp setup"/>
+    <circle cx="550" cy="9940" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="2411697: fix(gc-mcp): redirect print_info to stderr so it doesn't pollute the return value"/>
+    <circle cx="800" cy="9940" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="38b642c: feat(gc-mcp): detect and use absolute npx path"/>
+    <circle cx="1050" cy="9940" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="d3fc6ec: chore(gc-create): add back owner selection and owner as slug"/>
+    <circle cx="50" cy="10060" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="037cfae: chore(dc-init): add lost description saving + url recognition and addition"/>
+    <circle cx="300" cy="10060" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="667f41c: rename: manual batch"/>
+    <circle cx="550" cy="10060" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="762071e: Rename core files: git-control → dev-control (batch 1: root files)"/>
+    <circle cx="800" cy="10060" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="24353e0: Rename git-control → dev-control (batch 2: install.sh, CHANGELOG.md)"/>
+    <circle cx="1050" cy="10060" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="eafcfc9: Rename git-control → dev-control (batch 3: config files)"/>
+    <circle cx="50" cy="10180" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="a944cd9: feat(gc-contain): add node installation and baked in config/updates"/>
+    <circle cx="300" cy="10180" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="1321782: Merge pull request #6 from xaoscience/refactor/rename-to-dev-control"/>
+    <circle cx="550" cy="10180" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="7a18f70: fix(mcp-setup): restore PAT creation and fix workspace config detection"/>
+    <circle cx="800" cy="10180" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="fe9455a: chore(gc-contain): add configurable git user.email + fix gc slug and tag"/>
+    <circle cx="1050" cy="10180" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="5061517: Rename git-control → dev-control (batch 3: config files)"/>
+    <circle cx="50" cy="10300" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="57e31bf: Rename git-control → dev-control (batch 2: install.sh, CHANGELOG.md)"/>
+    <circle cx="300" cy="10300" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="67caa7a: Rename core files: git-control → dev-control (batch 1: root files)"/>
+    <circle cx="550" cy="10300" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="25bff92: feat(gc-contain): add node installation and baked in config/updates"/>
+    <circle cx="800" cy="10300" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="dbb5ee7: chore(gc-contain): add configurable git user.email + fix gc slug and tag"/>
+    <circle cx="1050" cy="10300" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="868a675: fix(mcp-setup): restore PAT creation and fix workspace config detection"/>
+    <circle cx="50" cy="10420" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="f8e2b29: fix(mcp-setup): use workspace .vscode and secure token inputs"/>
+    <circle cx="300" cy="10420" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="72bc2d0: feat(containerise): complete rewrite with interactive config support"/>
+    <circle cx="550" cy="10420" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="9454c02: chore(tests): remove copied .git folders from tests"/>
+    <circle cx="800" cy="10420" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="6913f64: chore(gc-modules): removed last hardcoded print header"/>
+    <circle cx="1050" cy="10420" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="9a90789: chore(tests): import and use shared libs + gitignore tests"/>
+    <circle cx="50" cy="10540" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="a7aaa0b: chore(gc-modules): optimise exclude dirs + enable dotglob"/>
+    <circle cx="300" cy="10540" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="0be23a9: fix: Resolve shellcheck and test failures from PR #5"/>
+    <circle cx="550" cy="10540" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="b1e0ae0: quick fixes"/>
+    <circle cx="800" cy="10540" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="8bbbb6a: Merge pull request #5 from xaoscience/feat/architecture-enhancements"/>
+    <circle cx="1050" cy="10540" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="d3ddcf2: feat: Add version management and changelog"/>
+    <circle cx="50" cy="10660" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="ef948d4: feat: Add testing framework with bats"/>
+    <circle cx="300" cy="10660" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="c1d8377: feat: Add single-file installer for easy distribution"/>
+    <circle cx="550" cy="10660" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="92d214c: feat: Add output format support (--json, --quiet, --verbose)"/>
+    <circle cx="800" cy="10660" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="7045d9c: feat: Add interactive TUI mode with gum/fzf support"/>
+    <circle cx="1050" cy="10660" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="aec95fd: feat: Add plugin architecture with auto-discovery"/>
+    <circle cx="50" cy="10780" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="7d396b3: feat: Add hierarchical configuration system"/>
+    <circle cx="300" cy="10780" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="5d0369a: feat: Add modular CLI framework with gc entry point"/>
+    <circle cx="550" cy="10780" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="161bb95: docs(lib): update README with comprehensive function reference"/>
+    <circle cx="800" cy="10780" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="18423a3: refactor(fix-history): use shared libraries extensively"/>
+    <circle cx="1050" cy="10780" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="42abb32: refactor(module-nesting): use shared libraries extensively"/>
+    <circle cx="50" cy="10900" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="3e65ba2: refactor(template-loading): use shared libraries extensively"/>
+    <circle cx="300" cy="10900" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="c233744: Merge pull request #3 from xaoscience/refactor/comprehensive-shared-lib-usage"/>
+    <circle cx="550" cy="10900" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="a7c98ad: docs: Add comprehensive README for shared library usage"/>
+    <circle cx="800" cy="10900" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="5490a38: refactor: Update alias-loading.sh to use all shared helper functions"/>
+    <circle cx="1050" cy="10900" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="0adace2: refactor: Update git-control.sh, containerise.sh, mcp-setup.sh with shared helpers"/>
+    <circle cx="50" cy="11020" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="e64d467: refactor: Update licenses.sh, create-pr.sh, create-repo.sh to use shared helpers"/>
+    <circle cx="300" cy="11020" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="6f4fb65: refactor: Expand shared libraries with comprehensive helper functions"/>
+    <circle cx="550" cy="11020" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="593dc70: Merge pull request #2 from xaoscience/refactor/shared-lib-and-license-detection"/>
+    <circle cx="800" cy="11020" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="f628518: refactor: update alias-loading to use shared libs and add gc-licenses"/>
+    <circle cx="1050" cy="11020" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="cb12e7e: feat: add gc-licenses command for license auditing"/>
+    <circle cx="50" cy="11140" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="f76381d: refactor: add comprehensive license detection library"/>
+    <circle cx="300" cy="11140" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="641320c: refactor: add gc-init metadata configuration library"/>
+    <circle cx="550" cy="11140" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="6e03d6c: refactor: add shared print helper functions"/>
+    <circle cx="800" cy="11140" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="df5331f: refactor: add shared color definitions library"/>
+    <circle cx="1050" cy="11140" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="1b93696: refactor: add git utilities library"/>
+    <circle cx="50" cy="11260" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="71bfe53: chore(init): add explicit permissions"/>
+    <circle cx="300" cy="11260" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="6d5cc82: feat(automerge): renamed + included Cloudflare and Github pages bots + tightened matches"/>
+    <circle cx="550" cy="11260" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="38e05bf: fix(module-nesting) symlink transformation"/>
+    <circle cx="800" cy="11260" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="6a8b530: fix(module-nesting): logs, ephemeral folders + expand file handling logic"/>
+    <circle cx="1050" cy="11260" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="a97bcc7: feat(module-nesting): add .bak folder handling with generic functions"/>
+    <circle cx="50" cy="11380" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="1bf8044: feat(batch processing): add template-loading, gc-create batch flag + fix(init): detect local .git folder"/>
+    <circle cx="300" cy="11380" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="2913a60: feat(git-init/create): support explicit repo owner + save owner in gc-init metadata"/>
+    <circle cx="550" cy="11380" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="3f33823: template-loading: prefill GH metadata, add docs sub-options and badge insertion"/>
+    <circle cx="800" cy="11380" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="af1a67a: fix(module-nesting): remove trailing quote in output and normalise .gitmodules messages"/>
+    <circle cx="1050" cy="11380" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="fe1aab6: feat(temp): add copy/prune/aggressive/test flows for nested temp folders"/>
+    <circle cx="50" cy="11500" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="148a795: feat(alias-loading): add git push, git push force and git commit amend with original or restored author date + adapt alias docs"/>
+    <circle cx="300" cy="11500" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="96220ff: feat: add cleanup flags (--no-cleanup, --cleanup-only) and cleanup_tmp_and_backup_refs function"/>
+    <circle cx="550" cy="11500" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="c6265f1: fix: preserve complete dates list for reconstruction before rebase modifies it"/>
+    <circle cx="800" cy="11500" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="ab49912: fix(history): skip leading signed commits; re-sign unsigned range; preserve dates & topology; add AUTO_FIX_REBASE auto-push"/>
+    <circle cx="1050" cy="11500" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="641d16f: fix: Add missing else block in sign_mode to prevent double rebase that linearizes merges"/>
+    <circle cx="50" cy="11620" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="c057eb5: (chore) modularised fix-history"/>
+    <circle cx="300" cy="11620" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="715aec2: (fix)module-nesting: improve .git discovery, add DEBUG output and process exit fix"/>
+    <circle cx="550" cy="11620" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="8e763ef: temp"/>
+    <circle cx="800" cy="11620" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="0959fb6: fix(fix-history): robust date-restore & deterministic reconstruction; add apply-dates helper; support RANGE HEAD= syntax"/>
+    <circle cx="1050" cy="11620" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="9915c40: fix(fix-history): robust date-restore + deterministic reconstruction fallback; add apply-dates helper"/>
+    <circle cx="50" cy="11740" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="d7cb72f: fix: prompt to push after --drop and improve date restoration"/>
+    <circle cx="300" cy="11740" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="f76e656: feat: add restore wtih dry-run, rebase automation and date preservation"/>
+    <circle cx="550" cy="11740" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="8bd979a: fix(fix-history): auto-confirm sign operation in harness mode (non-interactive tests)"/>
+    <circle cx="800" cy="11740" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="b6931ba: feat(fix-history): add integrated harness (--harness-drop/--harness-sign); harness honors global --dry-run; write reports to /tmp/history-harness-reports"/>
+    <circle cx="1050" cy="11740" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="64eb546: feat(fix-history): add --sign and --drop modes; fix interactive input handling and date capture for ranges; add dry-run support"/>
+    <circle cx="50" cy="11860" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="9181900: chore: improve gc-init/gc-create flow, template loader, and editing UX"/>
+    <circle cx="300" cy="11860" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="3ed5249: feat(mcp,devcontainer): refactor MCP server setup and add containerisation tooling"/>
+    <circle cx="550" cy="11860" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="7e786ae: feat: add GitHub MCP setup script for VS Code"/>
+    <circle cx="800" cy="11860" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="2a98e96: feat: add fix-history and git-control scripts with interactive menus"/>
+    <circle cx="1050" cy="11860" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="cd5797c: feat/ci: add advanced Bash linting with auto-fix suggestions"/>
+    <circle cx="50" cy="11980" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="e0af88c: feat/ci: add template and live Bash linting workflow"/>
+    <circle cx="300" cy="11980" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="c2ff6a3: feat: add create-pr script and adapt docs"/>
+    <circle cx="550" cy="11980" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="acd1b04: Initial commit"/>
+  </g>
+  
+  <!-- Legend -->
+  <g id="legend" transform="translate(20, 20)">
+    <rect width="200" height="80" fill="white" stroke="#cbd5e1" stroke-width="1" rx="4"/>
+    <circle cx="20" cy="25" r="5" fill="url(#leafGradient)" stroke="#16a34a"/>
+    <text x="32" y="30" class="branch-label" font-size="12">Regular Commit</text>
+    
+    <circle cx="20" cy="55" r="6" fill="url(#mergeGradient)" stroke="#7c3aed"/>
+    <text x="32" y="60" class="branch-label" font-size="12">Merge Commit</text>
+  </g>
+  
+  <!-- Repository info -->
+  <g id="info" transform="translate(20, 1416)">
+    <text x="0" y="0" class="branch-label" font-size="12" fill="#666">
+      Repository: dev-control
+    </text>
+    <text x="0" y="20" class="branch-label" font-size="10" fill="#999">
+      Generated: 2026-02-22 05:19:14 UTC
+    </text>
+  </g>
+</svg>
