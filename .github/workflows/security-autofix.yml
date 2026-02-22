@@ -74,136 +74,17 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.app_token.outputs.token }}
         run: |
-          FIXES_APPLIED=0
-          MODIFIED_FILES=""
+          chmod +x scripts/security-autofix.sh
+          scripts/security-autofix.sh "${{ github.repository }}" "$GH_TOKEN" /tmp/alerts.json > /tmp/fixes_output.txt 2>&1
+          cat /tmp/fixes_output.txt
           
-          # Read alerts
-          ALERTS=$(cat /tmp/alerts.json)
-          
-          # Pattern 1: Fix code injection - Extract GitHub expressions to env vars
-          echo "🔧 Fixing code injection vulnerabilities..."
-          
-          FIXES_APPLIED=0
-          while IFS= read -r alert_b64; do
-            # Decode the base64-encoded alert
-            ALERT=$(echo "$alert_b64" | base64 --decode)
-            FILE=$(echo "$ALERT" | jq -r '.file // empty')
-            MSG=$(echo "$ALERT" | jq -r '.msg // empty')
-            
-            [[ -z "$FILE" ]] || [[ ! -f "$FILE" ]] && continue
-            [[ -z "$MSG" ]] && continue
-            
-            # Extract GitHub action expression from message
-            if [[ "$MSG" =~ \$\{\{\s*([^}]+)\s*\}\} ]]; then
-              VAR_EXPR="${BASH_REMATCH[1]}"
-              # Convert to safe shell variable name
-              VAR_NAME="FIX_$(echo "$VAR_EXPR" | sed 's/[^a-zA-Z0-9_]/_/g' | tr '[:lower:]' '[:upper:]')"
-              VAR_NAME="${VAR_NAME:0:32}"  # limit to 32 chars
-              
-              echo "  📝 Processing $FILE: $VAR_EXPR → $VAR_NAME"
-              
-              # Step 1: Replace all ${{ VAR_EXPR }} with $VAR_NAME in the file
-              # Escape special regex characters in VAR_EXPR
-              ESCAPED_EXPR=$(printf '%s\n' "$VAR_EXPR" | sed 's/[&/\]/\\&/g' | sed 's/\[\|\]\|\.\|\*\|\^\|\$/\\&/g')
-              sed -i "s/\${{ *$ESCAPED_EXPR *}}/\$$VAR_NAME/g" "$FILE"
-              
-              # Step 2: Find where to add the env: section
-              # Look for the line with our replacement, then find the next "run:" 
-              LINENUM=$(grep -n "\$$VAR_NAME" "$FILE" | head -1 | cut -d: -f1)
-              if [[ -n "$LINENUM" ]]; then
-                # Find next run: line after LINENUM
-                RUNLINE=$(awk -v start="$LINENUM" 'NR > start && /^        run:/ {print NR; exit}' "$FILE")
-                
-                if [[ -n "$RUNLINE" ]]; then
-                  # Insert env: section before run: using a temp file approach
-                  {
-                    head -n $((RUNLINE - 1)) "$FILE"
-                    echo "        env:"
-                    echo "          $VAR_NAME: \${{ $VAR_EXPR }}"
-                    tail -n +$RUNLINE "$FILE"
-                  } > "$FILE.tmp" && mv "$FILE.tmp" "$FILE"
-                fi
-              fi
-              
-              FIXES_APPLIED=$((FIXES_APPLIED + 1))
-              echo "  ✅ Extracted $VAR_EXPR to $VAR_NAME"
-            fi
-          done < <(echo "$ALERTS" | jq -r '.[] | select(.rule == "actions/code-injection/medium") | @base64')
-          
-          # Collect modified files from git
-          MODIFIED_FILES=$(git diff --name-only 2>/dev/null || echo "")
-          
-          # Pattern 2: Fix unpinned actions
-          echo "🔧 Fixing unpinned actions..."
-          for alert in $(echo "$ALERTS" | jq -r '.[] | select(.rule == "actions/unpinned-tag") | @base64'); do
-            _jq() {
-              echo "$alert" | base64 --decode | jq -r "$1"
-            }
-            
-            FILE=$(_jq '.file')
-            
-            if [[ ! -f "$FILE" ]]; then
-              continue
-            fi
-            
-            echo "  📝 Processing $FILE"
-            
-            # Find unpinned actions (uses: owner/repo@branch)
-            # Resolve to SHA via GitHub API and replace
-            while IFS= read -r line_content; do
-              if [[ "$line_content" =~ uses:\ ([^@]+)@(master|main|v[0-9]+)($|\ ) ]]; then
-                ACTION="${BASH_REMATCH[1]}"
-                REF="${BASH_REMATCH[2]}"
-                
-                # Skip local actions (start with ./)
-                if [[ "$ACTION" == ./* ]]; then
-                  continue
-                fi
-                
-                echo "  🔍 Resolving $ACTION@$REF to SHA..."
-                
-                # Get SHA for ref via GitHub API
-                if [[ "$ACTION" == */* ]]; then
-                  OWNER=$(echo "$ACTION" | cut -d/ -f1)
-                  REPO=$(echo "$ACTION" | cut -d/ -f2-)
-                  
-                  SHA=$(gh api "repos/$OWNER/$REPO/commits/$REF" --jq '.sha' 2>/dev/null | head -c 40)
-                  
-                  if [[ -n "$SHA" && "$SHA" =~ ^[0-9a-f]{40}$ ]]; then
-                    # Replace @ref with @SHA in file
-                    sed -i "s|uses: $ACTION@$REF|uses: $ACTION@$SHA|g" "$FILE"
-                    FIXES_APPLIED=$((FIXES_APPLIED + 1))
-                    MODIFIED_FILES="$MODIFIED_FILES $FILE"
-                    echo "  ✅ Pinned $ACTION@$REF → @${SHA:0:7}"
-                  else
-                    echo "  ⚠️  Could not resolve SHA for $ACTION@$REF"
-                  fi
-                fi
-              fi
-            done < "$FILE"
-          done
-          
-          # Pattern 3: Fix unquoted $GITHUB_OUTPUT (already done in previous commits, but check)
-          echo "🔧 Checking for unquoted variables..."
-          for workflow in .github/workflows/*.yml; do
-            if grep -qE '>>\s+\$[A-Z_]+' "$workflow"; then
-              # Quote unquoted redirections
-              sed -i -E 's/>> \$([A-Z_]+)/>> "\$\1"/g' "$workflow"
-              if [[ "$MODIFIED_FILES" != *"$workflow"* ]]; then
-                MODIFIED_FILES="$MODIFIED_FILES $workflow"
-              fi
-              FIXES_APPLIED=$((FIXES_APPLIED + 1))
-              echo "  ✅ Quoted variables in $workflow"
-            fi
-          done
-          
-          echo "fixes_applied=$FIXES_APPLIED" >> "$GITHUB_OUTPUT"
+          # Export modified files
+          MODIFIED=$(git diff --name-only || true)
           echo "modified_files<<EOF" >> "$GITHUB_OUTPUT"
-          echo "$MODIFIED_FILES" | xargs -n1 | sort -u >> "$GITHUB_OUTPUT"
+          echo "$MODIFIED" >> "$GITHUB_OUTPUT"
           echo "EOF" >> "$GITHUB_OUTPUT"
           
-          echo ""
-          echo "📊 Summary: Applied $FIXES_APPLIED fixes across $(echo "$MODIFIED_FILES" | xargs -n1 | sort -u | wc -l) files"
+          echo "fixes_applied=$(git diff --name-only | wc -l)" >> "$GITHUB_OUTPUT"
 
       - name: Create security fix PR
         if: steps.fixes.outputs.fixes_applied > 0 || steps.fixes.outputs.code_injection_found == 'true'
