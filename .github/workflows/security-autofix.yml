@@ -166,7 +166,7 @@ jobs:
                     for i in "${!VARNAMES[@]}"; do
                       var_name="${VARNAMES[$i]}"
                       var_expr="${EXPRS[$i]}"
-                      printf "          %s: \${{ %s }}\n" "$var_name" "$var_expr"
+                      echo "          $var_name: \$"'{{'" $var_expr }}"
                     done
                     tail -n +$runline "$file"
                   } > "$file.tmp" && mv "$file.tmp" "$file"
