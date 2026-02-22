@@ -48,6 +48,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - remove broken Python code from security-autofix workflow
 
 ### Changed
+- refactor: replace ludeeus/action-shellcheck with native shellcheck
+- chore: update CHANGELOG for v0.5.6
 - refactor: replace peter-evans/create-pull-request with gh CLI
 - security: fix untrusted-checkout vulnerabilities in automerge workflow
 - Merge pull request #91 from XAOSTECH:security/autofix-1771727196
