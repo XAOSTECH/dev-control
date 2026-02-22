@@ -44,7 +44,6 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       
       - name: Shellcheck
-        uses: ludeeus/action-shellcheck@0a0fc8d6ded45b42e41fb4bae3e1ec9f4f1a2cb0
-        with:
-          scandir: './scripts'
-          severity: warning
+        run: |
+          # Use shellcheck with our custom .shellcheckrc config
+          shellcheck --severity=warning scripts/**/*.sh
