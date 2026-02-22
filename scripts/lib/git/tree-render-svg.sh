@@ -93,7 +93,7 @@ SVGHEADER
   </g>
   
   <!-- Repository info -->
-  <g id="info" transform="translate(20, \($height - 40\))">
+  <g id="info" transform="translate(20, $((height - 40)))">
     <text x="0" y="0" class="branch-label" font-size="12" fill="#666">
       Repository: $(git rev-parse --show-toplevel 2>/dev/null | xargs basename)
     </text>
