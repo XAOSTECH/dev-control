@@ -111,6 +111,7 @@ jobs:
             [[ -z "$alert_json" ]] && continue
             
             file=$(echo "$alert_json" | jq -r '.file // empty')
+            line=$(echo "$alert_json" | jq -r '.line // empty')
             msg=$(echo "$alert_json" | jq -r '.message // empty')
             rule=$(echo "$alert_json" | jq -r '.rule // empty')
             
@@ -122,10 +123,19 @@ jobs:
               var_expr="${BASH_REMATCH[1]}"
               # Trim spaces from captured expression
               var_expr=$(echo "$var_expr" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+              
+              # Check if this expression is in an env: section (SAFE - do not replace)
+              # Read the line where the alert is
+              alert_line=$(sed -n "${line}p" "$file" 2>/dev/null || echo "")
+              if [[ "$alert_line" =~ ^[[:space:]]*[A-Z_]+:[[:space:]]*\$\{\{ ]]; then
+                echo "  ⏭️  Skipping $file:$line (already in env: section): $var_expr"
+                continue
+              fi
+              
               var_name="FIX_$(echo "$var_expr" | sed 's/[^a-zA-Z0-9_]/_/g' | tr '[:lower:]' '[:upper:]')"
               var_name="${var_name:0:32}"
               
-              echo "  📝 Processing $file: $var_expr → $var_name"
+              echo "  📝 Processing $file:$line: $var_expr → $var_name"
               
               # Replace expression with variable in file
               escaped_expr=$(printf '%s\n' "$var_expr" | sed 's/[&/\]/\\&/g' | sed 's/\[\|\]\|\.\|\*\|\^\|\$/\\&/g')
