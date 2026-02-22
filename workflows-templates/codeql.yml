@@ -1,11 +1,6 @@
-name: CodeQL Security Analysis
+name: CodeQL Advanced Security
 
 on:
-  push:
-    branches:
-      - main
-      - master
-      - develop
   pull_request:
     branches:
       - main
@@ -26,97 +21,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Detect repository languages to determine analysis strategy
-  detect-languages:
-    name: Detect Repository Languages
-    runs-on: ubuntu-latest
-    outputs:
-      has-codeql-languages: ${{ steps.detect.outputs.has_codeql }}
-      has-shell: ${{ steps.detect.outputs.has_shell }}
-      languages: ${{ steps.detect.outputs.languages }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Detect languages
-        id: detect
-        run: |
-          # Detect CodeQL-supported languages (JavaScript, Python, Go, Java, C/C++, C#, Ruby, Swift)
-          HAS_CODEQL=false
-          HAS_SHELL=false
-          LANGUAGES=""
-          
-          # Check for JavaScript/TypeScript
-          if find . -name "*.js" -o -name "*.ts" -o -name "*.jsx" -o -name "*.tsx" -o -name "package.json" | grep -q .; then
-            LANGUAGES="${LANGUAGES}javascript,"
-            HAS_CODEQL=true
-          fi
-          
-          # Check for Python
-          if find . -name "*.py" -o -name "requirements.txt" -o -name "setup.py" -o -name "pyproject.toml" | grep -q .; then
-            LANGUAGES="${LANGUAGES}python,"
-            HAS_CODEQL=true
-          fi
-          
-          # Check for Go
-          if find . -name "*.go" -o -name "go.mod" | grep -q .; then
-            LANGUAGES="${LANGUAGES}go,"
-            HAS_CODEQL=true
-          fi
-          
-          # Check for Java/Kotlin
-          if find . -name "*.java" -o -name "*.kt" -o -name "pom.xml" -o -name "build.gradle" | grep -q .; then
-            LANGUAGES="${LANGUAGES}java,"
-            HAS_CODEQL=true
-          fi
-          
-          # Check for C/C++
-          if find . -name "*.c" -o -name "*.cpp" -o -name "*.h" -o -name "*.hpp" -o -name "CMakeLists.txt" | grep -q .; then
-            LANGUAGES="${LANGUAGES}cpp,"
-            HAS_CODEQL=true
-          fi
-          
-          # Check for C#
-          if find . -name "*.cs" -o -name "*.csproj" | grep -q .; then
-            LANGUAGES="${LANGUAGES}csharp,"
-            HAS_CODEQL=true
-          fi
-          
-          # Check for Ruby
-          if find . -name "*.rb" -o -name "Gemfile" | grep -q .; then
-            LANGUAGES="${LANGUAGES}ruby,"
-            HAS_CODEQL=true
-          fi
-          
-          # Check for Swift
-          if find . -name "*.swift" -o -name "Package.swift" | grep -q .; then
-            LANGUAGES="${LANGUAGES}swift,"
-            HAS_CODEQL=true
-          fi
-          
-          # Check for Shell scripts
-          if find . -name "*.sh" -o -name "*.bash" | grep -q .; then
-            HAS_SHELL=true
-          fi
-          
-          # Remove trailing comma
-          LANGUAGES="${LANGUAGES%,}"
-          
-          echo "has_codeql=$HAS_CODEQL" >> $GITHUB_OUTPUT
-          echo "has_shell=$HAS_SHELL" >> $GITHUB_OUTPUT
-          echo "languages=$LANGUAGES" >> $GITHUB_OUTPUT
-          
-          echo "## 🔍 Detected Languages" >> $GITHUB_STEP_SUMMARY
-          [[ "$HAS_CODEQL" == "true" ]] && echo "- CodeQL languages: $LANGUAGES" >> $GITHUB_STEP_SUMMARY
-          [[ "$HAS_SHELL" == "true" ]] && echo "- Shell scripts detected" >> $GITHUB_STEP_SUMMARY
-
-  # Standard CodeQL analysis for supported languages
-  codeql-analyze:
+  analyze:
     name: CodeQL Analysis
-    needs: detect-languages
-    if: needs.detect-languages.outputs.has-codeql-languages == 'true'
     runs-on: ubuntu-latest
     
     steps:
@@ -126,10 +32,10 @@ jobs:
           fetch-depth: 0
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@v4
         with:
-          # Use detected languages
-          languages: ${{ needs.detect-languages.outputs.languages }}
+          # Auto-detect languages present in repo (no hardcoding)
+          # Supports: JavaScript, Python, Go, Java, C/C++, C#, Ruby, Swift
           queries: security-and-quality
           config: |
             paths-ignore:
@@ -139,113 +45,41 @@ jobs:
               - 'vendor/bundle'
               - '.venv'
               - '__pycache__'
-              - 'dist'
-              - 'build'
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@v4
         with:
+          # Upload results after analysis completes
           upload: true
-
-  # Shell script analysis using ShellCheck (CodeQL doesn't support shell)
-  shellcheck-analyze:
-    name: ShellCheck Analysis
-    needs: detect-languages
-    if: needs.detect-languages.outputs.has-shell == 'true'
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Install ShellCheck
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y shellcheck
-
-      - name: Run ShellCheck analysis
-        run: |
-          # Find all shell scripts
-          SHELL_FILES=$(find . -type f \( -name "*.sh" -o -name "*.bash" \) ! -path "./.git/*" ! -path "./node_modules/*" ! -path "./vendor/*")
-          
-          if [[ -z "$SHELL_FILES" ]]; then
-            echo "No shell scripts found"
-            exit 0
-          fi
-          
-          # Use .shellcheckrc if present
-          SHELLCHECK_OPTS=""
-          if [[ -f ".shellcheckrc" ]]; then
-            echo "Using .shellcheckrc configuration"
-          fi
-          
-          # Run shellcheck and capture results
-          RESULTS_FILE="shellcheck-results.txt"
-          echo "$SHELL_FILES" | xargs shellcheck -f gcc > "$RESULTS_FILE" 2>&1 || true
-          
-          # Generate SARIF for GitHub Security tab
-          echo "$SHELL_FILES" | xargs shellcheck -f json > shellcheck.json 2>&1 || true
-          
-          # Display results
-          if [[ -s "$RESULTS_FILE" ]]; then
-            echo "## ⚠️ ShellCheck Findings" >> $GITHUB_STEP_SUMMARY
-            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-            cat "$RESULTS_FILE" >> $GITHUB_STEP_SUMMARY
-            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-            
-            # Count issues
-            ISSUE_COUNT=$(wc -l < "$RESULTS_FILE")
-            echo "Found $ISSUE_COUNT ShellCheck issue(s)"
-            
-            # Non-zero exit for PR blocking (optional)
-            # exit 1
-          else
-            echo "## ✅ ShellCheck Analysis Passed" >> $GITHUB_STEP_SUMMARY
-            echo "No issues found in shell scripts" >> $GITHUB_STEP_SUMMARY
-          fi
-
-      - name: Upload ShellCheck results
-        if: always()
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: shellcheck.json
-        continue-on-error: true
 
   # Security summary and reporting
   security-summary:
     name: Security Report
     runs-on: ubuntu-latest
-    needs: [detect-languages, codeql-analyze, shellcheck-analyze]
+    needs: [analyze]
     if: always()
     
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Generate security summary
         run: |
-          echo "## 🔒 Security Analysis Complete" >> "$GITHUB_STEP_SUMMARY"
+          echo "## 🔒 CodeQL Security Analysis Complete" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "### Analysis Coverage:" >> "$GITHUB_STEP_SUMMARY"
-          
-          if [[ "${{ needs.detect-languages.outputs.has-codeql-languages }}" == "true" ]]; then
-            echo "- **CodeQL**: ${{ needs.detect-languages.outputs.languages }}" >> "$GITHUB_STEP_SUMMARY"
-          fi
-          
-          if [[ "${{ needs.detect-languages.outputs.has-shell }}" == "true" ]]; then
-            echo "- **ShellCheck**: Shell scripts analyzed" >> "$GITHUB_STEP_SUMMARY"
-          fi
-          
+          echo "- **Auto-detected languages**: JavaScript, Python, Go, Java, C++, C#, Ruby, Swift" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Query suite**: Extended (security-and-quality)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Schedule**: Push, PR, daily at 2 AM UTC" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Concurrency**: Cancels older scans on new push" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "### Query Suite:" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Extended (security-and-quality)" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "### Schedule:" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Triggers: Push, PR, daily at 2 AM UTC" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Concurrency: Cancels older scans on new push" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Complementary Security:" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Shell scripts: bash-lint-advanced workflow (ShellCheck)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Dockerfile: GitHub Advanced Security scanning" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "### Next Steps:" >> "$GITHUB_STEP_SUMMARY"
-          echo "1. Check the [Security tab](../../security/code-scanning) for results" >> "$GITHUB_STEP_SUMMARY"
+          echo "1. Check the [Security tab](../../security/code-scanning?tab=alert) for results" >> "$GITHUB_STEP_SUMMARY"
           echo "2. Review any alerts in detail" >> "$GITHUB_STEP_SUMMARY"
           echo "3. Address discovered vulnerabilities" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "[CodeQL Documentation](https://codeql.github.com/docs/) | [ShellCheck Wiki](https://www.shellcheck.net/wiki/)" >> "$GITHUB_STEP_SUMMARY"
+          echo "[View CodeQL Documentation](https://codeql.github.com/docs/)" >> "$GITHUB_STEP_SUMMARY"
