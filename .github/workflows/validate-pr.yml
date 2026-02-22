@@ -65,14 +65,18 @@ jobs:
 
       - name: Save validation result
         if: steps.check.outputs.should_merge == 'true'
+        env:
+          FIX_GITHUB_EVENT_PULL_REQUEST_TI: ${{ github.event.pull_request.title }}
+        env:
+          FIX_GITHUB_EVENT_PULL_REQUEST_HE: ${{ github.event.pull_request.head.label }}
         run: |
           mkdir -p ./pr-validation
           echo "${{ steps.check.outputs.pr_number }}" > ./pr-validation/NUMBER
           echo "${{ steps.check.outputs.reason }}" > ./pr-validation/REASON
           echo "${{ github.event.pull_request.head.sha }}" > ./pr-validation/HEAD_SHA
           echo "${{ github.event.pull_request.base.ref }}" > ./pr-validation/BASE_REF
-          echo "${{ github.event.pull_request.head.label }}" > ./pr-validation/HEAD_LABEL
-          echo "${{ github.event.pull_request.title }}" > ./pr-validation/TITLE
+          echo "$FIX_GITHUB_EVENT_PULL_REQUEST_HE" > ./pr-validation/HEAD_LABEL
+          echo "$FIX_GITHUB_EVENT_PULL_REQUEST_TI" > ./pr-validation/TITLE
 
       - name: Upload validation artifact
         if: steps.check.outputs.should_merge == 'true'
