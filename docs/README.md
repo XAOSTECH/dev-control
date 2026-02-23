@@ -37,8 +37,6 @@
 
 ---
 
-## TL;DR
-
 **Dev-Control** is a modular CLI toolkit that automates customising and setting up repos (100% community standards), nested gitmodules, centralised and cleaned up .tmp and .bak folders, nested rootless podman docker containers, vscode mcp-servers, GitHub release (with lib tarbal, automated version tagging and signed latest + version tag) and app packages.
 
 This attempts to make arduous CLI and Git tasks (such as signing woktrees with topology and surgically dropping commits) easy and robust, so you can focus on your code - while, ironically, I focus on optimising this. All functions have a --dry-run option, so test it out and feel free to let me know of any issues or requests! Contributions are also lauded!  
@@ -86,7 +84,7 @@ Managing modern software projects involves a lot of repetitive housekeeping:
 - Keeping submodules in sync across complex monorepos
 - Rewriting commit history to fix author dates or add GPG signatures
 - Auditing license compliance when you have dozens of dependencies
-- Spinning up devcontainers with the right mounts and settings
+- Making devcontainers with the right mounts and settings and reusable category images
 - Packaging your tool for multiple platforms (Homebrew, Snap, Nix, Docker…)
 
 **Dev-Control bundles all of this into a single, modular CLI.** Each command is designed to be:
@@ -151,6 +149,7 @@ Populate a repo with docs, license, workflows, and GitHub templates.
 
 ```bash
 dc init                     # Interactive mode
+dc init --defaults          # Skip repo owner/slug and envVars prompts
 dc init -f docs/SECURITY.md # Update a specific file
 dc init --batch /projects/* # Initialise multiple repos
 ```
@@ -213,6 +212,8 @@ Configure Model Context Protocol servers for AI coding assistants.
 ```bash
 dc mcp                              # Interactive server selection
 dc mcp --test                       # Verify GitHub MCP connection
+dc mcp --create-pat                 # Interactive Github PAT creation
+dc mcp --config                     # Only generate .vscode/mcp.json
 ```
 
 ### `dc container` — Devcontainer Generator
@@ -244,10 +245,18 @@ dc package --docker --theme cyber   # Docker image with ttyd + theme
 Add productivity aliases for Git, Docker, system monitoring, and more.
 
 ```bash
-dc aliases                          # Interactive category selection
+dc alias                          # Interactive category selection
 source ~/.bashrc
 ```
 
+#### Example aliases
+
+```bash
+gpf         # git push --force-with-lease
+dca-alias   # Apply and source all aliases
+gcda        # Stage, amend and push with preserved author date
+gcda        # Restore otiginal author date
+```
 ---
 
 ## 🔌 Plugin System
