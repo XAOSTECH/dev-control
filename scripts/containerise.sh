@@ -597,16 +597,15 @@ DOCKERFILE_EOF
         cat >> "$dockerfile_path" << DOCKERFILE_EOF
 
 # Install nvm and Node.js (required for npx-dependent MCP servers like firecrawl)
-ENV NVM_DIR=/home/${CFG_CONTAINER_NAME}/.config/nvm
-ENV BASH_ENV=/home/${CFG_CONTAINER_NAME}/.bashrc
-RUN mkdir -p "\$NVM_DIR" && \\
+# System-wide installation (consistent with common.Dockerfile base images)
+ENV NVM_DIR=/opt/nvm
+RUN mkdir -p "$NVM_DIR" && \\
     curl -s -o- https://raw.githubusercontent.com/nvm-sh/nvm/\$(curl -s https://api.github.com/repos/nvm-sh/nvm/releases/latest | grep -o '"tag_name": "[^"]*' | cut -d'"' -f4)/install.sh | bash && \\
-    echo 'export NVM_DIR="\$HOME/.config/nvm"' >> ~/.bashrc && \\
-    echo '[ -s "\$NVM_DIR/nvm.sh" ] && \\. "\$NVM_DIR/nvm.sh"' >> ~/.bashrc && \\
-    bash -c 'source \$NVM_DIR/nvm.sh && nvm install --lts && nvm alias default lts/* && nvm cache clear'
+    bash -c 'source /opt/nvm/nvm.sh && nvm install --lts && nvm alias default lts/* && nvm cache clear' && \\
+    chmod -R a+rx $NVM_DIR
 
 # Dynamically load nvm and set PATH to latest installed Node (supports updates without rebuilds)
-RUN echo 'export NVM_DIR=\$NVM_DIR && [ -s "\$NVM_DIR/nvm.sh" ] && source "\$NVM_DIR/nvm.sh"' >> ~/.bashrc && \\
+RUN echo 'export NVM_DIR=/opt/nvm && [ -s "\$NVM_DIR/nvm.sh" ] && source "\$NVM_DIR/nvm.sh"' >> ~/.bashrc && \\
     echo 'export PATH=\$(ls -d \$NVM_DIR/versions/node/*/bin 2>/dev/null | head -1):\$PATH' >> ~/.bashrc
 DOCKERFILE_EOF
 
