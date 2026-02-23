@@ -600,12 +600,14 @@ DOCKERFILE_EOF
 ENV NVM_DIR=/home/${CFG_CONTAINER_NAME}/.config/nvm
 ENV BASH_ENV=/home/${CFG_CONTAINER_NAME}/.bashrc
 RUN mkdir -p "\$NVM_DIR" && \\
-    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash && \\
+    curl -s -o- https://raw.githubusercontent.com/nvm-sh/nvm/\$(curl -s https://api.github.com/repos/nvm-sh/nvm/releases/latest | grep -o '"tag_name": "[^"]*' | cut -d'"' -f4)/install.sh | bash && \\
     echo 'export NVM_DIR="\$HOME/.config/nvm"' >> ~/.bashrc && \\
     echo '[ -s "\$NVM_DIR/nvm.sh" ] && \\. "\$NVM_DIR/nvm.sh"' >> ~/.bashrc && \\
-    bash -c 'source \$NVM_DIR/nvm.sh && nvm install 22 && nvm alias default 22'
+    bash -c 'source \$NVM_DIR/nvm.sh && nvm install --lts && nvm alias default lts/* && nvm cache clear'
 
-ENV PATH=\$NVM_DIR/versions/node/v22.13.1/bin:\$PATH
+# Dynamically load nvm and set PATH to latest installed Node (supports updates without rebuilds)
+RUN echo 'export NVM_DIR=\$NVM_DIR && [ -s "\$NVM_DIR/nvm.sh" ] && source "\$NVM_DIR/nvm.sh"' >> ~/.bashrc && \\
+    echo 'export PATH=\$(ls -d \$NVM_DIR/versions/node/*/bin 2>/dev/null | head -1):\$PATH' >> ~/.bashrc
 DOCKERFILE_EOF
 
         # Add git configuration (always include safe.directory and defaultBranch, user/email/gpg if provided)

@@ -46,9 +46,12 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | d
 # Install nvm and Node.js system-wide (required for npx-dependent MCP servers like firecrawl)
 ENV NVM_DIR=/opt/nvm
 RUN mkdir -p /opt/nvm \
-    && curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash \
-    && bash -c 'source /opt/nvm/nvm.sh && nvm install 22 && nvm alias default 22' \
+    && curl -s -o- https://raw.githubusercontent.com/nvm-sh/nvm/$(curl -s https://api.github.com/repos/nvm-sh/nvm/releases/latest | grep -o '"tag_name": "[^"]*' | cut -d'"' -f4)/install.sh | bash \
+    && bash -c 'source /opt/nvm/nvm.sh && nvm install --lts && nvm alias default lts/* && nvm cache clear' \
     && chmod -R a+rx /opt/nvm
 
-# Set PATH for npx/npm to work in non-shell contexts (MCP servers, IDE integrations)
-ENV PATH=/opt/nvm/versions/node/v22.13.1/bin:${PATH}
+# Dynamically set PATH to latest installed Node version (supports nvm updates without rebuilds)
+RUN echo 'export NVM_DIR=/opt/nvm && [ -s "$NVM_DIR/nvm.sh" ] && source "$NVM_DIR/nvm.sh" && export PATH=$(ls -d $NVM_DIR/versions/node/*/bin 2>/dev/null | head -1):$PATH' >> /etc/profile.d/load-nvm.sh \
+    && chmod +x /etc/profile.d/load-nvm.sh
+
+ENV PATH=/opt/nvm/versions/node/default/bin:${PATH}

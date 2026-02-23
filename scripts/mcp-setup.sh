@@ -377,27 +377,7 @@ show_token_info() {
 # HELPER FUNCTIONS
 # ============================================================================
 
-detect_npx_path() {
-    # Detect absolute path to npx for VS Code extension host compatibility
-    if command -v npx &>/dev/null; then
-        which npx 2>/dev/null || command -v npx
-    else
-        echo "npx"  # Fallback to bare command if not found
-    fi
-}
 
-detect_node_bin_dir() {
-    # Detect the bin directory containing node/npx for PATH configuration
-    if command -v node &>/dev/null; then
-        local node_path
-        node_path=$(which node 2>/dev/null || command -v node)
-        dirname "$node_path"
-    else
-        echo ""
-    fi
-}
-
-# Note: require_gh_cli() is provided by sourced git-utils.sh (with auth check)
 
 # ============================================================================
 # MCP CONFIGURATION
@@ -413,20 +393,6 @@ create_mcp_config() {
     fi
     
     mkdir -p "$MCP_CONFIG_DIR"
-    
-    # Detect npx path for VS Code extension host compatibility
-    local npx_cmd
-    npx_cmd=$(detect_npx_path)
-    
-    # Detect node bin directory for PATH
-    local node_bin_dir
-    node_bin_dir=$(detect_node_bin_dir)
-    
-    # Build PATH for firecrawl env (include node bin dir if detected)
-    local firecrawl_path="\${env:PATH}"
-    if [[ -n "$node_bin_dir" ]]; then
-        firecrawl_path="$node_bin_dir:\${env:PATH}"
-    fi
     
     # Generate config with secure inputs
     cat > "$MCP_CONFIG_FILE" << MCP_EOF
@@ -461,12 +427,11 @@ create_mcp_config() {
             "command": "bash",
             "args": ["-lc", "source \$HOME/.bashrc && npx -y firecrawl-mcp"],
             "env": {
-                "FIRECRAWL_API_KEY": "\${input:firecrawlApiKey}",
-                "PATH": "${firecrawl_path}",
-                "NPM_CONFIG_CACHE": "/tmp/npm-cache",
-                "npm_config_cache": "/tmp/npm-cache"
+                "FIRECRAWL_API_KEY": "\${input:firecrawlApiKey}\",
+                \"NPM_CONFIG_CACHE\": \"/tmp/npm-cache\",
+                \"npm_config_cache\": \"/tmp/npm-cache\"
             },
-            "type": "stdio"
+            \"type\": \"stdio\"
         }
     }
 }
@@ -485,20 +450,6 @@ create_mcp_config_with_token() {
     
     # Ensure directory exists
     mkdir -p "$MCP_CONFIG_DIR"
-    
-    # Detect npx path for VS Code extension host compatibility
-    local npx_cmd
-    npx_cmd=$(detect_npx_path)
-    
-    # Detect node bin directory for PATH
-    local node_bin_dir
-    node_bin_dir=$(detect_node_bin_dir)
-    
-    # Build PATH for firecrawl env (include node bin dir if detected)
-    local firecrawl_path="\${env:PATH}"
-    if [[ -n "$node_bin_dir" ]]; then
-        firecrawl_path="$node_bin_dir:\${env:PATH}"
-    fi
     
     # Create config with token embedded in Authorisation header
     cat > "$MCP_CONFIG_FILE" << EOF
@@ -528,7 +479,6 @@ create_mcp_config_with_token() {
             "args": ["-lc", "source \$HOME/.bashrc && npx -y firecrawl-mcp"],
             "env": {
                 "FIRECRAWL_API_KEY": "\${input:firecrawlApiKey}",
-                "PATH": "${firecrawl_path}",
                 "NPM_CONFIG_CACHE": "/tmp/npm-cache",
                 "npm_config_cache": "/tmp/npm-cache"
             },
