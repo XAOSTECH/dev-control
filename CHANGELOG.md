@@ -28,6 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - YAML syntax errors in workflow templates
 
 ### Changed
+- refactor: split common template into base and footer
+- chore: update CHANGELOG for v0.5.7
 - chore(docs): update README
 
 ## [0.5.6] - 2026-02-22
