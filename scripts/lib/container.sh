@@ -726,12 +726,12 @@ generate_category_dockerfile() {
     local needs_device_groups=false
     [[ "$category" == "streaming" ]] && needs_device_groups=true
     
-    # Concatenate: common-base + category-specific + optional groups + common-footer
+    # Concatenate: common + category-specific + optional groups + footer
     {
         # Common base layer (substitute locale and timezone variables)
         sed -e "s|\${LOCALE}|${locale}|g" \
             -e "s|\${TZ}|${timezone}|g" \
-            "$containers_dir/common-base.Dockerfile"
+            "$containers_dir/common.Dockerfile"
         echo ""
         
         # Category-specific layer
@@ -750,11 +750,11 @@ DOCKERFILE_GROUPS
             echo ""
         fi
         
-        # Common footer (system tools + user setup + dev-control)
+        # Common footer (user setup, nvm, dev-control)
         # Replace template variables: CATEGORY, GIT_CONFIG_CMD
         sed -e "s/\${CATEGORY}/${category}/g" \
             -e "s|\${GIT_CONFIG_CMD}|${git_config_cmd_escaped}|g" \
-            "$containers_dir/common-footer.Dockerfile"
+            "$containers_dir/footer.Dockerfile"
             
         # Add streaming-specific user group membership
         if [[ "$needs_device_groups" == true ]]; then

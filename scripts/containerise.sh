@@ -597,7 +597,7 @@ DOCKERFILE_EOF
         cat >> "$dockerfile_path" << DOCKERFILE_EOF
 
 # Install nvm and Node.js (required for npx-dependent MCP servers like firecrawl)
-# System-wide installation (consistent with common-base/common-footer templates)
+# System-wide installation (consistent with common.Dockerfile base images)
 ENV NVM_DIR=/opt/nvm
 RUN mkdir -p "$NVM_DIR" && \\
     curl -s -o- https://raw.githubusercontent.com/nvm-sh/nvm/\$(curl -s https://api.github.com/repos/nvm-sh/nvm/releases/latest | grep -o '"tag_name": "[^"]*' | cut -d'"' -f4)/install.sh | bash && \\
