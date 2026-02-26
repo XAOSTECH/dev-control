@@ -604,9 +604,11 @@ RUN mkdir -p "$NVM_DIR" && \\
     bash -c 'source /opt/nvm/nvm.sh && nvm install --lts && nvm alias default lts/* && nvm use default && node_path="$(nvm which default)" && node_dir="$(dirname "$node_path")" && node_prefix="$(dirname "$node_dir")" && ln -sfn "$node_prefix" /opt/nvm/versions/node/default && nvm cache clear' && \\
     chmod -R a+rx $NVM_DIR
 
-# Dynamically load nvm and set PATH to latest installed Node (supports updates without rebuilds)
-RUN echo 'export NVM_DIR=/opt/nvm && [ -s "\$NVM_DIR/nvm.sh" ] && source "\$NVM_DIR/nvm.sh"' >> ~/.bashrc && \\
-    echo 'export PATH=\$(ls -d \$NVM_DIR/versions/node/*/bin 2>/dev/null | head -1):\$PATH' >> ~/.bashrc
+# Dynamically set PATH to latest installed Node version (supports nvm updates without rebuilds)
+RUN echo 'export NVM_DIR=/opt/nvm && [ -s "\$NVM_DIR/nvm.sh" ] && source "\$NVM_DIR/nvm.sh" && export PATH=\$(ls -d \$NVM_DIR/versions/node/*/bin 2>/dev/null | head -1):\$PATH' >> /etc/profile.d/load-nvm.sh && \\
+    chmod +x /etc/profile.d/load-nvm.sh
+
+ENV PATH=/opt/nvm/versions/node/default/bin:${PATH}
 DOCKERFILE_EOF
 
         # Add git configuration (always include safe.directory and defaultBranch, user/email/gpg if provided)

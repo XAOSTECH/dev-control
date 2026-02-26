@@ -2,7 +2,7 @@
 # DATA-SCIENCE: CUDA, Jupyter, Scientific Computing, Bioinformatics
 # ============================================================================
 #
-# Category-specific layer appended after common-tools.Dockerfile
+# Category-specific layer appended after common.Dockerfile
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025-2026 xaoscience
