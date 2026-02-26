@@ -411,7 +411,7 @@ jobs:
           version: ${VERSION}
           description: "Version ${VERSION}"
           homepage: https://github.com/$GITHUB_REPOSITORY
-          license: GPL-3.0-or-later
+          licence: GPL-3.0-or-later
           entry_point: ./dc
           include:
             - scripts/

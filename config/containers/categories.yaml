@@ -12,7 +12,7 @@
 #     github-path: <URL to build source>
 #     nvidia: <true|false>
 #
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-Licence-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025-2026 xaoscience
 
 game-dev:

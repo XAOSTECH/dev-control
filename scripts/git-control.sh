@@ -4,11 +4,11 @@
 # Unified interface for all git-related workflow tools
 #
 # Provides a single entry point for:
-#   - Repository initialisation (templates, licenses)
+#   - Repository initialisation (templates, licences)
 #   - Repository creation (GitHub)
 #   - Pull request creation
 #   - History fixing and rewriting
-#   - License auditing
+#   - Licence auditing
 #
 # Usage:
 #   ./git-control.sh                    # Interactive menu
@@ -16,13 +16,13 @@
 #   ./git-control.sh repo               # Create GitHub repository
 #   ./git-control.sh pr                 # Create pull request
 #   ./git-control.sh fix [OPTIONS]      # Fix commit history
-#   ./git-control.sh licenses [OPTIONS] # Audit licenses
+#   ./git-control.sh licences [OPTIONS] # Audit licences
 #   ./git-control.sh gpg-setup          # Setup GPG bot for Actions
 #   ./git-control.sh help               # Show this help
 #
 # Aliases: dc-git, gc-git
 #
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-Licence-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025-2026 xaoscience
 
 set -e
@@ -67,7 +67,7 @@ USAGE:
 
 COMMANDS:
   init, template      Initialise repository with templates (dc-init)
-                      Copy standardised documentation, workflows, and licenses
+                      Copy standardised documentation, workflows, and licences
 
   repo, create        Create GitHub repository (dc-repo)
                       Set up GitHub repo from current folder with topics
@@ -78,8 +78,8 @@ COMMANDS:
   fix, history        Fix commit history (dc-fix)
                       Interactive commit rewriting, signing, date fixing
 
-  licenses, lic       Audit repository licenses (dc-licenses)
-                      Detect and manage licenses across submodules
+  licences, lic       Audit repository licences (dc-licences)
+                      Detect and manage licences across submodules
 
   rename              Rename default branch across repos (dc-rename)
                       Batch rename Main → main for all repositories
@@ -103,8 +103,8 @@ EXAMPLES:
   git-control.sh pr                      # Create pull request
   git-control.sh fix --range HEAD=5      # Fix last 5 commits
   git-control.sh fix --sign --dry-run    # Preview signing commits
-  git-control.sh licenses --deep         # Deep license scan
-  git-control.sh licenses --apply MIT    # Apply MIT license
+  git-control.sh licences --deep         # Deep licence scan
+  git-control.sh licences --apply MIT    # Apply MIT licence
   git-control.sh gpg-setup               # Setup GPG bot for Actions
 
 ALIASES (after running dc-aliases):
@@ -113,7 +113,7 @@ ALIASES (after running dc-aliases):
   dc-repo        - Repository creation
   dc-pr          - Pull request creation
   dc-fix         - History fixing
-  dc-licenses    - License auditing
+  dc-licences    - Licence auditing
   dc-gpg-setup   - GPG bot setup
 
 For detailed help on each subcommand:
@@ -132,7 +132,7 @@ display_menu() {
     print_header "Git Control"
     
     echo -e "${BOLD}Repository Setup${NC}"
-    print_menu_item "1" "Initialise Templates (dc-init)   - Copy docs, workflows, licenses"
+    print_menu_item "1" "Initialise Templates (dc-init)   - Copy docs, workflows, licences"
     print_menu_item "2" "Create Repository (dc-repo)      - Create GitHub repository"
     echo ""
     
@@ -142,7 +142,7 @@ display_menu() {
     
     echo -e "${BOLD}Maintenance${NC}"
     print_menu_item "4" "Fix History (dc-fix)             - Rewrite commit history"
-    print_menu_item "5" "License Auditor (dc-licenses)    - Audit and manage licenses"
+    print_menu_item "5" "Licence Auditor (dc-licences)    - Audit and manage licences"
     print_menu_item "6" "Rename Branches (dc-rename)      - Batch rename Main → main"
     print_menu_item "7" "Setup GPG Bot (dc-gpg-setup)     - Configure GPG for Actions"
     echo ""
@@ -177,9 +177,9 @@ run_subcommand() {
             check_script_exists "fix-history.sh" && \
                 bash "$SCRIPT_DIR/fix-history.sh" "$@"
             ;;
-        5|licenses|lic|license)
-            check_script_exists "licenses.sh" && \
-                bash "$SCRIPT_DIR/licenses.sh" "$@"
+        5|licences|lic|licence)
+            check_script_exists "licences.sh" && \
+                bash "$SCRIPT_DIR/licences.sh" "$@"
             ;;
         6|rename|rename-branches|rename-branch)
             check_script_exists "lib/git/rename.sh" && \
@@ -225,7 +225,7 @@ show_quick_tips() {
     print_command_hint "Create GitHub repo" "dc-git repo"
     print_command_hint "Create PR" "dc-git pr"
     print_command_hint "Fix history" "dc-git fix"
-    print_command_hint "Audit licenses" "dc-git lic"
+    print_command_hint "Audit licences" "dc-git lic"
     print_command_hint "Rename branches" "dc-git rename"
     print_command_hint "Setup GPG bot" "dc-git gpg-setup"
     echo ""

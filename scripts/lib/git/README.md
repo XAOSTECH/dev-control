@@ -129,7 +129,7 @@ All modules in this directory depend on:
 
 When adding new modules:
 1. Follow the existing naming convention (`lowercase-name.sh`)
-2. Include header with usage, license, copyright
+2. Include header with usage, licence, copyright
 3. Document functions with `# Usage:` comments
 4. Source print.sh for output functions
 5. Update this README

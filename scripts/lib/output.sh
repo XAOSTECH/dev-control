@@ -7,7 +7,7 @@
 #   source "$SCRIPT_DIR/lib/output.sh"
 #   init_output_mode   # Call at script start
 #
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-Licence-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025-2026 xaoscience
 
 # ============================================================================

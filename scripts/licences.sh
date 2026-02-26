@@ -1,19 +1,19 @@
 #!/usr/bin/env bash
 #
-# Dev-Control License Auditor
-# Detect, display, and manage licenses across repositories and submodules
+# Dev-Control Licence Auditor
+# Detect, display, and manage licences across repositories and submodules
 #
 # Usage:
-#   ./licenses.sh                     # Detect and display licenses
-#   ./licenses.sh --deep              # Include submodules recursively
-#   ./licenses.sh --json              # Output as JSON
-#   ./licenses.sh --check GPL-3.0     # Check compatibility
-#   ./licenses.sh --apply MIT         # Apply license template
-#   ./licenses.sh --help              # Show help
+#   ./licences.sh                     # Detect and display licences
+#   ./licences.sh --deep              # Include submodules recursively
+#   ./licences.sh --json              # Output as JSON
+#   ./licences.sh --check GPL-3.0     # Check compatibility
+#   ./licences.sh --apply MIT         # Apply licence template
+#   ./licences.sh --help              # Show help
 #
-# Aliases: dc-licenses, dc-lic
+# Aliases: dc-licences, dc-lic
 #
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-Licence-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025-2026 xaoscience
 
 set -e
@@ -26,7 +26,7 @@ export DEV_CONTROL_DIR  # Used by sourced libraries
 # Source shared libraries
 source "$SCRIPT_DIR/lib/colours.sh"
 source "$SCRIPT_DIR/lib/print.sh"
-source "$SCRIPT_DIR/lib/git/license.sh"
+source "$SCRIPT_DIR/lib/git/licence.sh"
 source "$SCRIPT_DIR/lib/git/utils.sh"
 
 # CLI options
@@ -44,41 +44,41 @@ REFRESH=false
 
 show_help() {
     cat << 'EOF'
-Dev-Control License Auditor - Detect and manage repository licenses
+Dev-Control Licence Auditor - Detect and manage repository licences
 
 USAGE:
-  licenses.sh [OPTIONS] [DIRECTORY]
+  licences.sh [OPTIONS] [DIRECTORY]
 
 OPTIONS:
   -d, --deep              Scan submodules recursively
   -j, --json              Output results as JSON
-  -c, --check LICENSE     Check compatibility with specified license
-  -a, --apply LICENSE     Apply a license template (MIT, Apache-2.0, GPL-3.0, BSD-3-Clause)
+  -c, --check LICENSE     Check compatibility with specified licence
+  -a, --apply LICENSE     Apply a licence template (MIT, Apache-2.0, GPL-3.0, BSD-3-Clause)
   -r, --refresh           Force re-detection (ignore cache)
   -h, --help              Show this help message
 
 EXAMPLES:
-  licenses.sh                           # Show license for current repo
-  licenses.sh --deep                    # Include all submodules
-  licenses.sh --json --deep             # JSON output with submodules
-  licenses.sh --check GPL-3.0           # Check if deps are compatible with GPL-3.0
-  licenses.sh --apply MIT               # Apply MIT license template
-  licenses.sh /path/to/repo --deep      # Scan specific directory
+  licences.sh                           # Show licence for current repo
+  licences.sh --deep                    # Include all submodules
+  licences.sh --json --deep             # JSON output with submodules
+  licences.sh --check GPL-3.0           # Check if deps are compatible with GPL-3.0
+  licences.sh --apply MIT               # Apply MIT licence template
+  licences.sh /path/to/repo --deep      # Scan specific directory
 
 OUTPUT:
   Default output shows a table with:
   - Repository/submodule path
-  - Detected SPDX license identifier
+  - Detected SPDX licence identifier
   - Detection source (file, github-api, cache)
-  - License category (permissive, copyleft-weak, copyleft-strong)
+  - Licence category (permissive, copyleft-weak, copyleft-strong)
 
 SUPPORTED LICENSES:
   MIT, Apache-2.0, GPL-3.0, GPL-2.0, LGPL-3.0, LGPL-2.1,
   BSD-3-Clause, BSD-2-Clause, ISC, MPL-2.0, AGPL-3.0,
-  Unlicense, CC0-1.0, CC-BY-4.0, Zlib, WTFPL
+  Unlicence, CC0-1.0, CC-BY-4.0, Zlib, WTFPL
 
 ALIASES:
-  dc-licenses, dc-lic
+  dc-licences, dc-lic
 
 EOF
 }
@@ -127,23 +127,23 @@ parse_args() {
 # DISPLAY FUNCTIONS
 # ============================================================================
 
-print_license_header() {
-    print_header "Dev-Control License Auditor"
+print_licence_header() {
+    print_header "Dev-Control Licence Auditor"
 }
 
-print_license_table() {
-    local root_license="$1"
-    local submodule_licenses="$2"
+print_licence_table() {
+    local root_licence="$1"
+    local submodule_licences="$2"
     
     # Table header
-    printf "${BOLD}%-40s %-15s %-18s %-15s${NC}\n" "Repository" "License" "Source" "Category"
+    printf "${BOLD}%-40s %-15s %-18s %-15s${NC}\n" "Repository" "Licence" "Source" "Category"
     print_separator 90
     
     # Root repository
     local root_spdx root_source root_category
-    root_spdx=$(echo "$root_license" | jq -r '.spdx_id' 2>/dev/null)
-    root_source=$(echo "$root_license" | jq -r '.source' 2>/dev/null)
-    root_category=$(echo "$root_license" | jq -r '.category' 2>/dev/null)
+    root_spdx=$(echo "$root_licence" | jq -r '.spdx_id' 2>/dev/null)
+    root_source=$(echo "$root_licence" | jq -r '.source' 2>/dev/null)
+    root_category=$(echo "$root_licence" | jq -r '.category' 2>/dev/null)
     
     local colour="$GREEN"
     [[ "$root_category" == "copyleft-strong" ]] && colour="$YELLOW"
@@ -153,8 +153,8 @@ print_license_table() {
         "$(basename "$TARGET_DIR") (root)" "$root_spdx" "$root_source" "$root_category"
     
     # Submodules
-    if [[ -n "$submodule_licenses" && "$submodule_licenses" != "[]" ]]; then
-        echo "$submodule_licenses" | jq -c '.[]' 2>/dev/null | while read -r sub; do
+    if [[ -n "$submodule_licences" && "$submodule_licences" != "[]" ]]; then
+        echo "$submodule_licences" | jq -c '.[]' 2>/dev/null | while read -r sub; do
             local sub_path sub_spdx sub_source sub_category
             sub_path=$(echo "$sub" | jq -r '.path' 2>/dev/null)
             sub_spdx=$(echo "$sub" | jq -r '.spdx_id' 2>/dev/null)
@@ -179,13 +179,13 @@ print_license_table() {
 }
 
 print_json_output() {
-    local root_license="$1"
-    local submodule_licenses="$2"
+    local root_licence="$1"
+    local submodule_licences="$2"
     
     cat <<EOF
 {
-  "root": $root_license,
-  "submodules": $submodule_licenses,
+  "root": $root_licence,
+  "submodules": $submodule_licences,
   "scan_date": "$(date -Iseconds)",
   "deep_scan": $DEEP_SCAN
 }
@@ -193,28 +193,28 @@ EOF
 }
 
 print_compatibility_check() {
-    local target_license="$1"
-    local root_license="$2"
-    local submodule_licenses="$3"
+    local target_licence="$1"
+    local root_licence="$2"
+    local submodule_licences="$3"
     
-    print_section "Compatibility Check: $target_license"
+    print_section "Compatibility Check: $target_licence"
     
-    # Collect all licenses
-    local all_licenses=()
+    # Collect all licences
+    local all_licences=()
     local root_spdx
-    root_spdx=$(echo "$root_license" | jq -r '.spdx_id' 2>/dev/null)
-    all_licenses+=("$root_spdx")
+    root_spdx=$(echo "$root_licence" | jq -r '.spdx_id' 2>/dev/null)
+    all_licences+=("$root_spdx")
     
-    if [[ -n "$submodule_licenses" && "$submodule_licenses" != "[]" ]]; then
+    if [[ -n "$submodule_licences" && "$submodule_licences" != "[]" ]]; then
         while read -r spdx; do
-            all_licenses+=("$spdx")
-        done < <(echo "$submodule_licenses" | jq -r '.[].spdx_id' 2>/dev/null)
+            all_licences+=("$spdx")
+        done < <(echo "$submodule_licences" | jq -r '.[].spdx_id' 2>/dev/null)
     fi
     
     # Check compatibility
     local issues
-    if issues=$(check_license_compatibility "$target_license" "${all_licenses[@]}" 2>&1); then
-        print_success "All detected licenses are compatible with ${BOLD}$target_license${NC}"
+    if issues=$(check_licence_compatibility "$target_licence" "${all_licences[@]}" 2>&1); then
+        print_success "All detected licences are compatible with ${BOLD}$target_licence${NC}"
     else
         print_error "Compatibility issues found:"
         echo "$issues" | while read -r issue; do
@@ -228,16 +228,16 @@ print_compatibility_check() {
 # LICENSE APPLICATION
 # ============================================================================
 
-apply_license_template() {
-    local license="$1"
+apply_licence_template() {
+    local licence="$1"
     local target="$TARGET_DIR"
-    local template_dir="$DEV_CONTROL_DIR/license-templates"
+    local template_dir="$DEV_CONTROL_DIR/licence-templates"
     
-    # Normalise license name
-    local template_file="$template_dir/$license"
+    # Normalise licence name
+    local template_file="$template_dir/$licence"
     
     if [[ ! -f "$template_file" ]]; then
-        print_error "License template not found: $license"
+        print_error "Licence template not found: $licence"
         echo "Available templates:"
         for f in "$template_dir"/*; do
             [[ -f "$f" ]] && print_list_item "$(basename "$f")"
@@ -264,13 +264,13 @@ apply_license_template() {
         -e "s|{{ORG_NAME}}|$org_name|g" \
         "$template_file" > "$dest"
     
-    print_success "Applied $license license to $dest"
+    print_success "Applied $licence licence to $dest"
     
-    # Cache the license
+    # Cache the licence
     if [[ -d "$target/.git" ]]; then
-        git -C "$target" config --local dc-init.license-type "$license"
-        git -C "$target" config --local dc-init.license-source "file:LICENSE"
-        print_info "Cached license metadata in git config"
+        git -C "$target" config --local dc-init.licence-type "$licence"
+        git -C "$target" config --local dc-init.licence-source "file:LICENSE"
+        print_info "Cached licence metadata in git config"
     fi
 }
 
@@ -294,37 +294,37 @@ main() {
         exit 1
     fi
     
-    # Apply license if requested
+    # Apply licence if requested
     if [[ -n "$APPLY_LICENSE" ]]; then
-        apply_license_template "$APPLY_LICENSE"
+        apply_licence_template "$APPLY_LICENSE"
         exit 0
     fi
     
-    # Detect licenses
+    # Detect licences
     if [[ "$JSON_OUTPUT" != "true" ]]; then
-        print_license_header
+        print_licence_header
     fi
     
-    # Get root license
-    local root_license
-    root_license=$(detect_license "$TARGET_DIR")
+    # Get root licence
+    local root_licence
+    root_licence=$(detect_licence "$TARGET_DIR")
     
-    # Get submodule licenses if deep scan
-    local submodule_licenses="[]"
+    # Get submodule licences if deep scan
+    local submodule_licences="[]"
     if [[ "$DEEP_SCAN" == "true" ]]; then
-        submodule_licenses=$(scan_submodule_licenses "$TARGET_DIR" "true")
+        submodule_licences=$(scan_submodule_licences "$TARGET_DIR" "true")
     fi
     
     # Output
     if [[ "$JSON_OUTPUT" == "true" ]]; then
-        print_json_output "$root_license" "$submodule_licenses"
+        print_json_output "$root_licence" "$submodule_licences"
     else
-        print_license_table "$root_license" "$submodule_licenses"
+        print_licence_table "$root_licence" "$submodule_licences"
     fi
     
     # Compatibility check
     if [[ -n "$CHECK_COMPAT" ]]; then
-        print_compatibility_check "$CHECK_COMPAT" "$root_license" "$submodule_licenses"
+        print_compatibility_check "$CHECK_COMPAT" "$root_licence" "$submodule_licences"
     fi
 }
 

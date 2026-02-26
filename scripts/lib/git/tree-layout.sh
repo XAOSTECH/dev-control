@@ -3,7 +3,7 @@
 # Dev-Control Shared Library: Git Tree Fractal Layout (Pure Bash)
 # Generates mandelbrot-esque circular tree positions for git commits
 #
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-Licence-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025-2026 xaoscience
 
 # ============================================================================

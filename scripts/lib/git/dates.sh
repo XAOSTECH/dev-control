@@ -18,7 +18,7 @@
 #   RECONSTRUCT_TARGET - Target commit for reconstruction fallback
 #   ALLOW_OVERRIDE_SAME_BRANCH - Allow automatic branch override
 #
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-Licence-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025-2026 xaoscience
 
 # Ensure print functions are available (source print.sh before this)

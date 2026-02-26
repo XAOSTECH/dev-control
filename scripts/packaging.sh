@@ -24,7 +24,7 @@
 #
 # Aliases: dc-package, dc-pkg
 #
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-Licence-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025-2026 xaoscience
 
 set -e
@@ -128,7 +128,7 @@ CONFIG FILE (.dc-package.yaml):
   version: 1.0.0
   description: "My awesome CLI tool"
   homepage: "https://github.com/user/repo"
-  license: MIT
+  licence: MIT
   maintainer: "Name <email@example.com>"
   entry_point: ./main.sh
   theme: matrix
@@ -268,9 +268,9 @@ detect_package_info() {
         [[ -z "$PKG_DESCRIPTION" ]] && PKG_DESCRIPTION="A CLI tool"
     fi
     
-    # License from LICENSE file or git config
+    # Licence from LICENSE file or git config
     if [[ -z "$PKG_LICENSE" ]]; then
-        PKG_LICENSE=$(git config --local dc-init.license-type 2>/dev/null || echo "MIT")
+        PKG_LICENSE=$(git config --local dc-init.licence-type 2>/dev/null || echo "MIT")
     fi
     
     # Maintainer from git
@@ -296,7 +296,7 @@ load_config() {
                 version) [[ -z "$PKG_VERSION" ]] && PKG_VERSION="$value" ;;
                 description) [[ -z "$PKG_DESCRIPTION" ]] && PKG_DESCRIPTION="$value" ;;
                 homepage) [[ -z "$PKG_HOMEPAGE" ]] && PKG_HOMEPAGE="$value" ;;
-                license) [[ -z "$PKG_LICENSE" ]] && PKG_LICENSE="$value" ;;
+                licence) [[ -z "$PKG_LICENSE" ]] && PKG_LICENSE="$value" ;;
                 maintainer) [[ -z "$PKG_MAINTAINER" ]] && PKG_MAINTAINER="$value" ;;
                 entry_point) [[ -z "$PKG_ENTRY_POINT" ]] && PKG_ENTRY_POINT="$value" ;;
                 theme) [[ -z "$SELECTED_THEME" ]] && SELECTED_THEME="$value" ;;
@@ -341,7 +341,7 @@ init_config() {
         PKG_VERSION=$(tui_input "Version" "$PKG_VERSION")
         PKG_DESCRIPTION=$(tui_input "Description" "$PKG_DESCRIPTION")
         PKG_HOMEPAGE=$(tui_input "Homepage" "$PKG_HOMEPAGE")
-        PKG_LICENSE=$(tui_input "License" "$PKG_LICENSE")
+        PKG_LICENSE=$(tui_input "Licence" "$PKG_LICENSE")
         PKG_MAINTAINER=$(tui_input "Maintainer" "$PKG_MAINTAINER")
         PKG_ENTRY_POINT=$(tui_input "Entry point script" "./dc")
         
@@ -363,7 +363,7 @@ init_config() {
         read -rp "Homepage [$PKG_HOMEPAGE]: " input
         PKG_HOMEPAGE="${input:-$PKG_HOMEPAGE}"
         
-        read -rp "License [$PKG_LICENSE]: " input
+        read -rp "Licence [$PKG_LICENSE]: " input
         PKG_LICENSE="${input:-$PKG_LICENSE}"
         
         read -rp "Maintainer [$PKG_MAINTAINER]: " input
@@ -404,7 +404,7 @@ name: $PKG_NAME
 version: $PKG_VERSION
 description: "$PKG_DESCRIPTION"
 homepage: $PKG_HOMEPAGE
-license: $PKG_LICENSE
+licence: $PKG_LICENSE
 maintainer: "$PKG_MAINTAINER"
 entry_point: $PKG_ENTRY_POINT
 
@@ -577,7 +577,7 @@ class $class_name < Formula
   homepage "$PKG_HOMEPAGE"
   url "${PKG_HOMEPAGE}/archive/refs/tags/v${PKG_VERSION}.tar.gz"
   sha256 "$sha256"
-  license "$PKG_LICENSE"
+  licence "$PKG_LICENSE"
   
   # Dependencies
 EOF
@@ -856,7 +856,7 @@ build_nix() {
           meta = with pkgs.lib; {
             description = "$PKG_DESCRIPTION";
             homepage = "$PKG_HOMEPAGE";
-            license = licenses.$(echo "$PKG_LICENSE" | tr '[:upper:]' '[:lower:]' | tr '-' '_');
+            licence = licences.$(echo "$PKG_LICENSE" | tr '[:upper:]' '[:lower:]' | tr '-' '_');
             platforms = platforms.unix;
           };
         };

@@ -9,7 +9,7 @@
     <img alt="GitHub release" src="https://img.shields.io/github/v/release/{{ORG_NAME}}/{{REPO_SLUG}}?style=for-the-badge&logo=semantic-release&colour=blue">
   </a>
   <a href="{{REPO_URL}}/blob/main/LICENSE">
-    <img alt="License" src="https://img.shields.io/github/license/{{ORG_NAME}}/{{REPO_SLUG}}?style=for-the-badge&colour=green">
+    <img alt="Licence" src="https://img.shields.io/github/licence/{{ORG_NAME}}/{{REPO_SLUG}}?style=for-the-badge&colour=green">
   </a>
 </p>
 
@@ -63,7 +63,7 @@
 - [Contributing](#-contributing)
 - [Roadmap](#-roadmap)
 - [Support](#-support)
-- [License](#-license)
+- [Licence](#-licence)
 - [Acknowledgements](#-acknowledgements)
 
 ---
@@ -228,9 +228,9 @@ See the [open issues]({{REPO_URL}}/issues) for a full list of proposed features 
 
 ---
 
-## 📄 License
+## 📄 Licence
 
-Distributed under the {{LICENSE_TYPE}} License. See [`LICENSE`](LICENSE) for more information.
+Distributed under the {{LICENSE_TYPE}} Licence. See [`LICENSE`](LICENSE) for more information.
 
 ---
 

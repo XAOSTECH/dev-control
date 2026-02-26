@@ -40,7 +40,7 @@ teardown() {
     cat > "$TEST_CONFIG_DIR/dev-control/config.yaml" << 'EOF'
 defaults:
   author: "Test Author"
-  license: MIT
+  licence: MIT
 EOF
     
     load_gc_config
@@ -100,21 +100,21 @@ EOF
     # Create global config
     cat > "$TEST_CONFIG_DIR/dev-control/config.yaml" << 'EOF'
 defaults:
-  license: MIT
+  licence: MIT
 EOF
     
     # Create project config in temp dir
     local project_dir=$(mktemp -d)
     cat > "$project_dir/.dc-init.yaml" << 'EOF'
 defaults:
-  license: GPL-3.0
+  licence: GPL-3.0
 EOF
     
     cd "$project_dir"
     git init --quiet
     
     load_gc_config
-    result=$(gc_config "defaults.license")
+    result=$(gc_config "defaults.licence")
     assert_equal "$result" "GPL-3.0"
     
     rm -rf "$project_dir"

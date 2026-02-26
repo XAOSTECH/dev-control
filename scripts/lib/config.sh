@@ -9,7 +9,7 @@
 #   3. Global config (~/.config/dev-control/config.yaml)
 #   4. Built-in defaults
 #
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-Licence-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025-2026 xaoscience
 
 # ============================================================================
@@ -27,11 +27,11 @@ DC_CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/dev-control"
 # ============================================================================
 
 declare -A DC_DEFAULTS=(
-    ["default_license"]="MIT"
+    ["default_licence"]="MIT"
     ["default_branch"]="main"
     ["auto_sign_commits"]="true"
     ["auto_push_after_fix"]="false"
-    ["license_deep_scan"]="false"
+    ["licence_deep_scan"]="false"
     ["interactive_mode"]="true"
     ["color_output"]="auto"
     ["editor"]="${EDITOR:-nano}"
@@ -188,7 +188,7 @@ load_gc_metadata() {
     
     PROJECT_NAME=$(git config --local --get dc-init.project-name 2>/dev/null || echo "")
     REPO_SLUG=$(git config --local --get dc-init.repo-slug 2>/dev/null || echo "")
-    LICENSE_TYPE=$(git config --local --get dc-init.license-type 2>/dev/null || echo "")
+    LICENSE_TYPE=$(git config --local --get dc-init.licence-type 2>/dev/null || echo "")
     DESCRIPTION=$(git config --local --get dc-init.description 2>/dev/null || echo "")
     ORG_NAME=$(git config --local --get dc-init.org-name 2>/dev/null || echo "")
     TOPICS=$(git config --local --get dc-init.topics 2>/dev/null || echo "")

@@ -1,7 +1,7 @@
 # ShellCheck configuration for Dev-Control
 # https://github.com/koalaman/shellcheck/wiki/Directive
 #
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-Licence-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025-2026 xaoscience
 
 # Follow source directives (shellcheck -x) - required for multi-file projects

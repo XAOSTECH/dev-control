@@ -6,7 +6,7 @@
 # This script copies template files from all *-templates folders in Dev-Control:
 #   - docs-templates/      → copied to repo root (with placeholder replacement)
 #   - workflows-templates/ → copied to .github/workflows/
-#   - licenses-templates/  → copied to repo root (future)
+#   - licences-templates/  → copied to repo root (future)
 #   - Any other *-templates folders added later
 #
 # USAGE:
@@ -78,7 +78,7 @@ show_help() {
     echo "  $(basename "$0")                                    # Interactive mode"
     echo "  $(basename "$0") -f CONTRIBUTING.md -o              # Update single file"
     echo "  $(basename "$0") --files README.md,SECURITY.md      # Update multiple files"
-    echo "  $(basename "$0") -f LICENSE -o                      # Update license"
+    echo "  $(basename "$0") -f LICENSE -o                      # Update licence"
     echo ""
     echo "Available template files:"
     for dir in "$DEV_CONTROL_DIR"/*-templates; do
@@ -209,10 +209,10 @@ get_repo_info() {
     # Load cached metadata from git config (set by previous dc-init runs)
     # Only load from LOCAL config if a local .git directory exists
     if [[ -d ".git" ]]; then
-        local cached_license
-        cached_license=$(git config --local dc-init.license-type 2>/dev/null || echo "")
-        if [[ -n "$cached_license" ]]; then
-            LICENSE_TYPE="$cached_license"
+        local cached_licence
+        cached_licence=$(git config --local dc-init.licence-type 2>/dev/null || echo "")
+        if [[ -n "$cached_licence" ]]; then
+            LICENSE_TYPE="$cached_licence"
             print_info "Loaded licence from git config: $LICENSE_TYPE"
         fi
         
@@ -316,10 +316,10 @@ get_repo_info() {
 
         # Try to detect licence from GitHub (if not already cached)
         if [[ -z "$LICENSE_TYPE" ]]; then
-            local gh_license
-            gh_license=$(gh repo view "${ORG_NAME}/${REPO_SLUG}" --json licenseInfo --jq .licenseInfo.spdxId 2>/dev/null || true)
-            if [[ -n "$gh_license" && "$gh_license" != "null" ]]; then
-                LICENSE_TYPE="$gh_license"
+            local gh_licence
+            gh_licence=$(gh repo view "${ORG_NAME}/${REPO_SLUG}" --json licenceInfo --jq .licenceInfo.spdxId 2>/dev/null || true)
+            if [[ -n "$gh_licence" && "$gh_licence" != "null" ]]; then
+                LICENSE_TYPE="$gh_licence"
                 print_info "Detected GitHub licence: $LICENSE_TYPE"
             fi
         fi
@@ -427,26 +427,26 @@ collect_project_info() {
         echo "  4) BSD-3-Clause"
         echo "  5) Other"
         # Determine default from detected LICENSE_TYPE
-        local default_license_choice=1
+        local default_licence_choice=1
         if [[ -n "$LICENSE_TYPE" ]]; then
             case "${LICENSE_TYPE,,}" in
-                mit) default_license_choice=1 ;;
-                apache*|apache-2.0) default_license_choice=2 ;;
-                gpl*|gpl-3.0) default_license_choice=3 ;;
-                bsd*|bsd-3-clause) default_license_choice=4 ;;
-                *) default_license_choice=5 ;;
+                mit) default_licence_choice=1 ;;
+                apache*|apache-2.0) default_licence_choice=2 ;;
+                gpl*|gpl-3.0) default_licence_choice=3 ;;
+                bsd*|bsd-3-clause) default_licence_choice=4 ;;
+                *) default_licence_choice=5 ;;
             esac
             print_info "Detected licence: $LICENSE_TYPE (will be used if you leave blank)"
         fi
-        read -rp "Choice [${default_license_choice}]: " license_choice
-        case "${license_choice:-$default_license_choice}" in
+        read -rp "Choice [${default_licence_choice}]: " licence_choice
+        case "${licence_choice:-$default_licence_choice}" in
             1) LICENSE_TYPE="MIT" ;;
             2) LICENSE_TYPE="Apache-2.0" ;;
             3) LICENSE_TYPE="GPL-3.0" ;;
             4) LICENSE_TYPE="BSD-3-Clause" ;;
             5) 
-                read -rp "Enter licence name [${LICENSE_TYPE:-}]: " custom_license
-                LICENSE_TYPE="${custom_license:-$LICENSE_TYPE}"
+                read -rp "Enter licence name [${LICENSE_TYPE:-}]: " custom_licence
+                LICENSE_TYPE="${custom_licence:-$LICENSE_TYPE}"
                 ;;
         esac
         
@@ -649,10 +649,10 @@ select_templates() {
         ((idx++))
     fi
     
-    # license-templates (or licenses-templates)
-    if [[ -d "$DEV_CONTROL_DIR/license-templates" ]] || [[ -d "$DEV_CONTROL_DIR/licenses-templates" ]]; then
-        echo -e "  ${CYAN}$idx)${NC} Licenses            - LICENSE file"
-        TEMPLATE_FOLDERS[$idx]="licenses"
+    # licence-templates (or licences-templates)
+    if [[ -d "$DEV_CONTROL_DIR/licence-templates" ]] || [[ -d "$DEV_CONTROL_DIR/licences-templates" ]]; then
+        echo -e "  ${CYAN}$idx)${NC} Licences            - LICENSE file"
+        TEMPLATE_FOLDERS[$idx]="licences"
         ((idx++))
     fi
     
@@ -660,7 +660,7 @@ select_templates() {
     for dir in "$DEV_CONTROL_DIR"/*-templates; do
         if [[ -d "$dir" ]]; then
             local name=$(basename "$dir")
-            if [[ "$name" != "docs-templates" && "$name" != "workflows-templates" && "$name" != "actions-templates" && "$name" != "license-templates" && "$name" != "licenses-templates" && "$name" != "github-templates" ]]; then
+            if [[ "$name" != "docs-templates" && "$name" != "workflows-templates" && "$name" != "actions-templates" && "$name" != "licence-templates" && "$name" != "licences-templates" && "$name" != "github-templates" ]]; then
                 local display=$(get_folder_display_name "$dir")
                 echo -e "  ${CYAN}$idx)${NC} $display"
                 TEMPLATE_FOLDERS[$idx]="${name%-templates}"
@@ -684,7 +684,7 @@ install_templates() {
     local target_dir
     target_dir=$(pwd)
     
-    # Track if installing all (for auto-license selection)
+    # Track if installing all (for auto-licence selection)
     local install_all=false
     
     # Handle 'A' for all
@@ -760,8 +760,8 @@ install_templates() {
             github)
                 install_github_templates "$target_dir"
                 ;;
-            licenses)
-                install_licenses_templates "$target_dir" "$install_all"
+            licences)
+                install_licences_templates "$target_dir" "$install_all"
                 ;;
             *)
                 # Generic handler for other template folders
@@ -805,7 +805,7 @@ add_badges_after_title() {
     <img alt="GitHub release" src="https://img.shields.io/github/v/release/{{ORG_NAME}}/{{REPO_SLUG}}?style=for-the-badge&logo=semantic-release&colour=blue">
   </a>
   <a href="{{REPO_URL}}/blob/main/LICENSE">
-    <img alt="License" src="https://img.shields.io/github/license/{{ORG_NAME}}/{{REPO_SLUG}}?style=for-the-badge&colour=green">
+    <img alt="Licence" src="https://img.shields.io/github/licence/{{ORG_NAME}}/{{REPO_SLUG}}?style=for-the-badge&colour=green">
   </a>
 </p>
 
@@ -929,26 +929,26 @@ install_github_templates() {
     done
 }
 
-install_licenses_templates() {
+install_licences_templates() {
     local target_dir="$1"
     local auto_choice="${2:-false}"
     local lic_dir=""
     
     # Check both folder names
-    if [[ -d "$DEV_CONTROL_DIR/license-templates" ]]; then
-        lic_dir="$DEV_CONTROL_DIR/license-templates"
-    elif [[ -d "$DEV_CONTROL_DIR/licenses-templates" ]]; then
-        lic_dir="$DEV_CONTROL_DIR/licenses-templates"
+    if [[ -d "$DEV_CONTROL_DIR/licence-templates" ]]; then
+        lic_dir="$DEV_CONTROL_DIR/licence-templates"
+    elif [[ -d "$DEV_CONTROL_DIR/licences-templates" ]]; then
+        lic_dir="$DEV_CONTROL_DIR/licences-templates"
     else
-        print_warning "No license folder found (license-templates or licenses-templates)"
+        print_warning "No licence folder found (licence-templates or licences-templates)"
         return
     fi
     
-    print_info "Installing license templates..."
+    print_info "Installing licence templates..."
     
-    # Show license options
+    # Show licence options
     echo ""
-    echo "Select license:"
+    echo "Select licence:"
     local idx=1
     declare -A LICENSE_FILES
     for file in "$lic_dir"/*; do
@@ -960,7 +960,7 @@ install_licenses_templates() {
         fi
     done
     
-    # Auto-select license when installing ALL
+    # Auto-select licence when installing ALL
     if [[ "$auto_choice" == "true" ]]; then
         local pick=1
         if [[ -n "$LICENSE_TYPE" ]]; then
@@ -974,17 +974,17 @@ install_licenses_templates() {
             done
         fi
         lic_choice="$pick"
-        print_info "Auto-selected license: $(basename "${LICENSE_FILES[$lic_choice]}")" 
+        print_info "Auto-selected licence: $(basename "${LICENSE_FILES[$lic_choice]}")" 
     else
         read -rp "Choice [1]: " lic_choice
         lic_choice="${lic_choice:-1}"
     fi
     
-    local selected_license="${LICENSE_FILES[$lic_choice]}"
-    if [[ -f "$selected_license" ]]; then
-        process_template "$selected_license" "$target_dir/LICENSE"
+    local selected_licence="${LICENSE_FILES[$lic_choice]}"
+    if [[ -f "$selected_licence" ]]; then
+        process_template "$selected_licence" "$target_dir/LICENSE"
     else
-        print_warning "No license selected or license file not found"
+        print_warning "No licence selected or licence file not found"
     fi
 }
 
@@ -1296,7 +1296,7 @@ save_project_metadata() {
         git config --local dc-init.repo-url "$REPO_URL" 2>/dev/null || true
         git config --local dc-init.description "$SHORT_DESCRIPTION" 2>/dev/null || true
         git config --local dc-init.long-description "$LONG_DESCRIPTION" 2>/dev/null || true
-        git config --local dc-init.license-type "$LICENSE_TYPE" 2>/dev/null || true
+        git config --local dc-init.licence-type "$LICENSE_TYPE" 2>/dev/null || true
         git config --local dc-init.stability "$STABILITY" 2>/dev/null || true
         git config --local dc-init.stability-colour "$STABILITY_COLOR" 2>/dev/null || true
         [[ -n "$WEBSITE_URL" ]] && git config --local dc-init.website-url "$WEBSITE_URL" 2>/dev/null || true

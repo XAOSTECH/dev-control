@@ -6,7 +6,7 @@
 # Usage:
 #   source "${SCRIPT_DIR}/lib/git/tree-viz.sh"
 #
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-Licence-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025-2026 xaoscience
 
 # ============================================================================

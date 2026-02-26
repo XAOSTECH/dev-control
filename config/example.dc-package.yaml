@@ -4,7 +4,7 @@ name: dev-control
 version: 0.2.0
 description: "Git workflow automation toolkit with glamorous TUI"
 homepage: https://github.com/xaoscience/dev-control
-license: GPL-3.0-or-later
+licence: GPL-3.0-or-later
 maintainer: "xaoscience <69734795+xaoscience@users.noreply.github.com>"
 entry_point: ./dc
 

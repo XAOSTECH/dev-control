@@ -3,7 +3,7 @@
 # Dev-Control Configuration Command
 # Manage Dev-Control configuration interactively
 #
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-Licence-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025-2026 xaoscience
 
 set -e
@@ -31,7 +31,7 @@ USAGE:
   gc config init               Initialise project config
 
 KEYS:
-  default-license       Default license (MIT, GPL-3.0, etc.)
+  default-licence       Default licence (MIT, GPL-3.0, etc.)
   default-branch        Default branch name
   auto-sign-commits     Sign commits with GPG (true/false)
   auto-push-after-fix   Push after history fix (true/false)
@@ -40,8 +40,8 @@ KEYS:
 
 EXAMPLES:
   gc config
-  gc config get default-license
-  gc config set default-license Apache-2.0
+  gc config get default-licence
+  gc config set default-licence Apache-2.0
   gc config set --global github-org myorg
   gc config init
 
@@ -152,10 +152,10 @@ cmd_init() {
     print_info "Creating project configuration..."
     
     # Interactive setup using TUI
-    local project_name license github_org
+    local project_name licence github_org
     
     project_name=$(tui_input "Project name:" "$(basename "$project_root")")
-    license=$(tui_choose "Default license:" "MIT" "Apache-2.0" "GPL-3.0" "BSD-3-Clause" "LGPL-3.0" "Unlicense")
+    licence=$(tui_choose "Default licence:" "MIT" "Apache-2.0" "GPL-3.0" "BSD-3-Clause" "LGPL-3.0" "Unlicence")
     github_org=$(tui_input "GitHub organisation (leave empty for personal):" "")
     
     cat > "$config_file" << EOF
@@ -165,7 +165,7 @@ cmd_init() {
 project-name: $project_name
 repo-slug: $(echo "$project_name" | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
 
-default-license: $license
+default-licence: $licence
 default-branch: main
 
 github-org: $github_org

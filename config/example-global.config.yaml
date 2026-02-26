@@ -1,11 +1,11 @@
 # Dev-Control global configuration
 # Location: ~/.config/dev-control/config.yaml
 
-default-license: MIT
+default-licence: MIT
 default-branch: main
 auto-sign-commits: true
 auto-push-after-fix: false
-license-deep-scan: false
+licence-deep-scan: false
 interactive-mode: true
 colour-output: auto
 editor: nano

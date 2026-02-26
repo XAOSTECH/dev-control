@@ -6062,7 +6062,7 @@
       "email": "69734795+xaoscience@users.noreply.github.com",
       "date": "2026-01-26T16:34:20+00:00",
       "timestamp": 1769445260,
-      "subject": "fix: improve license detection for multi-line patterns and debian packaging dependencies",
+      "subject": "fix: improve licence detection for multi-line patterns and debian packaging dependencies",
       "refs": "",
       "position": {
         "x": 300,
@@ -8204,7 +8204,7 @@
       "email": "69734795+xaoscience@users.noreply.github.com",
       "date": "2026-01-12T22:11:43+01:00",
       "timestamp": 1768252303,
-      "subject": "refactor: Update licenses.sh, create-pr.sh, create-repo.sh to use shared helpers",
+      "subject": "refactor: Update licences.sh, create-pr.sh, create-repo.sh to use shared helpers",
       "refs": "",
       "position": {
         "x": 50,
@@ -8240,7 +8240,7 @@
       "email": "69734795+xaoscience@users.noreply.github.com",
       "date": "2026-01-12T21:06:21+01:00",
       "timestamp": 1768248381,
-      "subject": "Merge pull request #2 from xaoscience/refactor/shared-lib-and-license-detection",
+      "subject": "Merge pull request #2 from xaoscience/refactor/shared-lib-and-licence-detection",
       "refs": "",
       "position": {
         "x": 550,
@@ -8258,7 +8258,7 @@
       "email": "69734795+xaoscience@users.noreply.github.com",
       "date": "2026-01-12T18:03:45+01:00",
       "timestamp": 1768237425,
-      "subject": "refactor: update alias-loading to use shared libs and add gc-licenses",
+      "subject": "refactor: update alias-loading to use shared libs and add gc-licences",
       "refs": "",
       "position": {
         "x": 800,
@@ -8276,7 +8276,7 @@
       "email": "69734795+xaoscience@users.noreply.github.com",
       "date": "2026-01-12T18:02:05+01:00",
       "timestamp": 1768237325,
-      "subject": "feat: add gc-licenses command for license auditing",
+      "subject": "feat: add gc-licences command for licence auditing",
       "refs": "",
       "position": {
         "x": 1050,
@@ -8294,7 +8294,7 @@
       "email": "69734795+xaoscience@users.noreply.github.com",
       "date": "2026-01-12T18:01:02+01:00",
       "timestamp": 1768237262,
-      "subject": "refactor: add comprehensive license detection library",
+      "subject": "refactor: add comprehensive licence detection library",
       "refs": "",
       "position": {
         "x": 50,

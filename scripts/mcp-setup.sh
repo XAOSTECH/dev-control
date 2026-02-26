@@ -20,7 +20,7 @@
 #   --show-token        Display current GitHub token info (masked)
 #   --help              Show this help message
 #
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-Licence-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025-2026 xaoscience
 ################################################################################
 

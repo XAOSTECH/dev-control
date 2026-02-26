@@ -24,16 +24,16 @@ jobs:
         id: app_token
         uses: actions/create-github-app-token@v1
         with:
-          app-id: ${{ secrets.XB_AI }}
-          private-key: ${{ secrets.XB_PK }}
+          app-id: ${{ secrets['{{BOT_APP_ID_SECRET}}'] }}
+          private-key: ${{ secrets['{{BOT_PRIVATE_KEY_SECRET}}'] }}
 
       - name: Setup bot identity
-        uses: ./.github/actions/identity
+      - uses: XAOSTECH/dev-control/.github/actions/identity@b067f72ca7f849b734a45634f23581a739d5146f # v2.0.0
         with:
-          gpg-private-key: ${{ secrets.XB_GK }}
-          gpg-passphrase: ${{ secrets.XB_GP }}
-          user-token: ${{ secrets.XB_UT }}
-          bot-name: ${{ vars.BOT_NAME || 'xaos-bot' }}
+          gpg-private-key: ${{ secrets['{{GPG_PRIVATE_KEY_SECRET}}'] }}
+          gpg-passphrase: ${{ secrets['{{GPG_PASSPHRASE_SECRET}}'] }}
+          user-token: ${{ secrets['{{USER_TOKEN_SECRET}}'] }}
+          bot-name: ${{ vars.BOT_NAME || '{{BOT_NAME}}' }}
 
       - name: Check for American spellings
         id: check
@@ -297,6 +297,7 @@ jobs:
           plows|ploughs|plow → plough
           plowed|ploughed|plow → plough
           plowing|ploughing|plow → plough
+          license|licence|license → licence
           WORDLIST
 
           # Find files to check
@@ -306,11 +307,12 @@ jobs:
             ! -path "./vendor/*" \
             ! -path "./.github/workflows/*" \
             ! -path "./workflows-templates/anglicise.yml" \
-            ! -path "./license-templates/*" \
+            ! -path "./licence-templates/*" \
+            ! -path "./LICENSE" \
             2>/dev/null | sort)
 
-          echo "## British English Spelling Check" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "## British English Spelling Check" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
           echo "🔍 Checking $(echo "$FILES" | wc -l) files for American spellings..." | tee -a $GITHUB_STEP_SUMMARY
           echo ""
 
@@ -358,21 +360,21 @@ jobs:
           echo ""
           if [[ $ISSUES_FOUND -gt 0 ]]; then
             echo "❌ Found $ISSUES_FOUND American spelling(s) in ${#FILES_TO_FIX[@]} file(s)"
-            echo "" >> "$GITHUB_STEP_SUMMARY"
-            echo "❌ **Found $ISSUES_FOUND American spelling(s) to convert**" >> "$GITHUB_STEP_SUMMARY"
-            echo "" >> "$GITHUB_STEP_SUMMARY"
-            echo "| Location | American 🇺🇸 | British 🇬🇧 | Pattern |" >> "$GITHUB_STEP_SUMMARY"
-            echo "|----------|-------------|------------|---------|" >> "$GITHUB_STEP_SUMMARY"
-            echo "$ISSUE_OUTPUT" >> "$GITHUB_STEP_SUMMARY"
-            echo "" >> "$GITHUB_STEP_SUMMARY"
-            echo "🔧 **A pull request will be created with automatic fixes.**" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "❌ **Found $ISSUES_FOUND American spelling(s) to convert**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Location | American 🇺🇸 | British 🇬🇧 | Pattern |" >> $GITHUB_STEP_SUMMARY
+            echo "|----------|-------------|------------|---------|" >> $GITHUB_STEP_SUMMARY
+            echo "$ISSUE_OUTPUT" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "🔧 **A pull request will be created with automatic fixes.**" >> $GITHUB_STEP_SUMMARY
             
-            echo "needs_fix=true" >> "$GITHUB_OUTPUT"
+            echo "needs_fix=true" >> $GITHUB_OUTPUT
           else
             echo "✅ All spellings conform to British English standards."
-            echo "" >> "$GITHUB_STEP_SUMMARY"
-            echo "✅ **All spellings conform to British English standards.**" >> "$GITHUB_STEP_SUMMARY"
-            echo "needs_fix=false" >> "$GITHUB_OUTPUT"
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "✅ **All spellings conform to British English standards.**" >> $GITHUB_STEP_SUMMARY
+            echo "needs_fix=false" >> $GITHUB_OUTPUT
           fi
 
       - name: Apply British English fixes
@@ -390,7 +392,8 @@ jobs:
             ! -path "./vendor/*" \
             ! -path "./.github/workflows/*" \
             ! -path "./workflows-templates/anglicise.yml" \
-            ! -path "./license-templates/*" \
+            ! -path "./licence-templates/*" \
+            ! -path "./LICENSE" \
             2>/dev/null)
           
           FIXED_COUNT=0
@@ -465,12 +468,12 @@ jobs:
       - name: Setup bot identity (if fixes needed)
         id: import_gpg
         if: steps.check.outputs.needs_fix == 'true'
-        uses: ./.github/actions/identity
+        uses: XAOSTECH/dev-control/.github/actions/identity@b067f72ca7f849b734a45634f23581a739d5146f # v2.0.0
         with:
-          gpg-private-key: ${{ secrets.XB_GK }}
-          gpg-passphrase: ${{ secrets.XB_GP }}
-          user-token: ${{ secrets.XB_UT }}
-          bot-name: ${{ vars.BOT_NAME || 'xaos-bot' }}
+          gpg-private-key: ${{ secrets['{{GPG_PRIVATE_KEY_SECRET}}'] }}
+          gpg-passphrase: ${{ secrets['{{GPG_PASSPHRASE_SECRET}}'] }}
+          user-token: ${{ secrets['{{USER_TOKEN_SECRET}}'] }}
+          bot-name: ${{ vars.BOT_NAME || '{{BOT_NAME}}' }}
 
       - name: Ensure automerge label exists
         if: steps.check.outputs.needs_fix == 'true'
@@ -513,26 +516,7 @@ jobs:
           # Create PR
           gh pr create \
             --title "chore: Convert American spellings to British English" \
-            --body "## Automated British English Conversion
-            
-            This PR automatically converts American spellings to British English equivalents.
-            
-            ### Patterns converted:
-            - \`-ize\` → \`-ise\` (organize → organise)
-            - \`-ization\` → \`-isation\` (organization → organisation)
-            - \`-or\` → \`-our\` (color → colour)
-            - \`-er\` → \`-re\` (center → centre)
-            - \`-og\` → \`-ogue\` (catalog → catalogue)
-            - \`-ense\` → \`-ence\` (defense → defence)
-            - \`-l-\` → \`-ll-\` (canceled → cancelled)
-            - Other common differences (gray → grey, aging → ageing, etc.)
-            
-            ### Review notes:
-            - All replacements use case-insensitive whole-word matching
-            - File paths, URLs, and code identifiers are preserved
-            - Please review the changes to ensure no false positives
-            
-            ---
+            --body "## Automated British English Conversion\n\nThis PR automatically converts American spellings to British English equivalents.\n\n### Patterns converted:\n- \`-ize\` → \`-ise\` (organize → organise)\n- \`-ization\` → \`-isation\` (organization → organisation)\n- \`-or\` → \`-our\` (color → colour)\n- \`-er\` → \`-re\` (center → centre)\n- \`-og\` → \`-ogue\` (catalog → catalogue)\n- \`-ense\` → \`-ence\` (defense → defence)\n- \`-l-\` → \`-ll-\` (canceled → cancelled)\n- Other common differences (gray → grey, aging → ageing, etc.)\n\n### Review notes:\n- All replacements use case-insensitive whole-word matching\n- File paths, URLs, and code identifiers are preserved\n- Please review the changes to ensure no false positives\n\n---
             *Generated by [British English Spelling Check workflow](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})*" \
             --base "${{ github.ref_name }}" \
             --head "$BRANCH_NAME" \

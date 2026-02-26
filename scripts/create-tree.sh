@@ -15,7 +15,7 @@
 #   ./scripts/create-tree.sh --no-embed         # Don't modify README
 #   ./scripts/create-tree.sh --max-commits 200  # Limit commits
 #
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-Licence-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025-2026 xaoscience
 
 set -e

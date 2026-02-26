@@ -8,7 +8,7 @@
 #   - Git configured with user credentials
 #   - Currently on a feature/fix branch (not main/master)
 #
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-Licence-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025-2026 xaoscience
 
 set -e

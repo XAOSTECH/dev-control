@@ -8,7 +8,7 @@ name: dev-control
 version: 1.0.0
 description: "Git workflow automation toolkit - templates, repos, PRs, history fixing"
 homepage: https://github.com/xaoscience/dev-control
-license: GPL-3.0-or-later
+licence: GPL-3.0-or-later
 maintainer: "xaoscience <xaos@xaostech.io>"
 entry_point: ./dc
 
@@ -21,7 +21,7 @@ include:
   - docs/
   - docs-templates/
   - github-templates/
-  - license-templates/
+  - licence-templates/
   - workflows-templates/
   - plugins/
   - install.sh

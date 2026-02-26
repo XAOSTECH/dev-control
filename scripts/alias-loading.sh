@@ -5,7 +5,7 @@
 # 
 # This script creates a .bash_aliases file and modifies .bashrc to source it.
 #
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-Licence-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025-2026 xaoscience
 
 set -e
@@ -44,13 +44,13 @@ declare -a DC_ALIASES=(
     "alias dc-fix='${SCRIPT_DIR}/fix-history.sh'"
     "alias dc-alias='${SCRIPT_DIR}/alias-loading.sh'"
     "alias dc-aliases='${SCRIPT_DIR}/alias-loading.sh'"
-    "alias dc-licenses='${SCRIPT_DIR}/licenses.sh'"
-    "alias dc-lic='${SCRIPT_DIR}/licenses.sh'"
+    "alias dc-licences='${SCRIPT_DIR}/licences.sh'"
+    "alias dc-lic='${SCRIPT_DIR}/licences.sh'"
     "alias dc-pkg='${SCRIPT_DIR}/packaging.sh'"
     "alias dc-cluster='${SCRIPT_DIR}/dev-control.sh cluster'"
     "alias dc-gpg='source ${SCRIPT_DIR}/lib/git/gpg.sh && setup_bot_gpg_for_repo'"
     "alias dca-alias='${SCRIPT_DIR}/alias-loading.sh <<< A && source ~/.bashrc && echo \"Changes applied (source ~/.bashrc already done)!\"'"
-    "alias dc-help='echo \"dc-control: Main menu for all Dev-Control tools\"; echo \"dc-git: Unified git services menu\"; echo \"dc-init: Initialise repo with templates\"; echo \"dc-repo: Create GitHub repo from current folder\"; echo \"dc-pr: Create pull request from current branch\"; echo \"dc-modules: Manage git submodules\"; echo \"dc-licenses: Detect and audit licenses\"; echo \"dc-fix: Fix commit history interactively\"; echo \"dc-pkg: Build multi-platform packages\"; echo \"dc-cluster: Setup fully fledged development environment\"; echo \"dc-gpg-setup: Setup GPG bot for GitHub Actions\"; echo \"dc-aliases: Reload alias installer\"'"
+    "alias dc-help='echo \"dc-control: Main menu for all Dev-Control tools\"; echo \"dc-git: Unified git services menu\"; echo \"dc-init: Initialise repo with templates\"; echo \"dc-repo: Create GitHub repo from current folder\"; echo \"dc-pr: Create pull request from current branch\"; echo \"dc-modules: Manage git submodules\"; echo \"dc-licences: Detect and audit licences\"; echo \"dc-fix: Fix commit history interactively\"; echo \"dc-pkg: Build multi-platform packages\"; echo \"dc-cluster: Setup fully fledged development environment\"; echo \"dc-gpg-setup: Setup GPG bot for GitHub Actions\"; echo \"dc-aliases: Reload alias installer\"'"
 )
 
 # Git shortcuts
@@ -233,7 +233,7 @@ create_backup() {
 display_menu() {
     print_section "Select alias categories to install:"
     
-    print_menu_item "1" "Dev-Control Commands  - dc-init, dc-modules, dc-licenses..."
+    print_menu_item "1" "Dev-Control Commands  - dc-init, dc-modules, dc-licences..."
     print_menu_item "2" "Git Shortcuts         - gst, ga, gcm, gp, gl, gco, gb..."
     print_menu_item "3" "Safety Nets           - rm -i, cp -i, mv -i..."
     print_menu_item "4" "System Monitoring     - ports, meminfo, disk, psg..."

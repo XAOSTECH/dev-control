@@ -3,7 +3,7 @@
 # Dev-Control Shared Library: HTML Canvas Tree Renderer
 # Renders interactive git tree with animations on hover
 #
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-Licence-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025-2026 xaoscience
 
 # ============================================================================

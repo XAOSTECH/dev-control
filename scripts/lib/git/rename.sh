@@ -7,7 +7,7 @@
 #   rename.sh xaoscience Main main /path/to/repo1 /path/to/repo2
 #   rename.sh xaoscience Main main  # Auto-discover from GitHub
 #
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-Licence-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025-2026 xaoscience
 
 set -e

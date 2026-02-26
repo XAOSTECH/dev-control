@@ -3,7 +3,7 @@
 # Dev-Control Shared Library: SVG Tree Renderer
 # Renders git tree as static SVG with fractal styling
 #
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-Licence-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025-2026 xaoscience
 
 # ============================================================================

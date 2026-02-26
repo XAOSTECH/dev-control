@@ -2,7 +2,7 @@
 #
 # gc version - Version and update management
 #
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-Licence-Identifier: GPL-3.0-or-later
 
 set -e
 

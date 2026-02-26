@@ -6,7 +6,7 @@
 # It loads templates from all *-templates folders in Dev-Control:
 #   - docs-templates/     → copied to repo root (with placeholder replacement)
 #   - workflows-templates/ → copied to .github/workflows/
-#   - licenses-templates/  → copied to repo root (future)
+#   - licences-templates/  → copied to repo root (future)
 #   - Any other *-templates folders added later
 #
 # USAGE (from another repo):
@@ -17,7 +17,7 @@
 #       with:
 #         project_name: 'My Project'
 #         short_description: 'A cool project'
-#         license_type: 'MIT'
+#         licence_type: 'MIT'
 #         stability: 'experimental'
 #         templates: 'all'
 #
@@ -41,8 +41,8 @@ on:
         required: false
         type: string
         default: 'A project powered by Dev-Control templates'
-      license_type:
-        description: 'License type (MIT, Apache-2.0, GPL-3.0, BSD-3-Clause)'
+      licence_type:
+        description: 'Licence type (MIT, Apache-2.0, GPL-3.0, BSD-3-Clause)'
         required: false
         type: string
         default: 'MIT'
@@ -91,7 +91,7 @@ jobs:
           sparse-checkout: |
             docs-templates
             workflows-templates
-            licenses-templates
+            licences-templates
           sparse-checkout-cone-mode: false
       
       - name: Set up variables
@@ -135,7 +135,7 @@ jobs:
           ORG_NAME: ${{ steps.vars.outputs.repo_owner }}
           REPO_URL: ${{ steps.vars.outputs.repo_url }}
           SHORT_DESC: ${{ inputs.short_description }}
-          LICENSE_TYPE: ${{ inputs.license_type }}
+          LICENSE_TYPE: ${{ inputs.licence_type }}
           STABILITY: ${{ inputs.stability }}
           STABILITY_COLOR: ${{ steps.vars.outputs.stability_color }}
           CURRENT_YEAR: ${{ steps.vars.outputs.current_year }}
@@ -208,10 +208,10 @@ jobs:
             done
           fi
           
-          # Process licenses-templates (to repo root, direct copy)
-          if [[ -d "$DC_DIR/licenses-templates" ]] && [[ "$TEMPLATES" == "all" || "$TEMPLATES" == *"license"* ]]; then
-            echo "📜 Processing licenses-templates..."
-            for lic in "$DC_DIR/licenses-templates"/*; do
+          # Process licences-templates (to repo root, direct copy)
+          if [[ -d "$DC_DIR/licences-templates" ]] && [[ "$TEMPLATES" == "all" || "$TEMPLATES" == *"licence"* ]]; then
+            echo "📜 Processing licences-templates..."
+            for lic in "$DC_DIR/licences-templates"/*; do
               if [ -f "$lic" ]; then
                 lic_name=$(basename "$lic")
                 process_file "$lic" "$lic_name"
@@ -226,7 +226,7 @@ jobs:
             if [ -d "$tpl_dir" ]; then
               dir_name=$(basename "$tpl_dir")
               # Skip already processed
-              if [[ "$dir_name" == "docs-templates" || "$dir_name" == "workflows-templates" || "$dir_name" == "licenses-templates" ]]; then
+              if [[ "$dir_name" == "docs-templates" || "$dir_name" == "workflows-templates" || "$dir_name" == "licences-templates" ]]; then
                 continue
               fi
               echo "📦 Processing $dir_name..."
@@ -254,7 +254,7 @@ jobs:
           BRANCH_NAME: ${{ steps.vars.outputs.branch_name }}
           PROJECT_NAME: ${{ steps.vars.outputs.project_name }}
           INSTALLED: ${{ steps.process.outputs.installed }}
-          LICENSE_TYPE: ${{ inputs.license_type }}
+          LICENSE_TYPE: ${{ inputs.licence_type }}
           STABILITY: ${{ inputs.stability }}
         run: |
           # Create PR body
@@ -272,7 +272,7 @@ jobs:
           | Setting | Value |
           |---------|-------|
           | Project Name | \`$PROJECT_NAME\` |
-          | License | \`$LICENSE_TYPE\` |
+          | Licence | \`$LICENSE_TYPE\` |
           | Stability | \`$STABILITY\` |
           
           ---

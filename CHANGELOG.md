@@ -446,9 +446,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.3.0] - 2026-01-26
 
 ### Fixed
-- License detection now correctly identifies GPL-3.0 when version number is on a separate line
+- Licence detection now correctly identifies GPL-3.0 when version number is on a separate line
 - Debian package Depends field now properly formatted (comma+space separated)
-- Fixed library path in licenses.sh (was lib/license.sh, now lib/git/license.sh)
+- Fixed library path in licences.sh (was lib/licence.sh, now lib/git/licence.sh)
 
 ### Improved
 - Documentation updated with concise introduction for new users
@@ -479,7 +479,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Shared libraries: common.sh, github.sh, git.sh, signing.sh
 - Documentation templates
 - GitHub issue/PR templates
-- License templates (MIT, GPL-3.0, Apache-2.0, BSD-3-Clause)
+- Licence templates (MIT, GPL-3.0, Apache-2.0, BSD-3-Clause)
 - Workflow templates for CI/CD
 
 ### Security

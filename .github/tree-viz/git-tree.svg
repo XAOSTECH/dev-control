@@ -374,7 +374,7 @@
     <circle cx="800" cy="8020" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="931997c: chore: update CHANGELOG for v0.4.0"/>
     <circle cx="1050" cy="8020" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="5416fa7: feat(containerise): add multi-category base image support with streaming/CUDA features"/>
     <circle cx="50" cy="8140" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="bfadb84: chore: update CHANGELOG for v0.3.0"/>
-    <circle cx="300" cy="8140" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="d8293e1: fix: improve license detection for multi-line patterns and debian packaging dependencies"/>
+    <circle cx="300" cy="8140" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="d8293e1: fix: improve licence detection for multi-line patterns and debian packaging dependencies"/>
     <circle cx="550" cy="8140" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="0de1259: chore(README) Significantly improved"/>
     <circle cx="800" cy="8140" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="260ac11: fix(anglicise): succeed instead of fail when no changes made"/>
     <circle cx="1050" cy="8140" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="c79e3cb: refactor(release): separate template from dev-control-specific workflow"/>
@@ -493,12 +493,12 @@
     <circle cx="550" cy="10900" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="a7c98ad: docs: Add comprehensive README for shared library usage"/>
     <circle cx="800" cy="10900" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="5490a38: refactor: Update alias-loading.sh to use all shared helper functions"/>
     <circle cx="1050" cy="10900" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="0adace2: refactor: Update git-control.sh, containerise.sh, mcp-setup.sh with shared helpers"/>
-    <circle cx="50" cy="11020" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="e64d467: refactor: Update licenses.sh, create-pr.sh, create-repo.sh to use shared helpers"/>
+    <circle cx="50" cy="11020" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="e64d467: refactor: Update licences.sh, create-pr.sh, create-repo.sh to use shared helpers"/>
     <circle cx="300" cy="11020" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="6f4fb65: refactor: Expand shared libraries with comprehensive helper functions"/>
-    <circle cx="550" cy="11020" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="593dc70: Merge pull request #2 from xaoscience/refactor/shared-lib-and-license-detection"/>
-    <circle cx="800" cy="11020" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="f628518: refactor: update alias-loading to use shared libs and add gc-licenses"/>
-    <circle cx="1050" cy="11020" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="cb12e7e: feat: add gc-licenses command for license auditing"/>
-    <circle cx="50" cy="11140" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="f76381d: refactor: add comprehensive license detection library"/>
+    <circle cx="550" cy="11020" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="593dc70: Merge pull request #2 from xaoscience/refactor/shared-lib-and-licence-detection"/>
+    <circle cx="800" cy="11020" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="f628518: refactor: update alias-loading to use shared libs and add gc-licences"/>
+    <circle cx="1050" cy="11020" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="cb12e7e: feat: add gc-licences command for licence auditing"/>
+    <circle cx="50" cy="11140" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="f76381d: refactor: add comprehensive licence detection library"/>
     <circle cx="300" cy="11140" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="641320c: refactor: add gc-init metadata configuration library"/>
     <circle cx="550" cy="11140" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="6e03d6c: refactor: add shared print helper functions"/>
     <circle cx="800" cy="11140" r="6" fill="url(#leafGradient)" stroke="#16a34a" stroke-width="1.5" title="df5331f: refactor: add shared color definitions library"/>

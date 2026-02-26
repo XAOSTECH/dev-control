@@ -17,7 +17,7 @@ name: dev-control-lib
 version: 0.2.0
 description: "Lightweight Bash library for TUI, print utilities, and terminal formatting"
 homepage: https://github.com/xaoscience/dev-control
-license: GPL-3.0-or-later
+licence: GPL-3.0-or-later
 maintainer: "xaoscience <69734795+xaoscience@users.noreply.github.com>"
 
 # No entry point - this is a library

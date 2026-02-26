@@ -12,7 +12,7 @@
 #   result=$(tui_input "Enter name")
 #   tui_confirm "Continue?" && echo "Yes!"
 #
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-Licence-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025-2026 xaoscience
 
 # ============================================================================

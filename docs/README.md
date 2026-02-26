@@ -9,7 +9,7 @@
     <img alt="GitHub release" src="https://img.shields.io/github/v/release/xaostech/dev-control?style=for-the-badge&logo=semantic-release&color=blue">
   </a>
   <a href="https://github.com/xaostech/dev-control/blob/main/LICENSE">
-    <img alt="License" src="https://img.shields.io/github/license/xaostech/dev-control?style=for-the-badge&color=green">
+    <img alt="Licence" src="https://img.shields.io/github/licence/xaostech/dev-control?style=for-the-badge&color=green">
   </a>
 </p>
 
@@ -46,12 +46,12 @@ This attempts to make arduous CLI and Git tasks (such as signing woktrees with t
 git clone https://github.com/xaostech/dev-control.git && cd dev-control && ./install.sh
 
 # Use
-dc init          # Set up a repo with templates, license, docs
+dc init          # Set up a repo with templates, licence, docs
 dc repo          # Create a GitHub repo from your local project
 dc pr            # Open a pull request in seconds
 dc fix           # Rewrite/sign/clean commit history safely
 dc modules       # Manage nested submodules automatically
-dc licenses      # Audit license compliance across repos
+dc licences      # Audit licence compliance across repos
 dc mcp           # Configure AI coding assistants (MCP servers)
 dc contain       # Generate devcontainer.json for VS Code
 dc package       # Build tarballs, Homebrew, Snap, Deb, Nix, Docker
@@ -72,7 +72,7 @@ dca-alias        # Sync (all) new alias and reload bashrc
 - [Documentation](#-documentation)
 - [Contributing](#-contributing)
 - [Roadmap](#-roadmap)
-- [License](#-license)
+- [Licence](#-licence)
 
 ---
 
@@ -80,10 +80,10 @@ dca-alias        # Sync (all) new alias and reload bashrc
 
 Managing modern software projects involves a lot of repetitive housekeeping:
 
-- Initialising repos with consistent templates, licenses, and docs
+- Initialising repos with consistent templates, licences, and docs
 - Keeping submodules in sync across complex monorepos
 - Rewriting commit history to fix author dates or add GPG signatures
-- Auditing license compliance when you have dozens of dependencies
+- Auditing licence compliance when you have dozens of dependencies
 - Making devcontainers with the right mounts and settings and reusable category images
 - Packaging your tool for multiple platforms (Homebrew, Snap, Nix, Docker…)
 
@@ -102,7 +102,7 @@ Managing modern software projects involves a lot of repetitive housekeeping:
 
 | Category | What You Get |
 |----------|--------------|
-| **Repo Setup** | Template loading, license selection, README/CONTRIBUTING/SECURITY scaffolding, GitHub Actions workflows |
+| **Repo Setup** | Template loading, licence selection, README/CONTRIBUTING/SECURITY scaffolding, GitHub Actions workflows |
 | **Git Ops** | History rewriting with GPG signing, date preservation, conflict auto-resolution, worktree sync |
 | **Submodules** | Auto-generated `.gitmodules`, temp-folder consolidation, symlink pruning |
 | **Licensing** | SPDX detection, compatibility checking, bulk apply, JSON export |
@@ -163,7 +163,7 @@ gcda        # Restore original author date
 
 ### `dc init` — Repository Initialisation
 
-Populate a repo with docs, license, workflows, and GitHub templates.
+Populate a repo with docs, licence, workflows, and GitHub templates.
 
 ```bash
 dc init                     # Interactive mode
@@ -212,15 +212,15 @@ dc modules /path/to/monorepo
 dc modules --aggressive --dry-run   # Preview symlink + .gitignore changes
 ```
 
-### `dc licenses` — License Auditor
+### `dc licences` — Licence Auditor
 
-Detect, check compatibility, and apply licenses across repos.
+Detect, check compatibility, and apply licences across repos.
 
 ```bash
-dc licenses                         # Scan current repo
-dc licenses --deep                  # Include submodules
-dc licenses --check GPL-3.0         # Verify compatibility
-dc licenses --apply MIT             # Apply license template
+dc licences                         # Scan current repo
+dc licences --deep                  # Include submodules
+dc licences --check GPL-3.0         # Verify compatibility
+dc licences --apply MIT             # Apply licence template
 ```
 
 ### `dc mcp` — MCP Server Setup
@@ -292,7 +292,7 @@ Example `.dc-init.yaml`:
 
 ```yaml
 project-name: my-project
-default-license: MIT
+default-licence: MIT
 default-branch: main
 auto-sign-commits: true
 github-org: my-org
@@ -320,7 +320,7 @@ See [config/example.dc-init.yaml](../config/example.dc-init.yaml) for all option
 | [template-loading.sh](../scripts/template-loading.sh) | Template init logic |
 | [fix-history.sh](../scripts/fix-history.sh) | History rewriting engine |
 | [module-nesting.sh](../scripts/module-nesting.sh) | Submodule management |
-| [licenses.sh](../scripts/licenses.sh) | License auditing |
+| [licences.sh](../scripts/licences.sh) | Licence auditing |
 | [containerise.sh](../scripts/containerise.sh) | Devcontainer generator |
 | [packaging.sh](../scripts/packaging.sh) | Multi-platform packaging |
 | [mcp-setup.sh](../scripts/mcp-setup.sh) | MCP server configuration |
@@ -359,7 +359,7 @@ git push origin feature/amazing-feature
 - [x] Plugin system with GitHub install support
 - [x] Multi-platform packaging (tarball, Homebrew, Snap, Deb, Nix, Docker)
 - [x] MCP server configuration for AI assistants
-- [x] License auditing with SPDX detection
+- [x] Licence auditing with SPDX detection
 - [x] Devcontainer generator
 - [ ] Zsh compatibility layer
 - [ ] Fish shell support
@@ -370,7 +370,7 @@ See [open issues](https://github.com/xaostech/dev-control/issues) for more.
 
 ---
 
-## 📄 License
+## 📄 Licence
 
 GPL-3.0. See [LICENSE](../LICENSE).
 

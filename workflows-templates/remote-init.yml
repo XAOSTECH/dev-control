@@ -26,8 +26,8 @@ on:
         required: false
         type: string
         default: 'A well-documented project'
-      license:
-        description: 'License type'
+      licence:
+        description: 'Licence type'
         type: choice
         options:
           - MIT
@@ -55,7 +55,7 @@ jobs:
     with:
       project_name: ${{ inputs.project_name }}
       short_description: ${{ inputs.description }}
-      license_type: ${{ inputs.license }}
+      licence_type: ${{ inputs.licence }}
       stability: ${{ inputs.stability }}
       templates: 'all'
       create_pr: true

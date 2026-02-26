@@ -7,7 +7,7 @@
 #   - GitHub CLI (gh) installed and authenticated
 #   - Git configured with user credentials
 #
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-Licence-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025-2026 xaoscience
 
 set -e

@@ -10,9 +10,9 @@
 #   dc --version              # Show version
 #
 # Commands:
-#   init, repo, pr, fix, modules, licenses, mcp, container, aliases
+#   init, repo, pr, fix, modules, licences, mcp, container, aliases
 #
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-Licence-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025-2026 xaoscience
 
 set -e
@@ -68,9 +68,9 @@ declare -A COMMAND_MAP=(
     ["modules"]="module-nesting.sh"
     ["nest"]="module-nesting.sh"
     ["submodules"]="module-nesting.sh"
-    ["licenses"]="licenses.sh"
-    ["lic"]="licenses.sh"
-    ["license"]="licenses.sh"
+    ["licences"]="licences.sh"
+    ["lic"]="licences.sh"
+    ["licence"]="licences.sh"
     ["mcp"]="mcp-setup.sh"
     ["container"]="containerise.sh"
     ["containerise"]="containerise.sh"
@@ -87,7 +87,7 @@ declare -A COMMAND_DESC=(
     ["pr"]="Create pull request from current branch"
     ["fix"]="Fix commit history (reorder, edit, sign, drop)"
     ["modules"]="Manage git submodules and .gitmodules"
-    ["licenses"]="Audit and manage licenses across repo/submodules"
+    ["licences"]="Audit and manage licences across repo/submodules"
     ["mcp"]="Configure Model Context Protocol servers"
     ["container"]="Setup devcontainer for project"
     ["aliases"]="Install bash aliases for Dev-Control"
@@ -123,7 +123,7 @@ ${BOLD}COMMANDS${NC}
 EOF
 
     # Print commands in a formatted table
-    local commands=("init" "repo" "pr" "fix" "modules" "licenses" "mcp" "container" "aliases")
+    local commands=("init" "repo" "pr" "fix" "modules" "licences" "mcp" "container" "aliases")
     for cmd in "${commands[@]}"; do
         printf "  ${CYAN}%-12s${NC} %s\n" "$cmd" "${COMMAND_DESC[$cmd]}"
     done
@@ -143,12 +143,12 @@ ${BOLD}EXAMPLES${NC}
   dc repo                   Create GitHub repo from current folder
   dc pr                     Create pull request
   dc fix --range HEAD=5     Fix last 5 commits
-  dc licenses --deep        Audit licenses including submodules
+  dc licences --deep        Audit licences including submodules
   dc aliases                Install bash aliases
 
 ${BOLD}ALIASES${NC}
   After running 'dc aliases', these shortcuts are available:
-    dc-init, dc-repo, dc-pr, dc-fix, dc-modules, dc-licenses, dc-mcp
+    dc-init, dc-repo, dc-pr, dc-fix, dc-modules, dc-licences, dc-mcp
 
 ${BOLD}CONFIGURATION${NC}
   Global config:  ~/.config/dev-control/config.yaml

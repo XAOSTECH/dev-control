@@ -8,7 +8,7 @@
 #   curl -sSL ... | bash -s -- --prefix=/custom/path
 #   curl -sSL ... | bash -s -- --uninstall
 #
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-Licence-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025-2026 xaoscience
 
 set -e
@@ -197,7 +197,7 @@ alias dc-repo='$PREFIX/dc repo'
 alias dc-pr='$PREFIX/dc pr'
 alias dc-fix='$PREFIX/dc fix'
 alias dc-modules='$PREFIX/dc modules'
-alias dc-licenses='$PREFIX/dc licenses'
+alias dc-licences='$PREFIX/dc licences'
 alias dc-mcp='$PREFIX/dc mcp'
 alias dc-aliases='$PREFIX/dc aliases'
 # end dev-control
@@ -266,7 +266,7 @@ show_post_install() {
     echo "  dc pr         - Create pull request"
     echo "  dc fix        - Fix commit history"
     echo "  dc modules    - Manage submodules"
-    echo "  dc licenses   - Audit licenses"
+    echo "  dc licences   - Audit licences"
     echo "  dc mcp        - Configure MCP servers"
     echo "  dc config     - Manage configuration"
     echo "  dc status     - Show status"

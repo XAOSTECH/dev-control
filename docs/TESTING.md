@@ -144,6 +144,6 @@ jobs:
 
 1. **Isolate tests**: Use temp directories, reset globals
 2. **Test one thing**: Each test should verify a single behaviour
-3. **Use descriptive names**: `@test "gc init with --license creates LICENSE"`
+3. **Use descriptive names**: `@test "gc init with --licence creates LICENSE"`
 4. **Clean up**: Always remove temp files in teardown
 5. **Test edge cases**: Empty inputs, missing files, invalid args

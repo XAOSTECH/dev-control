@@ -297,6 +297,7 @@ jobs:
           plows|ploughs|plow → plough
           plowed|ploughed|plow → plough
           plowing|ploughing|plow → plough
+          license|licence|license → licence
           WORDLIST
 
           # Find files to check
@@ -306,7 +307,8 @@ jobs:
             ! -path "./vendor/*" \
             ! -path "./.github/workflows/*" \
             ! -path "./workflows-templates/anglicise.yml" \
-            ! -path "./license-templates/*" \
+            ! -path "./licence-templates/*" \
+            ! -path "./LICENSE" \
             2>/dev/null | sort)
 
           echo "## British English Spelling Check" >> $GITHUB_STEP_SUMMARY
@@ -390,7 +392,8 @@ jobs:
             ! -path "./vendor/*" \
             ! -path "./.github/workflows/*" \
             ! -path "./workflows-templates/anglicise.yml" \
-            ! -path "./license-templates/*" \
+            ! -path "./licence-templates/*" \
+            ! -path "./LICENSE" \
             2>/dev/null)
           
           FIXED_COUNT=0

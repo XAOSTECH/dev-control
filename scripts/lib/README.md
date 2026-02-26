@@ -95,7 +95,7 @@ Git-control metadata management via `dc-init.*` git config.
 source "$SCRIPT_DIR/lib/config.sh"
 
 load_gc_metadata  # Sets PROJECT_NAME, REPO_SLUG, etc.
-save_gc_metadata "license-type" "MIT"
+save_gc_metadata "licence-type" "MIT"
 ```
 
 **Functions:**
@@ -107,24 +107,24 @@ save_gc_metadata "license-type" "MIT"
 - `has_gc_metadata` - Check if any metadata exists
 - `show_gc_metadata` - Display all metadata
 
-### license.sh
-License detection and management.
+### licence.sh
+Licence detection and management.
 
 ```bash
-source "$SCRIPT_DIR/lib/license.sh"
+source "$SCRIPT_DIR/lib/licence.sh"
 
-license_info=$(detect_license "/path/to/repo")
+licence_info=$(detect_licence "/path/to/repo")
 spdx=$(detect_spdx_from_content "/path/to/LICENSE")
 ```
 
 **Functions:**
-- `find_license_file "dir"` - Find LICENSE file
+- `find_licence_file "dir"` - Find LICENSE file
 - `detect_spdx_from_content "file"` - Detect SPDX ID from content
-- `detect_local_license "dir"` - Detect license from local files
-- `detect_github_license "owner" "repo"` - Detect via GitHub API
-- `detect_license "dir"` - Full detection (local + remote)
-- `scan_submodule_licenses "dir" [recursive]` - Scan all submodules
-- `check_license_compatibility "target" "licenses..."` - Check compatibility
+- `detect_local_licence "dir"` - Detect licence from local files
+- `detect_github_licence "owner" "repo"` - Detect via GitHub API
+- `detect_licence "dir"` - Full detection (local + remote)
+- `scan_submodule_licences "dir" [recursive]` - Scan all submodules
+- `check_licence_compatibility "target" "licences..."` - Check compatibility
 
 ### cli.sh
 CLI argument parsing and script utilities.

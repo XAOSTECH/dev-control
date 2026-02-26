@@ -10,7 +10,7 @@
 #   - Pull Request Creation
 #   - Module Nesting
 #   - History Fixing
-#   - License Auditing
+#   - Licence Auditing
 #   - MCP Setup
 #   - Containerisation
 #   - Packaging
@@ -20,7 +20,7 @@
 #   ./dev-control.sh alias        # Run specific tool directly
 #   ./dev-control.sh help         # Show available commands
 #
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-Licence-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025-2026 xaoscience
 
 set -e
@@ -145,7 +145,7 @@ run_cluster_setup() {
     print_header_success "Cluster setup complete!"
     echo ""
     print_section "What's been set up:"
-    print_list_item "✓ Templates (docs, workflows, licenses)"
+    print_list_item "✓ Templates (docs, workflows, licences)"
     if [[ "$CLUSTER_MODE" != "templates-only" ]]; then
         print_list_item "✓ Devcontainer ($([ "$CLUSTER_MODE" = "bare" ] && echo "bare" || echo "with $CLUSTER_CATEGORY"))"
     fi
@@ -173,7 +173,7 @@ COMMANDS:
   pr                 Create pull request (dc-pr)
   modules, nest      Manage submodules (dc-modules)
   fix, history       Fix commit history (dc-fix)
-  licenses, lic      Audit licenses (dc-licenses)
+  licences, lic      Audit licences (dc-licences)
   package, pkg       Build multi-platform packages (dc-package)
   mcp                Setup MCP servers (dc-mcp)
   cluster            Setup fully fledged cluster (init + container + mcp)
@@ -190,7 +190,7 @@ EXAMPLES:
   ./dev-control.sh cluster              # Init, Containerise, MCP-setup (also add to aliases as dc-cluster and nothing else)
   ./dev-control.sh pr                   # Create pull request
   ./dev-control.sh fix --range HEAD=5   # Fix last 5 commits
-  ./dev-control.sh licenses --deep      # Audit licenses recursively
+  ./dev-control.sh licences --deep      # Audit licences recursively
   ./dev-control.sh package --all        # Build all package types
 
 ALIASES:
@@ -203,7 +203,7 @@ ALIASES:
     dc-fix      - History fixing
     dc-modules  - Module nesting
     dc-aliases  - Alias loading
-    dc-licenses - License auditing
+    dc-licences - Licence auditing
     dc-package  - Package builder
     dc-mcp      - MCP setup
 
@@ -237,7 +237,7 @@ display_menu() {
     
     echo -e "${BOLD}Maintenance & Tools${NC}"
     print_menu_item "7" "History Fixer (dc-fix)           - Fix commit history"
-    print_menu_item "8" "License Auditor (dc-licenses)    - Audit licenses"
+    print_menu_item "8" "Licence Auditor (dc-licences)    - Audit licences"
     print_menu_item "9" "Package Builder (dc-package)     - Build release packages"
     echo ""
     
@@ -282,9 +282,9 @@ run_tool() {
             check_script_exists "fix-history.sh" && \
                 bash "$SCRIPT_DIR/fix-history.sh" "$@"
             ;;
-        8|licenses|lic)
-            check_script_exists "licenses.sh" && \
-                bash "$SCRIPT_DIR/licenses.sh" "$@"
+        8|licences|lic)
+            check_script_exists "licences.sh" && \
+                bash "$SCRIPT_DIR/licences.sh" "$@"
             ;;
         9|package|pkg)
             check_script_exists "packaging.sh" && \
