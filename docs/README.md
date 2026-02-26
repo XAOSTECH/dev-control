@@ -143,6 +143,24 @@ dc --help             # List all commands
 
 Below is a quick reference. Run `dc <command> --help` for full options.
 
+### `dc aliases` — Shell Alias Installer
+
+Add productivity aliases for Git, Docker, system monitoring, and more.
+
+```bash
+dc alias    # Interactive category selection
+source ~/.bashrc
+```
+
+#### Example aliases
+
+```bash
+gpf         # git push --force-with-lease
+dca-alias   # Apply and source all aliases
+gcda        # Stage, amend and push with preserved author date
+gcda        # Restore original author date
+```
+
 ### `dc init` — Repository Initialisation
 
 Populate a repo with docs, license, workflows, and GitHub templates.
@@ -238,24 +256,6 @@ Build distribution packages with a single command.
 dc package --init                   # Create .dc-package.yaml
 dc package --all                    # Build everything
 dc package --docker --theme cyber   # Docker image with ttyd + theme
-```
-
-### `dc aliases` — Shell Alias Installer
-
-Add productivity aliases for Git, Docker, system monitoring, and more.
-
-```bash
-dc alias                          # Interactive category selection
-source ~/.bashrc
-```
-
-#### Example aliases
-
-```bash
-gpf         # git push --force-with-lease
-dca-alias   # Apply and source all aliases
-gcda        # Stage, amend and push with preserved author date
-gcda        # Restore otiginal author date
 ```
 ---
 
