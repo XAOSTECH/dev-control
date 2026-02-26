@@ -167,7 +167,7 @@ Populate a repo with docs, license, workflows, and GitHub templates.
 
 ```bash
 dc init                     # Interactive mode
-dc init --defaults          # Skip repo owner/slug and envVars prompts
+dc init --defaults          # Skip repo owner/slug and bot credentials (envVars) prompts
 dc init -f docs/SECURITY.md # Update a specific file
 dc init --batch /projects/* # Initialise multiple repos
 ```
