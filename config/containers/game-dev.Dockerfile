@@ -2,7 +2,7 @@
 # GAME-DEV: Godot, Vulkan, SDL2, GLFW, CUDA
 # ============================================================================
 #
-# Category-specific layer appended after common.Dockerfile
+# Category-specific layer appended after common-tools.Dockerfile
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025-2026 xaoscience

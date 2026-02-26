@@ -726,12 +726,16 @@ generate_category_dockerfile() {
     local needs_device_groups=false
     [[ "$category" == "streaming" ]] && needs_device_groups=true
     
-    # Concatenate: common + category-specific + optional groups + footer
+    # Concatenate: common + common-tools + category-specific + optional groups + footer
     {
         # Common base layer (substitute locale and timezone variables)
         sed -e "s|\${LOCALE}|${locale}|g" \
             -e "s|\${TZ}|${timezone}|g" \
             "$containers_dir/common.Dockerfile"
+        echo ""
+
+        # Common tools layer (nvm/Node.js, GitHub CLI)
+        cat "$containers_dir/common-tools.Dockerfile"
         echo ""
         
         # Category-specific layer
@@ -750,7 +754,7 @@ DOCKERFILE_GROUPS
             echo ""
         fi
         
-        # Common footer (user setup, nvm, dev-control)
+        # Common footer (user setup, dev-control)
         # Replace template variables: CATEGORY, GIT_CONFIG_CMD
         sed -e "s/\${CATEGORY}/${category}/g" \
             -e "s|\${GIT_CONFIG_CMD}|${git_config_cmd_escaped}|g" \

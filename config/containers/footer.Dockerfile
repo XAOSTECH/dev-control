@@ -1,5 +1,5 @@
 # ============================================================================
-# Common footer: User setup, nvm, dev-control (appended to all categories)
+# Common footer: User setup, dev-control (appended to all categories)
 # ============================================================================
 #
 # Expects: CATEGORY variable set by build process
