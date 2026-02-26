@@ -601,7 +601,7 @@ DOCKERFILE_EOF
 ENV NVM_DIR=/opt/nvm
 RUN mkdir -p "$NVM_DIR" && \\
     curl -s -o- https://raw.githubusercontent.com/nvm-sh/nvm/\$(curl -s https://api.github.com/repos/nvm-sh/nvm/releases/latest | grep -o '"tag_name": "[^"]*' | cut -d'"' -f4)/install.sh | bash && \\
-    bash -c 'source /opt/nvm/nvm.sh && nvm install --lts && nvm alias default lts/* && nvm use --lts && node_path="$(nvm which --lts)" && node_dir="$(dirname "$node_path")" && node_prefix="$(dirname "$node_dir")" && ln -sfn "$node_prefix" /opt/nvm/versions/node/default && nvm cache clear' && \\
+    bash -c 'source /opt/nvm/nvm.sh && nvm install --lts && nvm alias default lts/* && nvm use default && node_path="$(nvm which default)" && node_dir="$(dirname "$node_path")" && node_prefix="$(dirname "$node_dir")" && ln -sfn "$node_prefix" /opt/nvm/versions/node/default && nvm cache clear' && \\
     chmod -R a+rx $NVM_DIR
 
 # Dynamically load nvm and set PATH to latest installed Node (supports updates without rebuilds)

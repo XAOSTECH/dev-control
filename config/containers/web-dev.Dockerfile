@@ -9,7 +9,7 @@
 
 # Install Wrangler globally (Cloudflare Workers CLI)
 # Note: nvm/Node.js installed system-wide in common-tools.Dockerfile
-RUN bash -c 'source /opt/nvm/nvm.sh && nvm use --lts && npm install -g wrangler'
+RUN bash -c 'source /opt/nvm/nvm.sh && nvm use default && npm install -g wrangler'
 
 # Verify installation
-RUN bash -c 'source /opt/nvm/nvm.sh && nvm use --lts && wrangler --version'
+RUN bash -c 'source /opt/nvm/nvm.sh && nvm use default && wrangler --version'
