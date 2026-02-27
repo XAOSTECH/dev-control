@@ -7,7 +7,7 @@
 # SPDX-Licence-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025-2026 xaoscience
 
-# Install nvm and Node.js system-wide (required for npx-dependent MCP servers like firecrawl)
+# Install nvm and Node.js system-wide (required for npm install wrangler)
 ENV NVM_DIR=/opt/nvm
 RUN mkdir -p /opt/nvm \
     && curl -s -o- https://raw.githubusercontent.com/nvm-sh/nvm/$(curl -s https://api.github.com/repos/nvm-sh/nvm/releases/latest | grep -o '"tag_name": "[^"]*' | cut -d'"' -f4)/install.sh | bash \
