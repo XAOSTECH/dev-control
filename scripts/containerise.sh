@@ -1361,6 +1361,16 @@ run_nest_mode() {
             
             if confirm "Delete these containers?"; then
                 echo ""
+                # Collect all associated volume names upfront before any removal
+                local -a all_vol_names=()
+                for container_id in "${container_ids[@]}"; do
+                    mapfile -t -O "${#all_vol_names[@]}" all_vol_names < <(
+                        docker inspect "$container_id" \
+                            --format='{{range .Mounts}}{{if eq .Type "volume"}}{{.Name}}{{"\n"}}{{end}}{{end}}' \
+                            2>/dev/null | grep -v "^$" || true
+                    )
+                done
+
                 for container_id in "${container_ids[@]}"; do
                     print_info "Stopping container ${container_id:0:12}..."
                     docker stop "$container_id" 2>/dev/null || true
@@ -1370,6 +1380,13 @@ run_nest_mode() {
                 done
                 echo ""
                 print_success "Deleted ${#container_ids[@]} containers"
+
+                # Remove associated volumes in one batch (clears stale postCreateCommandMarker)
+                if [[ ${#all_vol_names[@]} -gt 0 ]]; then
+                    print_info "Removing ${#all_vol_names[@]} associated volume(s)..."
+                    docker volume rm "${all_vol_names[@]}" 2>/dev/null || true
+                    print_success "Removed volumes: ${all_vol_names[*]}"
+                fi
             else
                 print_info "Skipped container deletion"
             fi
