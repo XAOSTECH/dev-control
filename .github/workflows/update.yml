@@ -59,11 +59,42 @@ on:
         required: false
         type: boolean
         default: false
+      check_dependencies:
+        description: 'Check and update dependencies (package.json, requirements.txt)'
+        required: false
+        type: boolean
+        default: true
+      cleanup_branches:
+        description: 'Delete stale merged branches (>5 days old)'
+        required: false
+        type: boolean
+        default: true
+      branch_age_days:
+        description: 'Days after merge to consider branch stale'
+        required: false
+        type: number
+        default: 5
+      check_stale_issues:
+        description: 'Check and comment on stale issues/PRs'
+        required: false
+        type: boolean
+        default: true
+      stale_days:
+        description: 'Days of inactivity to consider issue/PR stale'
+        required: false
+        type: number
+        default: 60
+      dummy_commit:
+        description: 'Create dummy commit for serverless deployments'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
   pull-requests: write
   actions: write
+  issues: write
 
 concurrency:
   group: update-${{ github.ref }}
@@ -333,6 +364,298 @@ Once approved, this will bring submodules up to date with their respective main 
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "📝 **Pull request created** for submodule updates" >> $GITHUB_STEP_SUMMARY
 
+      - name: Check dependencies
+        id: check_dependencies
+        if: ${{ github.event.inputs.check_dependencies != 'false' }}
+        run: |
+          echo "## 📦 Dependency Check" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          UPDATES_FOUND=0
+          UPDATES_FILES=""
+          
+          # Check package.json (npm)
+          if [[ -f package.json ]]; then
+            echo "🔍 Checking npm dependencies..."
+            if command -v npm &>/dev/null; then
+              npm outdated --json > outdated.json || true
+              if [[ -s outdated.json ]] && [[ $(cat outdated.json) != "{}" ]]; then
+                COUNT=$(jq 'length' outdated.json 2>/dev/null || echo "0")
+                if [[ $COUNT -gt 0 ]]; then
+                  echo "  ⚠️ Found $COUNT outdated npm package(s)"
+                  UPDATES_FOUND=$((UPDATES_FOUND + COUNT))
+                  UPDATES_FILES="${UPDATES_FILES}npm:${COUNT};"
+                  echo "- **npm**: $COUNT package(s)" >> $GITHUB_STEP_SUMMARY
+                fi
+              else
+                echo "  ✅ All npm packages up to date"
+              fi
+              rm -f outdated.json
+            fi
+          fi
+          
+          # Check requirements.txt (pip)
+          if [[ -f requirements.txt ]]; then
+            echo "🔍 Checking pip dependencies..."
+            if command -v pip &>/dev/null; then
+              pip list --outdated --format=json > pip-outdated.json 2>/dev/null || true
+              if [[ -s pip-outdated.json ]]; then
+                COUNT=$(jq 'length' pip-outdated.json 2>/dev/null || echo "0")
+                if [[ $COUNT -gt 0 ]]; then
+                  echo "  ⚠️ Found $COUNT outdated pip package(s)"
+                  UPDATES_FOUND=$((UPDATES_FOUND + COUNT))
+                  UPDATES_FILES="${UPDATES_FILES}pip:${COUNT};"
+                  echo "- **pip**: $COUNT package(s)" >> $GITHUB_STEP_SUMMARY
+                fi
+              else
+                echo "  ✅ All pip packages up to date"
+              fi
+              rm -f pip-outdated.json
+            fi
+          fi
+          
+          # Check go.mod (Go)
+          if [[ -f go.mod ]]; then
+            echo "🔍 Checking Go dependencies..."
+            if command -v go &>/dev/null; then
+              go list -u -m -json all 2>/dev/null | jq -s '[.[] | select(.Update)] | length' > go-updates 2>/dev/null || echo "0" > go-updates
+              COUNT=$(cat go-updates)
+              if [[ $COUNT -gt 0 ]]; then
+                echo "  ⚠️ Found $COUNT outdated Go module(s)"
+                UPDATES_FOUND=$((UPDATES_FOUND + COUNT))
+                UPDATES_FILES="${UPDATES_FILES}go:${COUNT};"
+                echo "- **Go**: $COUNT module(s)" >> $GITHUB_STEP_SUMMARY
+              else
+                echo "  ✅ All Go modules up to date"
+              fi
+              rm -f go-updates
+            fi
+          fi
+          
+          echo "has_updates=$([[ $UPDATES_FOUND -gt 0 ]] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
+          echo "updates_count=$UPDATES_FOUND" >> $GITHUB_OUTPUT
+          echo "updates_files=$UPDATES_FILES" >> $GITHUB_OUTPUT
+          
+          if [[ $UPDATES_FOUND -eq 0 ]]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "✅ **All dependencies up to date**" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Update dependencies
+        if: steps.check_dependencies.outputs.has_updates == 'true' && github.event.inputs.dry_run != 'true'
+        run: |
+          echo "## 🔄 Updating Dependencies" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Update npm
+          if [[ -f package.json ]] && command -v npm &>/dev/null; then
+            echo "⬆️ Updating npm packages to latest..."
+            npm update 2>/dev/null || true
+            npm outdated 2>/dev/null || echo "All up to date"
+          fi
+          
+          # Update pip
+          if [[ -f requirements.txt ]] && command -v pip &>/dev/null; then
+            echo "⬆️ Updating pip packages to latest..."
+            pip list --outdated --format=json 2>/dev/null | jq -r '.[] | .name' | xargs -n1 pip install -U 2>/dev/null || true
+            pip freeze > requirements.txt 2>/dev/null || true
+          fi
+          
+          # Update Go
+          if [[ -f go.mod ]] && command -v go &>/dev/null; then
+            echo "⬆️ Updating Go modules to latest..."
+            go get -u ./... 2>/dev/null || true
+            go mod tidy 2>/dev/null || true
+          fi
+          
+          echo "✅ Dependencies updated" >> $GITHUB_STEP_SUMMARY
+
+      - name: Create PR for dependency updates
+        if: steps.check_dependencies.outputs.has_updates == 'true' && github.event.inputs.dry_run != 'true'
+        env:
+          GH_TOKEN: ${{ steps.app_token.outputs.token }}
+        run: |
+          # Check if there are changes
+          if git diff --quiet && git diff --cached --quiet; then
+            echo "ℹ️ No dependency changes to commit"
+            exit 0
+          fi
+          
+          BRANCH_NAME="chore/update-dependencies-$(date +%Y%m%d-%H%M%S)"
+          git checkout -b "$BRANCH_NAME"
+          
+          git add -A
+          
+          UPDATES_COUNT="${{ steps.check_dependencies.outputs.updates_count }}"
+          git commit -m "chore: update $UPDATES_COUNT dependencies to latest" \
+            -m "Automated dependency updates." \
+            -m "See workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          
+          git push origin "$BRANCH_NAME"
+          
+          gh pr create \
+            --title "chore: Update $UPDATES_COUNT dependencies to latest" \
+            --body "## 📦 Automated Dependency Updates
+
+This PR updates outdated dependencies to their latest versions.
+
+### Updated Files
+
+${{ steps.check_dependencies.outputs.updates_files }}
+
+### Details
+
+- **Triggered by:** [Repository Update Workflow](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+- **Date:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+
+### Review Checklist
+
+- [ ] Check CHANGELOG/release notes for breaking changes
+- [ ] Review major version bumps carefully
+- [ ] Run tests locally
+- [ ] Verify compatibility with existing code
+
+Once approved, dependencies will be updated to latest stable versions." \
+            --base "${{ github.ref_name }}" \
+            --head "$BRANCH_NAME" \
+            --label "automated,dependencies"
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📝 **Pull request created** for dependency updates" >> $GITHUB_STEP_SUMMARY
+
+      - name: Cleanup stale branches
+        id: cleanup_branches
+        if: ${{ github.event.inputs.cleanup_branches != 'false' }}
+        env:
+          GH_TOKEN: ${{ steps.app_token.outputs.token }}
+          BRANCH_AGE_DAYS: ${{ github.event.inputs.branch_age_days || '5' }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+        run: |
+          echo "## 🧹 Stale Branch Cleanup" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          CUTOFF_DATE=$(date -d "$BRANCH_AGE_DAYS days ago" +%s)
+          DELETED=0
+          
+          # Get all merged branches (excluding main/master and protected branches)
+          gh api repos/${{ github.repository }}/branches --paginate | jq -r '.[] | select(.protected == false) | .name' | while read -r branch; do
+            # Skip main branches
+            if [[ "$branch" =~ ^(main|master|develop|production)$ ]]; then
+              continue
+            fi
+            
+            # Check if branch is merged
+            MERGE_STATUS=$(git branch -r --merged origin/${{ github.ref_name }} | grep -c "origin/$branch" || echo "0")
+            
+            if [[ $MERGE_STATUS -gt 0 ]]; then
+              # Get last commit date
+              LAST_COMMIT_DATE=$(git log -1 --format=%ct "origin/$branch" 2>/dev/null || echo "0")
+              
+              if [[ $LAST_COMMIT_DATE -lt $CUTOFF_DATE ]]; then
+                DAYS_OLD=$(( ($(date +%s) - LAST_COMMIT_DATE) / 86400 ))
+                echo "🗑️ Stale branch: $branch (merged $DAYS_OLD days ago)"
+                
+                if [[ "$DRY_RUN" != "true" ]]; then
+                  git push origin --delete "$branch" 2>/dev/null || true
+                  DELETED=$((DELETED + 1))
+                  echo "  ✅ Deleted"
+                else
+                  echo "  🔍 Would delete (dry-run)"
+                  DELETED=$((DELETED + 1))
+                fi
+                
+                echo "- \`$branch\` - $DAYS_OLD days old" >> $GITHUB_STEP_SUMMARY
+              fi
+            fi
+          done
+          
+          if [[ $DELETED -eq 0 ]]; then
+            echo "✅ **No stale branches found**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "🗑️ **$DELETED branch(es) cleaned up**" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Check stale issues and PRs
+        id: check_stale
+        if: ${{ github.event.inputs.check_stale_issues != 'false' }}
+        env:
+          GH_TOKEN: ${{ steps.app_token.outputs.token }}
+          STALE_DAYS: ${{ github.event.inputs.stale_days || '60' }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+        run: |
+          echo "## 📝 Stale Issues/PRs Check" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          CUTOFF_DATE=$(date -d "$STALE_DAYS days ago" --iso-8601)
+          COMMENTED=0
+          
+          # Check stale issues
+          echo "🔍 Checking stale issues..."
+          gh issue list --state open --json number,title,updatedAt --limit 100 | \
+            jq -r ".[] | select(.updatedAt < \"$CUTOFF_DATE\") | \"\(.number):\(.title)\"" | \
+            while IFS=':' read -r number title; do
+              echo "  ⚠️ Issue #$number is stale: $title"
+              
+              if [[ "$DRY_RUN" != "true" ]]; then
+                gh issue comment "$number" --body "This issue has been inactive for over $STALE_DAYS days. Please provide an update or it may be closed." 2>/dev/null || true
+                gh issue edit "$number" --add-label "stale" 2>/dev/null || true
+                COMMENTED=$((COMMENTED + 1))
+              else
+                COMMENTED=$((COMMENTED + 1))
+              fi
+              
+              echo "- Issue [#$number](${{ github.server_url }}/${{ github.repository }}/issues/$number): $title" >> $GITHUB_STEP_SUMMARY
+            done
+          
+          # Check stale PRs
+          echo "🔍 Checking stale PRs..."
+          gh pr list --state open --json number,title,updatedAt --limit 100 | \
+            jq -r ".[] | select(.updatedAt < \"$CUTOFF_DATE\") | \"\(.number):\(.title)\"" | \
+            while IFS=':' read -r number title; do
+              echo "  ⚠️ PR #$number is stale: $title"
+              
+              if [[ "$DRY_RUN" != "true" ]]; then
+                gh pr comment "$number" --body "This PR has been inactive for over $STALE_DAYS days. Please rebase and resolve conflicts, or it may be closed." 2>/dev/null || true
+                gh pr edit "$number" --add-label "stale" 2>/dev/null || true
+                COMMENTED=$((COMMENTED + 1))
+              else
+                COMMENTED=$((COMMENTED + 1))
+              fi
+              
+              echo "- PR [#$number](${{ github.server_url }}/${{ github.repository }}/pull/$number): $title" >> $GITHUB_STEP_SUMMARY
+            done
+          
+          if [[ $COMMENTED -eq 0 ]]; then
+            echo "✅ **No stale issues or PRs found**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "📌 **$COMMENTED item(s) marked as stale**" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Create dummy commit for serverless
+        if: ${{ github.event.inputs.dummy_commit == 'true' && github.event.inputs.dry_run != 'true' }}
+        run: |
+          echo "## 🤖 Dummy Commit for Serverless" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Get original author info
+          ORIGINAL_AUTHOR=$(git log -1 --format='%an <%ae>')
+          ORIGINAL_DATE=$(git log -1 --format='%ad')
+          
+          # Create empty commit with preserved author date
+          git commit --allow-empty \
+            --author="$ORIGINAL_AUTHOR" \
+            --date="$ORIGINAL_DATE" \
+            -m "chore: trigger serverless deployment" \
+            -m "Empty commit to trigger deployment with preserved author date."
+          
+          git push origin ${{ github.ref_name }}
+          
+          echo "✅ **Dummy commit created** (author date preserved)" >> $GITHUB_STEP_SUMMARY
+          echo "- Author: $ORIGINAL_AUTHOR" >> $GITHUB_STEP_SUMMARY
+          echo "- Date: $ORIGINAL_DATE" >> $GITHUB_STEP_SUMMARY
+
       - name: Summary
         if: always()
         run: |
@@ -342,6 +665,12 @@ Once approved, this will bring submodules up to date with their respective main 
           echo "### Workflow Configuration" >> $GITHUB_STEP_SUMMARY
           echo "- **Release check:** ${{ github.event.inputs.check_release != 'false' && '✅ Enabled' || '❌ Disabled' }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Submodule check:** ${{ github.event.inputs.check_submodules != 'false' && '✅ Enabled' || '❌ Disabled' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Dependency check:** ${{ github.event.inputs.check_dependencies != 'false' && '✅ Enabled' || '❌ Disabled' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch cleanup:** ${{ github.event.inputs.cleanup_branches != 'false' && '✅ Enabled' || '❌ Disabled' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Stale check:** ${{ github.event.inputs.check_stale_issues != 'false' && '✅ Enabled' || '❌ Disabled' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Dummy commit:** ${{ github.event.inputs.dummy_commit == 'true' && '✅ Enabled' || '❌ Disabled' }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Release threshold:** ${{ github.event.inputs.release_threshold || '5' }} commits" >> $GITHUB_STEP_SUMMARY
           echo "- **Submodule threshold:** ${{ github.event.inputs.submodule_threshold || '5' }} commits" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch age:** ${{ github.event.inputs.branch_age_days || '5' }} days" >> $GITHUB_STEP_SUMMARY
+          echo "- **Stale threshold:** ${{ github.event.inputs.stale_days || '60' }} days" >> $GITHUB_STEP_SUMMARY
           echo "- **Dry run:** ${{ github.event.inputs.dry_run == 'true' && '🔍 Yes' || '❌ No' }}" >> $GITHUB_STEP_SUMMARY
