@@ -180,10 +180,15 @@ jobs:
         run: |
           echo "🚀 Triggering release workflow for re-release..."
           
-          # Trigger the release workflow with 'current' version to re-release
+          CURRENT_VERSION=$(gh api repos/${{ github.repository }}/releases/latest --jq '.tag_name' 2>/dev/null || \
+                            git tag --list 'v*' --sort=-version:refname | grep -vE 'latest|alpha|beta|rc' | head -1)
+          CURRENT_VERSION=${CURRENT_VERSION#v}
+          
+          echo "📌 Current version: ${CURRENT_VERSION}"
+          
           gh workflow run release.yml \
             --ref ${{ github.ref_name }} \
-            -f version=current \
+            -f version="${CURRENT_VERSION}" \
             -f prerelease=false \
             -f draft=false
           
