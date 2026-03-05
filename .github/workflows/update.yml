@@ -474,22 +474,7 @@ jobs:
           
           gh pr create \
             --title "chore: Update $UPDATES_COUNT dependencies to latest" \
-            --body "## 📦 Automated Dependency Updates
-
-This PR updates outdated dependencies to their latest versions.
-
-**Updated Files:** ${{ steps.check_dependencies.outputs.updates_files }}
-
-**Triggered by:** [Repository Update Workflow](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
-**Date:** $(date -u +\"%Y-%m-%d %H:%M:%S UTC\")
-
-**Review Checklist:**
-- Check CHANGELOG/release notes for breaking changes
-- Review major version bumps carefully
-- Run tests locally
-- Verify compatibility with existing code
-
-Once approved, dependencies will be updated to latest stable versions." \
+            --body $'## 📦 Automated Dependency Updates\n\nThis PR updates outdated dependencies to their latest versions.\n\n**Updated Files:** ${{ steps.check_dependencies.outputs.updates_files }}\n\n**Triggered by:** [Repository Update Workflow](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})\n**Date:** $(date -u +\"%Y-%m-%d %H:%M:%S UTC\")\n\n**Review Checklist:**\n- Check CHANGELOG/release notes for breaking changes\n- Review major version bumps carefully\n- Run tests locally\n- Verify compatibility with existing code\n\nOnce approved, dependencies will be updated to latest stable versions.' \
             --base "${{ github.ref_name }}" \
             --head "$BRANCH_NAME" \
             --label "automated,dependencies"
