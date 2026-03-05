@@ -85,7 +85,7 @@ on:
         type: number
         default: 60
       dummy_commit:
-        description: 'Create dummy commit for serverless deployments'
+        description: 'Amend HEAD for serverless deployment (gcda-style, no SHA change)'
         required: false
         type: boolean
         default: false
@@ -633,28 +633,25 @@ Once approved, dependencies will be updated to latest stable versions." \
             echo "📌 **$COMMENTED item(s) marked as stale**" >> $GITHUB_STEP_SUMMARY
           fi
 
-      - name: Create dummy commit for serverless
+      - name: Amend HEAD for serverless deployment
         if: ${{ github.event.inputs.dummy_commit == 'true' && github.event.inputs.dry_run != 'true' }}
         run: |
-          echo "## 🤖 Dummy Commit for Serverless" >> $GITHUB_STEP_SUMMARY
+          echo "## 🤖 Amending HEAD for Serverless Deployment" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
-          # Get original author info
-          ORIGINAL_AUTHOR=$(git log -1 --format='%an <%ae>')
-          ORIGINAL_DATE=$(git log -1 --format='%ad')
+          # Get original author date from HEAD
+          AUTHOR_DATE=$(git show -s --format=%aD HEAD)
           
-          # Create empty commit with preserved author date
-          git commit --allow-empty \
-            --author="$ORIGINAL_AUTHOR" \
-            --date="$ORIGINAL_DATE" \
-            -m "chore: trigger serverless deployment" \
-            -m "Empty commit to trigger deployment with preserved author date."
+          # Amend HEAD with preserved author date (gcda approach)
+          # This triggers deployments without changing the commit SHA
+          GIT_COMMITTER_DATE="$AUTHOR_DATE" git commit --amend --no-edit --date="$AUTHOR_DATE"
           
-          git push origin ${{ github.ref_name }}
+          git push --force-with-lease origin ${{ github.ref_name }}
           
-          echo "✅ **Dummy commit created** (author date preserved)" >> $GITHUB_STEP_SUMMARY
-          echo "- Author: $ORIGINAL_AUTHOR" >> $GITHUB_STEP_SUMMARY
-          echo "- Date: $ORIGINAL_DATE" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **HEAD amended for deployment** (no SHA change)" >> $GITHUB_STEP_SUMMARY
+          echo "- Original author date preserved" >> $GITHUB_STEP_SUMMARY
+          echo "- Push timestamp updated (triggers serverless)" >> $GITHUB_STEP_SUMMARY
+          echo "- Method: \`git commit --amend\` (gcda-style)" >> $GITHUB_STEP_SUMMARY
 
       - name: Summary
         if: always()
