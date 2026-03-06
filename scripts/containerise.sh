@@ -959,6 +959,7 @@ generate_config_variants() {
     local orig_email="${CFG_GITHUB_USER_EMAIL:-}"
     local orig_gpg="${CFG_GPG_KEY_ID:-}"
     local orig_timezone="${CFG_TIMEZONE:-UTC}"
+    local orig_extensions="${CFG_VSCODE_EXTENSIONS:-}"
     local orig_mount_gpg="${CFG_MOUNT_GPG:-true}"
     local orig_mount_gh="${CFG_MOUNT_GH_CONFIG:-true}"
     local orig_mount_wrangler="${CFG_MOUNT_WRANGLER:-false}"
@@ -971,12 +972,13 @@ generate_config_variants() {
     CFG_TIMEZONE="UTC"
     _generate_variant "$devcontainer_dir" "$mode" "$category" "$image_tag" "_example"
 
-    # ─── MINIMAL VARIANT (no personal config) ───
+    # ─── MINIMAL VARIANT (no personal config, no extensions) ───
     print_info "Generating _minimal variant (no personal config)..."
     CFG_GITHUB_USER=""
     CFG_GITHUB_USER_EMAIL=""
     CFG_GPG_KEY_ID=""
     CFG_TIMEZONE=""
+    CFG_VSCODE_EXTENSIONS=""
     CFG_MOUNT_GPG="false"
     CFG_MOUNT_GH_CONFIG="false"
     CFG_MOUNT_WRANGLER="false"
@@ -987,6 +989,7 @@ generate_config_variants() {
     CFG_GITHUB_USER_EMAIL="$orig_email"
     CFG_GPG_KEY_ID="$orig_gpg"
     CFG_TIMEZONE="$orig_timezone"
+    CFG_VSCODE_EXTENSIONS="$orig_extensions"
     CFG_MOUNT_GPG="$orig_mount_gpg"
     CFG_MOUNT_GH_CONFIG="$orig_mount_gh"
     CFG_MOUNT_WRANGLER="$orig_mount_wrangler"
