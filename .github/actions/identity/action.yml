@@ -6,16 +6,16 @@ description: >
 
 inputs:
   gpg-private-key:
-    description: Armored GPG private key (secrets.XB_GK)
+    description: Armored GPG private key (secrets.BOT_GPG_PRIVATE_KEY)
     required: false
     default: ''
   gpg-passphrase:
-    description: GPG key passphrase (secrets.XB_GP)
+    description: GPG key passphrase (secrets.BOT_GPG_PASSPHRASE)
     required: false
     default: ''
   user-token:
     description: >
-      Classic PAT with write:gpg_key scope (secrets.XB_UT).
+      Classic PAT with write:gpg_key scope (secrets.BOT_USER_TOKEN).
       Required to register the public key to the machine user's GitHub profile —
       installation tokens cannot call POST /user/gpg_keys.
     required: false

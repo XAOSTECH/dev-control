@@ -1,15 +1,14 @@
 # ============================================================================
-# Dev-Control Release Workflow (release.yml)
+# Release Workflow Template (release.yml)
 # ============================================================================
 #
-# This is the release workflow for the dev-control project itself.
-# For the reusable template, see: workflows-templates/release.yml
-#
-# REPOSITORY: https://github.com/XAOSTECH/dev-control
+# ORIGIN: https://github.com/XAOSTECH/dev-control
+# This workflow template is part of the dev-control toolkit.
+# See: https://github.com/XAOSTECH/dev-control/blob/main/workflows-templates/
 #
 # ============================================================================
 #
-# Automates GitHub releases for Dev-Control.
+# Automates GitHub releases for any project using packaging.sh.
 # Builds tarball, creates GitHub release, manages version and latest tags.
 #
 # TRIGGERS:
@@ -17,9 +16,8 @@
 #   - Push to tags matching v* (requires careful tagging)
 #
 # ARTIFACTS:
-#   Each release includes two tarballs:
-#   1. dev-control-X.Y.Z.tar.gz     - Full toolkit (~180KB)
-#   2. dev-control-lib-X.Y.Z.tar.gz - Lib-only (~27KB)
+#   - PROJECT-X.Y.Z.tar.gz - Main release tarball
+#   - Optional: Additional tarballs (configure in 'Build additional packages' step)
 #
 # SAFEGUARDS:
 #   ✓ Version format validation (semantic versioning)
@@ -30,30 +28,24 @@
 #
 # WHAT IT DOES:
 #   1. Validates version format and commit count
-#   2. Builds full tarball using packaging.sh
-#   3. Builds lightweight lib-only tarball
-#   4. Creates GitHub release with both tarballs attached
+#   2. Builds main tarball using packaging.sh
+#   3. Optionally builds additional packages (customise as needed)
+#   4. Creates GitHub release with tarballs attached
 #   5. Updates 'latest' tag to point to new release
 #   6. Generates release notes from commits
 #
-# LIB-ONLY TARBALL:
-#   A lightweight package containing only shared Bash utilities:
-#   - colours.sh, print.sh, tui.sh, output.sh, validation.sh, cli.sh, version.sh
-#   
-#   Use cases:
-#   - Projects wanting TUI/print utilities without full toolkit
-#   - Consistent terminal formatting without git/gh dependencies
-#   
-#   Installation:
-#   curl -fsSL https://github.com/XAOSTECH/dev-control/releases/download/v0.5.3/dev-control-lib-0.5.3.tar.gz | tar xz
+# CUSTOMISATION:
+#   - Edit the 'Build additional packages' step to add project-specific tarballs
+#   - Modify release notes template in 'Generate release notes' step
+#   - Adjust validation rules as needed for your project
 #
 # RECOMMENDED WORKFLOW:
 #
 #   1. Create feature branch: git checkout -b feat/my-feature
-#   2. Make changes and test locally: ./tests/run_tests.sh
+#   2. Make changes and test locally
 #   3. Create PR and merge to main (use conventional commits: feat/fix/chore/docs)
 #   4. Trigger via Actions → Release → Run workflow
-#      CHANGELOG.md is auto-generated from commits and committed by xaos-bot
+#      CHANGELOG.md is auto-generated from commits and committed by the bot
 #   OR create a signed tag locally and push to trigger the push path:
 #      git tag -s v1.0.0 -m "Release v1.0.0" && git push origin v1.0.0
 #
@@ -143,8 +135,8 @@ jobs:
         id: app_token
         uses: actions/create-github-app-token@v1
         with:
-          app-id: ${{ secrets.XB_AI }}
-          private-key: ${{ secrets.XB_PK }}
+          app-id: ${{ secrets['XB_AI'] }}
+          private-key: ${{ secrets['XB_PK'] }}
 
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -156,11 +148,11 @@ jobs:
           token: ${{ steps.app_token.outputs.token }}
 
       - name: Setup bot identity
-        uses: ./.github/actions/identity
+        uses: XAOSTECH/dev-control/.github/actions/identity@b067f72ca7f849b734a45634f23581a739d5146f # v2.0.0
         with:
-          gpg-private-key: ${{ secrets.XB_GK }}
-          gpg-passphrase: ${{ secrets.XB_GP }}
-          user-token: ${{ secrets.XB_UT }}
+          gpg-private-key: ${{ secrets['XB_GK'] }}
+          gpg-passphrase: ${{ secrets['XB_GP'] }}
+          user-token: ${{ secrets['XB_UT'] }}
           bot-name: ${{ vars.BOT_NAME || 'xaos-bot' }}
 
       - name: Determine version
@@ -194,8 +186,8 @@ jobs:
             TAG_NAME="v${VERSION}"
           fi
           
-          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-          echo "tag_name=${TAG_NAME}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "tag_name=${TAG_NAME}" >> $GITHUB_OUTPUT
           echo "📦 Release version: ${VERSION}"
           echo "🏷️ Tag: ${TAG_NAME}"
 
@@ -230,22 +222,22 @@ jobs:
                 git tag -d latest 2>/dev/null || true
                 echo "✅ Cleaned up — will rebuild and republish"
                 RERELEASE="true"
-                echo "exists=false" >> "$GITHUB_OUTPUT"
+                echo "exists=false" >> $GITHUB_OUTPUT
               else
                 echo "⚠️ Release $TAG_NAME exists but is not the latest (latest: $LATEST_TAG)"
                 echo "ℹ️ Only the latest release can be re-released via manual dispatch"
-                echo "exists=true" >> "$GITHUB_OUTPUT"
+                echo "exists=true" >> $GITHUB_OUTPUT
               fi
             else
               echo "⏭️ Release $TAG_NAME already exists — skipping build (push trigger)"
-              echo "exists=true" >> "$GITHUB_OUTPUT"
+              echo "exists=true" >> $GITHUB_OUTPUT
             fi
           else
             echo "🆕 Release $TAG_NAME not yet published — proceeding"
-            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "exists=false" >> $GITHUB_OUTPUT
           fi
 
-          echo "rerelease=${RERELEASE}" >> "$GITHUB_OUTPUT"
+          echo "rerelease=${RERELEASE}" >> $GITHUB_OUTPUT
 
       - name: Gather commit history
         id: commits
@@ -274,7 +266,7 @@ jobs:
             git log --pretty=format:"%s" -20 > .commits-subjects.txt
           fi
 
-          echo "prev_tag=${PREV_TAG}" >> "$GITHUB_OUTPUT"
+          echo "prev_tag=${PREV_TAG}" >> $GITHUB_OUTPUT
 
       - name: Update CHANGELOG.md
         if: steps.check_release.outputs.exists != 'true'
@@ -363,11 +355,11 @@ jobs:
       - name: Setup bot identity (for signing)
         id: import_gpg
         if: github.event_name == 'workflow_dispatch'
-        uses: ./.github/actions/identity
+        uses: XAOSTECH/dev-control/.github/actions/identity@b067f72ca7f849b734a45634f23581a739d5146f # v2.0.0
         with:
-          gpg-private-key: ${{ secrets.XB_GK }}
-          gpg-passphrase: ${{ secrets.XB_GP }}
-          user-token: ${{ secrets.XB_UT }}
+          gpg-private-key: ${{ secrets['XB_GK'] }}
+          gpg-passphrase: ${{ secrets['XB_GP'] }}
+          user-token: ${{ secrets['XB_UT'] }}
           bot-name: ${{ vars.BOT_NAME || 'xaos-bot' }}
 
       - name: Create tag (manual dispatch only)
@@ -441,123 +433,84 @@ jobs:
       - name: Build full tarball
         if: steps.check_release.outputs.exists != 'true'
         run: |
+          if [[ ! -f "scripts/packaging.sh" ]]; then
+            echo "⚠️ No packaging.sh found - skipping tarball build"
+            echo "build_skipped=true" >> $GITHUB_ENV
+            exit 0
+          fi
           chmod +x scripts/packaging.sh scripts/lib/*.sh 2>/dev/null || true
           bash scripts/packaging.sh --tarball --verbose
           echo "✅ Full tarball built successfully"
 
-      - name: Build lib-only tarball
-        if: steps.check_release.outputs.exists != 'true' && github.event.inputs.skip_lib != 'true'
-        run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          LIB_NAME="dev-control-lib-${VERSION}"
-          LIB_DIR="dist/${LIB_NAME}"
-          
-          mkdir -p "$LIB_DIR"
-          
-          echo "📦 Building lib-only package: ${LIB_NAME}"
-          
-          # Copy library files (flatten structure for easy sourcing)
-          cp scripts/lib/cli.sh "$LIB_DIR/"
-          cp scripts/lib/colours.sh "$LIB_DIR/"
-          cp scripts/lib/output.sh "$LIB_DIR/"
-          cp scripts/lib/print.sh "$LIB_DIR/"
-          cp scripts/lib/README.md "$LIB_DIR/"
-          cp scripts/lib/tui.sh "$LIB_DIR/"
-          cp scripts/lib/validation.sh "$LIB_DIR/"
-          cp scripts/lib/version.sh "$LIB_DIR/"
-          
-          # Copy config files (if tui theming needed)
-          mkdir -p "$LIB_DIR/config"
-          cp config/theme.yaml "$LIB_DIR/config/" 2>/dev/null || true
-          
-          # Copy LICENSE
-          cp LICENSE "$LIB_DIR/"
-          
-          # Create quick-start INSTALL.md with origin attribution
-          {
-            echo "# Dev-Control Library - Quick Start"
-            echo ""
-            echo "## Origin"
-            echo ""
-            echo "This library package was extracted from the dev-control toolkit."
-            echo ""
-            echo "- **Source Repository**: https://github.com/XAOSTECH/dev-control"
-            echo "- **Version**: ${VERSION}"
-            echo "- **Full Toolkit**: https://github.com/XAOSTECH/dev-control/releases"
-            echo ""
-            echo "## Description"
-            echo ""
-            echo "Lightweight standalone library for TUI, terminal formatting, colors, and validation."
-            echo "This is a subset of the full dev-control toolkit, containing only the shared Bash utilities."
-            echo ""
-            echo "## Installation"
-            echo ""
-            echo "    tar xzf dev-control-lib-*.tar.gz -C /usr/local/share/"
-            echo ""
-            echo "## Usage"
-            echo ""
-            echo "    source /usr/local/share/dev-control-lib-${VERSION}/colours.sh"
-            echo "    source /usr/local/share/dev-control-lib-${VERSION}/print.sh"
-            echo "    print_header \"My Script\""
-            echo ""
-            echo "## Libraries"
-            echo ""
-            echo "- colours.sh: ANSI colour codes"
-            echo "- print.sh: Print functions (print_header, print_info, etc.)"
-            echo "- tui.sh: TUI helpers with Gum integration"
-            echo "- output.sh: Output formatting"
-            echo "- validation.sh: Input validation helpers"
-            echo "- cli.sh: CLI argument parsing helpers"
-            echo "- version.sh: Version comparison utilities"
-            echo ""
-            echo "## Full Documentation"
-            echo ""
-            echo "See README.md in this package or visit:"
-            echo "https://github.com/XAOSTECH/dev-control/tree/main/scripts/lib"
-          } > "$LIB_DIR/INSTALL.md"
-          
-          # Create version file
-          echo "${VERSION}" > "$LIB_DIR/VERSION"
-          
-          # Create tarball
-          cd dist
-          tar czf "${LIB_NAME}.tar.gz" "${LIB_NAME}"
-          sha256sum "${LIB_NAME}.tar.gz" > "${LIB_NAME}.tar.gz.sha256"
-          cd ..
-          
-          echo "✅ Lib tarball built: dist/${LIB_NAME}.tar.gz"
+      # ========================================================================
+      # CUSTOMISE: Build additional packages (optional)
+      # ========================================================================
+      # Uncomment and modify this step to build additional tarballs.
+      # Example: A lightweight lib-only package, docs package, etc.
+      #
+      # - name: Build additional packages
+      #   run: |
+      #     VERSION="${{ steps.version.outputs.version }}"
+      #     PKG_NAME="myproject-extra-${VERSION}"
+      #     PKG_DIR="dist/${PKG_NAME}"
+      #     
+      #     mkdir -p "$PKG_DIR"
+      #     
+      #     # Copy files for additional package
+      #     cp -r src/lib/* "$PKG_DIR/"
+      #     cp LICENSE "$PKG_DIR/"
+      #     
+      #     # Create README with origin attribution
+      #     {
+      #       echo "# My Project Extra Package"
+      #       echo ""
+      #       echo "## Origin"
+      #       echo ""
+      #       echo "This package was built from: https://github.com/$GITHUB_REPOSITORY"
+      #       echo "Release: ${VERSION}"
+      #       echo ""
+      #       echo "## Installation"
+      #       echo "..."
+      #     } > "$PKG_DIR/README.md"
+      #     
+      #     echo "${VERSION}" > "$PKG_DIR/VERSION"
+      #     
+      #     cd dist
+      #     tar czf "${PKG_NAME}.tar.gz" "${PKG_NAME}"
+      #     sha256sum "${PKG_NAME}.tar.gz" > "${PKG_NAME}.tar.gz.sha256"
+      #     cd ..
+      # ========================================================================
 
       - name: List build artifacts
         if: steps.check_release.outputs.exists != 'true'
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          echo "📦 Build artifacts:"
-          ls -la dist/
           
-          # Get full tarball info
-          TARBALL=$(ls dist/dev-control-${VERSION}.tar.gz 2>/dev/null || ls dist/*.tar.gz 2>/dev/null | grep -v lib | head -1)
+          if [[ ! -d "dist" ]]; then
+            echo "⚠️ No dist/ directory - no tarballs were built"
+            echo "tarball_count=0" >> $GITHUB_ENV
+            exit 0
+          fi
+          
+          echo "📦 Build artifacts:"
+          ls -la dist/ || true
+          
+          # Get main tarball info (first .tar.gz that's not a sub-package)
+          TARBALL=$(ls dist/*.tar.gz 2>/dev/null | head -1 || echo "")
           if [[ -n "$TARBALL" ]]; then
-            echo "tarball_path=${TARBALL}" >> "$GITHUB_ENV"
-            echo "tarball_name=$(basename "$TARBALL")" >> "$GITHUB_ENV"
+            echo "tarball_path=${TARBALL}" >> $GITHUB_ENV
+            echo "tarball_name=$(basename "$TARBALL")" >> $GITHUB_ENV
             
             if [[ -f "${TARBALL}.sha256" ]]; then
               SHA256=$(cat "${TARBALL}.sha256" | awk '{print $1}')
-              echo "tarball_sha256=${SHA256}" >> "$GITHUB_ENV"
-              echo "🔐 Full tarball SHA256: ${SHA256}"
+              echo "tarball_sha256=${SHA256}" >> $GITHUB_ENV
+              echo "🔐 Tarball SHA256: ${SHA256}"
             fi
           fi
           
-          # Get lib tarball info
-          LIB_TARBALL="dist/dev-control-lib-${VERSION}.tar.gz"
-          if [[ -f "$LIB_TARBALL" ]]; then
-            echo "lib_tarball_name=dev-control-lib-${VERSION}.tar.gz" >> "$GITHUB_ENV"
-            
-            if [[ -f "${LIB_TARBALL}.sha256" ]]; then
-              LIB_SHA256=$(cat "${LIB_TARBALL}.sha256" | awk '{print $1}')
-              echo "lib_tarball_sha256=${LIB_SHA256}" >> "$GITHUB_ENV"
-              echo "🔐 Lib tarball SHA256: ${LIB_SHA256}"
-            fi
-          fi
+          # Count all tarballs for summary
+          TARBALL_COUNT=$(ls dist/*.tar.gz 2>/dev/null | wc -l || echo "0")
+          echo "tarball_count=${TARBALL_COUNT}" >> $GITHUB_ENV
 
       - name: Generate release notes
         id: release_notes
@@ -587,41 +540,15 @@ jobs:
             git log --pretty=format:"- %s (%h)" -10 >> "$NOTES_FILE"
           fi
           
-          cat >> "$NOTES_FILE" << EOF
+          # Add installation instructions only if tarball exists
+          if [[ -n "${tarball_name:-}" && -n "${tarball_sha256:-}" ]]; then
+            cat >> "$NOTES_FILE" << EOF
           
           ## Installation
           
-          ### Full Toolkit (tarball)
+          ### Quick Install (tarball)
           \`\`\`bash
           curl -fsSL https://github.com/$GITHUB_REPOSITORY/releases/download/${TAG_NAME}/${tarball_name} | tar xz
-          cd dev-control-${VERSION}
-          ./install.sh
-          \`\`\`
-          EOF
-          
-          # Add lib-only instructions only if lib tarball was built
-          if [[ -n "${lib_tarball_name:-}" && -n "${lib_tarball_sha256:-}" ]]; then
-            cat >> "$NOTES_FILE" << EOF
-          
-          ### Library Only (lightweight)
-          For projects that only need the TUI/print/colour utilities (~27KB vs ~180KB):
-          \`\`\`bash
-          curl -fsSL https://github.com/$GITHUB_REPOSITORY/releases/download/${TAG_NAME}/${lib_tarball_name} | tar xz
-          
-          # Then in your scripts:
-          source "./dev-control-lib-${VERSION}/colours.sh"
-          source "./dev-control-lib-${VERSION}/print.sh"
-          print_header "My Script"
-          \`\`\`
-          EOF
-          fi
-          
-          cat >> "$NOTES_FILE" << EOF
-          
-          ### Homebrew (coming soon)
-          \`\`\`bash
-          brew tap xaoscience/tap
-          brew install dev-control
           \`\`\`
           
           ## Checksums
@@ -630,10 +557,24 @@ jobs:
           |------|--------|
           | ${tarball_name} | \`${tarball_sha256}\` |
           EOF
+          else
+            # No custom tarball - show git installation
+            cat >> "$NOTES_FILE" << EOF
           
-          # Add lib tarball checksum only if it was built
-          if [[ -n "${lib_tarball_name:-}" && -n "${lib_tarball_sha256:-}" ]]; then
-            echo "| ${lib_tarball_name} | \`${lib_tarball_sha256}\` |" >> "$NOTES_FILE"
+          ## Installation
+          
+          ### From Source
+          \`\`\`bash
+          git clone https://github.com/$GITHUB_REPOSITORY.git
+          cd $(basename $GITHUB_REPOSITORY)
+          git checkout ${TAG_NAME}
+          \`\`\`
+          
+          ### Download Release Archive
+          \`\`\`bash
+          curl -fsSL https://github.com/$GITHUB_REPOSITORY/archive/refs/tags/${TAG_NAME}.tar.gz | tar xz
+          \`\`\`
+          EOF
           fi
           
           cat >> "$NOTES_FILE" << EOF
@@ -641,10 +582,13 @@ jobs:
           ---
           
           **Full Changelog**: https://github.com/$GITHUB_REPOSITORY/compare/${PREV_TAG}...${TAG_NAME}
+          
+          ---
+          *Release workflow powered by [dev-control](https://github.com/XAOSTECH/dev-control)*
           EOF
           
           # Output for next step
-          echo "notes_file=${NOTES_FILE}" >> "$GITHUB_OUTPUT"
+          echo "notes_file=${NOTES_FILE}" >> $GITHUB_OUTPUT
           
           echo "📝 Release notes generated"
           cat "$NOTES_FILE"
@@ -658,19 +602,28 @@ jobs:
           VERSION="${{ steps.version.outputs.version }}"
           NOTES_FILE="${{ steps.release_notes.outputs.notes_file }}"
           
-          # Build file list
-          FILES=$(find dist/ -name "*.tar.gz" -o -name "*.sha256" 2>/dev/null | tr '\n' ' ')
+          # Build file list (may be empty if no tarb alls)
+          FILES=$(find dist/ -name "*.tar.gz" -o -name "*.sha256" 2>/dev/null | tr '\n' ' ' || echo "")
           
           # Create release (idempotent — skip if already exists)
           if gh release view "$TAG_NAME" &>/dev/null; then
-            echo "✅ Release $TAG_NAME already exists — skipping creation"
+            echo "✅ Release $TAG_NAME already exists— skipping creation"
           else
-            gh release create "$TAG_NAME" \
-              --title "Release $TAG_NAME" \
-              --notes-file "$NOTES_FILE" \
-              ${{ github.event.inputs.draft == 'true' && '--draft' || '' }} \
-              ${{ github.event.inputs.prerelease == 'true' && '--prerelease' || '' }} \
-              $FILES
+            if [[ -n "$FILES" ]]; then
+              gh release create "$TAG_NAME" \
+                --title "Release $TAG_NAME" \
+                --notes-file "$NOTES_FILE" \
+                ${{ github.event.inputs.draft == 'true' && '--draft' || '' }} \
+                ${{ github.event.inputs.prerelease == 'true' && '--prerelease' || '' }} \
+                $FILES
+            else
+              # Release without attachments (notes only)
+              gh release create "$TAG_NAME" \
+                --title "Release $TAG_NAME" \
+                --notes-file "$NOTES_FILE" \
+                ${{ github.event.inputs.draft == 'true' && '--draft' || '' }} \
+                ${{ github.event.inputs.prerelease == 'true' && '--prerelease' || '' }}
+            fi
             echo "✅ Release created: $TAG_NAME"
           fi
 
@@ -745,21 +698,21 @@ jobs:
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           TAG_NAME="${{ steps.version.outputs.tag_name }}"
+          TARBALL_COUNT="${tarball_count:-0}"
           
-          echo "## 🎉 Release Summary" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Item | Value |" >> "$GITHUB_STEP_SUMMARY"
-          echo "|------|-------|" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Version | ${VERSION} |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Tag | ${TAG_NAME} |" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "### Artifacts" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Package | File | SHA256 |" >> "$GITHUB_STEP_SUMMARY"
-          echo "|---------|------|--------|" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Full Toolkit | ${tarball_name} | \`${tarball_sha256:0:16}...\` |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Library Only | ${lib_tarball_name} | \`${lib_tarball_sha256:0:16}...\` |" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "### Links" >> "$GITHUB_STEP_SUMMARY"
-          echo "- [Release](https://github.com/$GITHUB_REPOSITORY/releases/tag/${TAG_NAME})" >> "$GITHUB_STEP_SUMMARY"
-          echo "- [Full Toolkit](https://github.com/$GITHUB_REPOSITORY/releases/download/${TAG_NAME}/${tarball_name})" >> "$GITHUB_STEP_SUMMARY"
-          echo "- [Library Only](https://github.com/$GITHUB_REPOSITORY/releases/download/${TAG_NAME}/${lib_tarball_name})" >> "$GITHUB_STEP_SUMMARY"
+          echo "## 🎉 Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Version | ${VERSION} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Tag | ${TAG_NAME} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Artifacts | ${TARBALL_COUNT} tarball(s) |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Links" >> $GITHUB_STEP_SUMMARY
+          echo "- [Release](https://github.com/$GITHUB_REPOSITORY/releases/tag/${TAG_NAME})" >> $GITHUB_STEP_SUMMARY
+          if [[ -n "${tarball_name:-}" ]]; then
+            echo "- [Download](https://github.com/$GITHUB_REPOSITORY/releases/download/${TAG_NAME}/${tarball_name})" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "*Workflow template from [dev-control](https://github.com/XAOSTECH/dev-control)*" >> $GITHUB_STEP_SUMMARY

@@ -1,11 +1,10 @@
 # ============================================================================
-# Dev-Control Repository Update Workflow (update.yml)
+# Repository Update Workflow Template (update.yml)
 # ============================================================================
 #
-# This is the update workflow for the dev-control project itself.
-# For the reusable template, see: workflows-templates/update.yml
-#
-# REPOSITORY: https://github.com/XAOSTECH/dev-control
+# ORIGIN: https://github.com/XAOSTECH/dev-control
+# This workflow template is part of the dev-control toolkit.
+# See: https://github.com/XAOSTECH/dev-control/blob/main/workflows-templates/
 #
 # ============================================================================
 #
@@ -24,6 +23,29 @@
 #   3. Scans submodules for updates (5+ commits behind main)
 #   4. Updates outdated submodules and creates PR
 #   5. Generates summary report
+#
+# SAFEGUARDS:
+#   ✓ Dry-run mode for testing
+#   ✓ Minimum threshold checks (configurable)
+#   ✓ Creates PR instead of direct commit for review
+#   ✓ Detailed summary with change counts
+#
+# CONFIGURATION:
+#   Adjust thresholds via workflow inputs:
+#   - release_threshold: Minimum commits to trigger release (default: 5)
+#   - submodule_threshold: Minimum commits behind to update (default: 5)
+#
+# BEST PRACTICES:
+#   - Review the generated PR before merging
+#   - Use dry-run mode first to preview changes
+#   - Adjust thresholds based on your release cadence
+#   - Check submodule references match intended versions
+#
+# CUSTOMISATION:
+#   - Edit schedule cron for different timing
+#   - Modify thresholds for your workflow
+#   - Add additional checks in the detection steps
+#   - Customise PR template and labels
 #
 # ============================================================================
 
@@ -110,8 +132,8 @@ jobs:
         id: app_token
         uses: actions/create-github-app-token@v1
         with:
-          app-id: ${{ secrets.XB_AI }}
-          private-key: ${{ secrets.XB_PK }}
+          app-id: ${{ secrets['XB_AI'] }}
+          private-key: ${{ secrets['XB_PK'] }}
 
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -121,11 +143,11 @@ jobs:
           token: ${{ steps.app_token.outputs.token }}
 
       - name: Setup bot identity
-        uses: ./.github/actions/identity
+        uses: XAOSTECH/dev-control/.github/actions/identity@b067f72ca7f849b734a45634f23581a739d5146f # v2.0.0
         with:
-          gpg-private-key: ${{ secrets.XB_GK }}
-          gpg-passphrase: ${{ secrets.XB_GP }}
-          user-token: ${{ secrets.XB_UT }}
+          gpg-private-key: ${{ secrets['XB_GK'] }}
+          gpg-passphrase: ${{ secrets['XB_GP'] }}
+          user-token: ${{ secrets['XB_UT'] }}
           bot-name: ${{ vars.BOT_NAME || 'xaos-bot' }}
 
       - name: Check for release trigger
