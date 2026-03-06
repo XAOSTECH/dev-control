@@ -971,12 +971,12 @@ generate_config_variants() {
     CFG_TIMEZONE="UTC"
     _generate_variant "$devcontainer_dir" "$mode" "$category" "$image_tag" "_example"
 
-    # ─── MINIMAL VARIANT (no personal config, neutral timezone) ───
+    # ─── MINIMAL VARIANT (no personal config) ───
     print_info "Generating _minimal variant (no personal config)..."
     CFG_GITHUB_USER=""
     CFG_GITHUB_USER_EMAIL=""
     CFG_GPG_KEY_ID=""
-    CFG_TIMEZONE="UTC"
+    CFG_TIMEZONE=""
     CFG_MOUNT_GPG="false"
     CFG_MOUNT_GH_CONFIG="false"
     CFG_MOUNT_WRANGLER="false"
