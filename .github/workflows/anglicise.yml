@@ -425,20 +425,20 @@ jobs:
                 # Apply case-preserving replacement using perl
                 # (?!\.) prevents replacing when the word is directly followed by a dot (e.g. colors.sh)
                 echo "$line" | perl -pe "
-                  s/\b${american}\b(?!\.)(?![a-zA-Z0-9]|/|=)/
+                  s{\b${american}\b(?!\.)(?![a-zA-Z0-9]|/|=)}{
                     my \$match = \$&;
                     my \$repl = '${british}';
-                    if (\$match =~ \/^[A-Z]+\$\/) {
+                    if (\$match =~ /^[A-Z]+\$/) {
                       # ALL CAPS
                       uc(\$repl);
-                    } elsif (\$match =~ \/^[A-Z]\/) {
+                    } elsif (\$match =~ /^[A-Z]/) {
                       # Title Case
                       ucfirst(\$repl);
                     } else {
                       # lowercase
                       \$repl;
                     }
-                  /gei"
+                  }gei"
               fi
             done < "$file" > "$tmpfile"
             
