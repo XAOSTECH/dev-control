@@ -958,22 +958,25 @@ generate_config_variants() {
     local orig_user="$CFG_GITHUB_USER"
     local orig_email="${CFG_GITHUB_USER_EMAIL:-}"
     local orig_gpg="${CFG_GPG_KEY_ID:-}"
+    local orig_timezone="${CFG_TIMEZONE:-UTC}"
     local orig_mount_gpg="${CFG_MOUNT_GPG:-true}"
     local orig_mount_gh="${CFG_MOUNT_GH_CONFIG:-true}"
     local orig_mount_wrangler="${CFG_MOUNT_WRANGLER:-false}"
 
-    # ─── EXAMPLE VARIANT (placeholder credentials) ───
+    # ─── EXAMPLE VARIANT (placeholder credentials, neutral timezone) ───
     print_info "Generating _example variant (placeholder values)..."
     CFG_GITHUB_USER="YOUR_GITHUB_USER"
     CFG_GITHUB_USER_EMAIL="YOUR_GITHUB_EMAIL"
     CFG_GPG_KEY_ID="YOUR_GPG_KEY_ID"
+    CFG_TIMEZONE="UTC"
     _generate_variant "$devcontainer_dir" "$mode" "$category" "$image_tag" "_example"
 
-    # ─── MINIMAL VARIANT (no personal config) ───
+    # ─── MINIMAL VARIANT (no personal config, neutral timezone) ───
     print_info "Generating _minimal variant (no personal config)..."
     CFG_GITHUB_USER=""
     CFG_GITHUB_USER_EMAIL=""
     CFG_GPG_KEY_ID=""
+    CFG_TIMEZONE="UTC"
     CFG_MOUNT_GPG="false"
     CFG_MOUNT_GH_CONFIG="false"
     CFG_MOUNT_WRANGLER="false"
@@ -983,6 +986,7 @@ generate_config_variants() {
     CFG_GITHUB_USER="$orig_user"
     CFG_GITHUB_USER_EMAIL="$orig_email"
     CFG_GPG_KEY_ID="$orig_gpg"
+    CFG_TIMEZONE="$orig_timezone"
     CFG_MOUNT_GPG="$orig_mount_gpg"
     CFG_MOUNT_GH_CONFIG="$orig_mount_gh"
     CFG_MOUNT_WRANGLER="$orig_mount_wrangler"
