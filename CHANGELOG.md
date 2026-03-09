@@ -5,6 +5,69 @@ All notable changes to Dev-Control will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.7] - 2026-03-09 (re-release)
+
+### Added
+- enhance update workflow with comprehensive maintenance
+- add repository update workflow
+- add SHA256 checksums for GitHub-generated source archives
+- add CodeQL workflow template with auto-detection
+- install docs templates to docs/ subdirectory
+- add global repoVars.env config for bot credentials
+
+### Fixed
+- correct Perl regex syntax using curly brace delimiters
+- improve anglicise workflow exclusion patterns for licence/license conversion
+- strip extensions and customizations from _minimal variant
+- leave timezone empty in _minimal variant
+- replace user timezone with UTC in _example and _minimal config variants
+- extract current version before triggering release
+- simplify gh pr create syntax to match anglicise.yml pattern
+- quote multiline gh pr create body for dependency updates
+- properly quote multiline gh pr create body in update.yml
+- resolve YAML syntax errors in workflows
+- prune container volumes on --regen to clear stale postCreateCommandMarker
+- use nvm default alias in builds
+- ensure nvm default path and use LTS for wrangler
+- split common tools before categories and restore footer usage
+- add nvm to web-dev category for wrangler dependency
+- align containerise.sh to use system-wide nvm at /opt/nvm
+- dynamic Node/nvm version detection to prevent hardcoded path mismatches
+- pin unpinned actions and sanitize user input in workflows
+- align bash-lint template with repo version (quote environment variables)
+- add git clone installation for projects without packaging.sh + update org to XAOSTECH
+- ALWAYS show installation instructions in dev-control workflow
+- properly handle projects without packaging.sh in release workflow
+- make tarball build conditional on skip_tarball input and packaging.sh existence
+- replace CodeQL template with working Advanced Security workflow
+- convert multi-line --body args to single-line in workflow templates
+- additional YAML syntax errors in workflow templates
+- YAML syntax errors in workflow templates
+
+### Changed
+- chore(dc-init): update workflows and actions
+- chore(replace-template): fix syntax
+- chore: update CHANGELOG for v0.5.7 (re-release)
+- improve: use gcda-style HEAD amendment for serverless
+- chore: update CHANGELOG for v0.5.7 (re-release)
+- chore(web-dev): adapt comment
+- chore(anglicise): license -> licence + adapt anglicise
+- chore(docs): clarify dc-init -> dc-create config flow
+- chore(docs): clarify envVars
+- chore(docs): move dc-alias to front  + fix typo + format
+- chore(docs): mention re-releases
+- chore: update CHANGELOG for v0.5.7 (re-release)
+- refactor: drop common-tools and align nvm usage
+- Revert "fix: add nvm to web-dev category for wrangler dependency"
+- Revert "chore: update CHANGELOG for v0.5.7 (re-release)"
+- Revert "chore: update CHANGELOG for v0.5.7 (re-release)"
+- Revert "refactor: split common template into base and footer"
+- chore: update CHANGELOG for v0.5.7 (re-release)
+- chore: update CHANGELOG for v0.5.7 (re-release)
+- refactor: split common template into base and footer
+- chore: update CHANGELOG for v0.5.7
+- chore(docs): update README
+
 ## [0.5.7] - 2026-03-03 (re-release)
 
 ### Added
