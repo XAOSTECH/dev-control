@@ -16,7 +16,7 @@
 
 # Common licence file patterns
 LICENSE_FILE_PATTERNS=(
-    "LICENSE"
+    "LICENCE"
     "LICENSE.txt"
     "LICENSE.md"
     "LICENCE"
@@ -95,7 +95,7 @@ find_licence_file() {
 }
 
 # Detect SPDX identifier from file content
-# Usage: detect_spdx_from_content "/path/to/LICENSE"
+# Usage: detect_spdx_from_content "/path/to/LICENCE"
 # Returns: SPDX ID or "NOASSERTION"
 detect_spdx_from_content() {
     local file="$1"
@@ -342,7 +342,7 @@ get_licence_category() {
 }
 
 # Cache licence detection result in git config
-# Usage: cache_licence "MIT" "file:LICENSE"
+# Usage: cache_licence "MIT" "file:LICENCE"
 cache_licence() {
     local spdx_id="$1"
     local source="$2"

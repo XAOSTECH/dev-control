@@ -38,7 +38,7 @@ include:
   - scripts/lib/version.sh
   - scripts/lib/README.md
   - config/theme.yaml
-  - LICENSE
+  - LICENCE
 
 # No runtime dependencies for core lib
 # (gum is optional for tui.sh advanced features)

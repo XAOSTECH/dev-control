@@ -114,11 +114,11 @@ Licence detection and management.
 source "$SCRIPT_DIR/lib/licence.sh"
 
 licence_info=$(detect_licence "/path/to/repo")
-spdx=$(detect_spdx_from_content "/path/to/LICENSE")
+spdx=$(detect_spdx_from_content "/path/to/LICENCE")
 ```
 
 **Functions:**
-- `find_licence_file "dir"` - Find LICENSE file
+- `find_licence_file "dir"` - Find LICENCE file
 - `detect_spdx_from_content "file"` - Detect SPDX ID from content
 - `detect_local_licence "dir"` - Detect licence from local files
 - `detect_github_licence "owner" "repo"` - Detect via GitHub API

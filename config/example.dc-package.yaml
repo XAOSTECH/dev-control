@@ -18,7 +18,7 @@ include:
   - docs/
   - plugins/
   - README.md
-  - LICENSE
+  - LICENCE
   - install.sh
 
 # Runtime dependencies

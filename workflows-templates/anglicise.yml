@@ -19,13 +19,13 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Generate App Token
         id: app_token
-        uses: actions/create-github-app-token@v1
+        uses: actions/create-github-app-token@v2
         with:
           app-id: ${{ secrets['{{BOT_APP_ID_SECRET}}'] }}
           private-key: ${{ secrets['{{BOT_PRIVATE_KEY_SECRET}}'] }}
@@ -311,7 +311,7 @@ jobs:
             ! -path "./.github/workflows/*" \
             ! -path "./workflows-templates/anglicise.yml" \
             ! -path "./licence-templates/*" \
-            ! -path "./LICENSE" \
+            ! -path "./LICENCE" \
             2>/dev/null | sort)
 
           echo "## British English Spelling Check" >> $GITHUB_STEP_SUMMARY
@@ -339,7 +339,7 @@ jobs:
               # - Variable references ($color, ${color})
               # - Assignment patterns (color=, COLOR=) including query params
               MATCHES=$(grep -inw "$american" "$file" 2>/dev/null | \
-                grep -vE '(https?://|file://|github/|[?&](color|center|gray|licence)=[a-zA-Z0-9]+|"Authorization": "Bearer|types:[[:space:]]*\[[^]]+\]|--[a-z-]+ (center|color|gray)|\$\{?(color|center|gray);}|\b(color|center|gray|licence)[_A-Z]*=|gum |\\$|shields\.io)' || true)
+                grep -vE '(https?://|file://|github/|[?&](color|center|gray|licence)=[a-zA-Z0-9]+|"Authorization": "Bearer|types:[[:space:]]*\[[^]]+\]|--[a-z-]+ (center|color|gray)|\$\{?(color|center|gray);\}|\b(color|center|gray|licence)[_A-Z]*=|gum |\\$|shields\.io|stop-color|[a-z-]color[a-z-]*:|color[a-z-]*:[[:space:]]*#|align-items:)' || true)
               
               if [[ -n "$MATCHES" ]]; then
                 FILES_TO_FIX["$file"]=1
@@ -396,7 +396,7 @@ jobs:
             ! -path "./.github/workflows/*" \
             ! -path "./workflows-templates/anglicise.yml" \
             ! -path "./licence-templates/*" \
-            ! -path "./LICENSE" \
+            ! -path "./LICENCE" \
             2>/dev/null)
           
           FIXED_COUNT=0
@@ -422,7 +422,7 @@ jobs:
               # - Escaped line continuations (trailing backslash)
               # NOTE: filename exclusion is handled in the perl regex via (?!\.)
               # so that 'colors' in a comment is fixed even if 'colours.sh' appears on the same line
-              if echo "$line" | grep -qE "(https?://|github/|[?&](color|center|gray|licence)=|=[\"'](center|color|licence)|types:[[:space:]]*\[[^]]+\]|--[a-z-]+ (center|color|gray)|--color|--center|\$\{?(color|center|gray|licence)|\b(COLOR|CENTER|GRAY|LICENCE)[_A-Z]*=|gum |\\$|shields\.io)"; then
+              if echo "$line" | grep -qE "(https?://|github/|[?&](color|center|gray|licence)=|=[\"'](center|color|licence)|types:[[:space:]]*\[[^]]+\]|--[a-z-]+ (center|color|gray)|--color|--center|\$\{?(color|center|gray|licence)|\b(COLOR|CENTER|GRAY|LICENCE)[_A-Z]*=|gum |\\$|shields\.io|stop-color|[a-z-]color[a-z-]*:|color[a-z-]*:[[:space:]]*#|align-items:)"; then
                 echo "$line"
               else
                 # Apply case-preserving replacement using perl
@@ -458,7 +458,7 @@ jobs:
               
               # Check if file contains the word (case-insensitive, whole word)
               # Exclude lines where the match is inside a code/CLI pattern (filename exclusion handled by perl (?!\.))
-              if grep -inw "$american" "$file" 2>/dev/null | grep -qvE "(https?://|file://|github/|[?&](color|center|gray|licence)=[a-zA-Z0-9]+|\"Authorization\": \"Bearer|types:[[:space:]]*\[[^]]+\]|=[\"'](center|color|licence)|--[a-z-]+ (center|color|gray)|--color|--center|\$\{?(color|center|gray|licence)|\b(COLOR|CENTER|GRAY|LICENCE)[_A-Z]*|gum |\\$|shields\.io)"; then
+              if grep -inw "$american" "$file" 2>/dev/null | grep -qvE "(https?://|file://|github/|[?&](color|center|gray|licence)=[a-zA-Z0-9]+|\"Authorization\": \"Bearer|types:[[:space:]]*\[[^]]+\]|=[\"'](center|color|licence)|--[a-z-]+ (center|color|gray)|--color|--center|\$\{?(color|center|gray|licence)|\b(COLOR|CENTER|GRAY|LICENCE)[_A-Z]*|gum |\\$|shields\.io|stop-color|[a-z-]color[a-z-]*:|color[a-z-]*:[[:space:]]*#|align-items:)"; then
                 case_preserve_replace "$file" "$american" "$british"
                 echo "  ✓ Fixed in: $file"
                 FIXED_COUNT=$((FIXED_COUNT + 1))

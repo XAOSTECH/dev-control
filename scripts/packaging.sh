@@ -268,7 +268,7 @@ detect_package_info() {
         [[ -z "$PKG_DESCRIPTION" ]] && PKG_DESCRIPTION="A CLI tool"
     fi
     
-    # Licence from LICENSE file or git config
+    # Licence from LICENCE file or git config
     if [[ -z "$PKG_LICENSE" ]]; then
         PKG_LICENSE=$(git config --local dc-init.licence-type 2>/dev/null || echo "MIT")
     fi
@@ -348,7 +348,7 @@ init_config() {
         # Theme selection with glamorous chooser
         SELECTED_THEME=$(tui_choose "Select default theme" "matrix" "hacker" "cyber")
         
-        PKG_INCLUDE_DIRS=$(tui_input "Directories/files to include" "scripts/,config/,docs/,README.md,LICENSE")
+        PKG_INCLUDE_DIRS=$(tui_input "Directories/files to include" "scripts/,config/,docs/,README.md,LICENCE")
         PKG_DEPENDENCIES=$(tui_input "Runtime dependencies" "git,gh,jq,gum")
     else
         read -rp "Package name [$PKG_NAME]: " input
@@ -386,8 +386,8 @@ init_config() {
         
         echo ""
         echo "Directories/files to include (comma-separated):"
-        read -rp "Include [scripts/,config/,docs/,README.md,LICENSE]: " input
-        PKG_INCLUDE_DIRS="${input:-scripts/,config/,docs/,README.md,LICENSE}"
+        read -rp "Include [scripts/,config/,docs/,README.md,LICENCE]: " input
+        PKG_INCLUDE_DIRS="${input:-scripts/,config/,docs/,README.md,LICENCE}"
         
         echo ""
         echo "Runtime dependencies (comma-separated):"

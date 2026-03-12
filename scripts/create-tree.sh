@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Dev-Control Git Tree Visualizer
-# Creates fractal/mandelbrot-style git tree visualization
+# Creates fractal/mandelbrot-style git tree visualisation
 #
 # Generates:
 #   - SVG for static embedding in README
@@ -61,7 +61,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         -h|--help)
             cat <<-EOF
-Git Tree Visualizer - Fractal/Mandelbrot-style git history visualization
+Git Tree Visualizer - Fractal/Mandelbrot-style git history visualisation
 
 Usage: create-tree.sh [OPTIONS]
 
@@ -69,7 +69,7 @@ Options:
   --svg-only              Generate only SVG (static, README-compatible)
   --html-only             Generate only HTML (interactive with animations)
   --no-embed              Don't auto-inject into README
-  --max-commits N         Limit visualization to N commits (default: 500)
+  --max-commits N         Limit visualisation to N commits (default: 500)
   --output-dir DIR        Output directory (default: .github/tree-viz)
   -h, --help              Show this help
 
@@ -94,7 +94,7 @@ done
 # ============================================================================
 
 print_header
-print_info "Git Tree Visualizer - Creating fractal tree visualization"
+print_info "Git Tree Visualizer - Creating fractal tree visualisation"
 
 # Create output directory
 mkdir -p "$OUTPUT_DIR"
@@ -127,7 +127,7 @@ fi
 
 # Step 5: Embed in README
 if [[ "$EMBED_README" == "true" && "$GENERATE_SVG" == "true" ]]; then
-    print_info "Embedding visualization in README..."
+    print_info "Embedding visualisation in README..."
     
     # Find README
     README=""
@@ -145,13 +145,13 @@ if [[ "$EMBED_README" == "true" && "$GENERATE_SVG" == "true" ]]; then
         # Check if tree-viz section already exists
         if grep -q "<!-- TREE-VIZ-START -->" "$README"; then
             # Replace existing section
-            print_info "Updating existing tree visualization in README..."
+            print_info "Updating existing tree visualisation in README..."
             # Create temp file with new content
             awk -v path="$README_REL_PATH" '
                 /<!-- TREE-VIZ-START -->/ {
                     print $0
                     print ""
-                    print "![Git Tree Visualization](" path "/git-tree.svg)"
+                    print "![Git Tree Visualisation](" path "/git-tree.svg)"
                     print ""
                     in_tree=1
                     next
@@ -164,14 +164,14 @@ if [[ "$EMBED_README" == "true" && "$GENERATE_SVG" == "true" ]]; then
             mv "$README.tmp" "$README"
         else
             # Append new section
-            print_info "Adding tree visualization section to README..."
+            print_info "Adding tree visualisation section to README..."
             cat >> "$README" <<-EOF
 
 <!-- TREE-VIZ-START -->
 
-## Git Tree Visualization
+## Git Tree Visualisation
 
-![Git Tree Visualization]($README_REL_PATH/git-tree.svg)
+![Git Tree Visualisation]($README_REL_PATH/git-tree.svg)
 
 [Interactive version]($README_REL_PATH/git-tree.html) • [View data]($README_REL_PATH/git-tree-data.json)
 
@@ -186,7 +186,7 @@ fi
 
 # Summary
 echo ""
-print_success "Visualization complete!"
+print_success "Visualisation complete!"
 echo ""
 echo "Generated files:"
 [[ "$GENERATE_SVG" == "true" ]] && echo "  • SVG:  $OUTPUT_DIR/git-tree.svg"

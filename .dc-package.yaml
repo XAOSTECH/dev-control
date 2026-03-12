@@ -26,7 +26,7 @@ include:
   - plugins/
   - install.sh
   - README.md
-  - LICENSE
+  - LICENCE
   - CHANGELOG.md
 
 # Runtime dependencies

@@ -14,7 +14,7 @@
 # Automates repository maintenance tasks including:
 #   - Detecting accumulated changes and auto-triggering releases
 #   - Updating submodules that have fallen behind
-#   - Keeping monorepo dependencies synchronized
+#   - Keeping monorepo dependencies synchronised
 #
 # TRIGGERS:
 #   - Schedule: Weekly on Monday at 00:00 UTC
@@ -133,13 +133,13 @@ jobs:
     steps:
       - name: Generate App Token
         id: app_token
-        uses: actions/create-github-app-token@v1
+        uses: actions/create-github-app-token@v2
         with:
           app-id: ${{ secrets['{{BOT_APP_ID_SECRET}}'] }}
           private-key: ${{ secrets['{{BOT_PRIVATE_KEY_SECRET}}'] }}
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0  # Full history for commit counting
           submodules: recursive

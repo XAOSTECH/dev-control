@@ -23,7 +23,7 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -39,7 +39,7 @@ jobs:
           permission-contents: write
           permission-pull-requests: write
 
-      - name: Fetch and analyze CodeQL alerts
+      - name: Fetch and analyse CodeQL alerts
         id: alerts
         env:
           GH_TOKEN: ${{ steps.app_token.outputs.token }}

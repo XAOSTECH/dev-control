@@ -8,7 +8,7 @@
   <a href="https://github.com/xaostech/dev-control/releases">
     <img alt="GitHub release" src="https://img.shields.io/github/v/release/xaostech/dev-control?style=for-the-badge&logo=semantic-release&color=blue">
   </a>
-  <a href="https://github.com/xaostech/dev-control/blob/main/LICENSE">
+  <a href="https://github.com/xaostech/dev-control/blob/main/LICENCE">
     <img alt="Licence" src="https://img.shields.io/github/licence/xaostech/dev-control?style=for-the-badge&color=green">
   </a>
 </p>
@@ -372,7 +372,7 @@ See [open issues](https://github.com/xaostech/dev-control/issues) for more.
 
 ## 📄 Licence
 
-GPL-3.0. See [LICENSE](../LICENSE).
+GPL-3.0. See [LICENCE](../LICENCE).
 
 ---
 
@@ -388,9 +388,9 @@ GPL-3.0. See [LICENSE](../LICENSE).
 
 <!-- TREE-VIZ-START -->
 
-## Git Tree Visualization
+## Git Tree Visualisation
 
-![Git Tree Visualization](../.github/tree-viz/git-tree.svg)
+![Git Tree Visualisation](../.github/tree-viz/git-tree.svg)
 
 [Interactive version](../.github/tree-viz/git-tree.html) • [View data](../.github/tree-viz/git-tree-data.json)
 

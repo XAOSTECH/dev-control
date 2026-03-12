@@ -133,13 +133,13 @@ jobs:
     steps:
       - name: Generate App Token
         id: app_token
-        uses: actions/create-github-app-token@v1
+        uses: actions/create-github-app-token@v2
         with:
           app-id: ${{ secrets['XB_AI'] }}
           private-key: ${{ secrets['XB_PK'] }}
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0  # Full history for changelog generation
           # Use the app token so actions/checkout installs its credential helper
@@ -411,7 +411,7 @@ jobs:
             - docs/
             - plugins/
             - README.md
-            - LICENSE
+            - LICENCE
             - install.sh
           dependencies:
             - git
