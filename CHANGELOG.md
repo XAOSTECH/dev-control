@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - correct Perl regex syntax using curly brace delimiters
-- improve anglicise workflow exclusion patterns for licence/license conversion
+- improve anglicise workflow exclusion patterns for licence/licence conversion
 - strip extensions and customizations from _minimal variant
 - leave timezone empty in _minimal variant
 - replace user timezone with UTC in _example and _minimal config variants
@@ -51,7 +51,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - improve: use gcda-style HEAD amendment for serverless
 - chore: update CHANGELOG for v0.5.7 (re-release)
 - chore(web-dev): adapt comment
-- chore(anglicise): license -> licence + adapt anglicise
+- chore(anglicise): licence -> licence + adapt anglicise
 - chore(docs): clarify dc-init -> dc-create config flow
 - chore(docs): clarify envVars
 - chore(docs): move dc-alias to front  + fix typo + format
@@ -97,7 +97,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - chore(web-dev): adapt comment
-- chore(anglicise): license -> licence + adapt anglicise
+- chore(anglicise): licence -> licence + adapt anglicise
 - chore(docs): clarify dc-init -> dc-create config flow
 - chore(docs): clarify envVars
 - chore(docs): move dc-alias to front  + fix typo + format
@@ -180,7 +180,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.5.6] - 2026-02-22
 
 ### Added
-- add fractal git tree visualization (create-tree.sh)
+- add fractal git tree visualisation (create-tree.sh)
 - add security branch cleanup and --auto-sign flag
 - amend security review issues instead of creating duplicates
 - add automerge label to security-fix PRs
@@ -188,7 +188,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - SVG info transform arithmetic calculation
 - tree-viz JSON escaping and duplicate echo bugs
-- tree visualization - CodeQL schedule, SVG rendering, relative paths
+- tree visualisation - CodeQL schedule, SVG rendering, relative paths
 - restore correct variables in PR body template
 - remove self-referential env vars and use correct shell syntax
 - disable autofix automatic trigger to prevent infinite loop

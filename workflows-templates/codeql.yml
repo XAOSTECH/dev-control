@@ -24,7 +24,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  analyze:
+  analyse:
     name: CodeQL Analysis
     runs-on: ubuntu-latest
     
@@ -34,7 +34,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Initialize CodeQL
+      - name: Initialise CodeQL
         uses: github/codeql-action/init@v4
         with:
           # Auto-detect languages present in repo (no hardcoding)
@@ -59,7 +59,7 @@ jobs:
   security-summary:
     name: Security Report
     runs-on: ubuntu-latest
-    needs: [analyze]
+    needs: [analyse]
     if: always()
     
     steps:

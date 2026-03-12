@@ -52,8 +52,8 @@ USAGE:
 OPTIONS:
   -d, --deep              Scan submodules recursively
   -j, --json              Output results as JSON
-  -c, --check LICENSE     Check compatibility with specified licence
-  -a, --apply LICENSE     Apply a licence template (MIT, Apache-2.0, GPL-3.0, BSD-3-Clause)
+  -c, --check LICENCE     Check compatibility with specified licence
+  -a, --apply LICENCE     Apply a licence template (MIT, Apache-2.0, GPL-3.0, BSD-3-Clause)
   -r, --refresh           Force re-detection (ignore cache)
   -h, --help              Show this help message
 
@@ -225,7 +225,7 @@ print_compatibility_check() {
 }
 
 # ============================================================================
-# LICENSE APPLICATION
+# LICENCE APPLICATION
 # ============================================================================
 
 apply_licence_template() {

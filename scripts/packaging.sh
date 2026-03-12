@@ -268,7 +268,7 @@ detect_package_info() {
         [[ -z "$PKG_DESCRIPTION" ]] && PKG_DESCRIPTION="A CLI tool"
     fi
     
-    # Licence from LICENSE file or git config
+    # Licence from LICENCE file or git config
     if [[ -z "$PKG_LICENSE" ]]; then
         PKG_LICENSE=$(git config --local dc-init.licence-type 2>/dev/null || echo "MIT")
     fi
@@ -386,7 +386,7 @@ init_config() {
         
         echo ""
         echo "Directories/files to include (comma-separated):"
-        read -rp "Include [scripts/,config/,docs/,README.md,LICENSE]: " input
+        read -rp "Include [scripts/,config/,docs/,README.md,LICENCE]: " input
         PKG_INCLUDE_DIRS="${input:-scripts/,config/,docs/,README.md,LICENSE}"
         
         echo ""

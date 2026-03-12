@@ -16,7 +16,7 @@ calculate_tree_positions_bash() {
     local output_file="${2:-/tmp/git-tree-positions.json}"
     
     # Use jq for simple spiral/grid positioning (no trigonometry needed)
-    # Just arrange commits in a spiral pattern from center outward
+    # Just arrange commits in a spiral pattern from centre outward
     jq '
         # Grid layout: 5 columns per row
         (.commits | length) as $total_commits |

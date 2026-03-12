@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
-# Dev-Control Shared Library: Git Tree Visualization Data Extraction
-# Functions for extracting git data for fractal tree visualization
+# Dev-Control Shared Library: Git Tree Visualisation Data Extraction
+# Functions for extracting git data for fractal tree visualisation
 #
 # Usage:
 #   source "${SCRIPT_DIR}/lib/git/tree-viz.sh"
@@ -13,7 +13,7 @@
 # GIT DATA EXTRACTION
 # ============================================================================
 
-# Extract all commits with metadata for visualization
+# Extract all commits with metadata for visualisation
 # Output: JSON array of commits with sha, parents, author, date, message, refs
 extract_commits_json() {
     local branch="${1:-HEAD}"
@@ -142,10 +142,10 @@ calculate_tree_positions() {
 }
 
 # ============================================================================
-# VISUALIZATION METRICS
+# VISUALISATION METRICS
 # ============================================================================
 
-# Get repository statistics for visualization sizing
+# Get repository statistics for visualisation sizing
 get_repo_stats() {
     local commit_count
     commit_count=$(git rev-list --count HEAD 2>/dev/null || echo 0)

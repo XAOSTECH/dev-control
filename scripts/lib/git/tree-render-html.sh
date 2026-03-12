@@ -24,14 +24,14 @@ render_html_tree() {
     local json_data
     json_data=$(cat "$input_json")
     
-    # Create HTML with embedded Canvas visualization
+    # Create HTML with embedded Canvas visualisation
     cat > "$output_file" <<-'HTMLEOF'
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Git Tree Visualization</title>
+    <title>Git Tree Visualisation</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
@@ -41,7 +41,7 @@ render_html_tree() {
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-            align-items: center;
+            align-items: centre;
             padding: 20px;
         }
         
@@ -54,13 +54,13 @@ render_html_tree() {
         }
         
         h1 {
-            color: #1e293b;
+            colour: #1e293b;
             margin-bottom: 10px;
             font-size: 28px;
         }
         
         .info {
-            color: #64748b;
+            colour: #64748b;
             margin-bottom: 20px;
             font-size: 14px;
         }
@@ -75,7 +75,7 @@ render_html_tree() {
         #tooltip {
             position: absolute;
             background: rgba(15, 23, 42, 0.95);
-            color: white;
+            colour: white;
             padding: 12px 16px;
             border-radius: 8px;
             font-family: monospace;
@@ -93,19 +93,19 @@ render_html_tree() {
         }
         
         .tooltip-sha {
-            color: #60a5fa;
+            colour: #60a5fa;
             font-weight: bold;
             margin-bottom: 4px;
         }
         
         .tooltip-author {
-            color: #a78bfa;
+            colour: #a78bfa;
             font-size: 11px;
             margin-bottom: 4px;
         }
         
         .tooltip-date {
-            color: #94a3b8;
+            colour: #94a3b8;
             font-size: 10px;
         }
         
@@ -119,7 +119,7 @@ render_html_tree() {
         button {
             padding: 8px 16px;
             background: #3b82f6;
-            color: white;
+            colour: white;
             border: none;
             border-radius: 6px;
             cursor: pointer;
@@ -134,7 +134,7 @@ render_html_tree() {
 </head>
 <body>
     <div class="container">
-        <h1>🌳 Git Tree Visualization</h1>
+        <h1>🌳 Git Tree Visualisation</h1>
         <p class="info">Hover over leaves (commits) to see details • Click to zoom</p>
         
 HTMLEOF
@@ -165,7 +165,7 @@ CANVASHTML
     # Embed JSON data
     cat "$input_json" >> "$output_file"
     
-    # Add JavaScript visualization code
+    # Add JavaScript visualisation code
     cat >> "$output_file" <<-'JSEOF'
 ;
         

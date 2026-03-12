@@ -14,7 +14,7 @@
 # Automates repository maintenance tasks including:
 #   - Detecting accumulated changes and auto-triggering releases
 #   - Updating submodules that have fallen behind
-#   - Keeping monorepo dependencies synchronized
+#   - Keeping monorepo dependencies synchronised
 #
 # TRIGGERS:
 #   - Schedule: Weekly on Monday at 00:00 UTC

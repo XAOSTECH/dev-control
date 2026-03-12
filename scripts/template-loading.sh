@@ -804,7 +804,7 @@ add_badges_after_title() {
   <a href="{{REPO_URL}}/releases">
     <img alt="GitHub release" src="https://img.shields.io/github/v/release/{{ORG_NAME}}/{{REPO_SLUG}}?style=for-the-badge&logo=semantic-release&colour=blue">
   </a>
-  <a href="{{REPO_URL}}/blob/main/LICENSE">
+  <a href="{{REPO_URL}}/blob/main/LICENCE">
     <img alt="Licence" src="https://img.shields.io/github/licence/{{ORG_NAME}}/{{REPO_SLUG}}?style=for-the-badge&colour=green">
   </a>
 </p>

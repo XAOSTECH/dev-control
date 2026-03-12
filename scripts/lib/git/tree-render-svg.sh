@@ -36,13 +36,13 @@ render_svg_tree() {
   <defs>
     <!-- Gradients for fractal effect -->
     <radialGradient id="leafGradient">
-      <stop offset="0%" style="stop-color:#22c55e;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#16a34a;stop-opacity:0.8" />
+      <stop offset="0%" style="stop-colour:#22c55e;stop-opacity:1" />
+      <stop offset="100%" style="stop-colour:#16a34a;stop-opacity:0.8" />
     </radialGradient>
     
     <radialGradient id="mergeGradient">
-      <stop offset="0%" style="stop-color:#a78bfa;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#7c3aed;stop-opacity:0.8" />
+      <stop offset="0%" style="stop-colour:#a78bfa;stop-opacity:1" />
+      <stop offset="100%" style="stop-colour:#7c3aed;stop-opacity:0.8" />
     </radialGradient>
     
     <!-- Branch line style -->
@@ -58,7 +58,7 @@ render_svg_tree() {
   <!-- Background -->
   <rect width="$width" height="$height" fill="#f8fafc"/>
   
-  <!-- Grid pattern for depth visualization -->
+  <!-- Grid pattern for depth visualisation -->
   <defs>
     <pattern id="grid" width="100" height="100" patternUnits="userSpaceOnUse">
       <path d="M 100 0 L 0 0 0 100" fill="none" stroke="#e2e8f0" stroke-width="0.5" opacity="0.3"/>
