@@ -1014,7 +1014,7 @@ generate_config_variants() {
     CFG_GITHUB_USER_EMAIL=""
     CFG_GPG_KEY_ID=""
     CFG_TIMEZONE=""
-    CFG_VSCODE_EXTENSIONS="github.copilot,github.copilot-chat"
+    CFG_VSCODE_EXTENSIONS="github.copilot,GitHub.copilot-chat"
     CFG_MOUNT_GPG="false"
     CFG_MOUNT_GH_CONFIG="false"
     CFG_MOUNT_WRANGLER="false"

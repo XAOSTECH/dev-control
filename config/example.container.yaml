@@ -103,7 +103,7 @@ hush-login: true
 # ============================================================================
 
 # VS Code extensions to install in the devcontainer (comma-separated)
-vscode-extensions: github.copilot,github.copilot-chat
+vscode-extensions: github.copilot,GitHub.copilot-chat
 
 # ============================================================================
 # Mount Points
