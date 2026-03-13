@@ -221,59 +221,67 @@ run_interactive_config() {
     fi
     
     # Base image category or custom
-    echo ""
-    echo -e "${BOLD}Base Image Selection:${NC}"
-    echo -e "  ${DIM}Choose a dev-control category (pre-built) or custom image${NC}"
-    echo ""
-    echo -e "  ${CYAN}Dev-Control Categories:${NC}"
-    for category in "${!BASE_IMAGE_CATEGORIES[@]}"; do
-        local image="${BASE_IMAGE_CATEGORIES[$category]}"
-        local desc="${CATEGORY_FEATURES[$category]}"
-        echo -e "    ${GREEN}$category${NC} → ${YELLOW}$image${NC}"
-        echo -e "      ${DIM}$desc${NC}"
-    done
-    echo ""
-    
-    if confirm "Use a dev-control category image?"; then
+    if [[ -n "$CATEGORY_FLAG" && -n "${BASE_IMAGE_CATEGORIES[$CATEGORY_FLAG]:-}" ]]; then
+        # CLI category flags (--img/--base --dev-tools etc.) take precedence over prompts
         CFG_USE_BASE_CATEGORY="true"
-        local categories=("${!BASE_IMAGE_CATEGORIES[@]}")
-        echo ""
-        echo -e "${BOLD}Select category:${NC}"
-        select category in "${categories[@]}" "Custom image..."; do
-            if [[ -n "$category" && "$category" != "Custom image..." ]]; then
-                CFG_BASE_CATEGORY="$category"
-                CFG_BASE_IMAGE="${BASE_IMAGE_CATEGORIES[$category]}"
-                print_success "Selected: $category (${BASE_IMAGE_CATEGORIES[$category]})"
-                break
-            elif [[ "$category" == "Custom image..." ]]; then
-                CFG_USE_BASE_CATEGORY="false"
-                CFG_BASE_IMAGE=$(select_from_list "Select custom base Docker image:" "$CFG_BASE_IMAGE" "${BASE_IMAGES[@]}")
-                
-                # Check if the custom image matches a known category
-                for cat in "${!BASE_IMAGE_CATEGORIES[@]}"; do
-                    if [[ "$CFG_BASE_IMAGE" == *"${BASE_IMAGE_CATEGORIES[$cat]}"* ]]; then
-                        CFG_USE_BASE_CATEGORY="true"
-                        CFG_BASE_CATEGORY="$cat"
-                        print_info "Inferred category '$cat' from image name"
-                        break
-                    fi
-                done
-                break
-            fi
-        done
+        CFG_BASE_CATEGORY="$CATEGORY_FLAG"
+        CFG_BASE_IMAGE="${BASE_IMAGE_CATEGORIES[$CATEGORY_FLAG]}"
+        print_info "Using category from flag: $CATEGORY_FLAG (${CFG_BASE_IMAGE})"
     else
-        CFG_USE_BASE_CATEGORY="false"
-        CFG_BASE_IMAGE=$(select_from_list "Select base Docker image:" "$CFG_BASE_IMAGE" "${BASE_IMAGES[@]}")
-        
-        # Check if the custom image matches a known category
-        for cat in "${!BASE_IMAGE_CATEGORIES[@]}"; do
-            if [[ "$CFG_BASE_IMAGE" == *"${BASE_IMAGE_CATEGORIES[$cat]}"* ]]; then
-                CFG_USE_BASE_CATEGORY="true"
-                CFG_BASE_CATEGORY="$cat"
-                print_info "Inferred category '$cat' from image name"
-                break
-            fi
+        echo ""
+        echo -e "${BOLD}Base Image Selection:${NC}"
+        echo -e "  ${DIM}Choose a dev-control category (pre-built) or custom image${NC}"
+        echo ""
+        echo -e "  ${CYAN}Dev-Control Categories:${NC}"
+        for category in "${!BASE_IMAGE_CATEGORIES[@]}"; do
+            local image="${BASE_IMAGE_CATEGORIES[$category]}"
+            local desc="${CATEGORY_FEATURES[$category]}"
+            echo -e "    ${GREEN}$category${NC} → ${YELLOW}$image${NC}"
+            echo -e "      ${DIM}$desc${NC}"
         done
+        echo ""
+        
+        if confirm "Use a dev-control category image?"; then
+            CFG_USE_BASE_CATEGORY="true"
+            local categories=("${!BASE_IMAGE_CATEGORIES[@]}")
+            echo ""
+            echo -e "${BOLD}Select category:${NC}"
+            select category in "${categories[@]}" "Custom image..."; do
+                if [[ -n "$category" && "$category" != "Custom image..." ]]; then
+                    CFG_BASE_CATEGORY="$category"
+                    CFG_BASE_IMAGE="${BASE_IMAGE_CATEGORIES[$category]}"
+                    print_success "Selected: $category (${BASE_IMAGE_CATEGORIES[$category]})"
+                    break
+                elif [[ "$category" == "Custom image..." ]]; then
+                    CFG_USE_BASE_CATEGORY="false"
+                    CFG_BASE_IMAGE=$(select_from_list "Select custom base Docker image:" "$CFG_BASE_IMAGE" "${BASE_IMAGES[@]}")
+                    
+                    # Check if the custom image matches a known category
+                    for cat in "${!BASE_IMAGE_CATEGORIES[@]}"; do
+                        if [[ "$CFG_BASE_IMAGE" == *"${BASE_IMAGE_CATEGORIES[$cat]}"* ]]; then
+                            CFG_USE_BASE_CATEGORY="true"
+                            CFG_BASE_CATEGORY="$cat"
+                            print_info "Inferred category '$cat' from image name"
+                            break
+                        fi
+                    done
+                    break
+                fi
+            done
+        else
+            CFG_USE_BASE_CATEGORY="false"
+            CFG_BASE_IMAGE=$(select_from_list "Select base Docker image:" "$CFG_BASE_IMAGE" "${BASE_IMAGES[@]}")
+            
+            # Check if the custom image matches a known category
+            for cat in "${!BASE_IMAGE_CATEGORIES[@]}"; do
+                if [[ "$CFG_BASE_IMAGE" == *"${BASE_IMAGE_CATEGORIES[$cat]}"* ]]; then
+                    CFG_USE_BASE_CATEGORY="true"
+                    CFG_BASE_CATEGORY="$cat"
+                    print_info "Inferred category '$cat' from image name"
+                    break
+                fi
+            done
+        fi
     fi
     
     # Timezone
