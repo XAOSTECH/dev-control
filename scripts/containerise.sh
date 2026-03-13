@@ -676,8 +676,9 @@ DOCKERFILE_EOF
 # Generate devcontainer.json
 generate_devcontainer_json() {
     local devcontainer_dir="$1"
-    local use_image="${2:-}"  # Optional: image tag to use instead of building
-    local category="${3:-}"   # Optional: category for header comments
+    local use_image="${2:-}"               # Optional: image tag to use instead of building
+    local category="${3:-}"                # Optional: category for header comments
+    local skip_category_extensions="${4:-false}"  # Optional: do not inject category extensions
     local devcontainer_file="$devcontainer_dir/devcontainer.json"
     local project_name
     project_name=$(basename "${PROJECT_PATH:-$(pwd)}")
@@ -763,7 +764,7 @@ generate_devcontainer_json() {
     done
     
     # Add category-specific extensions if available
-    if [[ -n "$category" && -n "${CATEGORY_EXTENSIONS[$category]:-}" ]]; then
+    if [[ "$skip_category_extensions" != "true" && -n "$category" && -n "${CATEGORY_EXTENSIONS[$category]:-}" ]]; then
         for ext in ${CATEGORY_EXTENSIONS[$category]}; do
             if [[ -n "$extensions" ]]; then extensions+=","; fi
             extensions+="\"${ext}\""
@@ -1007,13 +1008,13 @@ generate_config_variants() {
     CFG_TIMEZONE="UTC"
     _generate_variant "$devcontainer_dir" "$mode" "$category" "$image_tag" "_example"
 
-    # ─── MINIMAL VARIANT (no personal config, no extensions) ───
+    # ─── MINIMAL VARIANT (no personal config, copilot-only extension set) ───
     print_info "Generating _minimal variant (no personal config)..."
     CFG_GITHUB_USER=""
     CFG_GITHUB_USER_EMAIL=""
     CFG_GPG_KEY_ID=""
     CFG_TIMEZONE=""
-    CFG_VSCODE_EXTENSIONS=""
+    CFG_VSCODE_EXTENSIONS="github.copilot,github.copilot-chat"
     CFG_MOUNT_GPG="false"
     CFG_MOUNT_GH_CONFIG="false"
     CFG_MOUNT_WRANGLER="false"
@@ -1081,12 +1082,17 @@ _generate_variant() {
     fi
 
     # Generate devcontainer.json variant
+    local skip_category_extensions="false"
+    if [[ "$suffix" == "_minimal" ]]; then
+        skip_category_extensions="true"
+    fi
+
     if [[ "$mode" == "image" ]]; then
-        generate_devcontainer_json "$devcontainer_dir" "$image_tag" "$category"
+        generate_devcontainer_json "$devcontainer_dir" "$image_tag" "$category" "$skip_category_extensions"
     elif [[ "$mode" == "base" ]]; then
-        generate_devcontainer_json "$devcontainer_dir" "" "$category"
+        generate_devcontainer_json "$devcontainer_dir" "" "$category" "$skip_category_extensions"
     else
-        generate_devcontainer_json "$devcontainer_dir"
+        generate_devcontainer_json "$devcontainer_dir" "" "" "$skip_category_extensions"
     fi
     mv "$devcontainer_dir/devcontainer.json" "$devcontainer_dir/devcontainer${suffix}.json"
     print_success "Created: devcontainer${suffix}.json"

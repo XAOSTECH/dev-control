@@ -32,14 +32,14 @@ art:
 data-science:
   image: devcontrol/data-science:latest
   features: "CUDA 13.1, FFmpeg (NVENC/NVDEC), NVIDIA acceleration"
-  extensions: ms-python.python ms-toolsai.jupyter ms-python.vscode-pylance
+  extensions: ms-toolsai.jupyter
   github-path: https://github.com/xaostech/dev-control/tree/main/.devcontainer/data-science
   nvidia: true
 
 streaming:
   image: devcontrol/streaming:latest
   features: "FFmpeg (NVENC/NVDEC), NGINX-RTMP, SRT, ONNX Runtime GPU, YOLOv8"
-  extensions: ms-vscode.cpptools ms-python.python
+  extensions: ms-vscode.cpptools
   github-path: https://github.com/xaostech/dev-control/tree/main/.devcontainer/streaming
   nvidia: true
 
@@ -53,6 +53,6 @@ web-dev:
 dev-tools:
   image: devcontrol/dev-tools:latest
   features: "GCC, build-essential, common compilers, general development"
-  extensions: ms-vscode.cpptools ms-python.python
+  extensions: ""
   github-path: https://github.com/xaostech/dev-control/tree/main/.devcontainer/dev-tools
   nvidia: false
