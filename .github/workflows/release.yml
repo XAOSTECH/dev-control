@@ -411,7 +411,7 @@ jobs:
             - docs/
             - plugins/
             - README.md
-            - LICENCE
+            - LICENSE
             - install.sh
           dependencies:
             - git
