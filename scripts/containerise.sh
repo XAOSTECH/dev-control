@@ -248,12 +248,32 @@ run_interactive_config() {
             elif [[ "$category" == "Custom image..." ]]; then
                 CFG_USE_BASE_CATEGORY="false"
                 CFG_BASE_IMAGE=$(select_from_list "Select custom base Docker image:" "$CFG_BASE_IMAGE" "${BASE_IMAGES[@]}")
+                
+                # Check if the custom image matches a known category
+                for cat in "${!BASE_IMAGE_CATEGORIES[@]}"; do
+                    if [[ "$CFG_BASE_IMAGE" == *"${BASE_IMAGE_CATEGORIES[$cat]}"* ]]; then
+                        CFG_USE_BASE_CATEGORY="true"
+                        CFG_BASE_CATEGORY="$cat"
+                        print_info "Inferred category '$cat' from image name"
+                        break
+                    fi
+                done
                 break
             fi
         done
     else
         CFG_USE_BASE_CATEGORY="false"
         CFG_BASE_IMAGE=$(select_from_list "Select base Docker image:" "$CFG_BASE_IMAGE" "${BASE_IMAGES[@]}")
+        
+        # Check if the custom image matches a known category
+        for cat in "${!BASE_IMAGE_CATEGORIES[@]}"; do
+            if [[ "$CFG_BASE_IMAGE" == *"${BASE_IMAGE_CATEGORIES[$cat]}"* ]]; then
+                CFG_USE_BASE_CATEGORY="true"
+                CFG_BASE_CATEGORY="$cat"
+                print_info "Inferred category '$cat' from image name"
+                break
+            fi
+        done
     fi
     
     # Timezone
@@ -266,36 +286,39 @@ run_interactive_config() {
     CFG_UBUNTU_MIRROR=$(select_mirror "$CFG_UBUNTU_MIRROR")
     
     # Streaming/CUDA features
-    echo ""
-    print_separator
-    echo -e "${BOLD}Streaming & CUDA Features:${NC}"
-    echo -e "  ${DIM}Enable these for video streaming, transcoding, and GPU-accelerated workflows${NC}"
-    echo ""
-    
-    if confirm "Install CUDA Toolkit 13.1? (for GPU-accelerated compute)"; then
-        CFG_INSTALL_CUDA="true"
-        CFG_ENABLE_NVIDIA_DEVICES="true"
-    fi
-    
-    if confirm "Install FFmpeg from source with NVENC/NVDEC? (requires CUDA)"; then
-        CFG_INSTALL_FFMPEG="true"
-        if [[ "$CFG_INSTALL_CUDA" != "true" ]]; then
-            print_warning "Enabling CUDA automatically (required for FFmpeg NVENC/NVDEC)"
+    # SKIPPED: Pre-built images (--img, --base, or category selected) already contain these
+    if [[ "$MODE" != "image" && "$MODE" != "base" && "$CFG_USE_BASE_CATEGORY" != "true" ]]; then
+        echo ""
+        print_separator
+        echo -e "${BOLD}Streaming & CUDA Features:${NC}"
+        echo -e "  ${DIM}Enable these for video streaming, transcoding, and GPU-accelerated workflows${NC}"
+        echo ""
+        
+        if confirm "Install CUDA Toolkit 13.1? (for GPU-accelerated compute)"; then
             CFG_INSTALL_CUDA="true"
             CFG_ENABLE_NVIDIA_DEVICES="true"
         fi
-    fi
-    
-    if confirm "Install NGINX with RTMP module? (for streaming server)"; then
-        CFG_INSTALL_NGINX_RTMP="true"
-    fi
-    
-    if confirm "Install streaming utilities? (mediainfo, sox, v4l-utils, imagemagick)"; then
-        CFG_INSTALL_STREAMING_UTILS="true"
-    fi
-    
-    if confirm "Mount Cloudflare Wrangler config? (for Workers development)"; then
-        CFG_MOUNT_WRANGLER="true"
+        
+        if confirm "Install FFmpeg from source with NVENC/NVDEC? (requires CUDA)"; then
+            CFG_INSTALL_FFMPEG="true"
+            if [[ "$CFG_INSTALL_CUDA" != "true" ]]; then
+                print_warning "Enabling CUDA automatically (required for FFmpeg NVENC/NVDEC)"
+                CFG_INSTALL_CUDA="true"
+                CFG_ENABLE_NVIDIA_DEVICES="true"
+            fi
+        fi
+        
+        if confirm "Install NGINX with RTMP module? (for streaming server)"; then
+            CFG_INSTALL_NGINX_RTMP="true"
+        fi
+        
+        if confirm "Install streaming utilities? (mediainfo, sox, v4l-utils, imagemagick)"; then
+            CFG_INSTALL_STREAMING_UTILS="true"
+        fi
+        
+        if confirm "Mount Cloudflare Wrangler config? (for Workers development)"; then
+            CFG_MOUNT_WRANGLER="true"
+        fi
     fi
     
     # Show summary
@@ -309,12 +332,16 @@ run_interactive_config() {
     print_kv "Timezone" "$CFG_TIMEZONE"
     print_kv "Locale" "$CFG_LOCALE"
     print_kv "Ubuntu mirror" "$CFG_UBUNTU_MIRROR"
-    print_kv "CUDA 13.1" "${CFG_INSTALL_CUDA:-false}"
-    print_kv "FFmpeg (NVENC)" "${CFG_INSTALL_FFMPEG:-false}"
-    print_kv "NGINX-RTMP" "${CFG_INSTALL_NGINX_RTMP:-false}"
-    print_kv "Streaming utils" "${CFG_INSTALL_STREAMING_UTILS:-false}"
-    print_kv "NVIDIA devices" "${CFG_ENABLE_NVIDIA_DEVICES:-false}"
-    print_kv "Wrangler mount" "${CFG_MOUNT_WRANGLER:-false}"
+    
+    # Only show these if they were prompted (not using pre-built images or categories)
+    if [[ "$MODE" != "image" && "$MODE" != "base" && "$CFG_USE_BASE_CATEGORY" != "true" ]]; then
+        print_kv "CUDA 13.1" "${CFG_INSTALL_CUDA:-false}"
+        print_kv "FFmpeg (NVENC)" "${CFG_INSTALL_FFMPEG:-false}"
+        print_kv "NGINX-RTMP" "${CFG_INSTALL_NGINX_RTMP:-false}"
+        print_kv "Streaming utils" "${CFG_INSTALL_STREAMING_UTILS:-false}"
+        print_kv "NVIDIA devices" "${CFG_ENABLE_NVIDIA_DEVICES:-false}"
+        print_kv "Wrangler mount" "${CFG_MOUNT_WRANGLER:-false}"
+    fi
     print_separator
     
     # Offer to save as defaults
