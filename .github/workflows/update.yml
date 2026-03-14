@@ -401,8 +401,7 @@ jobs:
             --title "chore: Update ${UPDATES_COUNT} submodule(s) to latest" \
             --body "## 🔄 Automated Submodule Update\n\nThis PR updates submodules that have fallen behind by 5 or more commits.\n\n**Updated Submodules:** ${{ steps.check_submodules.outputs.updates_list }}\n\n**Triggered by:** [Repository Update Workflow](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})\n\n**What to Check:**\n- Review each submodule's changes between old and new commit\n- Ensure no breaking changes were introduced\n- Verify monorepo compatibility\n- Run tests locally if needed\n\nOnce approved, this will bring submodules up to date with their respective main branches." \
             --base "${{ github.ref_name }}" \
-            --head "$BRANCH_NAME" \
-            --label "automated,dependencies,submodules"
+            --head "$BRANCH_NAME"
           
           echo "✅ Pull request created successfully"
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -541,8 +540,7 @@ jobs:
             --title "chore: Update $UPDATES_COUNT dependencies to latest" \
             --body "## 📦 Automated Dependency Updates\n\nThis PR updates outdated dependencies to their latest versions.\n\n**Updated Files:** ${{ steps.check_dependencies.outputs.updates_files }}\n\n**Triggered by:** [Repository Update Workflow](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})\n\n**Review Checklist:**\n- Check CHANGELOG/release notes for breaking changes\n- Review major version bumps carefully\n- Run tests locally\n- Verify compatibility with existing code\n\nOnce approved, dependencies will be updated to latest stable versions." \
             --base "${{ github.ref_name }}" \
-            --head "$BRANCH_NAME" \
-            --label "automated,dependencies"
+            --head "$BRANCH_NAME"
           
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "📝 **Pull request created** for dependency updates" >> $GITHUB_STEP_SUMMARY
