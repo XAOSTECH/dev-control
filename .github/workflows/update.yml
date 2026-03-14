@@ -105,7 +105,7 @@ on:
         description: 'Days of inactivity to consider issue/PR stale'
         required: false
         type: number
-        default: 60
+        default: 10
       dummy_commit:
         description: 'Amend HEAD for serverless deployment (gcda-style, no SHA change)'
         required: false
@@ -227,6 +227,14 @@ jobs:
           echo "## 📦 Submodule Check" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
+          # For manual (workflow_dispatch) runs, override threshold to 0 so all
+          # behind submodules are flagged regardless of how far behind they are.
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            EFFECTIVE_THRESHOLD=0
+          else
+            EFFECTIVE_THRESHOLD=$SUBMODULE_THRESHOLD
+          fi
+          
           # Check if .gitmodules exists
           if [[ ! -f .gitmodules ]]; then
             echo "ℹ️ No submodules found in repository"
@@ -238,8 +246,8 @@ jobs:
           UPDATES_NEEDED=0
           UPDATES_LIST=""
           
-          # Parse submodules
-          git config --file .gitmodules --get-regexp '^submodule\..*\.path$' | while read -r key path; do
+          # Parse submodules (process substitution avoids subshell variable scope loss)
+          while read -r key path; do
             name=$(echo "$key" | sed 's/^submodule\.\(.*\)\.path$/\1/')
             url=$(git config --file .gitmodules --get "submodule.$name.url" || echo "")
             branch=$(git config --file .gitmodules --get "submodule.$name.branch" || echo "main")
@@ -274,8 +282,8 @@ jobs:
             if [[ "$CURRENT_COMMIT" != "$LATEST_COMMIT" ]]; then
               COMMITS_BEHIND=$(git rev-list --count "${CURRENT_COMMIT}..${LATEST_COMMIT}" 2>/dev/null || echo "0")
               
-              if [[ $COMMITS_BEHIND -ge $SUBMODULE_THRESHOLD ]]; then
-                echo "  ⚠️ $COMMITS_BEHIND commits behind (threshold: $SUBMODULE_THRESHOLD)"
+              if [[ $COMMITS_BEHIND -ge $EFFECTIVE_THRESHOLD ]]; then
+                echo "  ⚠️ $COMMITS_BEHIND commits behind (threshold: $EFFECTIVE_THRESHOLD)"
                 UPDATES_NEEDED=$((UPDATES_NEEDED + 1))
                 UPDATES_LIST="${UPDATES_LIST}${name}:${path}:${COMMITS_BEHIND};"
               else
@@ -286,7 +294,7 @@ jobs:
             fi
             
             cd "$GITHUB_WORKSPACE"
-          done
+          done < <(git config --file .gitmodules --get-regexp '^submodule\..*\.path$')
           
           echo "updates_needed=$UPDATES_NEEDED" >> $GITHUB_OUTPUT
           echo "updates_list=$UPDATES_LIST" >> $GITHUB_OUTPUT
@@ -567,7 +575,7 @@ jobs:
         if: ${{ github.event.inputs.check_stale_issues != 'false' }}
         env:
           GH_TOKEN: ${{ steps.app_token.outputs.token }}
-          STALE_DAYS: ${{ github.event.inputs.stale_days || '60' }}
+          STALE_DAYS: ${{ github.event.inputs.stale_days || '10' }}
           DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
         run: |
           echo "## 📝 Stale Issues/PRs Check" >> $GITHUB_STEP_SUMMARY
@@ -655,5 +663,5 @@ jobs:
           echo "- **Release threshold:** ${{ github.event.inputs.release_threshold || '5' }} commits" >> $GITHUB_STEP_SUMMARY
           echo "- **Submodule threshold:** ${{ github.event.inputs.submodule_threshold || '5' }} commits" >> $GITHUB_STEP_SUMMARY
           echo "- **Branch age:** ${{ github.event.inputs.branch_age_days || '5' }} days" >> $GITHUB_STEP_SUMMARY
-          echo "- **Stale threshold:** ${{ github.event.inputs.stale_days || '60' }} days" >> $GITHUB_STEP_SUMMARY
+          echo "- **Stale threshold:** ${{ github.event.inputs.stale_days || '10' }} days" >> $GITHUB_STEP_SUMMARY
           echo "- **Dry run:** ${{ github.event.inputs.dry_run == 'true' && '🔍 Yes' || '❌ No' }}" >> $GITHUB_STEP_SUMMARY
