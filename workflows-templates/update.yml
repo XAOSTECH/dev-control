@@ -272,11 +272,24 @@ jobs:
             fi
             
             # Fetch latest from remote
-            git fetch origin "$branch" --quiet 2>/dev/null || true
+            # Fetch latest from remote — try configured branch then common fallbacks
+            RESOLVED_BRANCH=""
+            for try_branch in "$branch" main Main master Master; do
+              if git fetch origin "$try_branch" --quiet 2>/dev/null; then
+                RESOLVED_BRANCH="$try_branch"
+                break
+              fi
+            done
+            if [[ -z "$RESOLVED_BRANCH" ]]; then
+              echo "  ⚠️ Failed to fetch any branch for $name — skipping"
+              cd "$GITHUB_WORKSPACE"
+              continue
+            fi
+            branch="$RESOLVED_BRANCH"
             LATEST_COMMIT=$(git rev-parse "origin/$branch" 2>/dev/null || echo "")
             
             if [[ -z "$LATEST_COMMIT" ]]; then
-              echo "  ⚠️ Failed to fetch remote branch: $branch"
+              echo "  ⚠️ Failed to resolve remote branch: $branch"
               cd "$GITHUB_WORKSPACE"
               continue
             fi
@@ -331,17 +344,34 @@ jobs:
             cd "$path"
             
             # Get branch to update to
-            branch=$(git config --file "$GITHUB_WORKSPACE/.gitmodules" --get "submodule.$name.branch" || echo "main")
+            # Get branch to update to — try configured branch then common fallbacks
+            branch=$(git config --file "$GITHUB_WORKSPACE/.gitmodules" --get "submodule.$name.branch" 2>/dev/null || echo "main")
+            RESOLVED_BRANCH=""
+            for try_branch in "$branch" main Main master Master; do
+              if git fetch origin "$try_branch" --quiet 2>/dev/null; then
+                RESOLVED_BRANCH="$try_branch"
+                break
+              fi
+            done
+            if [[ -z "$RESOLVED_BRANCH" ]]; then
+              echo "  ⚠️ Could not fetch any branch for $name — skipping"
+              echo "- ⚠️ **$name**: skipped (no fetchable branch)" >> $GITHUB_STEP_SUMMARY
+              cd "$GITHUB_WORKSPACE"
+              continue
+            fi
             
-            # Update to latest
-            git fetch origin "$branch" --quiet
-            git checkout "origin/$branch" --quiet
+            if ! git checkout "origin/$RESOLVED_BRANCH" --quiet 2>/dev/null; then
+              echo "  ⚠️ checkout failed for $name — skipping"
+              echo "- ⚠️ **$name**: skipped (checkout failed)" >> $GITHUB_STEP_SUMMARY
+              cd "$GITHUB_WORKSPACE"
+              continue
+            fi
             
             cd "$GITHUB_WORKSPACE"
           done
           
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Submodules updated successfully" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Submodules update complete" >> $GITHUB_STEP_SUMMARY
 
       - name: Create Pull Request
         if: steps.check_submodules.outputs.has_updates == 'true' && github.event.inputs.dry_run != 'true'
