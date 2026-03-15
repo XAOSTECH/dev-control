@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dev-control — XAOSTECH</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: linear-gradient(160deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px 20px;
+            color: #e0e0e0;
+        }
+        .card {
+            background: rgba(15, 15, 35, 0.85);
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 40px rgba(100, 60, 200, 0.15);
+            padding: 40px;
+            max-width: 640px;
+            width: 100%;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(100, 100, 200, 0.15);
+        }
+        h1 {
+            color: #c0a0ff;
+            font-size: 28px;
+            margin-bottom: 8px;
+            text-shadow: 0 0 20px rgba(160, 100, 255, 0.4);
+        }
+        .subtitle {
+            color: #8888aa;
+            font-size: 14px;
+            margin-bottom: 32px;
+        }
+        .links {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .links a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 18px;
+            border-radius: 10px;
+            background: rgba(100, 80, 200, 0.08);
+            border: 1px solid rgba(100, 100, 200, 0.15);
+            color: #d0c0ff;
+            text-decoration: none;
+            font-size: 15px;
+            transition: background 0.2s, border-color 0.2s;
+        }
+        .links a:hover {
+            background: rgba(100, 80, 200, 0.18);
+            border-color: rgba(140, 120, 255, 0.35);
+        }
+        .links .icon { font-size: 20px; flex-shrink: 0; }
+        .links .desc {
+            color: #8888aa;
+            font-size: 12px;
+            margin-top: 2px;
+        }
+        footer {
+            margin-top: 32px;
+            text-align: center;
+            font-size: 12px;
+            color: #555;
+        }
+        footer a { color: #8080bb; text-decoration: none; }
+        footer a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>dev-control</h1>
+        <p class="subtitle">Developer toolkit for repository automation</p>
+        <ul class="links">
+            <li>
+                <a href="tree-viz/git-tree.html">
+                    <span class="icon">🌳</span>
+                    <div>
+                        <div>Interactive Git Tree</div>
+                        <div class="desc">Animated fractal visualisation of the commit history</div>
+                    </div>
+                </a>
+            </li>
+            <li>
+                <a href="tree-viz/git-tree.svg">
+                    <span class="icon">🖼️</span>
+                    <div>
+                        <div>Git Tree SVG</div>
+                        <div class="desc">Static vector image of the repository tree</div>
+                    </div>
+                </a>
+            </li>
+            <li>
+                <a href="tree-viz/git-tree-data.json">
+                    <span class="icon">📊</span>
+                    <div>
+                        <div>Tree Data (JSON)</div>
+                        <div class="desc">Raw commit, branch, and tag data</div>
+                    </div>
+                </a>
+            </li>
+            <li>
+                <a href="tree-viz/git-tree-positions.json">
+                    <span class="icon">📐</span>
+                    <div>
+                        <div>Layout Positions (JSON)</div>
+                        <div class="desc">Calculated fractal tree node positions</div>
+                    </div>
+                </a>
+            </li>
+        </ul>
+        <footer>
+            <a href="https://github.com/XAOSTECH/dev-control">XAOSTECH/dev-control</a>
+        </footer>
+    </div>
+</body>
+</html>

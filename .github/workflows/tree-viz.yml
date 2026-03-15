@@ -22,7 +22,7 @@
 #   3. Calculates organic tree layout positions
 #   4. Renders interactive HTML with Canvas animations
 #   5. Optionally renders static SVG for README embedding
-#   6. Commits generated artefacts to .github/tree-viz/
+#   6. Commits generated artefacts to .github/static/tree-viz/
 #
 # ============================================================================
 
@@ -105,7 +105,7 @@ jobs:
           EMBED_README: ${{ inputs.embed_readme }}
         run: |
           # Build args — scripts are in this repo
-          ARGS=("--max-commits" "$MAX_COMMITS" "--output-dir" ".github/tree-viz")
+          ARGS=("--max-commits" "$MAX_COMMITS" "--output-dir" ".github/static/tree-viz")
           [[ "$EMBED_README" != "true" ]] && ARGS+=("--no-embed")
 
           bash scripts/create-tree.sh "${ARGS[@]}"
@@ -117,7 +117,7 @@ jobs:
             exit 0
           fi
 
-          git add .github/tree-viz/
+          git add .github/static/tree-viz/
           [[ -f README.md ]] && git add README.md
           [[ -f docs/README.md ]] && git add docs/README.md
           git commit -m "chore: update git tree visualisation" \
@@ -128,6 +128,6 @@ jobs:
           echo "## 🌳 Tree Visualization Updated" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Generated files:" >> $GITHUB_STEP_SUMMARY
-          echo "- \`.github/tree-viz/git-tree.html\` (interactive)" >> $GITHUB_STEP_SUMMARY
-          echo "- \`.github/tree-viz/git-tree-data.json\` (data)" >> $GITHUB_STEP_SUMMARY
-          echo "- \`.github/tree-viz/git-tree.svg\` (static)" >> $GITHUB_STEP_SUMMARY
+          echo "- \`.github/static/tree-viz/git-tree.html\` (interactive)" >> $GITHUB_STEP_SUMMARY
+          echo "- \`.github/static/tree-viz/git-tree-data.json\` (data)" >> $GITHUB_STEP_SUMMARY
+          echo "- \`.github/static/tree-viz/git-tree.svg\` (static)" >> $GITHUB_STEP_SUMMARY

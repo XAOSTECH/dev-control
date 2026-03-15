@@ -711,7 +711,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
 
           # Find the last tree-viz commit
-          LAST_VIZ_SHA=$(git log --all --oneline --format='%H' -- '.github/tree-viz/' | head -1 || echo "")
+          LAST_VIZ_SHA=$(git log --all --oneline --format='%H' -- '.github/static/tree-viz/' | head -1 || echo "")
 
           if [[ -z "$LAST_VIZ_SHA" ]]; then
             COMMITS_SINCE=999

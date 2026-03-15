@@ -131,14 +131,15 @@ if [[ "$EMBED_README" == "true" && "$GENERATE_SVG" == "true" ]]; then
     
     # Find README
     README=""
-    README_REL_PATH=".github/tree-viz"  # Default: from repo root
+    # Derive relative path from OUTPUT_DIR (strip repo root prefix)
+    local _out_rel="${OUTPUT_DIR#"$REPO_ROOT/"}"
     
     if [[ -f "$REPO_ROOT/README.md" ]]; then
         README="$REPO_ROOT/README.md"
-        README_REL_PATH=".github/tree-viz"
+        README_REL_PATH="$_out_rel"
     elif [[ -f "$REPO_ROOT/docs/README.md" ]]; then
         README="$REPO_ROOT/docs/README.md"
-        README_REL_PATH="../.github/tree-viz"  # One level up from docs/
+        README_REL_PATH="../$_out_rel"  # One level up from docs/
     fi
     
     if [[ -n "$README" ]]; then
