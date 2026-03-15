@@ -111,6 +111,16 @@ on:
         required: false
         type: boolean
         default: false
+      update_tree_viz:
+        description: 'Regenerate git tree visualisation if threshold met'
+        required: false
+        type: boolean
+        default: true
+      tree_viz_threshold:
+        description: 'Minimum new commits since last tree-viz to regenerate'
+        required: false
+        type: number
+        default: 30
 
 permissions:
   contents: write
@@ -669,6 +679,36 @@ jobs:
             echo "📌 **$COMMENTED item(s) marked as stale**" >> $GITHUB_STEP_SUMMARY
           fi
 
+      - name: Check and trigger tree visualization
+        id: check_tree_viz
+        if: ${{ github.event.inputs.update_tree_viz != 'false' && github.event.inputs.dry_run != 'true' }}
+        env:
+          GH_TOKEN: ${{ steps.app_token.outputs.token }}
+          TREE_VIZ_THRESHOLD: ${{ github.event.inputs.tree_viz_threshold || '30' }}
+        run: |
+          echo "## 🌳 Tree Visualization Check" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Find the last tree-viz commit
+          LAST_VIZ_SHA=$(git log --all --oneline --format='%H' -- '.github/tree-viz/' | head -1 || echo "")
+
+          if [[ -z "$LAST_VIZ_SHA" ]]; then
+            COMMITS_SINCE=999
+            echo "ℹ️ No previous tree-viz found — will generate" | tee -a $GITHUB_STEP_SUMMARY
+          else
+            COMMITS_SINCE=$(git rev-list --count "${LAST_VIZ_SHA}..HEAD" 2>/dev/null || echo "0")
+            echo "📊 Commits since last tree-viz: $COMMITS_SINCE (threshold: $TREE_VIZ_THRESHOLD)" | tee -a $GITHUB_STEP_SUMMARY
+          fi
+
+          if [[ $COMMITS_SINCE -ge $TREE_VIZ_THRESHOLD ]]; then
+            echo "✅ Threshold met — triggering tree-viz workflow" | tee -a $GITHUB_STEP_SUMMARY
+            gh workflow run tree-viz.yml --ref ${{ github.ref_name }}
+            echo "triggered=true" >> $GITHUB_OUTPUT
+          else
+            echo "ℹ️ Below threshold — skipping ($COMMITS_SINCE < $TREE_VIZ_THRESHOLD)" | tee -a $GITHUB_STEP_SUMMARY
+            echo "triggered=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Amend HEAD for serverless deployment
         if: ${{ github.event.inputs.dummy_commit == 'true' && github.event.inputs.dry_run != 'true' }}
         run: |
@@ -702,7 +742,9 @@ jobs:
           echo "- **Branch cleanup:** ${{ github.event.inputs.cleanup_branches != 'false' && '✅ Enabled' || '❌ Disabled' }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Stale check:** ${{ github.event.inputs.check_stale_issues != 'false' && '✅ Enabled' || '❌ Disabled' }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Dummy commit:** ${{ github.event.inputs.dummy_commit == 'true' && '✅ Enabled' || '❌ Disabled' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tree viz:** ${{ github.event.inputs.update_tree_viz != 'false' && '✅ Enabled' || '❌ Disabled' }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Release threshold:** ${{ github.event.inputs.release_threshold || '5' }} commits" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tree viz threshold:** ${{ github.event.inputs.tree_viz_threshold || '30' }} commits" >> $GITHUB_STEP_SUMMARY
           echo "- **Submodule threshold:** ${{ github.event.inputs.submodule_threshold || '5' }} commits" >> $GITHUB_STEP_SUMMARY
           echo "- **Branch age:** ${{ github.event.inputs.branch_age_days || '5' }} days" >> $GITHUB_STEP_SUMMARY
           echo "- **Stale threshold:** ${{ github.event.inputs.stale_days || '10' }} days" >> $GITHUB_STEP_SUMMARY
