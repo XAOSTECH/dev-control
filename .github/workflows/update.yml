@@ -19,7 +19,7 @@
 #
 # WHAT IT DOES:
 #   1. Checks commits since last release
-#   2. If 5+ commits found, automatically triggers release workflow
+#   2. If 5+ commits found, triggers re-release (or version bump if 30+)
 #   3. Scans submodules for updates (5+ commits behind main)
 #   4. Updates outdated submodules and creates PR
 #   5. Generates summary report
@@ -33,6 +33,7 @@
 # CONFIGURATION:
 #   Adjust thresholds via workflow inputs:
 #   - release_threshold: Minimum commits to trigger release (default: 5)
+#   - new_release_threshold: Commits ceiling before forcing version bump (default: 30)
 #   - submodule_threshold: Minimum commits behind to update (default: 5)
 #
 # BEST PRACTICES:
@@ -71,6 +72,11 @@ on:
         required: false
         type: number
         default: 5
+      new_release_threshold:
+        description: 'Commits ceiling - above this, bump version instead of re-release'
+        required: false
+        type: number
+        default: 30
       submodule_threshold:
         description: 'Minimum commits behind to update submodule'
         required: false
@@ -166,6 +172,7 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.app_token.outputs.token }}
           RELEASE_THRESHOLD: ${{ github.event.inputs.release_threshold || '5' }}
+          NEW_RELEASE_THRESHOLD: ${{ github.event.inputs.new_release_threshold || '30' }}
           DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
         run: |
           echo "## 📦 Release Check" >> $GITHUB_STEP_SUMMARY
@@ -188,6 +195,7 @@ jobs:
           echo "📊 Latest release: $LATEST_TAG" | tee -a $GITHUB_STEP_SUMMARY
           echo "📊 Commits since last release: $COMMIT_COUNT" | tee -a $GITHUB_STEP_SUMMARY
           echo "🎯 Release threshold: $RELEASE_THRESHOLD" | tee -a $GITHUB_STEP_SUMMARY
+          echo "🎯 New release ceiling: $NEW_RELEASE_THRESHOLD" | tee -a $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
           if [[ $COMMIT_COUNT -ge $RELEASE_THRESHOLD ]]; then
@@ -209,24 +217,37 @@ jobs:
         if: steps.check_release.outputs.trigger_release == 'true' && github.event.inputs.dry_run != 'true'
         env:
           GH_TOKEN: ${{ steps.app_token.outputs.token }}
+          NEW_RELEASE_THRESHOLD: ${{ github.event.inputs.new_release_threshold || '30' }}
+          COMMIT_COUNT: ${{ steps.check_release.outputs.commit_count }}
         run: |
-          echo "🚀 Triggering release workflow for re-release..."
-          
           CURRENT_VERSION=$(gh api repos/${{ github.repository }}/releases/latest --jq '.tag_name' 2>/dev/null || \
                             git tag --list 'v*' --sort=-version:refname | grep -vE 'latest|alpha|beta|rc' | head -1)
           CURRENT_VERSION=${CURRENT_VERSION#v}
           
-          echo "📌 Current version: ${CURRENT_VERSION}"
+          if [[ $COMMIT_COUNT -ge $NEW_RELEASE_THRESHOLD ]]; then
+            # Too many commits for a re-release — bump patch version
+            IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+            NEXT_VERSION="${MAJOR}.${MINOR}.$(( PATCH + 1 ))"
+            echo "📈 Commit count ($COMMIT_COUNT) exceeds ceiling ($NEW_RELEASE_THRESHOLD) — bumping version"
+            echo "📌 ${CURRENT_VERSION} → ${NEXT_VERSION}"
+            RELEASE_VERSION="$NEXT_VERSION"
+            RELEASE_TYPE="new release"
+          else
+            echo "🔄 Commit count ($COMMIT_COUNT) within ceiling ($NEW_RELEASE_THRESHOLD) — re-releasing"
+            echo "📌 Current version: ${CURRENT_VERSION}"
+            RELEASE_VERSION="$CURRENT_VERSION"
+            RELEASE_TYPE="re-release"
+          fi
           
           gh workflow run release.yml \
             --ref ${{ github.ref_name }} \
-            -f version="${CURRENT_VERSION}" \
+            -f version="${RELEASE_VERSION}" \
             -f prerelease=false \
             -f draft=false
           
           echo "✅ Release workflow triggered successfully"
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "🚀 **Release workflow triggered** (re-release with ${{ steps.check_release.outputs.commit_count }} new commits)" >> $GITHUB_STEP_SUMMARY
+          echo "🚀 **Release workflow triggered** (${RELEASE_TYPE}: v${RELEASE_VERSION} with ${COMMIT_COUNT} commits)" >> $GITHUB_STEP_SUMMARY
 
       - name: Check submodules
         id: check_submodules
@@ -744,6 +765,7 @@ jobs:
           echo "- **Dummy commit:** ${{ github.event.inputs.dummy_commit == 'true' && '✅ Enabled' || '❌ Disabled' }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Tree viz:** ${{ github.event.inputs.update_tree_viz != 'false' && '✅ Enabled' || '❌ Disabled' }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Release threshold:** ${{ github.event.inputs.release_threshold || '5' }} commits" >> $GITHUB_STEP_SUMMARY
+          echo "- **New release ceiling:** ${{ github.event.inputs.new_release_threshold || '30' }} commits" >> $GITHUB_STEP_SUMMARY
           echo "- **Tree viz threshold:** ${{ github.event.inputs.tree_viz_threshold || '30' }} commits" >> $GITHUB_STEP_SUMMARY
           echo "- **Submodule threshold:** ${{ github.event.inputs.submodule_threshold || '5' }} commits" >> $GITHUB_STEP_SUMMARY
           echo "- **Branch age:** ${{ github.event.inputs.branch_age_days || '5' }} days" >> $GITHUB_STEP_SUMMARY
