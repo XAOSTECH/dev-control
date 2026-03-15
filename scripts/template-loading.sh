@@ -1305,29 +1305,35 @@ run_batch_update() {
 
         pushd "$d" > /dev/null || { print_error "Failed to enter $d"; continue; }
 
-        # --- Owner guard: skip repos not owned by MEMBERS ---
-        if [[ -n "$members_list" ]]; then
-            local remote_owner=""
-            local remote_url
-            remote_url=$(git config --get remote.origin.url 2>/dev/null || echo "")
-            if [[ "$remote_url" =~ github\.com[:/]([^/]+)/ ]]; then
-                remote_owner="${BASH_REMATCH[1]}"
+        # --- Owner guard: skip repos not owned by MEMBERS, and skip dev-control itself ---
+        local remote_owner=""
+        local remote_url
+        remote_url=$(git config --get remote.origin.url 2>/dev/null || echo "")
+        if [[ "$remote_url" =~ github\.com[:/]([^/]+)/([^/.]+) ]]; then
+            remote_owner="${BASH_REMATCH[1]}"
+            local remote_slug="${BASH_REMATCH[2]}"
+            # Skip dev-control itself — it is the template source, not a target
+            if [[ "$remote_slug" == "dev-control" ]]; then
+                print_info "Skipping $d (dev-control is the template source)"
+                popd > /dev/null || true
+                ((skipped++)) || true
+                continue
             fi
-            if [[ -n "$remote_owner" ]]; then
-                local is_member=false
-                IFS=',' read -ra _members <<< "$members_list"
-                for m in "${_members[@]}"; do
-                    if [[ "$m" == "$remote_owner" ]]; then
-                        is_member=true
-                        break
-                    fi
-                done
-                if [[ "$is_member" == "false" ]]; then
-                    print_info "Skipping $d (owner '$remote_owner' not in MEMBERS)"
-                    popd > /dev/null || true
-                    ((skipped++)) || true
-                    continue
+        fi
+        if [[ -n "$members_list" && -n "$remote_owner" ]]; then
+            local is_member=false
+            IFS=',' read -ra _members <<< "$members_list"
+            for m in "${_members[@]}"; do
+                if [[ "$m" == "$remote_owner" ]]; then
+                    is_member=true
+                    break
                 fi
+            done
+            if [[ "$is_member" == "false" ]]; then
+                print_info "Skipping $d (owner '$remote_owner' not in MEMBERS)"
+                popd > /dev/null || true
+                ((skipped++)) || true
+                continue
             fi
         fi
 
