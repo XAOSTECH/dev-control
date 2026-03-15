@@ -388,10 +388,6 @@ GPL-3.0. See [LICENCE](../LICENCE).
 
 <!-- TREE-VIZ-START -->
 
-## Git Tree Visualisation
-
 ![Git Tree Visualisation](../.github/tree-viz/git-tree.svg)
-
-[Interactive version](../.github/tree-viz/git-tree.html) • [View data](../.github/tree-viz/git-tree-data.json)
 
 <!-- TREE-VIZ-END -->
