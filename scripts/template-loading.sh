@@ -45,6 +45,10 @@ BATCH_MODE=false
 REUSE_OWNER=false
 ASSUME_YES=false
 POSITIONAL_ARGS=()
+# Update-only mode: skip dc-init, just update templates on existing repos
+UPDATE_ONLY=false
+# Include local-only repos (no remote) in update mode
+INCLUDE_LOCAL=false
 # Batch owner prefill control: when true, do not prefill owner prompts with detected ORG_NAME
 BATCH_SKIP_OWNER=false
 # Reuse templates/settings across the batch
@@ -70,6 +74,9 @@ show_help() {
     echo "  -o, --overwrite            Overwrite existing files without prompting"
     echo "      --defaults             Use cached/default values and skip config prompts (template selection still shown)"
     echo "  -b, --batch                Batch mode: initialise multiple repositories (provide directories or use '*' to select all subdirs)"
+    echo "  -u, --update               Update mode: skip dc-init, only install templates on existing repos (stash/pull/install/commit/push)"
+    echo "      --update-only          Alias for --update"
+    echo "      --local                Include repos without a remote in update mode (skipped by default)"
     echo "      --reuse-owner          Prompt for repository owner once and reuse for all repos in the batch"
     echo "  -y, --yes                  Assume defaults and run non-interactively in batch mode"
     echo "  -h, --help                 Show this help message"
@@ -111,6 +118,15 @@ parse_args() {
                 BATCH_MODE=true
                 shift
                 ;;
+            -u|--update|--update-only)
+                UPDATE_ONLY=true
+                BATCH_MODE=true
+                shift
+                ;;
+            --local)
+                INCLUDE_LOCAL=true
+                shift
+                ;;
             --reuse-owner)
                 REUSE_OWNER=true
                 shift
@@ -143,6 +159,31 @@ parse_args() {
 # ============================================================================
 # HELPER FUNCTIONS
 # ============================================================================
+
+# Build TEMPLATE_FOLDERS mapping without displaying the interactive menu
+# Must be called before install_templates or describe_template_choices
+build_template_folders() {
+    local idx=1
+    declare -gA TEMPLATE_FOLDERS
+    [[ -d "$DEV_CONTROL_DIR/docs-templates" ]]      && { TEMPLATE_FOLDERS[$idx]="docs";      ((idx++)) || true; }
+    [[ -d "$DEV_CONTROL_DIR/workflows-templates" ]]  && { TEMPLATE_FOLDERS[$idx]="workflows";  ((idx++)) || true; }
+    [[ -d "$DEV_CONTROL_DIR/actions-templates" ]]    && { TEMPLATE_FOLDERS[$idx]="actions";    ((idx++)) || true; }
+    [[ -d "$DEV_CONTROL_DIR/github-templates" ]]     && { TEMPLATE_FOLDERS[$idx]="github";     ((idx++)) || true; }
+    if [[ -d "$DEV_CONTROL_DIR/licence-templates" ]] || [[ -d "$DEV_CONTROL_DIR/licences-templates" ]]; then
+        TEMPLATE_FOLDERS[$idx]="licences"
+        ((idx++)) || true
+    fi
+    for dir in "$DEV_CONTROL_DIR"/*-templates; do
+        if [[ -d "$dir" ]]; then
+            local name
+            name=$(basename "$dir")
+            if [[ "$name" != "docs-templates" && "$name" != "workflows-templates" && "$name" != "actions-templates" && "$name" != "licence-templates" && "$name" != "licences-templates" && "$name" != "github-templates" ]]; then
+                TEMPLATE_FOLDERS[$idx]="${name%-templates}"
+                ((idx++)) || true
+            fi
+        fi
+    done
+}
 
 # Translate template selection string to human-readable names
 # e.g. "2,3" → "workflows, actions" | "A" → "all templates"
@@ -186,6 +227,37 @@ check_git_repo() {
         print_success "Repository initialised"
         echo ""
     fi
+}
+
+# Detect licence type from the LICENSE/LICENCE file in the current directory
+detect_license_from_file() {
+    local license_file=""
+    for f in LICENSE LICENCE LICENSE.md LICENCE.md LICENSE.txt LICENCE.txt; do
+        [[ -f "$f" ]] && { license_file="$f"; break; }
+    done
+    [[ -z "$license_file" ]] && return
+
+    local head
+    head=$(head -5 "$license_file" 2>/dev/null || true)
+
+    if [[ "$head" == *"GNU GENERAL PUBLIC LICENSE"* && "$head" == *"Version 3"* ]]; then
+        LICENSE_TYPE="GPL-3.0"
+    elif [[ "$head" == *"Apache"* && "$head" == *"Version 2.0"* ]]; then
+        LICENSE_TYPE="Apache-2.0"
+    elif [[ "$head" == *"MIT"* ]]; then
+        LICENSE_TYPE="MIT"
+    elif [[ "$head" == *"BSD 3-Clause"* ]]; then
+        LICENSE_TYPE="BSD-3-Clause"
+    elif [[ "$head" == *"GNU GENERAL PUBLIC LICENSE"* && "$head" == *"Version 2"* ]]; then
+        LICENSE_TYPE="GPL-2.0"
+    elif [[ "$head" == *"Mozilla Public License"* && "$head" == *"2.0"* ]]; then
+        LICENSE_TYPE="MPL-2.0"
+    elif [[ "$head" == *"ISC"* ]]; then
+        LICENSE_TYPE="ISC"
+    else
+        return
+    fi
+    print_info "Detected licence from $license_file: $LICENSE_TYPE"
 }
 
 # Try to get git user info from global config
@@ -348,12 +420,28 @@ get_repo_info() {
         # Try to detect licence from GitHub (if not already cached)
         if [[ -z "$LICENSE_TYPE" ]]; then
             local gh_licence
-            gh_licence=$(gh repo view "${ORG_NAME}/${REPO_SLUG}" --json licenceInfo --jq .licenceInfo.spdxId 2>/dev/null || true)
+            gh_licence=$(gh repo view "${ORG_NAME}/${REPO_SLUG}" --json licenseInfo --jq '.licenseInfo.key' 2>/dev/null || true)
             if [[ -n "$gh_licence" && "$gh_licence" != "null" ]]; then
-                LICENSE_TYPE="$gh_licence"
+                # Map gh key to SPDX identifier
+                case "$gh_licence" in
+                    gpl-3.0)        LICENSE_TYPE="GPL-3.0" ;;
+                    gpl-2.0)        LICENSE_TYPE="GPL-2.0" ;;
+                    apache-2.0)     LICENSE_TYPE="Apache-2.0" ;;
+                    mit)            LICENSE_TYPE="MIT" ;;
+                    bsd-3-clause)   LICENSE_TYPE="BSD-3-Clause" ;;
+                    bsd-2-clause)   LICENSE_TYPE="BSD-2-Clause" ;;
+                    mpl-2.0)        LICENSE_TYPE="MPL-2.0" ;;
+                    isc)            LICENSE_TYPE="ISC" ;;
+                    *)              LICENSE_TYPE="$gh_licence" ;;
+                esac
                 print_info "Detected GitHub licence: $LICENSE_TYPE"
             fi
         fi
+    fi
+
+    # Fallback: detect from LICENSE file in current directory
+    if [[ -z "$LICENSE_TYPE" ]]; then
+        detect_license_from_file
     fi
 
     PROJECT_NAME="${REPO_SLUG}"
@@ -1132,6 +1220,187 @@ process_specific_files() {
     done
 }
 
+# ============================================================================
+# BATCH UPDATE (template-only refresh on existing repos)
+# ============================================================================
+
+run_batch_update() {
+    local dirs=()
+
+    if [[ ${#POSITIONAL_ARGS[@]} -gt 0 ]]; then
+        dirs=("${POSITIONAL_ARGS[@]}")
+    else
+        # Recursively discover git repos (exclude .bak, .tmp, .temp, archive dirs)
+        while IFS= read -r gitdir; do
+            dirs+=("$(dirname "$gitdir")")
+        done < <(find . -name .git \
+            -not -path './.git' \
+            -not -path './.bak/*' \
+            -not -path './.tmp/*' \
+            -not -path './.temp/*' \
+            -not -path './.archive/*' \
+            -not -path '*/node_modules/*' \
+            -not -path '*/.bak/*' \
+            -not -path '*/.tmp/*' \
+            -not -path '*/.temp/*' \
+            -not -path '*/.archive/*' \
+            | sort)
+    fi
+
+    # Filter to only directories with a remote (unless --local)
+    local git_dirs=()
+    for d in "${dirs[@]}"; do
+        if [[ ! -d "$d/.git" ]] && [[ ! -f "$d/.git" ]]; then
+            print_warning "Skipping $d (no .git found)"
+            continue
+        fi
+        if [[ "$INCLUDE_LOCAL" != "true" ]]; then
+            if ! git -C "$d" remote get-url origin &>/dev/null; then
+                print_warning "Skipping $d (no remote — use --local to include)"
+                continue
+            fi
+        fi
+        git_dirs+=("$d")
+    done
+
+    if [[ ${#git_dirs[@]} -eq 0 ]]; then
+        print_warning "No git repositories found to update"
+        return 1
+    fi
+
+    print_info "Found ${#git_dirs[@]} repositories to update"
+
+    # Build template folder mapping (non-interactive)
+    build_template_folders
+
+    # Read template selection: from stdin (<<< 2,3) or default to "A"
+    local selection="A"
+    if [[ "$DEFAULTS_ONLY" == "true" || "$ASSUME_YES" == "true" ]]; then
+        if [[ ! -t 0 ]]; then
+            # stdin has data (heredoc / herestring)
+            read -r selection < /dev/stdin || true
+            selection="${selection:-A}"
+        fi
+    else
+        # Interactive: show menu once for the whole batch
+        select_templates
+        selection="${SELECTED_TEMPLATE_CHOICES:-A}"
+    fi
+
+    local choice_desc
+    choice_desc=$(describe_template_choices "$selection")
+    print_info "Template selection: ${selection} (${choice_desc})"
+
+    local updated=0 skipped=0
+
+    for d in "${git_dirs[@]}"; do
+        print_header
+        print_info "Updating: $d"
+
+        pushd "$d" > /dev/null || { print_error "Failed to enter $d"; continue; }
+
+        # Reset variables for this repo iteration (prevent carryover)
+        SHORT_DESCRIPTION=""
+        LONG_DESCRIPTION=""
+        LICENSE_TYPE=""
+        STABILITY=""
+        STABILITY_COLOR=""
+        PROJECT_NAME=""
+        REPO_SLUG=""
+        REPO_URL=""
+        ORG_NAME=""
+        REPO_OWNER=""
+        WEBSITE_URL=""
+
+        # --- Stash any local changes ---
+        local had_stash=false
+        local current_branch
+        current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
+
+        if [[ -n "$(git status --porcelain 2>/dev/null)" ]]; then
+            print_info "Stashing local changes..."
+            git stash push -m "dc-init: pre-update stash" --quiet
+            had_stash=true
+        fi
+
+        # --- Pull latest if remote exists ---
+        if git remote get-url origin &>/dev/null; then
+            print_info "Pulling latest from origin/${current_branch}..."
+            if ! git pull --rebase origin "$current_branch" --quiet 2>/dev/null; then
+                print_warning "Pull failed (continuing anyway)"
+            fi
+        fi
+
+        # --- Load existing repo metadata from git config ---
+        get_repo_info
+        PROJECT_NAME="$(basename "$PWD")"
+        REPO_SLUG="$(basename "$PWD")"
+        if [[ -z "$ORG_NAME" ]]; then
+            ORG_NAME="$(git config --local dc-init.org-name 2>/dev/null || echo "")"
+        fi
+        REPO_OWNER="${ORG_NAME}"
+        REPO_URL="https://github.com/${ORG_NAME}/${REPO_SLUG}"
+        SHORT_DESCRIPTION="${SHORT_DESCRIPTION:-$(git config --local dc-init.description 2>/dev/null || echo "")}"
+        LONG_DESCRIPTION="${LONG_DESCRIPTION:-$SHORT_DESCRIPTION}"
+        LICENSE_TYPE="${LICENSE_TYPE:-$(git config --local dc-init.licence-type 2>/dev/null || echo "")}"
+        STABILITY="${STABILITY:-$(git config --local dc-init.stability 2>/dev/null || echo "")}"
+        STABILITY_COLOR="${STABILITY_COLOR:-$(git config --local dc-init.stability-colour 2>/dev/null || echo "")}"
+        CURRENT_YEAR=$(date +%Y)
+        print_info "Owner: ${ORG_NAME:-unknown} | Repo: ${REPO_SLUG}"
+
+        # --- Install templates ---
+        SELECTED_TEMPLATE_CHOICES="$selection"
+        install_templates "$selection"
+        save_project_metadata
+
+        # --- Commit and push template changes only ---
+        # Stage only paths managed by template-loading to avoid unrelated/submodule noise.
+        git add -A \
+            .github/workflows \
+            .github/actions \
+            .github/ISSUE_TEMPLATE \
+            .github/PULL_REQUEST_TEMPLATE.md \
+            .github/*.md \
+            .github/*.yml \
+            docs \
+            LICENSE LICENCE LICENSE.md LICENCE.md LICENSE.txt LICENCE.txt \
+            2>/dev/null || true
+
+        if ! git diff --cached --quiet; then
+            git commit -m "chore(dc-init): update ${choice_desc}" --quiet
+            print_success "Committed template updates for $d"
+
+            if git remote get-url origin &>/dev/null; then
+                if ! git push origin "$current_branch" --quiet 2>/dev/null; then
+                    print_warning "Push failed for $d (changes committed locally)"
+                fi
+            fi
+            ((updated++)) || true
+        else
+            print_info "No template changes needed for $d"
+            ((skipped++)) || true
+        fi
+
+        # --- Restore stash ---
+        if [[ "$had_stash" == "true" ]]; then
+            print_info "Restoring stashed changes..."
+            if ! git stash pop --quiet 2>/dev/null; then
+                print_info "Auto-resolving stash conflicts in $d..."
+                # Accept the stashed (local) version for any conflicted files
+                git checkout --theirs -- . 2>/dev/null || true
+                git add -A 2>/dev/null || true
+                git stash drop --quiet 2>/dev/null || true
+                print_success "Stash conflicts auto-resolved in $d"
+            fi
+        fi
+
+        popd > /dev/null || true
+    done
+
+    echo ""
+    print_success "Batch update complete: ${updated} updated, ${skipped} already up-to-date"
+}
+
 run_batch_init() {
     local dirs=()
 
@@ -1317,7 +1586,11 @@ run_batch_init() {
         if [[ "$had_stash" == "true" ]]; then
             print_info "Restoring stashed changes in $d..."
             if ! git stash pop --quiet 2>/dev/null; then
-                print_warning "Stash pop had conflicts in $d — resolve manually after batch completes"
+                print_info "Auto-resolving stash conflicts in $d..."
+                git checkout --theirs -- . 2>/dev/null || true
+                git add -A 2>/dev/null || true
+                git stash drop --quiet 2>/dev/null || true
+                print_success "Stash conflicts auto-resolved in $d"
             fi
         fi
 
@@ -1493,8 +1766,13 @@ main() {
     fi
 
     if [[ "$BATCH_MODE" == "true" ]]; then
-        print_info "Batch mode enabled"
-        run_batch_init
+        if [[ "$UPDATE_ONLY" == "true" ]]; then
+            print_info "Batch update mode enabled"
+            run_batch_update
+        else
+            print_info "Batch mode enabled"
+            run_batch_init
+        fi
         exit 0
     fi
 
