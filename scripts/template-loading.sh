@@ -144,6 +144,37 @@ parse_args() {
 # HELPER FUNCTIONS
 # ============================================================================
 
+# Translate template selection string to human-readable names
+# e.g. "2,3" → "workflows, actions" | "A" → "all templates"
+describe_template_choices() {
+    local selection="$1"
+    if [[ "$selection" =~ [Aa] ]]; then
+        echo "all templates"
+        return
+    fi
+    local names=()
+    local IFS=','
+    for token in $selection; do
+        # Strip any letter suffixes (e.g. "1AX" → "1")
+        local num="${token%%[A-Za-z]*}"
+        if [[ -n "$num" && -n "${TEMPLATE_FOLDERS[$num]+x}" ]]; then
+            local name="${TEMPLATE_FOLDERS[$num]}"
+            # Avoid duplicates
+            local already=false
+            for n in "${names[@]}"; do
+                [[ "$n" == "$name" ]] && already=true
+            done
+            $already || names+=("$name")
+        fi
+    done
+    if [[ ${#names[@]} -eq 0 ]]; then
+        echo "templates"
+    else
+        local IFS=', '
+        echo "${names[*]}"
+    fi
+}
+
 # Check if we're in a git repository with a LOCAL .git folder
 check_git_repo() {
     # Check for local .git directory (not inherited from parent)
@@ -1175,6 +1206,25 @@ run_batch_init() {
         # Ensure git repo initialised for this folder FIRST (before any config operations)
         check_git_repo
 
+        # --- Batch lifecycle: stash any local changes and pull latest ---
+        local had_stash=false
+        local current_branch
+        current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
+
+        if [[ -n "$(git status --porcelain 2>/dev/null)" ]]; then
+            print_info "Stashing local changes in $d..."
+            git stash push -m "dc-init: pre-batch stash" --quiet
+            had_stash=true
+        fi
+
+        # Pull latest if remote exists
+        if git remote get-url origin &>/dev/null; then
+            print_info "Pulling latest from origin/${current_branch}..."
+            if ! git pull --rebase origin "$current_branch" --quiet 2>/dev/null; then
+                print_warning "Pull failed for $d (continuing anyway)"
+            fi
+        fi
+
         # Reset variables for this repo iteration (prevent carryover from previous repos)
         # These must be reset AFTER check_git_repo but BEFORE get_repo_info
         SHORT_DESCRIPTION=""
@@ -1248,6 +1298,28 @@ run_batch_init() {
 
         # Save metadata for dc-create
         save_project_metadata
+
+        # --- Batch lifecycle: commit, push, and restore stash ---
+        if [[ -n "$(git status --porcelain 2>/dev/null)" ]]; then
+            local choice_desc
+            choice_desc=$(describe_template_choices "${SELECTED_TEMPLATE_CHOICES}")
+            git add -A
+            git commit -m "chore(dc-init): load ${choice_desc}" --quiet
+            print_success "Committed template changes for $d"
+
+            if git remote get-url origin &>/dev/null; then
+                if ! git push origin "$current_branch" --quiet 2>/dev/null; then
+                    print_warning "Push failed for $d (changes committed locally)"
+                fi
+            fi
+        fi
+
+        if [[ "$had_stash" == "true" ]]; then
+            print_info "Restoring stashed changes in $d..."
+            if ! git stash pop --quiet 2>/dev/null; then
+                print_warning "Stash pop had conflicts in $d — resolve manually after batch completes"
+            fi
+        fi
 
         # Show summary and auto-queue creation for batch mode (no per-repo prompts)
         local saved_batch="$BATCH_MODE"
