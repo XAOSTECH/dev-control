@@ -14,12 +14,17 @@ render_html_tree() {
     local input_json="$1"
     local output_file="${2:-git-tree.html}"
 
-    # Get dimensions from data
-    local commit_count
+    # Get dimensions from data (computed from actual positions)
+    local commit_count max_y max_x min_x
     commit_count=$(jq '.commits | length' "$input_json" 2>/dev/null || echo 100)
-    local width=1200
-    local height=$(( 120 + commit_count * 80 ))
+    max_y=$(jq '[.commits[].position.y // 0] | max' "$input_json" 2>/dev/null || echo 800)
+    max_x=$(jq '[.commits[].position.x // 600] | max' "$input_json" 2>/dev/null || echo 600)
+    min_x=$(jq '[.commits[].position.x // 600] | min' "$input_json" 2>/dev/null || echo 600)
+    local height=$(( max_y + 120 ))
     [[ $height -lt 800 ]] && height=800
+    # Width: ensure all lanes fit with padding
+    local width=$(( max_x - min_x + 400 ))
+    [[ $width -lt 1200 ]] && width=1200
 
     # Embed JSON data
     local json_data
@@ -78,7 +83,7 @@ render_html_tree() {
             border: 1px solid rgba(100, 100, 200, 0.2);
             border-radius: 8px;
             background: #0a0a1a;
-            max-height: 80vh;
+            max-height: 85vh;
         }
 
         #treeCanvas {
@@ -163,6 +168,24 @@ render_html_tree() {
             color: #6b6b8a;
         }
 
+        .wind-slider-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            color: #c0b0e8;
+        }
+        .wind-slider-label input[type="range"] {
+            width: 100px;
+            accent-color: #7c3aed;
+        }
+        #windVal {
+            min-width: 3.5em;
+            text-align: right;
+            font-size: 11px;
+            color: #8888aa;
+        }
+
         .legend {
             display: flex;
             gap: 16px;
@@ -187,7 +210,7 @@ render_html_tree() {
 <body>
     <div class="container">
         <h1>🌳 Git Tree Visualization</h1>
-        <p class="info">Hover over leaves to see commit details · Scroll to explore the full tree · Click a leaf to highlight its ancestry</p>
+        <p class="info">Hover over leaves to see commit details · Click to highlight ancestry · Ctrl+click to open commit page · Scroll to explore</p>
 
         <div class="canvas-viewport" id="viewport">
 HTMLEOF
@@ -203,6 +226,7 @@ CANVASHTML
         <div class="controls">
             <button onclick="toggleAnimation()">⏯ Animation</button>
             <button onclick="toggleWind()">🌬 Wind</button>
+            <label class="wind-slider-label" title="Wind intensity">🍃 <input type="range" id="windSlider" min="0" max="500" value="100" oninput="updateWindIntensity(this.value)"><span id="windVal">100%</span></label>
             <button onclick="resetView()">↺ Reset</button>
             <span class="stats" id="stats"></span>
         </div>
@@ -301,13 +325,22 @@ HTMLEOF2
 
         let ancestryHighlight = null;
 
-        // Wind simulation
+        // Wind intensity multiplier (0-5, default 1.0)
+        let windIntensity = 1.0;
+
+        function updateWindIntensity(val) {
+            windIntensity = val / 100;
+            document.getElementById('windVal').textContent = val + '%';
+            if (!animationEnabled) drawTree();
+        }
+
+        // Wind simulation — intensified base amplitudes
         function windOffset(x, y, t) {
             if (!windEnabled) return 0;
-            // Perlin-ish multi-frequency wind
-            const w1 = Math.sin(t * 0.02 + x * 0.008 + y * 0.003) * 3;
-            const w2 = Math.sin(t * 0.035 + x * 0.012 - y * 0.005) * 1.5;
-            const w3 = Math.cos(t * 0.015 + y * 0.007) * 2;
+            const s = windIntensity;
+            const w1 = Math.sin(t * 0.02 + x * 0.008 + y * 0.003) * 6 * s;
+            const w2 = Math.sin(t * 0.035 + x * 0.012 - y * 0.005) * 3 * s;
+            const w3 = Math.cos(t * 0.015 + y * 0.007) * 4 * s;
             return w1 + w2 + w3;
         }
 
@@ -551,9 +584,17 @@ HTMLEOF2
             if (!animationEnabled) drawTree();
         });
 
-        // Click to highlight ancestry
+        // Click to highlight ancestry; Ctrl+click or middle-click opens commit page
+        const repoUrl = (gitData.metadata && gitData.metadata.repo_url) || '';
         canvas.addEventListener('click', (e) => {
             if (hoveredCommit) {
+                if (e.ctrlKey || e.metaKey) {
+                    // Open commit page in new tab
+                    if (repoUrl) {
+                        window.open(repoUrl + '/commit/' + hoveredCommit.sha, '_blank', 'noopener');
+                    }
+                    return;
+                }
                 if (selectedCommit === hoveredCommit) {
                     selectedCommit = null;
                     ancestryHighlight = null;
@@ -566,6 +607,13 @@ HTMLEOF2
                 ancestryHighlight = null;
             }
             if (!animationEnabled) drawTree();
+        });
+
+        canvas.addEventListener('auxclick', (e) => {
+            if (e.button === 1 && hoveredCommit && repoUrl) {
+                e.preventDefault();
+                window.open(repoUrl + '/commit/' + hoveredCommit.sha, '_blank', 'noopener');
+            }
         });
 
         function resetView() {

@@ -17,13 +17,14 @@
 # Output: JSON array of commits with sha, parents, author, date, message, refs
 extract_commits_json() {
     local branch="${1:-HEAD}"
-    local max_commits="${2:-500}"  # Limit for performance
+    local max_commits="${2:-0}"
+    
+    # Build git log args
+    local -a log_args=("$branch" "--all" "--date=iso-strict")
+    [[ $max_commits -gt 0 ]] && log_args+=("--max-count=$max_commits")
     
     # Get commits with all needed data - use jq to properly escape subject
-    git log "$branch" \
-        --all \
-        --max-count="$max_commits" \
-        --date=iso-strict \
+    git log "${log_args[@]}" \
         --pretty=format:'%H%n%h%n%P%n%an%n%ae%n%ad%n%at%n%s%n%D' \
         2>/dev/null | \
         paste -d'|' - - - - - - - - - | \
@@ -91,19 +92,33 @@ extract_tags_json() {
 # Output: JSON object with commits, branches, tags, metadata
 generate_tree_data_json() {
     local output_file="${1:-/tmp/git-tree-data.json}"
-    local max_commits="${2:-500}"
+    local max_commits="${2:-0}"
     
     local repo_name
     repo_name=$(basename "$(git rev-parse --show-toplevel 2>/dev/null)" || echo "repository")
     
     local current_branch
     current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
+
+    # Derive web URL from remote origin (strip .git suffix, convert SSH to HTTPS)
+    local repo_url=""
+    local raw_url
+    raw_url=$(git remote get-url origin 2>/dev/null || true)
+    if [[ -n "$raw_url" ]]; then
+        repo_url="${raw_url%.git}"
+        # Convert SSH format (git@host:owner/repo) to HTTPS
+        if [[ "$repo_url" == git@* ]]; then
+            repo_url="https://${repo_url#git@}"
+            repo_url="${repo_url/://}"
+        fi
+    fi
     
     cat > "$output_file" <<-EOF
 {
   "metadata": {
     "repository": "$repo_name",
     "current_branch": "$current_branch",
+    "repo_url": "$repo_url",
     "generated": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
     "max_commits": $max_commits
   },

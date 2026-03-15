@@ -31,7 +31,7 @@ source "$SCRIPT_DIR/lib/git/tree-viz.sh"
 
 # Configuration
 OUTPUT_DIR="${REPO_ROOT}/.github/tree-viz"
-MAX_COMMITS=500
+MAX_COMMITS=0
 GENERATE_SVG=true
 GENERATE_HTML=true
 EMBED_README=true
@@ -69,7 +69,7 @@ Options:
   --svg-only              Generate only SVG (static, README-compatible)
   --html-only             Generate only HTML (interactive with animations)
   --no-embed              Don't auto-inject into README
-  --max-commits N         Limit visualisation to N commits (default: 500)
+  --max-commits N         Limit visualisation to N commits (default: all)
   --output-dir DIR        Output directory (default: .github/tree-viz)
   -h, --help              Show this help
 
@@ -95,12 +95,19 @@ done
 
 print_header
 print_info "Git Tree Visualizer - Creating fractal tree visualisation"
+if [[ $MAX_COMMITS -gt 0 ]]; then
+    print_info "Commit limit: $MAX_COMMITS"
+fi
 
 # Create output directory
 mkdir -p "$OUTPUT_DIR"
 
 # Step 1: Extract git data
-print_info "Extracting git data (max $MAX_COMMITS commits)..."
+if [[ $MAX_COMMITS -gt 0 ]]; then
+    print_info "Extracting git data (max $MAX_COMMITS commits)..."
+else
+    print_info "Extracting git data (all commits)..."
+fi
 DATA_FILE=$(generate_tree_data_json "$OUTPUT_DIR/git-tree-data.json" "$MAX_COMMITS")
 print_success "Git data extracted: $DATA_FILE"
 
@@ -115,6 +122,10 @@ if [[ "$GENERATE_SVG" == "true" ]]; then
     source "$SCRIPT_DIR/lib/git/tree-render-svg.sh"
     SVG_FILE=$(render_svg_tree "$POSITIONS_FILE" "$OUTPUT_DIR/git-tree.svg")
     print_success "SVG generated: $SVG_FILE"
+
+    # Also generate mini SVG for README inline embedding
+    MINI_SVG_FILE=$(render_mini_svg_tree "$POSITIONS_FILE" "$OUTPUT_DIR/git-tree-mini.svg")
+    print_success "Mini SVG generated: $MINI_SVG_FILE"
 fi
 
 # Step 4: Generate HTML
@@ -132,7 +143,7 @@ if [[ "$EMBED_README" == "true" && "$GENERATE_SVG" == "true" ]]; then
     # Find README
     README=""
     # Derive relative path from OUTPUT_DIR (strip repo root prefix)
-    local _out_rel="${OUTPUT_DIR#"$REPO_ROOT/"}"
+    _out_rel="${OUTPUT_DIR#"$REPO_ROOT/"}"
     
     if [[ -f "$REPO_ROOT/README.md" ]]; then
         README="$REPO_ROOT/README.md"
@@ -152,7 +163,9 @@ if [[ "$EMBED_README" == "true" && "$GENERATE_SVG" == "true" ]]; then
                 /<!-- TREE-VIZ-START -->/ {
                     print $0
                     print ""
-                    print "![Git Tree Visualisation](" path "/git-tree.svg)"
+                    print "![Git Tree Visualisation](" path "/git-tree-mini.svg)"
+                    print ""
+                    print "[Full SVG](" path "/git-tree.svg) · [Interactive version](" path "/git-tree.html) · [View data](" path "/git-tree-data.json)"
                     print ""
                     in_tree=1
                     next
@@ -172,9 +185,9 @@ if [[ "$EMBED_README" == "true" && "$GENERATE_SVG" == "true" ]]; then
 
 ## Git Tree Visualisation
 
-![Git Tree Visualisation]($README_REL_PATH/git-tree.svg)
+![Git Tree Visualisation]($README_REL_PATH/git-tree-mini.svg)
 
-[Interactive version]($README_REL_PATH/git-tree.html) • [View data]($README_REL_PATH/git-tree-data.json)
+[Full SVG]($README_REL_PATH/git-tree.svg) · [Interactive version]($README_REL_PATH/git-tree.html) · [View data]($README_REL_PATH/git-tree-data.json)
 
 <!-- TREE-VIZ-END -->
 EOF

@@ -21,14 +21,64 @@ calculate_tree_positions_bash() {
     # - y-axis: chronological order (newest at top, oldest at bottom)
     # Each branch gets its own lane; merges draw back to trunk
     jq '
-        # Sort commits oldest-first (bottom of tree = oldest)
-        .commits |= (sort_by(.timestamp) | reverse) |
+        # Topological sort: respect parent→child ordering as primary key,
+        # timestamp as secondary. This ensures merges never appear before
+        # their parent commits even when timestamps are identical.
+        (
+            # Build parent→children and child→parent maps
+            (.commits | map({(.sha): .}) | add // {}) as $by_sha |
+            (.commits | map(.sha)) as $all_shas |
+            (reduce .commits[] as $c (
+                {};
+                ($c.parents // "" | split(" ") | map(select(. != ""))) as $pp |
+                reduce $pp[] as $p (.; .[$p] = ((.[$p] // []) + [$c.sha]))
+            )) as $children_map |
+
+            # Kahn topological sort (oldest-first): start from root commits
+            # (commits with no parents or no known parents in our set)
+            (reduce .commits[] as $c (
+                {};
+                ($c.parents // "" | split(" ") | map(select(. != "" and $by_sha[.] != null))) as $known |
+                .[$c.sha] = ($known | length)
+            )) as $in_degree |
+
+            {
+                queue: [$all_shas[] | select($in_degree[.] == 0)] |
+                    sort_by($by_sha[.].timestamp),
+                result: [],
+                visited: {},
+                in_deg: $in_degree
+            } |
+            until(
+                (.queue | length) == 0;
+                # Sort queue by timestamp so same-depth commits appear in time order
+                .queue |= sort_by($by_sha[.].timestamp) |
+                .queue[0] as $sha |
+                .queue = .queue[1:] |
+                if .visited[$sha] then .
+                else
+                    .visited[$sha] = true |
+                    .result += [$by_sha[$sha]] |
+                    # Add children whose in-degree reaches 0
+                    reduce ($children_map[$sha] // [])[] as $child (
+                        .;
+                        .in_deg[$child] = ((.in_deg[$child] // 1) - 1) |
+                        if .in_deg[$child] <= 0 and (.visited[$child] // false | not) then
+                            .queue += [$child]
+                        else . end
+                    )
+                end
+            ) |
+            .result | reverse
+        ) as $sorted |
+
+        .commits = $sorted |
 
         # Assign lane indices based on parent topology
-        # Build parent->children map and detect branch points
         (.commits | length) as $total |
         600 as $centre_x |
-        80 as $row_height |
+        40 as $trunk_row_height |
+        80 as $branch_row_height |
         60 as $top_margin |
         120 as $lane_width |
 
@@ -93,27 +143,35 @@ calculate_tree_positions_bash() {
             )
         ) as $lane_data |
 
-        # Generate positions
-        .commits |= [
-            to_entries[] |
-            .key as $idx |
-            .value as $commit |
-            ($lane_data.lanes[$commit.sha] // 0) as $lane |
-            ($commit.parents // "" | split(" ") | map(select(. != "")) | length) as $parent_count |
-
-            $commit + {
-                position: {
-                    x: ($centre_x + ($lane * $lane_width)),
-                    y: ($top_margin + ($idx * $row_height)),
-                    lane: $lane,
-                    radius: (if $parent_count > 1 then 10 elif ($children_map[$commit.sha] // [] | length) > 1 then 9 else 6 end),
-                    depth: $idx,
-                    is_trunk: ($is_trunk[$commit.sha] // false),
-                    is_merge: ($parent_count > 1),
-                    is_fork: (($children_map[$commit.sha] // [] | length) > 1)
-                }
-            }
-        ]
+        # Generate positions with variable row heights
+        # Trunk commits use smaller spacing, branch commits use larger
+        .commits |= (
+            reduce to_entries[] as $entry (
+                { result: [], y: $top_margin };
+                $entry.key as $idx |
+                $entry.value as $commit |
+                ($lane_data.lanes[$commit.sha] // 0) as $lane |
+                ($commit.parents // "" | split(" ") | map(select(. != "")) | length) as $parent_count |
+                (if $is_trunk[$commit.sha] then $trunk_row_height else $branch_row_height end) as $step |
+                .y as $cur_y |
+                .result += [
+                    $commit + {
+                        position: {
+                            x: ($centre_x + ($lane * $lane_width)),
+                            y: $cur_y,
+                            lane: $lane,
+                            radius: (if $parent_count > 1 then 10 elif ($children_map[$commit.sha] // [] | length) > 1 then 9 else 6 end),
+                            depth: $idx,
+                            is_trunk: ($is_trunk[$commit.sha] // false),
+                            is_merge: ($parent_count > 1),
+                            is_fork: (($children_map[$commit.sha] // [] | length) > 1)
+                        }
+                    }
+                ] |
+                .y += $step
+            ) |
+            .result
+        )
     ' "$input_json" > "$output_file" 2>/dev/null || {
         # Fallback if jq transform fails
         cp "$input_json" "$output_file"
