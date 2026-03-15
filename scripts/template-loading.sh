@@ -299,17 +299,7 @@ get_repo_info() {
         fi
     fi
 
-    # Load global defaults from repoVars.env (if it exists)
-    # This takes precedence over built-in defaults but is overridden by repo-specific git config
-    local global_vars_file="$DEV_CONTROL_DIR/config/profiles/repoVars.env"
-    if [[ -f "$global_vars_file" ]]; then
-        # Source the file to load environment variables
-        # shellcheck source=/dev/null
-        source "$global_vars_file"
-        print_info "Loaded global defaults from repoVars.env"
-    fi
-
-    # Load cached metadata from git config (set by previous dc-init runs)
+    # Load cached metadata from git config FIRST (set by previous dc-init runs)
     # Only load from LOCAL config if a local .git directory exists
     if [[ -d ".git" ]]; then
         local cached_licence
@@ -403,6 +393,15 @@ get_repo_info() {
         if [[ -n "$cached_stability_color" ]]; then
             STABILITY_COLOR="$cached_stability_color"
         fi
+    fi
+
+    # Load global defaults from repoVars.env (if it exists)
+    # repoVars.env OVERRIDES git config — it represents the org-wide standard
+    local global_vars_file="$DEV_CONTROL_DIR/config/profiles/repoVars.env"
+    if [[ -f "$global_vars_file" ]]; then
+        # shellcheck source=/dev/null
+        source "$global_vars_file"
+        print_info "Loaded global defaults from repoVars.env"
     fi
 
     # If we have an org and repo slug, try to fetch repo metadata from GitHub (only if not cached)
@@ -1347,16 +1346,13 @@ run_batch_update() {
 
         # --- Recover from interrupted previous run ---
         # If template-managed files are sitting unstaged/uncommitted from a ^C'd run, commit them now
-        git add -A \
-            .github/workflows \
-            .github/actions \
-            .github/ISSUE_TEMPLATE \
-            .github/PULL_REQUEST_TEMPLATE.md \
-            .github/*.md \
-            .github/*.yml \
-            docs \
-            LICENSE LICENCE LICENSE.md LICENCE.md LICENSE.txt LICENCE.txt \
-            2>/dev/null || true
+        # Stage each path individually — non-existent paths must not block others
+        for _p in .github/workflows .github/actions .github/ISSUE_TEMPLATE docs; do
+            [[ -d "$_p" ]] && git add -A "$_p" 2>/dev/null || true
+        done
+        for _p in .github/PULL_REQUEST_TEMPLATE.md LICENSE LICENCE LICENSE.md LICENCE.md LICENSE.txt LICENCE.txt; do
+            [[ -f "$_p" ]] && git add "$_p" 2>/dev/null || true
+        done
         if ! git diff --cached --quiet 2>/dev/null; then
             git commit -m "chore(dc-init): recover interrupted update" --quiet
             print_info "Recovered uncommitted template changes from previous run in $d"
@@ -1377,7 +1373,18 @@ run_batch_update() {
         if git remote get-url origin &>/dev/null; then
             print_info "Pulling latest from origin/${current_branch}..."
             if ! git pull --rebase origin "$current_branch" --quiet 2>/dev/null; then
-                print_warning "Pull failed (continuing anyway)"
+                if [[ "$INCLUDE_LOCAL" == "true" ]]; then
+                    print_warning "Pull failed (continuing anyway — --local mode)"
+                else
+                    print_warning "Skipping $d (pull failed — use --local to force)"
+                    # Restore stash before skipping
+                    if [[ "$had_stash" == "true" ]]; then
+                        git stash pop --quiet 2>/dev/null || true
+                    fi
+                    popd > /dev/null || true
+                    ((skipped++)) || true
+                    continue
+                fi
             fi
         fi
 
@@ -1404,17 +1411,13 @@ run_batch_update() {
         save_project_metadata
 
         # --- Commit and push template changes only ---
-        # Stage only paths managed by template-loading to avoid unrelated/submodule noise.
-        git add -A \
-            .github/workflows \
-            .github/actions \
-            .github/ISSUE_TEMPLATE \
-            .github/PULL_REQUEST_TEMPLATE.md \
-            .github/*.md \
-            .github/*.yml \
-            docs \
-            LICENSE LICENCE LICENSE.md LICENCE.md LICENSE.txt LICENCE.txt \
-            2>/dev/null || true
+        # Stage each path individually — non-existent paths must not block others
+        for _p in .github/workflows .github/actions .github/ISSUE_TEMPLATE docs; do
+            [[ -d "$_p" ]] && git add -A "$_p" 2>/dev/null || true
+        done
+        for _p in .github/PULL_REQUEST_TEMPLATE.md LICENSE LICENCE LICENSE.md LICENCE.md LICENSE.txt LICENCE.txt; do
+            [[ -f "$_p" ]] && git add "$_p" 2>/dev/null || true
+        done
 
         if ! git diff --cached --quiet; then
             git commit -m "chore(dc-init): update ${choice_desc}" --quiet
