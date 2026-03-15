@@ -5,9 +5,16 @@ All notable changes to Dev-Control will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.5.7] - 2026-03-15 (re-release)
+## [0.5.7] - 2026-03-15
 
 ### Added
+- add --skip flag to exclude directories from batch update
+- add MEMBERS owner guard and interrupted-run recovery
+- add --update mode for batch template refresh
+- batch mode stash/pull/commit/push lifecycle
+- integrate tree-viz generation with 30-commit threshold
+- add workflow and template for automated tree generation
+- overhaul interactive visualisation with waving leaves and scrollable viewport
 - optimise containerise.sh flow for pre-built images
 - enhance update workflow with comprehensive maintenance
 - add repository update workflow
@@ -17,6 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - add global repoVars.env config for bot credentials
 
 ### Fixed
+- skip dev-control repo in batch update
+- fix staging, license priority, and pull-fail handling in batch update
 - avoid hard fail on missing usb capture device
 - ensure/apply automerge label for bot PRs
 - drop hardcoded automated PR label
@@ -55,6 +64,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - YAML syntax errors in workflow templates
 
 ### Changed
+- chore: update CHANGELOG for v0.5.7 (re-release)
 - chore: update CHANGELOG for v0.5.7 (re-release)
 - chore: clean devcontainer extension defaults and minimal profile
 - chore: bump actions to Node.js 24, fix anglicise false positives, apply British English fixes
