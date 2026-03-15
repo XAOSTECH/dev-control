@@ -49,6 +49,8 @@ POSITIONAL_ARGS=()
 UPDATE_ONLY=false
 # Include local-only repos (no remote) in update mode
 INCLUDE_LOCAL=false
+# Directories to skip in recursive discovery
+SKIP_DIRS=()
 # Batch owner prefill control: when true, do not prefill owner prompts with detected ORG_NAME
 BATCH_SKIP_OWNER=false
 # Reuse templates/settings across the batch
@@ -126,6 +128,13 @@ parse_args() {
             --local)
                 INCLUDE_LOCAL=true
                 shift
+                ;;
+            --skip)
+                shift
+                while [[ $# -gt 0 && ! "$1" =~ ^- ]]; do
+                    SKIP_DIRS+=("$1")
+                    shift
+                done
                 ;;
             --reuse-owner)
                 REUSE_OWNER=true
@@ -1230,20 +1239,25 @@ run_batch_update() {
         dirs=("${POSITIONAL_ARGS[@]}")
     else
         # Recursively discover git repos (exclude .bak, .tmp, .temp, archive dirs)
+        local find_excludes=(
+            -not -path './.git'
+            -not -path './.bak/*'
+            -not -path './.tmp/*'
+            -not -path './.temp/*'
+            -not -path './.archive/*'
+            -not -path '*/node_modules/*'
+            -not -path '*/.bak/*'
+            -not -path '*/.tmp/*'
+            -not -path '*/.temp/*'
+            -not -path '*/.archive/*'
+        )
+        for _skip in "${SKIP_DIRS[@]}"; do
+            _skip="${_skip%/}"  # strip trailing slash
+            find_excludes+=(-not -path "./${_skip}/*" -not -path "*/${_skip}/*")
+        done
         while IFS= read -r gitdir; do
             dirs+=("$(dirname "$gitdir")")
-        done < <(find . -name .git \
-            -not -path './.git' \
-            -not -path './.bak/*' \
-            -not -path './.tmp/*' \
-            -not -path './.temp/*' \
-            -not -path './.archive/*' \
-            -not -path '*/node_modules/*' \
-            -not -path '*/.bak/*' \
-            -not -path '*/.tmp/*' \
-            -not -path '*/.temp/*' \
-            -not -path '*/.archive/*' \
-            | sort)
+        done < <(find . -name .git "${find_excludes[@]}" | sort)
     fi
 
     # Filter to only directories with a remote (unless --local)
