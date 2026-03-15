@@ -1291,6 +1291,13 @@ run_batch_update() {
     choice_desc=$(describe_template_choices "$selection")
     print_info "Template selection: ${selection} (${choice_desc})"
 
+    # Load MEMBERS list from repoVars.env for owner guard
+    local members_list=""
+    local global_vars_file="$DEV_CONTROL_DIR/config/profiles/repoVars.env"
+    if [[ -f "$global_vars_file" ]]; then
+        members_list=$(grep -E '^MEMBERS=' "$global_vars_file" | head -1 | sed 's/^MEMBERS=//' | tr -d '"' || true)
+    fi
+
     local updated=0 skipped=0
 
     for d in "${git_dirs[@]}"; do
@@ -1298,6 +1305,32 @@ run_batch_update() {
         print_info "Updating: $d"
 
         pushd "$d" > /dev/null || { print_error "Failed to enter $d"; continue; }
+
+        # --- Owner guard: skip repos not owned by MEMBERS ---
+        if [[ -n "$members_list" ]]; then
+            local remote_owner=""
+            local remote_url
+            remote_url=$(git config --get remote.origin.url 2>/dev/null || echo "")
+            if [[ "$remote_url" =~ github\.com[:/]([^/]+)/ ]]; then
+                remote_owner="${BASH_REMATCH[1]}"
+            fi
+            if [[ -n "$remote_owner" ]]; then
+                local is_member=false
+                IFS=',' read -ra _members <<< "$members_list"
+                for m in "${_members[@]}"; do
+                    if [[ "$m" == "$remote_owner" ]]; then
+                        is_member=true
+                        break
+                    fi
+                done
+                if [[ "$is_member" == "false" ]]; then
+                    print_info "Skipping $d (owner '$remote_owner' not in MEMBERS)"
+                    popd > /dev/null || true
+                    ((skipped++)) || true
+                    continue
+                fi
+            fi
+        fi
 
         # Reset variables for this repo iteration (prevent carryover)
         SHORT_DESCRIPTION=""
@@ -1311,6 +1344,23 @@ run_batch_update() {
         ORG_NAME=""
         REPO_OWNER=""
         WEBSITE_URL=""
+
+        # --- Recover from interrupted previous run ---
+        # If template-managed files are sitting unstaged/uncommitted from a ^C'd run, commit them now
+        git add -A \
+            .github/workflows \
+            .github/actions \
+            .github/ISSUE_TEMPLATE \
+            .github/PULL_REQUEST_TEMPLATE.md \
+            .github/*.md \
+            .github/*.yml \
+            docs \
+            LICENSE LICENCE LICENSE.md LICENCE.md LICENSE.txt LICENCE.txt \
+            2>/dev/null || true
+        if ! git diff --cached --quiet 2>/dev/null; then
+            git commit -m "chore(dc-init): recover interrupted update" --quiet
+            print_info "Recovered uncommitted template changes from previous run in $d"
+        fi
 
         # --- Stash any local changes ---
         local had_stash=false
