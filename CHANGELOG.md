@@ -5,9 +5,10 @@ All notable changes to Dev-Control will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.5.7] - 2026-03-15
+## [0.5.7] - 2026-03-15 (re-release)
 
 ### Added
+- tree-viz overhaul - topo sort, variable spacing, wind slider, clickable nodes, SVG fix, mini SVG - Topological sort (Kahn's algorithm) replaces timestamp sort; merges   never appear before their parent commits - Variable row heights: 40px trunk, 80px branches for tighter layout - Dynamic canvas/SVG dimensions derived from actual position data - Wind intensity doubled + range slider (0-500%) for user control - Ctrl+click / middle-click commit nodes opens commit page (repo_url   extracted from git remote, SSH auto-converted to HTTPS) - SVG: XML-escaped title attributes (fixes unescaped quote error),   branch connection lines (Bézier curves), correct gradient per type - Mini SVG renderer with CSS sway animation for README inline embed - README embed updated: shows mini SVG with links to full SVG/HTML/data - Max-commits default changed to 0 (unlimited); fixed local-outside-fn   and duplicate --date flag issues
 - add --skip flag to exclude directories from batch update
 - add MEMBERS owner guard and interrupted-run recovery
 - add --update mode for batch template refresh
@@ -24,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - add global repoVars.env config for bot credentials
 
 ### Fixed
+- include (re-release) in same-day CHANGELOG heading
 - skip dev-control repo in batch update
 - fix staging, license priority, and pull-fail handling in batch update
 - avoid hard fail on missing usb capture device
@@ -64,6 +66,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - YAML syntax errors in workflow templates
 
 ### Changed
+- chore: update git tree visualisation
+- move tree-viz to .github/static/ for GitHub Pages hosting
+- feature(static.yml): tree viz page
+- chore: update git tree visualisation
+- tree-viz.yml: fix git add pathspec bug preventing commit
+- update.yml: add new_release_threshold to bump version instead of endless re-releases
+- chore: update CHANGELOG for v0.5.7 (re-release)
 - chore: update CHANGELOG for v0.5.7 (re-release)
 - chore: update CHANGELOG for v0.5.7 (re-release)
 - chore: clean devcontainer extension defaults and minimal profile
