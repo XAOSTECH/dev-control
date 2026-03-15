@@ -736,7 +736,10 @@ generate_devcontainer_json() {
     # Streaming category: Add NVENC encoding library mount
     if [[ "$category" == "streaming" ]]; then
         if [[ -n "$mounts" ]]; then mounts+=","; fi
-        mounts+="\"source=/usr/lib/x86_64-linux-gnu/libnvidia-encode.so.1,target=/usr/lib/x86_64-linux-gnu/libnvidia-encode.so.1,type=bind,readonly\""
+        mounts+="\"source=/usr/lib/x86_64-linux-gnu/libnvidia-encode.so.1,target=/usr/lib/x86_64-linux-gnu/libnvidia-encode.so.1,type=bind,readonly\","
+        # Bind host /dev so late-attached capture devices are visible at /host-dev/*
+        # without forcing a hard --device path that can fail when unplugged.
+        mounts+="\"source=/dev,target=/host-dev,type=bind,readonly\""
     fi
     
     # Build NVIDIA device mounts if enabled.
@@ -750,9 +753,10 @@ generate_devcontainer_json() {
         run_args="\"--shm-size=1g\",\"--device=/dev/dri\",\"--device=/dev/nvidia0\",\"--device=/dev/nvidiactl\",\"--device=/dev/nvidia-modeset\",\"--device=/dev/nvidia-uvm\",\"--device=/dev/nvidia-uvm-tools\""
     fi
     
-    # Streaming category: Always enable NVIDIA devices, DRI/KMS access, and USB capture device
+    # Streaming category: Always enable NVIDIA devices and DRI/KMS access.
+    # Do not hard-require a specific USB video node at start time.
     if [[ "$category" == "streaming" ]]; then
-        run_args="\"--shm-size=1g\",\"--device=/dev/dri\",\"--device=/dev/nvidia0\",\"--device=/dev/nvidiactl\",\"--device=/dev/nvidia-modeset\",\"--device=/dev/nvidia-uvm\",\"--device=/dev/nvidia-uvm-tools\",\"--group-add=video\",\"--group-add=render\",\"--security-opt=label=disable\",\"--device=/dev/usb-video-capture1\""
+        run_args="\"--shm-size=1g\",\"--device=/dev/dri\",\"--device=/dev/nvidia0\",\"--device=/dev/nvidiactl\",\"--device=/dev/nvidia-modeset\",\"--device=/dev/nvidia-uvm\",\"--device=/dev/nvidia-uvm-tools\",\"--group-add=video\",\"--group-add=render\",\"--security-opt=label=disable\""
     fi
     
     # Build extensions array (default + category-specific)
