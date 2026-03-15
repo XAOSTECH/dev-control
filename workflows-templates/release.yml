@@ -296,7 +296,7 @@ jobs:
             ENTRY_LINE=$(grep -n "^## \[${VERSION}\]\|^## ${VERSION}" CHANGELOG.md 2>/dev/null | head -1 | cut -d: -f1)
             ENTRY_DATE=$(sed -n "${ENTRY_LINE}p" CHANGELOG.md 2>/dev/null | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | head -1)
             if [[ -n "$ENTRY_LINE" && "$ENTRY_DATE" == "$TODAY" ]]; then
-              HEADING="## [${VERSION}] - ${TODAY}"
+              HEADING="## [${VERSION}] - ${TODAY} (re-release)"
               MODE="overwrite"
               echo "♻️ Same-day re-release: overwriting CHANGELOG section for v${VERSION}"
             else
