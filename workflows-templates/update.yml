@@ -721,7 +721,7 @@ jobs:
             echo "📌 **$COMMENTED item(s) marked as stale**" >> $GITHUB_STEP_SUMMARY
           fi
 
-      - name: Check and trigger tree visualization
+      - name: Check and trigger tree visualisation
         id: check_tree_viz
         if: ${{ github.event.inputs.update_tree_viz != 'false' && github.event.inputs.dry_run != 'true' }}
         env:

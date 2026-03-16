@@ -2,7 +2,7 @@
 # See templates folder documentation for details.
 
 # ============================================================================
-# Git Tree Visualization Workflow Template (tree-viz.yml)
+# Git Tree Visualisation Workflow Template (tree-viz.yml)
 # ============================================================================
 #
 # ORIGIN: https://github.com/XAOSTECH/dev-control
@@ -34,7 +34,7 @@
 #
 # ============================================================================
 
-name: Git Tree Visualization
+name: Git Tree Visualisation
 
 on:
   workflow_dispatch:
@@ -77,7 +77,7 @@ permissions:
 
 jobs:
   generate-tree:
-    name: Generate Git Tree Visualization
+    name: Generate Git Tree Visualisation
     runs-on: ubuntu-latest
 
     steps:
@@ -121,7 +121,7 @@ jobs:
             scripts/lib/print.sh
             scripts/create-tree.sh
 
-      - name: Generate tree visualization
+      - name: Generate tree visualisation
         env:
           MAX_COMMITS: ${{ inputs.max_commits || 500 }}
           GENERATE_SVG: ${{ inputs.generate_svg && '--svg-only' || '' }}
