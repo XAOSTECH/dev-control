@@ -5,6 +5,18 @@ All notable changes to Dev-Control will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.8] - 2026-03-16
+
+### Fixed
+- exclude license/licence code patterns + template-loading license loop
+- exclude license/licence, e.a. + fix in CHANGELOG
+- anglicise checkout with App token for workflow file pushes
+
+### Changed
+- perf: remove redundant identity setup in anglicise workflow
+- Merge pull request #98 from XAOSTECH:anglicise/20260316-032939
+- chore: convert American spellings to British English
+
 ## [0.5.7] - 2026-03-15 (re-release)
 
 ### Added
