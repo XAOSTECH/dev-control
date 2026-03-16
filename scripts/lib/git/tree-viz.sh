@@ -157,7 +157,7 @@ calculate_tree_positions() {
 }
 
 # ============================================================================
-# VISUALIZATION METRICS
+# VISUALISATION METRICS
 # ============================================================================
 
 # Get repository statistics for visualisation sizing

@@ -30,14 +30,14 @@ render_html_tree() {
     local json_data
     json_data=$(cat "$input_json")
 
-    # Create HTML with embedded Canvas visualization
+    # Create HTML with embedded Canvas visualisation
     cat > "$output_file" <<'HTMLEOF'
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Git Tree Visualization</title>
+    <title>Git Tree Visualisation</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -94,7 +94,7 @@ render_html_tree() {
         #tooltip {
             position: fixed;
             background: rgba(20, 10, 40, 0.96);
-            color: white;
+            colour: white;
             padding: 14px 18px;
             border-radius: 10px;
             font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
@@ -158,7 +158,7 @@ render_html_tree() {
         }
         button:hover {
             background: rgba(100, 60, 200, 0.8);
-            color: white;
+            colour: white;
             box-shadow: 0 0 12px rgba(120, 80, 220, 0.4);
         }
 
@@ -209,7 +209,7 @@ render_html_tree() {
 </head>
 <body>
     <div class="container">
-        <h1>🌳 Git Tree Visualization</h1>
+        <h1>🌳 Git Tree Visualisation</h1>
         <p class="info">Hover over leaves to see commit details · Click to highlight ancestry · Ctrl+click to open commit page · Scroll to explore</p>
 
         <div class="canvas-viewport" id="viewport">
@@ -255,7 +255,7 @@ HTMLEOF2
     # Embed JSON data
     cat "$input_json" >> "$output_file"
 
-    # Add JavaScript visualization code
+    # Add JavaScript visualisation code
     cat >> "$output_file" <<'JSEOF'
 ;
 

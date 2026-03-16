@@ -27,18 +27,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - include (re-release) in same-day CHANGELOG heading
 - skip dev-control repo in batch update
-- fix staging, license priority, and pull-fail handling in batch update
+- fix staging, licence priority, and pull-fail handling in batch update
 - avoid hard fail on missing usb capture device
 - ensure/apply automerge label for bot PRs
 - drop hardcoded automated PR label
 - non-fatal submodule update; fallback branch names
 - submodule threshold=0 on manual run, fix subshell bug, stale default 60→10
 - limit workflow edits to display text
-- preserve analyze IDs; keep UK display text
+- preserve analyse IDs; keep UK display text
 - github.copilot-chat --> GitHub.copilot-chat
-- honor category flag in interactive image selection
+- honour category flag in interactive image selection
 - correct Perl regex syntax using curly brace delimiters
-- improve anglicise workflow exclusion patterns for licence/license conversion
+- improve anglicise workflow exclusion patterns for licence/licence conversion
 - strip extensions and customizations from _minimal variant
 - leave timezone empty in _minimal variant
 - replace user timezone with UTC in _example and _minimal config variants
@@ -86,7 +86,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - improve: use gcda-style HEAD amendment for serverless
 - chore: update CHANGELOG for v0.5.7 (re-release)
 - chore(web-dev): adapt comment
-- chore(anglicise): license -> licence + adapt anglicise
+- chore(anglicise): licence -> licence + adapt anglicise
 - chore(docs): clarify dc-init -> dc-create config flow
 - chore(docs): clarify envVars
 - chore(docs): move dc-alias to front  + fix typo + format
@@ -116,11 +116,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - limit workflow edits to display text
-- preserve analyze IDs; keep UK display text
+- preserve analyse IDs; keep UK display text
 - github.copilot-chat --> GitHub.copilot-chat
-- honor category flag in interactive image selection
+- honour category flag in interactive image selection
 - correct Perl regex syntax using curly brace delimiters
-- improve anglicise workflow exclusion patterns for licence/license conversion
+- improve anglicise workflow exclusion patterns for licence/licence conversion
 - strip extensions and customizations from _minimal variant
 - leave timezone empty in _minimal variant
 - replace user timezone with UTC in _example and _minimal config variants
@@ -159,7 +159,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - improve: use gcda-style HEAD amendment for serverless
 - chore: update CHANGELOG for v0.5.7 (re-release)
 - chore(web-dev): adapt comment
-- chore(anglicise): license -> licence + adapt anglicise
+- chore(anglicise): licence -> licence + adapt anglicise
 - chore(docs): clarify dc-init -> dc-create config flow
 - chore(docs): clarify envVars
 - chore(docs): move dc-alias to front  + fix typo + format

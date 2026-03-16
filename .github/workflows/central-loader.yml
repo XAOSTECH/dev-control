@@ -115,7 +115,7 @@ jobs:
           fi
           echo "project_name=$PROJECT_NAME" >> "$GITHUB_OUTPUT"
           
-          # Stability color
+          # Stability colour
           case "$STABILITY_INPUT" in
             experimental) echo "stability_color=orange" >> "$GITHUB_OUTPUT" ;;
             beta) echo "stability_color=yellow" >> "$GITHUB_OUTPUT" ;;
