@@ -318,7 +318,7 @@ jobs:
 
           is_excluded_text_line() {
             local line="$1"
-            echo "$line" | grep -qE '(https?://|file://|github/|[?&](color|center|gray|licence)=[a-zA-Z0-9]+|"Authorization": "Bearer|types:[[:space:]]*\[[^]]+\]|--[a-z-]+ (center|color|gray)|\$\{?(color|center|gray);\}|\b(color|center|gray|licence)[_A-Z]*=|gum |\\$|shields\.io|stop-color|[a-z-]color[a-z-]*:|color[a-z-]*:[[:space:]]*#|align-items:)'
+            echo "$line" | grep -qE '(https?://|file://|github/|[?&](color|center|gray|licence)=[a-zA-Z0-9]+|"Authorization": "Bearer|types:[[:space:]]*\[[^]]+\]|--[a-z-]+ (center|color|gray)|\$\{?(color|center|gray);\}|\b(color|center|gray|licence)[_A-Z]*=|license/licence|licence/license|gum |\\$|shields\.io|stop-color|[a-z-]color[a-z-]*:|color[a-z-]*:[[:space:]]*#|align-items:)'
           }
 
           echo "## British English Spelling Check" >> $GITHUB_STEP_SUMMARY
@@ -427,7 +427,7 @@ jobs:
 
           is_excluded_text_line() {
             local line="$1"
-            echo "$line" | grep -qE "(https?://|github/|[?&](color|center|gray|licence)=|=[\"'](center|color|licence)|types:[[:space:]]*\[[^]]+\]|--[a-z-]+ (center|color|gray)|--color|--center|\$\{?(color|center|gray|licence)|\b(COLOR|CENTER|GRAY|LICENCE)[_A-Z]*=|gum |\\$|shields\.io|stop-color|[a-z-]color[a-z-]*:|color[a-z-]*:[[:space:]]*#|align-items:)"
+            echo "$line" | grep -qE "(https?://|github/|[?&](color|center|gray|licence)=|=[\"'](center|color|licence)|types:[[:space:]]*\[[^]]+\]|--[a-z-]+ (center|color|gray)|--color|--center|\$\{?(color|center|gray|licence)|\b(COLOR|CENTER|GRAY|LICENCE)[_A-Z]*=|license/licence|licence/license|gum |\\$|shields\.io|stop-color|[a-z-]color[a-z-]*:|color[a-z-]*:[[:space:]]*#|align-items:)"
           }
           
           FIXED_COUNT=0

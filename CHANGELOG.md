@@ -38,7 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - github.copilot-chat --> GitHub.copilot-chat
 - honour category flag in interactive image selection
 - correct Perl regex syntax using curly brace delimiters
-- improve anglicise workflow exclusion patterns for licence/licence conversion
+- improve anglicise workflow exclusion patterns for license/licence conversion
 - strip extensions and customizations from _minimal variant
 - leave timezone empty in _minimal variant
 - replace user timezone with UTC in _example and _minimal config variants
@@ -120,7 +120,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - github.copilot-chat --> GitHub.copilot-chat
 - honour category flag in interactive image selection
 - correct Perl regex syntax using curly brace delimiters
-- improve anglicise workflow exclusion patterns for licence/licence conversion
+- improve anglicise workflow exclusion patterns for license/licence conversion
 - strip extensions and customizations from _minimal variant
 - leave timezone empty in _minimal variant
 - replace user timezone with UTC in _example and _minimal config variants
@@ -188,7 +188,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - correct Perl regex syntax using curly brace delimiters
-- improve anglicise workflow exclusion patterns for licence/licence conversion
+- improve anglicise workflow exclusion patterns for license/licence conversion
 - strip extensions and customizations from _minimal variant
 - leave timezone empty in _minimal variant
 - replace user timezone with UTC in _example and _minimal config variants
