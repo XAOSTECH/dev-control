@@ -18,17 +18,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
       - name: Generate App Token
         id: app_token
         uses: actions/create-github-app-token@v2
         with:
           app-id: ${{ secrets['{{BOT_APP_ID_SECRET}}'] }}
           private-key: ${{ secrets['{{BOT_PRIVATE_KEY_SECRET}}'] }}
+
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          token: ${{ steps.app_token.outputs.token }}
 
       - name: Setup bot identity
         uses: XAOSTECH/dev-control/.github/actions/identity@b067f72ca7f849b734a45634f23581a739d5146f # v2.0.0
