@@ -28,14 +28,6 @@ jobs:
           fetch-depth: 0
           token: ${{ steps.app_token.outputs.token }}
 
-      - name: Setup bot identity
-        uses: XAOSTECH/dev-control/.github/actions/identity@b067f72ca7f849b734a45634f23581a739d5146f # v2.0.0
-        with:
-          gpg-private-key: ${{ secrets['XB_GK'] }}
-          gpg-passphrase: ${{ secrets['XB_GP'] }}
-          user-token: ${{ secrets['XB_UT'] }}
-          bot-name: ${{ vars.BOT_NAME || 'xaos-bot' }}
-
       - name: Check for American spellings
         id: check
         run: |
