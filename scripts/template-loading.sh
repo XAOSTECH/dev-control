@@ -241,7 +241,7 @@ check_git_repo() {
 # Detect licence type from the LICENSE/LICENCE file in the current directory
 detect_license_from_file() {
     local license_file=""
-    for f in LICENCE LICENCE LICENSE.md LICENCE.md LICENSE.txt LICENCE.txt; do
+    for f in LICENSE LICENCE LICENSE.md LICENCE.md LICENSE.txt LICENCE.txt; do
         [[ -f "$f" ]] && { license_file="$f"; break; }
     done
     [[ -z "$license_file" ]] && return
