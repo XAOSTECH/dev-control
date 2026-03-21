@@ -87,6 +87,11 @@ on:
         required: false
         type: boolean
         default: false
+      normalize_version:
+        description: 'Normalise v0.0.x to v0.1.0 (uncheck to keep v0.0.x scheme)'
+        required: false
+        type: boolean
+        default: true
       check_dependencies:
         description: 'Check and update dependencies (package.json, requirements.txt)'
         required: false
@@ -200,7 +205,7 @@ jobs:
                       while read -r t; do
                         v="${t#v}"
                         [[ "$v" != "$LATEST_VERSION" ]] && echo "$t" && break
-                      done)
+                      done) || true
           if [[ -n "$PRIOR_TAG" ]]; then
             CUMULATIVE_COUNT=$(git log "${PRIOR_TAG}..HEAD" --oneline | wc -l)
           else
@@ -242,7 +247,12 @@ jobs:
                             git tag --list 'v*' --sort=-version:refname | grep -vE 'latest|alpha|beta|rc' | head -1)
           CURRENT_VERSION=${CURRENT_VERSION#v}
           
-          if [[ $CUMULATIVE_COUNT -ge $NEW_RELEASE_THRESHOLD ]]; then
+          # Normalise v0.0.x → v0.1.0 (standard semver starting point)
+          if [[ "${{ github.event.inputs.normalize_version }}" != 'false' && "$CURRENT_VERSION" =~ ^0\.0\.[0-9]+$ ]]; then
+            echo "📐 Normalising v${CURRENT_VERSION} → v0.1.0 (standard semver convention)"
+            RELEASE_VERSION="0.1.0"
+            RELEASE_TYPE="new release"
+          elif [[ $CUMULATIVE_COUNT -ge $NEW_RELEASE_THRESHOLD ]]; then
             # Cumulative changes across re-releases exceed ceiling — bump patch version
             IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
             NEXT_VERSION="${MAJOR}.${MINOR}.$(( PATCH + 1 ))"
@@ -260,6 +270,7 @@ jobs:
           gh workflow run release.yml \
             --ref ${{ github.ref_name }} \
             -f version="${RELEASE_VERSION}" \
+            -f normalize_version="${{ github.event.inputs.normalize_version || 'true' }}" \
             -f prerelease=false \
             -f draft=false
           

@@ -116,6 +116,11 @@ on:
         required: false
         type: boolean
         default: false
+      normalize_version:
+        description: 'Normalise v0.0.x to v0.1.0 (uncheck to keep v0.0.x scheme)'
+        required: false
+        type: boolean
+        default: true
 
 permissions:
   contents: write
@@ -179,8 +184,14 @@ jobs:
                 MAJOR=${BASH_REMATCH[1]}
                 MINOR=${BASH_REMATCH[2]}
                 PATCH=${BASH_REMATCH[3]}
-                VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))"
-                echo "🔢 Auto-detected next version: ${VERSION} (from latest: v${LATEST})"
+                # Normalise v0.0.x → v0.1.0 (standard semver starting point)
+                if [[ "${{ github.event.inputs.normalize_version }}" != 'false' && "$MAJOR" -eq 0 && "$MINOR" -eq 0 ]]; then
+                  VERSION="0.1.0"
+                  echo "📐 Normalising v${LATEST} → v${VERSION} (standard semver convention)"
+                else
+                  VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))"
+                  echo "🔢 Auto-detected next version: ${VERSION} (from latest: v${LATEST})"
+                fi
               else
                 echo "❌ Could not determine latest version to auto-increment"
                 exit 1
