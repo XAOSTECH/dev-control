@@ -69,6 +69,9 @@ on:
         description: 'List of templates that were installed'
         value: ${{ jobs.load-templates.outputs.templates_installed }}
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   load-templates:
     name: Load Templates
