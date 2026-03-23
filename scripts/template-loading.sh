@@ -1240,7 +1240,7 @@ run_batch_update() {
     if [[ ${#POSITIONAL_ARGS[@]} -gt 0 ]]; then
         dirs=("${POSITIONAL_ARGS[@]}")
     else
-        # Recursively discover git repos (exclude .bak, .tmp, .temp, archive dirs)
+        # Recursively discover git repos (exclude .bak, .tmp, .temp, archive, build dirs)
         local find_excludes=(
             -not -path './.git'
             -not -path './.bak/*'
@@ -1248,6 +1248,9 @@ run_batch_update() {
             -not -path './.temp/*'
             -not -path './.archive/*'
             -not -path '*/node_modules/*'
+            -not -path '*/build/*'
+            -not -path '*/_deps/*'
+            -not -path '*/vendor/*'
             -not -path '*/.bak/*'
             -not -path '*/.tmp/*'
             -not -path '*/.temp/*'
@@ -1482,15 +1485,26 @@ run_batch_init() {
     if [[ ${#POSITIONAL_ARGS[@]} -gt 0 ]]; then
         dirs=("${POSITIONAL_ARGS[@]}")
     else
-        # Collect immediate subdirectories in current directory
-        local find_excludes=()
+        # Recursively discover git repos (exclude .bak, .tmp, .temp, archive dirs)
+        local find_excludes=(
+            -not -path './.git'
+            -not -path './.bak/*'
+            -not -path './.tmp/*'
+            -not -path './.temp/*'
+            -not -path './.archive/*'
+            -not -path '*/node_modules/*'
+            -not -path '*/.bak/*'
+            -not -path '*/.tmp/*'
+            -not -path '*/.temp/*'
+            -not -path '*/.archive/*'
+        )
         for _skip in "${SKIP_DIRS[@]}"; do
             _skip="${_skip%/}"  # strip trailing slash
-            find_excludes+=(-not -name "$_skip")
+            find_excludes+=(-not -path "./${_skip}/*" -not -path "*/${_skip}/*")
         done
-        while IFS= read -r d; do
-            dirs+=("$d")
-        done < <(find . -maxdepth 1 -mindepth 1 -type d -not -name '.*' "${find_excludes[@]}" -printf '%P\n')
+        while IFS= read -r gitdir; do
+            dirs+=("$(dirname "$gitdir")")
+        done < <(find . -name .git "${find_excludes[@]}" | sort)
     fi
 
     # Filter out excluded directories from explicit positional args too
@@ -1521,8 +1535,59 @@ run_batch_init() {
         return 1
     fi
 
+    # Filter to only directories with a remote (unless --local)
+    local filtered_remote=()
+    for d in "${dirs[@]}"; do
+        if [[ -d "$d/.git" ]] || [[ -f "$d/.git" ]]; then
+            if [[ "$INCLUDE_LOCAL" != "true" ]]; then
+                if ! git -C "$d" remote get-url origin &>/dev/null; then
+                    print_warning "Skipping $d (no remote — use --local to include)"
+                    continue
+                fi
+            fi
+        fi
+        filtered_remote+=("$d")
+    done
+    dirs=("${filtered_remote[@]}")
+
+    if [[ ${#dirs[@]} -eq 0 ]]; then
+        print_warning "No directories with remotes found to process (use --local to include local-only repos)"
+        return 1
+    fi
+
     # Ask whether to use a single repository owner for all repos (only once)
     # Default to Yes for convenience (empty input treated as Yes)
+    # When --defaults is passed, auto-accept and detect owner from first repo
+    if [[ "$DEFAULTS_ONLY" == "true" || "$ASSUME_YES" == "true" ]]; then
+        # Auto-detect owner from the first directory's git config
+        local candidate_owner=""
+        if [[ -d "${dirs[0]}" ]]; then
+            pushd "${dirs[0]}" > /dev/null 2>&1 || true
+            if git rev-parse --git-dir > /dev/null 2>&1; then
+                candidate_owner=$(git config --local dc-init.org-name 2>/dev/null || echo "")
+                # Fallback: detect from remote URL
+                if [[ -z "$candidate_owner" ]]; then
+                    local _remote_url
+                    _remote_url=$(git config --get remote.origin.url 2>/dev/null || echo "")
+                    if [[ "$_remote_url" =~ github\.com[:/]([^/]+)/ ]]; then
+                        candidate_owner="${BASH_REMATCH[1]}"
+                    fi
+                fi
+            fi
+            popd > /dev/null 2>&1 || true
+        fi
+        if [[ -n "$candidate_owner" ]]; then
+            REPO_OWNER="$candidate_owner"
+        fi
+        ORG_NAME="$REPO_OWNER"
+        REUSE_OWNER=true
+        BATCH_SKIP_OWNER=false
+        print_info "Using owner: ${REPO_OWNER:-auto-detect per repo} for all repositories"
+
+        # Auto-accept reuse of initialisation config
+        BATCH_REUSE_TEMPLATES=true
+        print_info "Will reuse initialisation config across the batch"
+    else
     read -rp "Use a single repository owner for all repos? (Y/n): " use_single_owner
     if [[ -z "${use_single_owner}" || "${use_single_owner}" =~ ^[Yy] ]]; then
         # For convenience, try to detect an owner from the first directory's local git config
@@ -1568,15 +1633,75 @@ run_batch_init() {
             print_info "Batch will run non-interactively with defaults"
         fi
     fi
+    fi  # end of --defaults/--yes vs interactive
+
+    # When --defaults is set, read template selection from stdin before the loop
+    # so that e.g. <<< 2,3 reaches template selection instead of being consumed by prompts
+    if [[ "$DEFAULTS_ONLY" == "true" && "$BATCH_REUSE_TEMPLATES" == "true" && -z "$BATCH_SELECTED_CHOICES" ]]; then
+        build_template_folders
+        if [[ ! -t 0 ]]; then
+            read -r BATCH_SELECTED_CHOICES < /dev/stdin || true
+        fi
+        BATCH_SELECTED_CHOICES="${BATCH_SELECTED_CHOICES:-A}"
+        local choice_desc
+        choice_desc=$(describe_template_choices "$BATCH_SELECTED_CHOICES")
+        print_info "Template selection: ${BATCH_SELECTED_CHOICES} (${choice_desc})"
+    fi
 
     for d in "${dirs[@]}"; do
-        print_header
-        print_info "Processing: $d"
 
         pushd "$d" > /dev/null || { print_error "Failed to enter $d"; continue; }
 
         # Ensure git repo initialised for this folder FIRST (before any config operations)
         check_git_repo
+
+        # --- Owner guard: skip repos not owned by shared owner or MEMBERS ---
+        # Run BEFORE stashing to avoid touching repos we won't process
+        local remote_owner=""
+        local remote_url
+        remote_url=$(git config --get remote.origin.url 2>/dev/null || echo "")
+        if [[ "$remote_url" =~ github\.com[:/]([^/]+)/([^/.]+) ]]; then
+            remote_owner="${BASH_REMATCH[1]}"
+            local remote_slug="${BASH_REMATCH[2]}"
+            # Skip dev-control itself — it is the template source, not a target
+            if [[ "$remote_slug" == "dev-control" ]]; then
+                print_info "Skipping $d (dev-control is the template source)"
+                popd > /dev/null || true
+                continue
+            fi
+        fi
+        if [[ -n "$remote_owner" ]]; then
+            if [[ "$REUSE_OWNER" == "true" && -n "$REPO_OWNER" ]]; then
+                # Explicit shared owner selected — strict match only
+                if [[ "$remote_owner" != "$REPO_OWNER" ]]; then
+                    print_info "Skipping $d (owner '$remote_owner' differs from '$REPO_OWNER')"
+                    popd > /dev/null || true
+                    continue
+                fi
+            else
+                # No shared owner — fall back to MEMBERS list
+                local members_list=""
+                local global_vars_file="$DEV_CONTROL_DIR/config/profiles/repoVars.env"
+                if [[ -f "$global_vars_file" ]]; then
+                    members_list=$(grep -E '^MEMBERS=' "$global_vars_file" | head -1 | sed 's/^MEMBERS=//' | tr -d '"' || true)
+                fi
+                if [[ -n "$members_list" ]]; then
+                    local is_member=false
+                    IFS=',' read -ra _members <<< "$members_list"
+                    for m in "${_members[@]}"; do
+                        if [[ "$m" == "$remote_owner" ]]; then
+                            is_member=true
+                            break
+                        fi
+                    done
+                    if [[ "$is_member" == "false" ]]; then
+                        print_info "Skipping $d (owner '$remote_owner' not in MEMBERS)"
+                        popd > /dev/null || true
+                        continue
+                    fi
+                fi
+            fi
+        fi
 
         # --- Batch lifecycle: stash any local changes and pull latest ---
         local had_stash=false
@@ -1614,11 +1739,6 @@ run_batch_init() {
         # This will load from THIS repo's local git config
         get_repo_info
 
-        # If user provided a shared owner earlier, warn when the detected owner for this repo differs
-        if [[ "$REUSE_OWNER" == "true" && -n "$ORG_NAME" && -n "$REPO_OWNER" && "$ORG_NAME" != "$REPO_OWNER" ]]; then
-            print_warning "Detected remote owner '$ORG_NAME' differs from chosen shared owner '$REPO_OWNER' for $d"
-        fi
-
         # Pre-fill sensible defaults based on folder name
         PROJECT_NAME="$(basename "$PWD")"
         REPO_SLUG="$(basename "$PWD")"
@@ -1627,7 +1747,7 @@ run_batch_init() {
         fi
         REPO_URL="https://github.com/${ORG_NAME}/${REPO_SLUG}"
 
-        if [[ "$ASSUME_YES" == "true" ]]; then
+        if [[ "$ASSUME_YES" == "true" || "$DEFAULTS_ONLY" == "true" ]]; then
             SHORT_DESCRIPTION="${SHORT_DESCRIPTION:-A project by $ORG_NAME}"
             LONG_DESCRIPTION="${LONG_DESCRIPTION:-$SHORT_DESCRIPTION}"
             LICENSE_TYPE="${LICENSE_TYPE:-MIT}"
