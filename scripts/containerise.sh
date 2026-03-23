@@ -50,6 +50,7 @@ SHOW_HELP=false
 NEST_MODE=false
 NEST_REGEN=false
 NO_CACHE=false
+EXCLUDE_DIRS=()
 
 ################################################################################
 # Help
@@ -72,6 +73,7 @@ MODES:
             Use --nest . to include the root directory itself
   --regen   Delete all .devcontainer dirs before nest rebuild (forces regeneration)
   --no-cache  Build base images without layer cache (force full image rebuild)
+  --exclude DIR [DIR..]  Exclude directories (and their children) from nest discovery
 
 CATEGORIES:
   --game-dev        Godot, Vulkan, SDL2, GLFW, CUDA
@@ -145,6 +147,13 @@ parse_args() {
             --no-cache)
                 NO_CACHE=true
                 shift
+                ;;
+            --exclude|--skip)
+                shift
+                while [[ $# -gt 0 && ! "$1" =~ ^- ]]; do
+                    EXCLUDE_DIRS+=("$1")
+                    shift
+                done
                 ;;
             --game-dev|--art|--data-science|--streaming|--web-dev|--dev-tools)
                 CATEGORY_FLAG="${1#--}"
@@ -1309,6 +1318,9 @@ run_nest_mode() {
         print_kv "Filter to categories" "$allowed_cats"
     fi
     [[ "$include_root" == true ]] && print_kv "Include root" "yes"
+    if [[ ${#EXCLUDE_DIRS[@]} -gt 0 ]]; then
+        print_kv "Excluding" "${EXCLUDE_DIRS[*]}"
+    fi
     echo ""
     
     # Check if nest.json exists - use it as source of truth
@@ -1325,6 +1337,17 @@ run_nest_mode() {
             local category=$(echo "$project_obj" | grep -oP '"category":\s*"\K[^"]+')
             
             [[ -z "$path" || -z "$type" || -z "$category" ]] && continue
+
+            # Filter by --exclude directories
+            local skip_this=false
+            for _excl in "${EXCLUDE_DIRS[@]}"; do
+                _excl="${_excl%/}"
+                if [[ "$path" == "$_excl" || "$path" == "$_excl/"* || "$path" == "./$_excl" || "$path" == "./$_excl/"* ]]; then
+                    skip_this=true
+                    break
+                fi
+            done
+            [[ "$skip_this" == "true" ]] && continue
             
             # Filter by allowed categories if specified
             if [[ -n "$allowed_cats" ]]; then
@@ -1343,7 +1366,12 @@ run_nest_mode() {
         echo ""
         
         # Find all .devcontainer dirs and build projects list (exclude .tmp and .bak)
-        find "$start_dir" \( -name ".tmp" -o -name ".bak" -o -name "*.tmp" -o -name "*.bak" \) -prune -o -type d -name ".devcontainer" -print 2>/dev/null | sort | while read -r devcontainer_dir; do
+        local find_prune_args=( -name ".tmp" -o -name ".bak" -o -name "*.tmp" -o -name "*.bak" )
+        for _excl in "${EXCLUDE_DIRS[@]}"; do
+            _excl="${_excl%/}"
+            find_prune_args+=( -o -name "$_excl" )
+        done
+        find "$start_dir" \( "${find_prune_args[@]}" \) -prune -o -type d -name ".devcontainer" -print 2>/dev/null | sort | while read -r devcontainer_dir; do
             local project_dir="$(dirname "$devcontainer_dir")"
             local rel_path="${project_dir#$start_dir/}"
             [[ "$rel_path" == "$project_dir" ]] && rel_path="."

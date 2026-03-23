@@ -49,7 +49,7 @@ POSITIONAL_ARGS=()
 UPDATE_ONLY=false
 # Include local-only repos (no remote) in update mode
 INCLUDE_LOCAL=false
-# Directories to skip in recursive discovery
+# Directories to skip/exclude in recursive discovery
 SKIP_DIRS=()
 # Batch owner prefill control: when true, do not prefill owner prompts with detected ORG_NAME
 BATCH_SKIP_OWNER=false
@@ -79,6 +79,8 @@ show_help() {
     echo "  -u, --update               Update mode: skip dc-init, only install templates on existing repos (stash/pull/install/commit/push)"
     echo "      --update-only          Alias for --update"
     echo "      --local                Include repos without a remote in update mode (skipped by default)"
+    echo "      --exclude DIR [DIR..]   Exclude directories (and their children) from batch/update discovery"
+    echo "      --skip DIR [DIR..]      Alias for --exclude"
     echo "      --reuse-owner          Prompt for repository owner once and reuse for all repos in the batch"
     echo "  -y, --yes                  Assume defaults and run non-interactively in batch mode"
     echo "  -h, --help                 Show this help message"
@@ -129,7 +131,7 @@ parse_args() {
                 INCLUDE_LOCAL=true
                 shift
                 ;;
-            --skip)
+            --skip|--exclude)
                 shift
                 while [[ $# -gt 0 && ! "$1" =~ ^- ]]; do
                     SKIP_DIRS+=("$1")
@@ -1481,9 +1483,37 @@ run_batch_init() {
         dirs=("${POSITIONAL_ARGS[@]}")
     else
         # Collect immediate subdirectories in current directory
+        local find_excludes=()
+        for _skip in "${SKIP_DIRS[@]}"; do
+            _skip="${_skip%/}"  # strip trailing slash
+            find_excludes+=(-not -name "$_skip")
+        done
         while IFS= read -r d; do
             dirs+=("$d")
-        done < <(find . -maxdepth 1 -mindepth 1 -type d -not -name '.*' -printf '%P\n')
+        done < <(find . -maxdepth 1 -mindepth 1 -type d -not -name '.*' "${find_excludes[@]}" -printf '%P\n')
+    fi
+
+    # Filter out excluded directories from explicit positional args too
+    if [[ ${#SKIP_DIRS[@]} -gt 0 && ${#dirs[@]} -gt 0 ]]; then
+        local filtered_dirs=()
+        for d in "${dirs[@]}"; do
+            local excluded=false
+            for _skip in "${SKIP_DIRS[@]}"; do
+                _skip="${_skip%/}"
+                local base
+                base=$(basename "$d")
+                if [[ "$base" == "$_skip" || "$d" == "$_skip" || "$d" == "./$_skip" ]]; then
+                    excluded=true
+                    break
+                fi
+            done
+            if [[ "$excluded" == "false" ]]; then
+                filtered_dirs+=("$d")
+            else
+                print_info "Excluding: $d"
+            fi
+        done
+        dirs=("${filtered_dirs[@]}")
     fi
 
     if [[ ${#dirs[@]} -eq 0 ]]; then
