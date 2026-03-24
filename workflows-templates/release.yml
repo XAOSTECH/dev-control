@@ -687,9 +687,11 @@ jobs:
             # Append build artifact checksums from SHA256SUMS.txt files
             if [[ -f "dist/SHA256SUMS.txt" ]]; then
               while IFS= read -r line; do
+                line="${line//$'\r'/}"
                 [[ -z "$line" ]] && continue
                 HASH=$(echo "$line" | awk '{print $1}')
-                FILE=$(echo "$line" | sed 's/^[a-fA-F0-9]*  *//')
+                FILE=$(echo "$line" | sed 's/^[a-fA-F0-9]*[ *]*//')
+                [[ -z "$FILE" || "$FILE" == "SHA256SUMS.txt" ]] && continue
                 echo "| ${FILE} | \`${HASH}\` |" >> "$NOTES_FILE"
               done < dist/SHA256SUMS.txt
             fi
@@ -721,9 +723,11 @@ jobs:
             echo "| File | SHA256 |" >> "$NOTES_FILE"
             echo "|------|--------|" >> "$NOTES_FILE"
             while IFS= read -r line; do
+              line="${line//$'\r'/}"
               [[ -z "$line" ]] && continue
               HASH=$(echo "$line" | awk '{print $1}')
-              FILE=$(echo "$line" | sed 's/^[a-fA-F0-9]*  *//')
+              FILE=$(echo "$line" | sed 's/^[a-fA-F0-9]*[ *]*//')
+              [[ -z "$FILE" || "$FILE" == "SHA256SUMS.txt" ]] && continue
               echo "| ${FILE} | \`${HASH}\` |" >> "$NOTES_FILE"
             done < dist/SHA256SUMS.txt
           fi
