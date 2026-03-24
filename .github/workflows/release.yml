@@ -602,9 +602,9 @@ jobs:
 
       - name: List build artifacts
         if: steps.check_release.outputs.exists != 'true'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          
           if [[ ! -d "dist" ]]; then
             echo "⚠️ No dist/ directory - no tarballs were built"
             echo "tarball_count=0" >> $GITHUB_ENV
