@@ -632,7 +632,7 @@ jobs:
           echo "tarball_count=${TARBALL_COUNT}" >> $GITHUB_ENV
 
           # Count build workflow artifacts (non-tarball files)
-          BUILD_ARTIFACT_COUNT=$(find dist/ -maxdepth 1 -type f ! -name "*.tar.gz" ! -name "*.sha256" 2>/dev/null | wc -l || echo "0")
+          BUILD_ARTIFACT_COUNT=$(find dist/ -maxdepth 1 -type f ! -name "*.tar.gz" ! -name "*.sha256" ! -name "SHA256SUMS.txt" 2>/dev/null | wc -l || echo "0")
           echo "build_artifact_count=${BUILD_ARTIFACT_COUNT}" >> $GITHUB_ENV
 
       - name: Generate release notes
@@ -751,7 +751,7 @@ jobs:
           NOTES_FILE="${{ steps.release_notes.outputs.notes_file }}"
           
           # Build file list (may be empty if no tarb alls)
-          FILES=$(find dist/ -maxdepth 1 -type f 2>/dev/null | tr '\n' ' ' || echo "")
+          FILES=$(find dist/ -maxdepth 1 -type f ! -name "SHA256SUMS.txt" 2>/dev/null | tr '\n' ' ' || echo "")
           
           # Create release (idempotent — skip if already exists)
           if gh release view "$TAG_NAME" &>/dev/null; then
