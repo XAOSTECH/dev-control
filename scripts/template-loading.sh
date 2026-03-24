@@ -51,6 +51,8 @@ UPDATE_ONLY=false
 INCLUDE_LOCAL=false
 # Directories to skip/exclude in recursive discovery
 SKIP_DIRS=()
+# Default branch name (detected or overridden via --branch)
+DEFAULT_BRANCH=""
 # Batch owner prefill control: when true, do not prefill owner prompts with detected ORG_NAME
 BATCH_SKIP_OWNER=false
 # Reuse templates/settings across the batch
@@ -81,6 +83,7 @@ show_help() {
     echo "      --local                Include repos without a remote in update mode (skipped by default)"
     echo "      --exclude DIR [DIR..]   Exclude directories (and their children) from batch/update discovery"
     echo "      --skip DIR [DIR..]      Alias for --exclude"
+    echo "      --branch NAME          Override default branch name (default: main)"
     echo "      --reuse-owner          Prompt for repository owner once and reuse for all repos in the batch"
     echo "  -y, --yes                  Assume defaults and run non-interactively in batch mode"
     echo "  -h, --help                 Show this help message"
@@ -137,6 +140,10 @@ parse_args() {
                     SKIP_DIRS+=("$1")
                     shift
                 done
+                ;;
+            --branch)
+                DEFAULT_BRANCH="$2"
+                shift 2
                 ;;
             --reuse-owner)
                 REUSE_OWNER=true
@@ -232,11 +239,33 @@ check_git_repo() {
     # Check for local .git directory (not inherited from parent)
     if [[ ! -d ".git" ]]; then
         print_warning "No local .git directory. Initialising..."
-        git init
+        git init -b "${DEFAULT_BRANCH:-main}"
         git config user.email "${GIT_EMAIL:-noreply@github.com}" 2>/dev/null || true
         git config user.name "${GIT_NAME:-User}" 2>/dev/null || true
-        print_success "Repository initialised"
+        print_success "Repository initialised (branch: ${DEFAULT_BRANCH:-main})"
         echo ""
+    else
+        # Existing repo: check if current branch matches expected default
+        local current_branch
+        current_branch=$(git symbolic-ref --short HEAD 2>/dev/null || echo "")
+        if [[ -n "$current_branch" && -n "$DEFAULT_BRANCH" && "$current_branch" != "$DEFAULT_BRANCH" ]]; then
+            # Only warn on first commit (no parent commits means fresh repo)
+            local commit_count
+            commit_count=$(git rev-list --count HEAD 2>/dev/null || echo "0")
+            if [[ "$commit_count" -le 1 ]]; then
+                print_warning "Current branch '$current_branch' differs from expected '$DEFAULT_BRANCH'"
+                if [[ "$DEFAULTS_ONLY" != "true" ]]; then
+                    read -rp "Rename '$current_branch' to '$DEFAULT_BRANCH'? [Y/n]: " rename_branch
+                    if [[ "${rename_branch:-y}" =~ [Yy] ]]; then
+                        git branch -m "$current_branch" "$DEFAULT_BRANCH"
+                        print_success "Branch renamed to $DEFAULT_BRANCH"
+                    fi
+                else
+                    git branch -m "$current_branch" "$DEFAULT_BRANCH"
+                    print_success "Branch renamed to $DEFAULT_BRANCH"
+                fi
+            fi
+        fi
     fi
 }
 
@@ -1942,6 +1971,28 @@ main() {
     
     # Initialise git repo if needed and get user info early
     get_git_user_info
+
+    # Resolve default branch name: CLI flag > git global config > "main"
+    if [[ -z "$DEFAULT_BRANCH" ]]; then
+        DEFAULT_BRANCH=$(git config --global init.defaultBranch 2>/dev/null || echo "main")
+        DEFAULT_BRANCH="${DEFAULT_BRANCH:-main}"
+    fi
+
+    # In single-repo mode (not batch), prompt for branch name if interactive
+    if [[ "$BATCH_MODE" != "true" && "$DEFAULTS_ONLY" != "true" ]]; then
+        local detected_branch=""
+        if [[ -d ".git" ]]; then
+            detected_branch=$(git symbolic-ref --short HEAD 2>/dev/null || echo "")
+        fi
+        local branch_hint="$DEFAULT_BRANCH"
+        if [[ -n "$detected_branch" && "$detected_branch" != "$DEFAULT_BRANCH" ]]; then
+            branch_hint="$detected_branch"
+            print_warning "Detected branch: $detected_branch (git global default: $DEFAULT_BRANCH)"
+        fi
+        read -rp "Default branch name [$branch_hint]: " branch_input
+        DEFAULT_BRANCH="${branch_input:-$branch_hint}"
+    fi
+
     check_git_repo
     
     local template_folders
