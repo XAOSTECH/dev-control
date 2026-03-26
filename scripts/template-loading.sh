@@ -1474,12 +1474,26 @@ run_batch_update() {
         done
 
         if ! git diff --cached --quiet; then
-            git commit -m "chore(dc-init): update ${choice_desc}" --quiet
-            print_success "Committed template updates for $d"
-
-            if git remote get-url origin &>/dev/null; then
-                if ! git push origin "$current_branch" --quiet 2>/dev/null; then
-                    print_warning "Push failed for $d (changes committed locally)"
+            # If the last commit was already a dc-init commit, amend it (gcda-style)
+            local last_msg
+            last_msg=$(git log -1 --format=%s 2>/dev/null || echo "")
+            if [[ "$last_msg" == chore\(dc-init\):* ]]; then
+                local author_date
+                author_date=$(git show -s --format=%aD HEAD)
+                GIT_COMMITTER_DATE="$author_date" git commit --amend --no-edit --date="$author_date" --quiet
+                print_success "Amended dc-init commit for $d"
+                if git remote get-url origin &>/dev/null; then
+                    if ! git push --force-with-lease origin "$current_branch" --quiet 2>/dev/null; then
+                        print_warning "Force-push failed for $d (amended locally)"
+                    fi
+                fi
+            else
+                git commit -m "chore(dc-init): update ${choice_desc}" --quiet
+                print_success "Committed template updates for $d"
+                if git remote get-url origin &>/dev/null; then
+                    if ! git push origin "$current_branch" --quiet 2>/dev/null; then
+                        print_warning "Push failed for $d (changes committed locally)"
+                    fi
                 fi
             fi
             ((updated++)) || true
@@ -1825,12 +1839,26 @@ run_batch_init() {
             local choice_desc
             choice_desc=$(describe_template_choices "${SELECTED_TEMPLATE_CHOICES}")
             git add -A
-            git commit -m "chore(dc-init): load ${choice_desc}" --quiet
-            print_success "Committed template changes for $d"
-
-            if git remote get-url origin &>/dev/null; then
-                if ! git push origin "$current_branch" --quiet 2>/dev/null; then
-                    print_warning "Push failed for $d (changes committed locally)"
+            # If the last commit was already a dc-init commit, amend it (gcda-style)
+            local last_msg
+            last_msg=$(git log -1 --format=%s 2>/dev/null || echo "")
+            if [[ "$last_msg" == chore\(dc-init\):* ]]; then
+                local author_date
+                author_date=$(git show -s --format=%aD HEAD)
+                GIT_COMMITTER_DATE="$author_date" git commit --amend --no-edit --date="$author_date" --quiet
+                print_success "Amended dc-init commit for $d"
+                if git remote get-url origin &>/dev/null; then
+                    if ! git push --force-with-lease origin "$current_branch" --quiet 2>/dev/null; then
+                        print_warning "Force-push failed for $d (amended locally)"
+                    fi
+                fi
+            else
+                git commit -m "chore(dc-init): load ${choice_desc}" --quiet
+                print_success "Committed template changes for $d"
+                if git remote get-url origin &>/dev/null; then
+                    if ! git push origin "$current_branch" --quiet 2>/dev/null; then
+                        print_warning "Push failed for $d (changes committed locally)"
+                    fi
                 fi
             fi
         fi
