@@ -613,40 +613,60 @@ jobs:
         run: |
           if [[ ! -d "dist" ]]; then
             echo "⚠️ No dist/ directory - no tarballs were built"
-            SAFE_TARBALL_COUNT=$(printf '%s' "0" | tr -d '\n\r')
-            echo "tarball_count=${SAFE_TARBALL_COUNT}" >> $GITHUB_ENV
+            {
+              echo 'tarball_count<<GHEOF'
+              echo '0'
+              echo 'GHEOF'
+            } >> "$GITHUB_ENV"
             exit 0
           fi
-          
+
           echo "📦 Build artifacts:"
           ls -la dist/ || true
-          
+
           # Get main tarball info (first .tar.gz that's not a sub-package)
           TARBALL=$(ls dist/*.tar.gz 2>/dev/null | head -1 || echo "")
           if [[ -n "$TARBALL" ]]; then
-            # Sanitize values to a single line before exporting to GITHUB_ENV
             SAFE_TARBALL=$(printf '%s' "$TARBALL" | tr -d '\n\r')
             SAFE_TARBALL_NAME=$(basename "$SAFE_TARBALL" | tr -d '\n\r')
-            echo "tarball_path=${SAFE_TARBALL}" >> $GITHUB_ENV
-            echo "tarball_name=${SAFE_TARBALL_NAME}" >> $GITHUB_ENV
-            
+            {
+              echo 'tarball_path<<GHEOF'
+              printf '%s\n' "$SAFE_TARBALL"
+              echo 'GHEOF'
+              echo 'tarball_name<<GHEOF'
+              printf '%s\n' "$SAFE_TARBALL_NAME"
+              echo 'GHEOF'
+            } >> "$GITHUB_ENV"
+
             if [[ -f "${TARBALL}.sha256" ]]; then
               SHA256=$(cat "${TARBALL}.sha256" | awk '{print $1}')
               SAFE_SHA256=$(printf '%s' "$SHA256" | tr -d '\n\r')
-              echo "tarball_sha256=${SAFE_SHA256}" >> $GITHUB_ENV
+              {
+                echo 'tarball_sha256<<GHEOF'
+                printf '%s\n' "$SAFE_SHA256"
+                echo 'GHEOF'
+              } >> "$GITHUB_ENV"
               echo "🔐 Tarball SHA256: ${SAFE_SHA256}"
             fi
           fi
-          
+
           # Count all tarballs for summary
           TARBALL_COUNT=$(ls dist/*.tar.gz 2>/dev/null | wc -l || echo "0")
           SAFE_TARBALL_COUNT=$(printf '%s' "$TARBALL_COUNT" | tr -d '\n\r')
-          echo "tarball_count=${SAFE_TARBALL_COUNT}" >> $GITHUB_ENV
+          {
+            echo 'tarball_count<<GHEOF'
+            printf '%s\n' "$SAFE_TARBALL_COUNT"
+            echo 'GHEOF'
+          } >> "$GITHUB_ENV"
 
           # Count build workflow artifacts (non-tarball files)
           BUILD_ARTIFACT_COUNT=$(find dist/ -maxdepth 1 -type f ! -name "*.tar.gz" ! -name "*.sha256" ! -name "SHA256SUMS.txt" 2>/dev/null | wc -l || echo "0")
           SAFE_BUILD_ARTIFACT_COUNT=$(printf '%s' "$BUILD_ARTIFACT_COUNT" | tr -d '\n\r')
-          echo "build_artifact_count=${SAFE_BUILD_ARTIFACT_COUNT}" >> $GITHUB_ENV
+          {
+            echo 'build_artifact_count<<GHEOF'
+            printf '%s\n' "$SAFE_BUILD_ARTIFACT_COUNT"
+            echo 'GHEOF'
+          } >> "$GITHUB_ENV"
 
       # ========================================================================
       # CODE SIGNING: Authenticode signing via SignPath.io (optional)
@@ -672,9 +692,11 @@ jobs:
           && steps.build_workflows.outputs.has_builds == 'true'
         env:
           SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
+          SIGNPATH_ORG_ID: ${{ vars.SIGNPATH_ORG_ID }}
+          SIGNPATH_PROJECT_SLUG: ${{ vars.SIGNPATH_PROJECT_SLUG }}
         run: |
-          ORG_ID="${{ vars.SIGNPATH_ORG_ID }}"
-          PROJECT="${{ vars.SIGNPATH_PROJECT_SLUG }}"
+          ORG_ID="${SIGNPATH_ORG_ID}"
+          PROJECT="${SIGNPATH_PROJECT_SLUG}"
           POLICY="release-signing"
           CONFIG="exe"
 
