@@ -17,6 +17,7 @@ This README is for maintainers editing templates in this repo. It is not copied 
 - `replace.yml`: search/replace automation with PR creation.
 - `update.yml`: scheduled/manual dependency/repo maintenance automation.
 - `release.yml`: release/tag/changelog automation.
+- `sign-artifacts.yml`: reusable Authenticode code signing via SignPath.io (called standalone or from release.yml).
 - `security-autofix.yml`: CodeQL-driven autofix workflow and security PR creation.
 
 ## Requisites by Template
@@ -30,6 +31,7 @@ This README is for maintainers editing templates in this repo. It is not copied 
 - `codeql.yml` and `security-autofix.yml` require Code Scanning/Advanced Security features to be enabled.
 - `security-autofix.yml` currently expects `secrets.XSS_AI` and `secrets.XSS_PK` as its app credentials.
 - `automerge.yml` depends on `validate-pr.yml` and uses local action path `./.github/actions/identity` in generated repos.
+- `sign-artifacts.yml` and code signing in `release.yml` require org variable `SIGNPATH_ORG_ID`, org secret `SIGNPATH_API_TOKEN`, and repo variable `SIGNPATH_PROJECT_SLUG`. See [docs/SIGNING.md](../docs/SIGNING.md).
 - `remote-init.yml` is an example workflow calling `xaoscience/dev-control/.github/workflows/central-loader.yml@main`; adjust owner/ref for your environment.
 
 For template conventions and broader context, see the templates folders in:

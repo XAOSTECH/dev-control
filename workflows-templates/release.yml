@@ -121,10 +121,16 @@ on:
         required: false
         type: boolean
         default: true
+      sign_artifacts:
+        description: 'Sign Windows binaries via SignPath.io (requires org setup)'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
   actions: write
+  id-token: write
 
 # One release job per tag at a time; if a second run starts (e.g. re-trigger from tag push)
 # it waits rather than racing. Both paths are idempotent so the second run is a no-op.
@@ -645,6 +651,157 @@ jobs:
           SAFE_BUILD_ARTIFACT_COUNT=$(printf '%s' "$BUILD_ARTIFACT_COUNT" | tr -d '\n\r')
           echo "build_artifact_count=${SAFE_BUILD_ARTIFACT_COUNT}" >> $GITHUB_ENV
 
+      # ========================================================================
+      # CODE SIGNING: Authenticode signing via SignPath.io (optional)
+      # ========================================================================
+      # Signs Windows binaries (.exe, .dll, .msi) for SmartScreen trust.
+      # Coexists with GPG (which signs git commits/tags for provenance).
+      #
+      # Prerequisites:
+      #   - Org variable: SIGNPATH_ORG_ID
+      #   - Repo variable: SIGNPATH_PROJECT_SLUG
+      #   - Org secret: SIGNPATH_API_TOKEN
+      #   - SignPath project with artefact configuration matching file types
+      #   - sign_artifacts: true in workflow dispatch
+      #
+      # See: https://github.com/XAOSTECH/dev-control/blob/main/docs/SIGNING.md
+      # ========================================================================
+
+      - name: Sign build artefacts (Authenticode)
+        id: code_signing
+        if: >
+          steps.check_release.outputs.exists != 'true'
+          && github.event.inputs.sign_artifacts == 'true'
+          && steps.build_workflows.outputs.has_builds == 'true'
+        env:
+          SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
+        run: |
+          ORG_ID="${{ vars.SIGNPATH_ORG_ID }}"
+          PROJECT="${{ vars.SIGNPATH_PROJECT_SLUG }}"
+          POLICY="release-signing"
+          CONFIG="exe"
+
+          # Graceful degradation — skip if not configured
+          if [[ -z "$ORG_ID" ]]; then
+            echo "⚠️ SIGNPATH_ORG_ID not set — skipping code signing"
+            echo "ℹ️ See: https://github.com/XAOSTECH/dev-control/blob/main/docs/SIGNING.md"
+            echo "outcome=skipped" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          if [[ -z "$PROJECT" ]]; then
+            echo "⚠️ SIGNPATH_PROJECT_SLUG not set — skipping code signing"
+            echo "outcome=skipped" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          if [[ -z "$SIGNPATH_API_TOKEN" ]]; then
+            echo "⚠️ SIGNPATH_API_TOKEN secret not set — skipping code signing"
+            echo "outcome=skipped" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          API="https://app.signpath.io/api/v1/${ORG_ID}"
+          SIGNED_COUNT=0
+          FAILED_COUNT=0
+
+          # Sign each signable file in dist/
+          shopt -s nullglob
+          SIGNABLE_FILES=(dist/*.exe dist/*.dll dist/*.msi)
+          shopt -u nullglob
+
+          if [[ ${#SIGNABLE_FILES[@]} -eq 0 ]]; then
+            echo "⏭️ No signable files found in dist/ (.exe, .dll, .msi)"
+            echo "outcome=skipped" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "🔏 Submitting ${#SIGNABLE_FILES[@]} file(s) to SignPath for signing..."
+
+          for FILE in "${SIGNABLE_FILES[@]}"; do
+            BASENAME=$(basename "$FILE")
+            echo "  → Signing: ${BASENAME}"
+
+            # Submit signing request
+            RESPONSE=$(curl -fsSL -X POST "${API}/signing-requests" \
+              -H "Authorization: Bearer ${SIGNPATH_API_TOKEN}" \
+              -F "projectSlug=${PROJECT}" \
+              -F "signingPolicySlug=${POLICY}" \
+              -F "artifactConfigurationSlug=${CONFIG}" \
+              -F "artifact=@${FILE}" \
+              2>&1) || {
+                echo "::warning::Failed to submit ${BASENAME} for signing: ${RESPONSE}"
+                ((FAILED_COUNT++)) || true
+                continue
+              }
+
+            REQUEST_ID=$(echo "$RESPONSE" | jq -r '.signingRequestId // empty' 2>/dev/null)
+            if [[ -z "$REQUEST_ID" ]]; then
+              echo "::warning::No signing request ID returned for ${BASENAME}"
+              ((FAILED_COUNT++)) || true
+              continue
+            fi
+
+            echo "    Request ID: ${REQUEST_ID}"
+
+            # Poll for completion (up to 10 minutes)
+            for attempt in $(seq 1 60); do
+              sleep 10
+              STATUS_RESPONSE=$(curl -fsSL "${API}/signing-requests/${REQUEST_ID}" \
+                -H "Authorization: Bearer ${SIGNPATH_API_TOKEN}" 2>/dev/null || echo '{}')
+              STATUS=$(echo "$STATUS_RESPONSE" | jq -r '.status // empty' 2>/dev/null)
+
+              case "$STATUS" in
+                Completed)
+                  # Download signed artefact
+                  DOWNLOAD_URL=$(echo "$STATUS_RESPONSE" | jq -r '.signedArtifactLink // empty' 2>/dev/null)
+                  if [[ -n "$DOWNLOAD_URL" ]]; then
+                    curl -fsSL -o "${FILE}" "${DOWNLOAD_URL}" \
+                      -H "Authorization: Bearer ${SIGNPATH_API_TOKEN}"
+                    echo "    ✅ Signed: ${BASENAME}"
+                    ((SIGNED_COUNT++)) || true
+                  else
+                    echo "::warning::Signed artefact URL missing for ${BASENAME}"
+                    ((FAILED_COUNT++)) || true
+                  fi
+                  break
+                  ;;
+                Failed|Denied|Cancelled)
+                  echo "::warning::Signing ${STATUS,,} for ${BASENAME}"
+                  ((FAILED_COUNT++)) || true
+                  break
+                  ;;
+                *)
+                  # Still processing
+                  ;;
+              esac
+
+              if [[ $attempt -eq 60 ]]; then
+                echo "::warning::Signing timed out for ${BASENAME} after 10 minutes"
+                ((FAILED_COUNT++)) || true
+              fi
+            done
+          done
+
+          echo ""
+          echo "🔏 Signing summary: ${SIGNED_COUNT} signed, ${FAILED_COUNT} failed"
+
+          if [[ $SIGNED_COUNT -gt 0 ]]; then
+            echo "outcome=success" >> $GITHUB_OUTPUT
+            echo "signed_count=${SIGNED_COUNT}" >> $GITHUB_OUTPUT
+
+            # Regenerate checksums for signed files
+            if [[ -f "dist/SHA256SUMS.txt" ]]; then
+              echo "🔄 Regenerating SHA256SUMS.txt with signed binaries..."
+              cd dist
+              sha256sum *.exe *.dll *.msi *.tar.gz 2>/dev/null | grep -v SHA256SUMS > SHA256SUMS.txt || true
+              cd ..
+            fi
+          elif [[ $FAILED_COUNT -gt 0 ]]; then
+            echo "outcome=failure" >> $GITHUB_OUTPUT
+            echo "::warning::Some files failed to sign — releasing unsigned"
+          else
+            echo "outcome=skipped" >> $GITHUB_OUTPUT
+          fi
+
       - name: Generate release notes
         id: release_notes
         if: steps.check_release.outputs.exists != 'true'
@@ -739,6 +896,25 @@ jobs:
             done < dist/SHA256SUMS.txt
           fi
           
+          # Add verification section if artefacts were code-signed
+          if [[ "${{ steps.code_signing.outputs.outcome }}" == "success" ]]; then
+            cat >> "$NOTES_FILE" << 'SIGNEOF'
+
+          ## Verification
+
+          Windows binaries in this release are **Authenticode signed** via [SignPath.io](https://signpath.io).
+          To verify a signed binary:
+
+          **PowerShell:**
+          ```powershell
+          Get-AuthenticodeSignature .\YourFile.exe | Format-List *
+          ```
+
+          **Expected output:** `Status: Valid`, `SignerCertificate` issued to XAOSTECH.
+
+          SIGNEOF
+          fi
+
           cat >> "$NOTES_FILE" << EOF
           
           ---
@@ -870,6 +1046,11 @@ jobs:
           echo "| Tag | ${TAG_NAME} |" >> $GITHUB_STEP_SUMMARY
           echo "| Artifacts | ${TARBALL_COUNT} tarball(s) |" >> $GITHUB_STEP_SUMMARY
           echo "| Build Artifacts | ${build_artifact_count:-0} file(s) |" >> $GITHUB_STEP_SUMMARY
+          if [[ "${{ steps.code_signing.outputs.outcome }}" == "success" ]]; then
+            echo "| Code Signing | ✅ ${SIGNING_COUNT:-} artefact(s) signed |" >> $GITHUB_STEP_SUMMARY
+          elif [[ "${{ github.event.inputs.sign_artifacts }}" == "true" ]]; then
+            echo "| Code Signing | ⚠️ ${{ steps.code_signing.outputs.outcome || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          fi
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Links" >> $GITHUB_STEP_SUMMARY
           echo "- [Release](https://github.com/$GITHUB_REPOSITORY/releases/tag/${TAG_NAME})" >> $GITHUB_STEP_SUMMARY
