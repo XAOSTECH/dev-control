@@ -607,7 +607,8 @@ jobs:
         run: |
           if [[ ! -d "dist" ]]; then
             echo "⚠️ No dist/ directory - no tarballs were built"
-            echo "tarball_count=0" >> $GITHUB_ENV
+            SAFE_TARBALL_COUNT=$(printf '%s' "0" | tr -d '\n\r')
+            echo "tarball_count=${SAFE_TARBALL_COUNT}" >> $GITHUB_ENV
             exit 0
           fi
           
