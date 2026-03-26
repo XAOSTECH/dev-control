@@ -427,11 +427,11 @@ create_mcp_config() {
             "command": "bash",
             "args": ["-lc", "source \$HOME/.bashrc && npx -y firecrawl-mcp"],
             "env": {
-                "FIRECRAWL_API_KEY": "\${input:firecrawlApiKey}\",
-                \"NPM_CONFIG_CACHE\": \"/tmp/npm-cache\",
-                \"npm_config_cache\": \"/tmp/npm-cache\"
+                "FIRECRAWL_API_KEY": "\${input:firecrawlApiKey}",
+                "NPM_CONFIG_CACHE": "/tmp/npm-cache",
+                "npm_config_cache": "/tmp/npm-cache"
             },
-            \"type\": \"stdio\"
+            "type": "stdio"
         }
     }
 }
