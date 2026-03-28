@@ -123,6 +123,11 @@ on:
         required: false
         type: boolean
         default: false
+      consolidate:
+        description: 'Consolidate: absorb all newer releases into this version (deletes newer tags/releases)'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -219,6 +224,74 @@ jobs:
             exit 1
           fi
           echo "✅ Version format valid: $VERSION"
+
+      - name: Consolidate newer releases
+        if: github.event.inputs.consolidate == 'true' && github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ steps.app_token.outputs.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+          TAG_NAME: ${{ steps.version.outputs.tag_name }}
+        run: |
+          # Collect version tags strictly newer than the target
+          mapfile -t NEWER_TAGS < <(
+            git tag -l 'v*' --sort=-version:refname \
+              | grep -vE 'latest|alpha|beta|rc' \
+              | while IFS= read -r tag; do
+                  tv="${tag#v}"
+                  if [[ "$tv" != "$VERSION" ]] && \
+                     [[ "$(printf '%s\n%s' "$VERSION" "$tv" | sort -V | tail -1)" == "$tv" ]]; then
+                    echo "$tag"
+                  fi
+                done
+          )
+
+          if [[ ${#NEWER_TAGS[@]} -eq 0 ]]; then
+            echo "⏭️ No newer releases to consolidate — v${VERSION} is already latest"
+            exit 0
+          fi
+
+          echo "🔄 Consolidating ${#NEWER_TAGS[@]} newer release(s) into v${VERSION}:"
+          printf '  → %s\n' "${NEWER_TAGS[@]}"
+
+          # Delete newer releases and their tags
+          for tag in "${NEWER_TAGS[@]}"; do
+            echo "🗑️ Removing release: $tag"
+            gh release delete "$tag" --yes 2>/dev/null || true
+            git push origin ":refs/tags/${tag}" 2>/dev/null || true
+            git tag -d "$tag" 2>/dev/null || true
+          done
+
+          # Also clean the target version so the release path runs fresh
+          gh release delete "$TAG_NAME" --yes 2>/dev/null || true
+          git push origin ":refs/tags/${TAG_NAME}" 2>/dev/null || true
+          git tag -d "$TAG_NAME" 2>/dev/null || true
+          git push origin :refs/tags/latest 2>/dev/null || true
+          git tag -d latest 2>/dev/null || true
+
+          # Strip CHANGELOG sections for all consolidated versions (rebuilt from combined commits)
+          if [[ -f "CHANGELOG.md" ]]; then
+            for tag in "${NEWER_TAGS[@]}" "$TAG_NAME"; do
+              ver="${tag#v}"
+              ENTRY_LINE=$(grep -n "^## \\[${ver}\\]\\|^## ${ver}" CHANGELOG.md 2>/dev/null | head -1 | cut -d: -f1)
+              [[ -z "$ENTRY_LINE" ]] && continue
+              NEXT=$(tail -n +$((ENTRY_LINE + 1)) CHANGELOG.md | grep -n "^## " | head -1 | cut -d: -f1)
+              if [[ -n "$NEXT" ]]; then
+                sed -i "${ENTRY_LINE},$((ENTRY_LINE + NEXT - 2))d" CHANGELOG.md
+              else
+                sed -i "${ENTRY_LINE},\$d" CHANGELOG.md
+              fi
+              echo "  📝 Removed CHANGELOG section: v${ver}"
+            done
+            cat -s CHANGELOG.md > /tmp/cl_n.md && mv /tmp/cl_n.md CHANGELOG.md
+
+            if ! git diff --quiet CHANGELOG.md 2>/dev/null; then
+              git add CHANGELOG.md
+              git commit -m "chore: consolidate releases — absorb changes into v${VERSION}"
+              git push
+            fi
+          fi
+
+          echo "✅ Consolidated ${#NEWER_TAGS[@]} release(s) — proceeding with v${VERSION} re-release"
 
       - name: Check if release already published
         id: check_release
