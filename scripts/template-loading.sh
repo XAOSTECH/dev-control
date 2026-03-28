@@ -85,6 +85,7 @@ show_help() {
     echo "      --skip DIR [DIR..]      Alias for --exclude"
     echo "      --branch NAME          Override default branch name (default: main)"
     echo "      --reuse-owner          Prompt for repository owner once and reuse for all repos in the batch"
+    echo "      --push                 Commit and push template changes after install (amends prior dc-init commit if present)"
     echo "  -y, --yes                  Assume defaults and run non-interactively in batch mode"
     echo "  -h, --help                 Show this help message"
     echo ""
@@ -147,6 +148,10 @@ parse_args() {
                 ;;
             --reuse-owner)
                 REUSE_OWNER=true
+                shift
+                ;;
+            --push)
+                AUTO_PUSH=true
                 shift
                 ;;
             -y|--yes)
@@ -1260,6 +1265,56 @@ process_specific_files() {
 }
 
 # ============================================================================
+# COMMIT & PUSH (reusable gcda-style amend / new-commit + push)
+# ============================================================================
+
+# Stage the well-known template paths (dirs + individual files).
+stage_template_paths() {
+    for _p in .github/workflows .github/actions .github/ISSUE_TEMPLATE docs; do
+        [[ -d "$_p" ]] && git add -A "$_p" 2>/dev/null || true
+    done
+    for _p in .github/PULL_REQUEST_TEMPLATE.md LICENSE LICENCE LICENSE.md LICENCE.md LICENSE.txt LICENCE.txt; do
+        [[ -f "$_p" ]] && git add "$_p" 2>/dev/null || true
+    done
+}
+
+# Commit staged template changes and push (gcda-style amend when prior dc-init
+# commit exists).  Callers must stage changes and verify there is something to
+# commit before calling this function.
+#
+# Usage: dc_init_commit_and_push <verb> <description> <dir_label>
+#   verb        – action word for the commit message (e.g. "update", "load")
+#   description – human-readable template description
+#   dir_label   – directory name shown in status messages
+dc_init_commit_and_push() {
+    local verb="$1" description="$2" dir_label="$3"
+    local current_branch
+    current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
+
+    local last_msg
+    last_msg=$(git log -1 --format=%s 2>/dev/null || echo "")
+    if [[ "$last_msg" == chore\(dc-init\):* ]]; then
+        local author_date
+        author_date=$(git show -s --format=%aD HEAD)
+        GIT_COMMITTER_DATE="$author_date" git commit --amend --no-edit --date="$author_date" --quiet
+        print_success "Amended dc-init commit for $dir_label"
+        if git remote get-url origin &>/dev/null; then
+            if ! git push --force-with-lease origin "$current_branch" --quiet 2>/dev/null; then
+                print_warning "Force-push failed for $dir_label (amended locally)"
+            fi
+        fi
+    else
+        git commit -m "chore(dc-init): ${verb} ${description}" --quiet
+        print_success "Committed template ${verb} for $dir_label"
+        if git remote get-url origin &>/dev/null; then
+            if ! git push origin "$current_branch" --quiet 2>/dev/null; then
+                print_warning "Push failed for $dir_label (changes committed locally)"
+            fi
+        fi
+    fi
+}
+
+# ============================================================================
 # BATCH UPDATE (template-only refresh on existing repos)
 # ============================================================================
 
@@ -1465,37 +1520,10 @@ run_batch_update() {
         save_project_metadata
 
         # --- Commit and push template changes only ---
-        # Stage each path individually — non-existent paths must not block others
-        for _p in .github/workflows .github/actions .github/ISSUE_TEMPLATE docs; do
-            [[ -d "$_p" ]] && git add -A "$_p" 2>/dev/null || true
-        done
-        for _p in .github/PULL_REQUEST_TEMPLATE.md LICENSE LICENCE LICENSE.md LICENCE.md LICENSE.txt LICENCE.txt; do
-            [[ -f "$_p" ]] && git add "$_p" 2>/dev/null || true
-        done
+        stage_template_paths
 
         if ! git diff --cached --quiet; then
-            # If the last commit was already a dc-init commit, amend it (gcda-style)
-            local last_msg
-            last_msg=$(git log -1 --format=%s 2>/dev/null || echo "")
-            if [[ "$last_msg" == chore\(dc-init\):* ]]; then
-                local author_date
-                author_date=$(git show -s --format=%aD HEAD)
-                GIT_COMMITTER_DATE="$author_date" git commit --amend --no-edit --date="$author_date" --quiet
-                print_success "Amended dc-init commit for $d"
-                if git remote get-url origin &>/dev/null; then
-                    if ! git push --force-with-lease origin "$current_branch" --quiet 2>/dev/null; then
-                        print_warning "Force-push failed for $d (amended locally)"
-                    fi
-                fi
-            else
-                git commit -m "chore(dc-init): update ${choice_desc}" --quiet
-                print_success "Committed template updates for $d"
-                if git remote get-url origin &>/dev/null; then
-                    if ! git push origin "$current_branch" --quiet 2>/dev/null; then
-                        print_warning "Push failed for $d (changes committed locally)"
-                    fi
-                fi
-            fi
+            dc_init_commit_and_push "update" "$choice_desc" "$d"
             ((updated++)) || true
         else
             print_info "No template changes needed for $d"
@@ -1839,28 +1867,7 @@ run_batch_init() {
             local choice_desc
             choice_desc=$(describe_template_choices "${SELECTED_TEMPLATE_CHOICES}")
             git add -A
-            # If the last commit was already a dc-init commit, amend it (gcda-style)
-            local last_msg
-            last_msg=$(git log -1 --format=%s 2>/dev/null || echo "")
-            if [[ "$last_msg" == chore\(dc-init\):* ]]; then
-                local author_date
-                author_date=$(git show -s --format=%aD HEAD)
-                GIT_COMMITTER_DATE="$author_date" git commit --amend --no-edit --date="$author_date" --quiet
-                print_success "Amended dc-init commit for $d"
-                if git remote get-url origin &>/dev/null; then
-                    if ! git push --force-with-lease origin "$current_branch" --quiet 2>/dev/null; then
-                        print_warning "Force-push failed for $d (amended locally)"
-                    fi
-                fi
-            else
-                git commit -m "chore(dc-init): load ${choice_desc}" --quiet
-                print_success "Committed template changes for $d"
-                if git remote get-url origin &>/dev/null; then
-                    if ! git push origin "$current_branch" --quiet 2>/dev/null; then
-                        print_warning "Push failed for $d (changes committed locally)"
-                    fi
-                fi
-            fi
+            dc_init_commit_and_push "load" "$choice_desc" "$d"
         fi
 
         if [[ "$had_stash" == "true" ]]; then
@@ -2120,6 +2127,18 @@ main() {
     
     # Save metadata for dc-create to use
     save_project_metadata
+
+    # --- Push if requested ---
+    if [[ "$AUTO_PUSH" == "true" ]]; then
+        stage_template_paths
+        if ! git diff --cached --quiet; then
+            local choice_desc
+            choice_desc=$(describe_template_choices "$selection")
+            dc_init_commit_and_push "load" "$choice_desc" "$(basename "$PWD")"
+        else
+            print_info "No template changes to push"
+        fi
+    fi
     
     show_summary
 }
