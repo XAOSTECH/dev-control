@@ -5,6 +5,41 @@ All notable changes to Dev-Control will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.8] - 2026-03-30 (re-release)
+
+### Added
+- add --push flag with reusable commit/push function
+- add consolidate option to absorb newer releases into an older version
+- very strict cache buster; BUILD_DATE now includes %m
+- add optional Authenticode code signing via SignPath.io
+- amend existing dc-init commits instead of stacking duplicates
+- auto-detect and trigger build-*.yml workflows
+- enforce default branch name 'main'
+- harden batch mode with filtering and smart defaults
+- add --exclude flag to batch/nest modes
+- normalise v0.0.x → v0.1.0 with opt-out checkbox
+
+### Fixed
+- resolve CodeQL envvar-injection and code-injection alerts
+- sanitize early-exit tarball_count GITHUB_ENV write
+- sanitize GITHUB_ENV writes against newline injection
+- remove erroneous backslash escaping in MCP config heredoc
+- resolve CodeQL envvar-injection and missing-permissions alerts
+- handle Windows CRLF and binary-mode prefix in SHA256SUMS.txt parsing
+- exclude SHA256SUMS.txt from release assets
+- unify drifted is_excluded_text_line functions
+- exclude license/licence code patterns + template-loading license loop
+- exclude license/licence, e.a. + fix in CHANGELOG
+- anglicise checkout with App token for workflow file pushes
+
+### Changed
+- chore(containerise): add %h to ARG BUILD_DATE
+- ci: force Node.js 24 for all GitHub Actions workflows
+- chore: update CHANGELOG for v0.5.8
+- perf: remove redundant identity setup in anglicise workflow
+- Merge pull request #98 from XAOSTECH:anglicise/20260316-032939
+- chore: convert American spellings to British English
+
 ## [0.5.8] - 2026-03-16
 
 ### Fixed
