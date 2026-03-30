@@ -32,7 +32,7 @@ art:
 data-science:
   image: devcontrol/data-science:latest
   features: "CUDA 13.1, FFmpeg (NVENC/NVDEC), NVIDIA acceleration"
-  extensions: ms-toolsai.jupyter
+  # extensions: ms-toolsai.jupyter
   github-path: https://github.com/xaostech/dev-control/tree/main/.devcontainer/data-science
   nvidia: true
 
@@ -46,7 +46,7 @@ streaming:
 web-dev:
   image: devcontrol/web-dev:latest
   features: "Node.js 25 (nvm), npm, modern web frameworks, Wrangler, dev-control"
-  extensions: dbaeumer.vscode-eslint esbenp.prettier-vscode
+  # extensions: dbaeumer.vscode-eslint esbenp.prettier-vscode
   github-path: https://github.com/xaostech/dev-control/tree/main/.devcontainer/web-dev
   nvidia: false
 
