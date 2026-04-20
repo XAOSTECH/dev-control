@@ -38,9 +38,14 @@ source "$SCRIPT_DIR/lib/colours.sh"
 source "$SCRIPT_DIR/lib/print.sh"
 
 TEST_REPO_DIR="${TEST_REPO_DIR:-$DC_ROOT/test-repo}"
+TEST_GNUPGHOME="${TEST_GNUPGHOME:-$TEST_REPO_DIR/.gnupg}"
+TEST_GPG_NAME="Dev-Control Test"
+TEST_GPG_EMAIL="test@dev-control.local"
+TEST_GPG_KEY_ID=""   # populated by ensure_gpg_key
 
 ACTION="cycle"   # cycle | clean | init | list
 ONLY=""
+NO_GPG=false
 
 # ---------------------------------------------------------------------------
 # CLI
@@ -57,14 +62,22 @@ Options:
   --clean           Wipe test-repo/ entirely (no rebuild)
   --init            Build fixtures only; fail if they already exist
   --list            List existing fixtures and their commit counts
-  --only NAME       Cycle only one fixture (linear|with-merges|unsigned)
+  --only NAME       Cycle only one fixture (linear|with-merges|unsigned|signed)
+  --no-gpg          Skip GPG key generation; build all fixtures unsigned
+                    (signing tests will not run; useful in environments
+                    without gpg or where key creation is undesirable)
   -h, --help        Show this help
 
 Environment:
   TEST_REPO_DIR     Override the destination root (default: \$DC_ROOT/test-repo)
+  TEST_GNUPGHOME    Override the ephemeral GNUPGHOME
+                    (default: \$TEST_REPO_DIR/.gnupg)
 
 Notes:
-  - test-repo/ is gitignored at the dev-control repo root.
+  - test-repo/ (including .gnupg/) is gitignored at the dev-control repo root.
+  - An ephemeral, passphrase-less GPG key is generated on first cycle and
+    re-used for every fixture so that --sign / --auto-sign / --resign
+    paths in dc-fix can be exercised end-to-end.
   - Each fixture is a standalone git repo with deterministic commit dates
     so date-preservation tests are reproducible.
 EOF
@@ -77,6 +90,7 @@ parse_args() {
             --init)  ACTION="init"; shift ;;
             --list)  ACTION="list"; shift ;;
             --only)  ONLY="$2"; shift 2 ;;
+            --no-gpg) NO_GPG=true; shift ;;
             -h|--help) show_help; exit 0 ;;
             *) print_error "Unknown option: $1"; show_help; exit 1 ;;
         esac
@@ -84,23 +98,112 @@ parse_args() {
 }
 
 # ---------------------------------------------------------------------------
+# GPG (ephemeral keyring under test-repo/.gnupg)
+# ---------------------------------------------------------------------------
+
+# Generate (or reuse) a passphrase-less RSA key inside an isolated
+# GNUPGHOME so signing tests don't pollute the developer's real keyring
+# and require no manual key import.  Idempotent: a second call with an
+# existing key just re-discovers the fingerprint.
+ensure_gpg_key() {
+    if [[ "$NO_GPG" == "true" ]]; then
+        TEST_GPG_KEY_ID=""
+        return 0
+    fi
+
+    if ! command -v gpg >/dev/null 2>&1; then
+        print_warning "gpg not found on PATH; signing fixtures will be skipped"
+        NO_GPG=true
+        return 0
+    fi
+
+    mkdir -p "$TEST_GNUPGHOME"
+    chmod 700 "$TEST_GNUPGHOME"
+
+    # Try to reuse an existing key first.
+    TEST_GPG_KEY_ID="$(GNUPGHOME="$TEST_GNUPGHOME" gpg --batch --with-colons \
+        --list-secret-keys 2>/dev/null \
+        | awk -F: '/^sec:/{print $5; exit}')"
+
+    if [[ -n "$TEST_GPG_KEY_ID" ]]; then
+        print_info "Reusing test GPG key: $TEST_GPG_KEY_ID"
+        return 0
+    fi
+
+    print_info "Generating ephemeral test GPG key in $TEST_GNUPGHOME"
+    GNUPGHOME="$TEST_GNUPGHOME" gpg --batch --pinentry-mode loopback \
+        --passphrase '' \
+        --quick-generate-key \
+        "$TEST_GPG_NAME <$TEST_GPG_EMAIL>" \
+        rsa2048 sign 0 >/dev/null 2>&1 || {
+        print_warning "Failed to generate test GPG key; signing fixtures will be skipped"
+        NO_GPG=true
+        return 0
+    }
+
+    TEST_GPG_KEY_ID="$(GNUPGHOME="$TEST_GNUPGHOME" gpg --batch --with-colons \
+        --list-secret-keys 2>/dev/null \
+        | awk -F: '/^sec:/{print $5; exit}')"
+
+    if [[ -z "$TEST_GPG_KEY_ID" ]]; then
+        print_warning "Test GPG key generated but not discoverable; disabling signing"
+        NO_GPG=true
+        return 0
+    fi
+
+    print_success "Test GPG key: $TEST_GPG_KEY_ID"
+}
+
+# Bind the ephemeral key to a fixture's local git config.  The repo will
+# look up GNUPGHOME from the environment (recycle-test-repo.sh exports
+# it for the build phase; for ad-hoc dc-fix runs the developer should
+# `export GNUPGHOME=$DC_ROOT/test-repo/.gnupg` or run via this script's
+# helpers).
+_bind_gpg_to_repo() {
+    local dir="$1" sign_default="$2"   # sign_default: true|false
+    if [[ "$NO_GPG" == "true" || -z "$TEST_GPG_KEY_ID" ]]; then
+        git -C "$dir" config commit.gpgsign false
+        git -C "$dir" config tag.gpgsign false
+        return 0
+    fi
+    git -C "$dir" config user.signingkey "$TEST_GPG_KEY_ID"
+    git -C "$dir" config gpg.program "$(command -v gpg)"
+    git -C "$dir" config commit.gpgsign "$sign_default"
+    git -C "$dir" config tag.gpgsign false
+
+    # Drop a tiny pointer file so the developer knows where the key lives.
+    cat > "$dir/.git/TEST_GPG_INFO" <<EOF
+Test GPG key bound to this fixture by scripts/recycle-test-repo.sh
+GNUPGHOME=$TEST_GNUPGHOME
+key=$TEST_GPG_KEY_ID
+To run dc-fix --sign / --auto-sign against this repo:
+  export GNUPGHOME="$TEST_GNUPGHOME"
+  cd $dir
+  bash $DC_ROOT/scripts/fix-history.sh --auto-sign
+EOF
+}
+
+# ---------------------------------------------------------------------------
 # FIXTURES
 # ---------------------------------------------------------------------------
 
-# Common per-repo bootstrap: init, set test identity, opt out of GPG signing
-# so commits are reproducible regardless of the developer's git config.
+# Common per-repo bootstrap: init, set test identity, bind ephemeral GPG
+# key.  sign_default controls whether commit.gpgsign is on (so the build
+# phase below produces signed history) or off (build unsigned, then let
+# dc-fix --auto-sign sign it later).
 _init_repo() {
-    local dir="$1"
+    local dir="$1" sign_default="${2:-false}"
     rm -rf "$dir"
     mkdir -p "$dir"
     git -C "$dir" init -q -b main
-    git -C "$dir" config user.email "test@dev-control.local"
-    git -C "$dir" config user.name "Dev-Control Test"
-    git -C "$dir" config commit.gpgsign false
-    git -C "$dir" config tag.gpgsign false
+    git -C "$dir" config user.email "$TEST_GPG_EMAIL"
+    git -C "$dir" config user.name "$TEST_GPG_NAME"
+    _bind_gpg_to_repo "$dir" "$sign_default"
 }
 
-# Make a commit with deterministic author + committer date.
+# Make a commit with deterministic author + committer date.  Inherits
+# GNUPGHOME from the caller (set by do_cycle/do_init when GPG is enabled)
+# so commit.gpgsign=true repos actually find the test key.
 _commit() {
     local dir="$1" date="$2" msg="$3"
     GIT_AUTHOR_DATE="$date" \
@@ -124,7 +227,9 @@ build_linear() {
 build_with_merges() {
     local dir="$TEST_REPO_DIR/with-merges"
     print_info "Building with-merges fixture: $dir"
-    _init_repo "$dir"
+    # Sign during build so we have a signed-history-with-merges fixture
+    # ready for dc-fix --sign --preserve-topology / rebase-merges tests.
+    _init_repo "$dir" true
 
     echo "main 1" > "$dir/main.txt"
     git -C "$dir" add main.txt
@@ -155,30 +260,63 @@ build_with_merges() {
         :
     }
 
-    print_success "with-merges: $(git -C "$dir" rev-list --count HEAD) commits ($(git -C "$dir" rev-list --merges HEAD | wc -l) merge)"
+    local merges signed
+    merges=$(git -C "$dir" rev-list --merges HEAD | wc -l | tr -d ' ')
+    signed=$(_count_signed "$dir")
+    print_success "with-merges: $(git -C "$dir" rev-list --count HEAD) commits, $merges merge, $signed signed"
 }
 
 build_unsigned() {
     local dir="$TEST_REPO_DIR/unsigned"
     print_info "Building unsigned fixture: $dir"
-    _init_repo "$dir"
+    # Key is bound but commit.gpgsign=false → ready for --auto-sign tests.
+    _init_repo "$dir" false
     local i
     for i in 1 2 3 4; do
         echo "u$i" > "$dir/u$i.txt"
         git -C "$dir" add "u$i.txt"
         _commit "$dir" "2024-03-0${i} 14:00:00 +0000" "unsigned: u$i"
     done
-    print_success "unsigned: $(git -C "$dir" rev-list --count HEAD) commits (no signatures)"
+    print_success "unsigned: $(git -C "$dir" rev-list --count HEAD) commits (no signatures, key bound for --auto-sign)"
+}
+
+build_signed() {
+    local dir="$TEST_REPO_DIR/signed"
+    print_info "Building signed fixture: $dir"
+    _init_repo "$dir" true
+    local i
+    for i in 1 2 3 4; do
+        echo "s$i" > "$dir/s$i.txt"
+        git -C "$dir" add "s$i.txt"
+        _commit "$dir" "2024-04-0${i} 16:00:00 +0000" "signed: s$i"
+    done
+    local signed
+    signed=$(_count_signed "$dir")
+    print_success "signed: $(git -C "$dir" rev-list --count HEAD) commits, $signed signed"
+}
+
+# Count how many commits on HEAD carry a valid signature (G or U).
+_count_signed() {
+    local dir="$1"
+    git -C "$dir" log --pretty=format:'%G?' 2>/dev/null \
+        | grep -c -E '^[GU]$' || true
 }
 
 build_all() {
     mkdir -p "$TEST_REPO_DIR"
+    ensure_gpg_key
+    # Export so child git invocations during the build phase find the
+    # ephemeral key when commit.gpgsign=true.
+    if [[ "$NO_GPG" != "true" ]]; then
+        export GNUPGHOME="$TEST_GNUPGHOME"
+    fi
     case "$ONLY" in
-        "")             build_linear; build_with_merges; build_unsigned ;;
+        "")             build_linear; build_with_merges; build_unsigned; build_signed ;;
         linear)         build_linear ;;
         with-merges)    build_with_merges ;;
         unsigned)       build_unsigned ;;
-        *) print_error "Unknown fixture: $ONLY (allowed: linear|with-merges|unsigned)"; exit 1 ;;
+        signed)         build_signed ;;
+        *) print_error "Unknown fixture: $ONLY (allowed: linear|with-merges|unsigned|signed)"; exit 1 ;;
     esac
 }
 
@@ -224,13 +362,18 @@ do_list() {
     local d
     for d in "$TEST_REPO_DIR"/*/; do
         [[ -d "$d" ]] || continue
+        # Skip the ephemeral keyring; it lives under test-repo/ but is
+        # not a fixture.
+        [[ "$(basename "$d")" == ".gnupg" ]] && continue
         found=1
-        local name count head
+        local name count head signed
         name=$(basename "$d")
         if [[ -d "$d/.git" ]]; then
             count=$(git -C "$d" rev-list --count HEAD 2>/dev/null || echo "?")
             head=$(git -C "$d" log -1 --format='%h %s' 2>/dev/null || echo "(empty)")
-            printf "  %-15s %s commits, HEAD: %s\n" "$name" "$count" "$head"
+            signed=$(GNUPGHOME="$TEST_GNUPGHOME" _count_signed "$d")
+            printf "  %-15s %s commits (%s signed), HEAD: %s\n" \
+                "$name" "$count" "$signed" "$head"
         else
             printf "  %-15s (not a git repo)\n" "$name"
         fi
