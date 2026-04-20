@@ -78,6 +78,9 @@ declare -A COMMAND_MAP=(
     ["aliases"]="alias-loading.sh"
     ["alias"]="alias-loading.sh"
     ["menu"]="dev-control.sh"
+    ["recycle"]="recycle-test-repo.sh"
+    ["cycle"]="recycle-test-repo.sh"
+    ["test-repo"]="recycle-test-repo.sh"
 )
 
 # Command descriptions for help
@@ -92,6 +95,7 @@ declare -A COMMAND_DESC=(
     ["container"]="Setup devcontainer for project"
     ["aliases"]="Install bash aliases for Dev-Control"
     ["menu"]="Open interactive menu (default)"
+    ["recycle"]="Wipe and rebuild deterministic test-repo fixtures (dev-only)"
 )
 
 # ============================================================================
