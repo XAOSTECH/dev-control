@@ -5,6 +5,16 @@ All notable changes to Dev-Control will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.9] - 2026-04-27
+
+### Added
+- add --blossom for surgical non-tip commit amend
+
+### Changed
+- refactor(dc-fix): split fix-history.sh into 5 focused lib modules
+- refactor(dc-fix): extract blossom mode into lib/git/blossom.sh
+- chore: update git tree visualisation
+
 ## [0.5.8] - 2026-03-30 (re-release)
 
 ### Added
