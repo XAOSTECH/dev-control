@@ -42,7 +42,7 @@ RUN SRT_VERSION=$(curl -s https://api.github.com/repos/Haivision/srt/releases/la
     && git clone --depth 1 --branch ${SRT_VERSION} https://github.com/Haivision/srt.git /tmp/srt \
     && cd /tmp/srt && cmake -B build -DCMAKE_INSTALL_PREFIX=/usr/local \
     && cmake --build build -j$(nproc) && cmake --install build \
-    && rm -rf /tmp/srt && ldconfig
+    && cd / && rm -rf /tmp/srt && ldconfig
 
 # Install nv-codec-headers for NVENC/NVDEC
 RUN git clone --depth 1 https://github.com/FFmpeg/nv-codec-headers.git /tmp/nv-codec-headers \

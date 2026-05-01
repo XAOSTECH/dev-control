@@ -37,7 +37,7 @@ RUN GLFW_VERSION=$(curl -s https://api.github.com/repos/glfw/glfw/releases/lates
         -DBUILD_SHARED_LIBS=ON \
     && cmake --build build \
     && cmake --install build \
-    && rm -rf /tmp/glfw \
+    && cd / && rm -rf /tmp/glfw \
     && ldconfig
 
 # Install CUDA Toolkit 13.1
