@@ -63,7 +63,7 @@ RUN wget https://github.com/conda-forge/miniforge/releases/latest/download/Minif
 ENV PATH="/opt/conda/bin:$PATH"
 
 # Create conda environment with scientific and bioinformatics stack (as root)
-RUN conda create -y -n datasci python=3.14 && \
+RUN conda create -y -n datasci python=3.12 && \
     conda run -n datasci conda install -y -c conda-forge \
     numpy scipy scikit-learn scikit-image \
     pandas polars dask \
