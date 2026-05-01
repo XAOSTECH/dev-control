@@ -38,7 +38,8 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Build SRT from source
-RUN git clone --depth 1 --branch v1.5.4 https://github.com/Haivision/srt.git /tmp/srt \
+RUN SRT_VERSION=$(curl -s https://api.github.com/repos/Haivision/srt/releases/latest | jq -r '.tag_name') \
+    && git clone --depth 1 --branch ${SRT_VERSION} https://github.com/Haivision/srt.git /tmp/srt \
     && cd /tmp/srt && cmake -B build -DCMAKE_INSTALL_PREFIX=/usr/local \
     && cmake --build build -j$(nproc) && cmake --install build \
     && rm -rf /tmp/srt && ldconfig
@@ -66,9 +67,10 @@ RUN apt-get update && apt-get install -y libpcre3-dev libssl-dev zlib1g-dev \
     && rm -rf /var/lib/apt/lists/* \
     && git clone --depth 1 https://github.com/arut/nginx-rtmp-module.git /tmp/nginx-rtmp \
     && curl -fsSL https://nginx.org/keys/nginx_signing.key | gpg --import \
-    && curl -sLO https://nginx.org/download/nginx-1.27.3.tar.gz \
-    && tar -xzf nginx-1.27.3.tar.gz -C /tmp && rm nginx-1.27.3.tar.gz \
-    && cd /tmp/nginx-1.27.3 && ./configure \
+    && NGINX_VERSION=$(curl -s https://nginx.org/en/download.html | grep -oP '(?<=nginx-)[0-9]+\.[0-9]+\.[0-9]+(?=\.tar\.gz)' | sort -V | tail -1) \
+    && curl -sLO https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz \
+    && tar -xzf nginx-${NGINX_VERSION}.tar.gz -C /tmp && rm nginx-${NGINX_VERSION}.tar.gz \
+    && cd /tmp/nginx-${NGINX_VERSION} && ./configure \
         --prefix=/usr/local/nginx \
         --with-http_ssl_module --with-http_v2_module \
         --with-http_realip_module --with-http_stub_status_module \
@@ -100,8 +102,8 @@ RUN apt-get update && apt-get install -y \
     bc sqlite3 \
     && rm -rf /var/lib/apt/lists/*
 
-# Install ONNX Runtime 1.20.1 GPU
-RUN ONNX_VERSION="1.20.1" \
+# Install ONNX Runtime GPU (latest)
+RUN ONNX_VERSION=$(curl -s https://api.github.com/repos/microsoft/onnxruntime/releases/latest | jq -r '.tag_name' | tr -d 'v') \
     && curl -fsSL "https://github.com/microsoft/onnxruntime/releases/download/v${ONNX_VERSION}/onnxruntime-linux-x64-gpu-${ONNX_VERSION}.tgz" -o /tmp/onnxruntime.tgz \
     && tar -xzf /tmp/onnxruntime.tgz -C /opt \
     && mv /opt/onnxruntime-linux-x64-gpu-${ONNX_VERSION} /opt/onnxruntime \

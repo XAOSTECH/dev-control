@@ -63,7 +63,7 @@ RUN wget https://github.com/conda-forge/miniforge/releases/latest/download/Minif
 ENV PATH="/opt/conda/bin:$PATH"
 
 # Create conda environment with scientific and bioinformatics stack (as root)
-RUN conda create -y -n datasci python=3.11 && \
+RUN conda create -y -n datasci python=3.14 && \
     conda run -n datasci conda install -y -c conda-forge \
     numpy scipy scikit-learn scikit-image \
     pandas polars dask \
@@ -78,7 +78,7 @@ RUN conda create -y -n datasci python=3.11 && \
 
 # Install PyTorch and TensorFlow in conda env (separate to manage dependencies)
 RUN conda run -n datasci pip install --no-cache-dir \
-    torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu124 \
+    torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu126 \
     tensorflow[and-cuda] pytorch-lightning \
     transformers huggingface-hub
 

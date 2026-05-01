@@ -528,7 +528,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Build SRT from source (not in Ubuntu 24.04 repos)
-RUN cd /tmp && git clone --depth 1 --branch v1.5.4 https://github.com/Haivision/srt.git \
+RUN SRT_VERSION=$(curl -s https://api.github.com/repos/Haivision/srt/releases/latest | jq -r '.tag_name') \
+    && cd /tmp && git clone --depth 1 --branch ${SRT_VERSION} https://github.com/Haivision/srt.git \
     && cd srt && mkdir build && cd build \
     && cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local -DENABLE_SHARED=ON -DENABLE_STATIC=OFF \
     && make -j$(nproc) && make install && ldconfig \
@@ -562,13 +563,14 @@ DOCKERFILE_EOF
         if [[ "$CFG_INSTALL_NGINX_RTMP" == "true" ]]; then
             cat >> "$dockerfile_path" << 'DOCKERFILE_EOF'
 
-# Build NGINX with RTMP module (mainline 1.29.x with GPG verification)
+# Build NGINX with RTMP module (latest mainline with GPG verification)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpcre3-dev libssl-dev libgeoip-dev \
     && rm -rf /var/lib/apt/lists/* \
     && cd /tmp \
-    && curl -fsSL --retry 5 --retry-delay 10 -o nginx.tar.gz https://nginx.org/download/nginx-1.29.0.tar.gz \
-    && curl -fsSL --retry 5 --retry-delay 10 -o nginx.tar.gz.asc https://nginx.org/download/nginx-1.29.0.tar.gz.asc \
+    && NGINX_VERSION=$(curl -s https://nginx.org/en/download.html | grep -oP '(?<=nginx-)[0-9]+\.[0-9]+\.[0-9]+(?=\.tar\.gz)' | sort -V | tail -1) \
+    && curl -fsSL --retry 5 --retry-delay 10 -o nginx.tar.gz https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz \
+    && curl -fsSL --retry 5 --retry-delay 10 -o nginx.tar.gz.asc https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz.asc \
     && gpg --batch --keyserver hkps://keyserver.ubuntu.com --recv-keys \
         B0F4253373F8F6F510D42178520A9993A1C052F8 \
         43387825DDB1BB97EC36BA5D007C8D7C15D87369 \
@@ -578,7 +580,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && gpg --batch --verify nginx.tar.gz.asc nginx.tar.gz \
     && tar -xzf nginx.tar.gz \
     && git clone --depth 1 https://github.com/arut/nginx-rtmp-module.git \
-    && cd nginx-1.29.0 \
+    && cd nginx-${NGINX_VERSION} \
     && ./configure --prefix=/usr/local/nginx \
         --with-http_ssl_module --with-http_v2_module --with-http_realip_module \
         --with-http_geoip_module --with-stream --with-stream_ssl_module \
