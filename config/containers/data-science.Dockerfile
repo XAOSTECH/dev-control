@@ -54,10 +54,11 @@ RUN R --vanilla -e "install.packages(c('BiocManager', 'tidyverse', 'ggplot2', 'g
     && R --vanilla -e "BiocManager::install(c('phyloseq', 'dada2', 'DESeq2', 'limma', 'edgeR', 'igraph'), ask=FALSE)" \
     && R --vanilla -e "install.packages('vegan', repos='http://cran.r-project.org')"
 
-# Install Miniforge (lightweight conda) as root
+# Install Miniforge (lightweight conda) as root, then update conda itself to latest
 RUN wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh -O /tmp/miniforge.sh && \
     bash /tmp/miniforge.sh -b -p /opt/conda && \
     rm /tmp/miniforge.sh && \
+    /opt/conda/bin/conda update -n base -c conda-forge conda -y && \
     /opt/conda/bin/conda clean -afy
 
 ENV PATH="/opt/conda/bin:$PATH"
