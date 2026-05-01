@@ -78,7 +78,7 @@ RUN mkdir -p \
         /home/${CATEGORY}/.cache \
         /home/${CATEGORY}/.config \
         /home/${CATEGORY}/.devcontainer && \
-    chmod 775 /home/${CATEGORY}/.vscode-server && \
+    chmod 777 /home/${CATEGORY}/.vscode-server && \
     chmod 700 /home/${CATEGORY}/.bash_backups && \
     chmod 700 /home/${CATEGORY}/.gnupg && \
     chmod 700 /home/${CATEGORY}/.ssh && \
