@@ -22,18 +22,18 @@ RUN if id ubuntu &>/dev/null; then \
     echo "${CATEGORY} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
     mkdir -p /home/${CATEGORY}/.config /home/${CATEGORY}/.cache /home/${CATEGORY}/.local/share && \
     touch /home/${CATEGORY}/.hushlogin /home/${CATEGORY}/.bashrc && \
-    chown -R ${CATEGORY}:${CATEGORY} /home/${CATEGORY} && \
+    chown -R 1000:1000 /home/${CATEGORY} && \
     chmod 755 /home/${CATEGORY} && \
     rm -rf /root/.gnupg /home/${CATEGORY}/.gnupg
 
+# Configure nvm for user shell and GPG_TTY (run as root with explicit path — avoids
+# UID name resolution instability in rootless podman layer snapshots)
+RUN echo 'export NVM_DIR="/opt/nvm"' >> /home/${CATEGORY}/.bashrc && \
+    echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> /home/${CATEGORY}/.bashrc && \
+    echo 'export GPG_TTY=$(tty)' >> /home/${CATEGORY}/.bashrc
+
 USER ${CATEGORY}
 WORKDIR /home/${CATEGORY}
-
-# Configure nvm for user shell (installed system-wide in common layer)
-# Set GPG_TTY correctly for interactive shells (must be evaluated at runtime, not baked in).
-RUN echo 'export NVM_DIR="/opt/nvm"' >> ~/.bashrc && \
-    echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> ~/.bashrc && \
-    echo 'export GPG_TTY=$(tty)' >> ~/.bashrc
 
 # Install dev-control system-wide to /opt
 USER root
@@ -70,7 +70,7 @@ RUN mkdir -p \
         /home/${CATEGORY}/.cache \
         /home/${CATEGORY}/.config \
         /home/${CATEGORY}/.devcontainer && \
-    chown -R ${CATEGORY}:${CATEGORY} \
+    chown -R 1000:1000 \
         /home/${CATEGORY}/.vscode-server \
         /home/${CATEGORY}/.bash_backups \
         /home/${CATEGORY}/.gnupg \
