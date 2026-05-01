@@ -21,14 +21,13 @@ RUN if id ubuntu &>/dev/null; then \
     usermod -aG sudo ${CATEGORY} && \
     echo "${CATEGORY} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
     mkdir -p /home/${CATEGORY}/.config /home/${CATEGORY}/.cache /home/${CATEGORY}/.local/share && \
+    touch /home/${CATEGORY}/.hushlogin /home/${CATEGORY}/.bashrc && \
     chown -R ${CATEGORY}:${CATEGORY} /home/${CATEGORY} && \
     chmod 755 /home/${CATEGORY} && \
     rm -rf /root/.gnupg /home/${CATEGORY}/.gnupg
 
 USER ${CATEGORY}
 WORKDIR /home/${CATEGORY}
-
-RUN touch ~/.hushlogin ~/.bashrc
 
 # Configure nvm for user shell (installed system-wide in common layer)
 # Set GPG_TTY correctly for interactive shells (must be evaluated at runtime, not baked in).
