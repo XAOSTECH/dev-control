@@ -5,6 +5,23 @@ All notable changes to Dev-Control will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.9] - 2026-05-01 (re-release)
+
+### Added
+- bind ephemeral GPG key to fixtures so signing is testable
+- add deterministic test-repo recycler
+- add --blossom for surgical non-tip commit amend
+
+### Fixed
+- use 1000:1000 for chown and move bashrc writes to root in footer.Dockerfile
+- create .hushlogin/.bashrc as root before USER switch in footer.Dockerfile
+
+### Changed
+- chore: update CHANGELOG for v0.5.9
+- refactor(dc-fix): split fix-history.sh into 5 focused lib modules
+- refactor(dc-fix): extract blossom mode into lib/git/blossom.sh
+- chore: update git tree visualisation
+
 ## [0.5.9] - 2026-04-27
 
 ### Added
