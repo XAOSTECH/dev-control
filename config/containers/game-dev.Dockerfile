@@ -25,8 +25,9 @@ RUN apt-get update && apt-get install -y \
     libdecor-0-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Build GLFW 3.4 from source with native Wayland support
-RUN git clone --depth 1 --branch 3.4 https://github.com/glfw/glfw.git /tmp/glfw \
+# Build GLFW (latest) from source with native Wayland support
+RUN GLFW_VERSION=$(curl -s https://api.github.com/repos/glfw/glfw/releases/latest | jq -r '.tag_name') \
+    && git clone --depth 1 --branch ${GLFW_VERSION} https://github.com/glfw/glfw.git /tmp/glfw \
     && cd /tmp/glfw \
     && cmake -B build -G Ninja \
         -DCMAKE_BUILD_TYPE=Release \
