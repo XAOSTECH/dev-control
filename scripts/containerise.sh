@@ -771,7 +771,7 @@ generate_devcontainer_json() {
     # at container start. That prevents the devcontainers CLI from creating its session
     # staging dir (/tmp/devcontainers-<session>/) which in turn blocks postCreateCommand
     # from ever running. A tmpfs mount guarantees 1777 at container start regardless.
-    local run_args="\"--tmpfs=/tmp:exec,nosuid,size=512m\""
+    local run_args="\"--tmpfs=/tmp:exec,nosuid,size=512m,mode=1777\""
     if [[ "$CFG_ENABLE_NVIDIA_DEVICES" == "true" ]]; then
         run_args+=",\"--shm-size=1g\",\"--device=/dev/dri\",\"--device=/dev/nvidia0\",\"--device=/dev/nvidiactl\",\"--device=/dev/nvidia-modeset\",\"--device=/dev/nvidia-uvm\",\"--device=/dev/nvidia-uvm-tools\""
     fi
@@ -779,7 +779,7 @@ generate_devcontainer_json() {
     # Streaming category: Always enable NVIDIA devices and DRI/KMS access.
     # Do not hard-require a specific USB video node at start time.
     if [[ "$category" == "streaming" ]]; then
-        run_args="\"--tmpfs=/tmp:exec,nosuid,size=512m\",\"--shm-size=1g\",\"--device=/dev/dri\",\"--device=/dev/nvidia0\",\"--device=/dev/nvidiactl\",\"--device=/dev/nvidia-modeset\",\"--device=/dev/nvidia-uvm\",\"--device=/dev/nvidia-uvm-tools\",\"--group-add=video\",\"--group-add=render\",\"--security-opt=label=disable\""
+        run_args="\"--tmpfs=/tmp:exec,nosuid,size=512m,mode=1777\",\"--shm-size=1g\",\"--device=/dev/dri\",\"--device=/dev/nvidia0\",\"--device=/dev/nvidiactl\",\"--device=/dev/nvidia-modeset\",\"--device=/dev/nvidia-uvm\",\"--device=/dev/nvidia-uvm-tools\",\"--group-add=video\",\"--group-add=render\",\"--security-opt=label=disable\""
     fi
     
     # Build extensions array (default + category-specific)
