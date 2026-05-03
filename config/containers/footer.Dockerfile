@@ -22,7 +22,6 @@ RUN if id ubuntu &>/dev/null; then \
     echo "${CATEGORY} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
     mkdir -p /home/${CATEGORY}/.config /home/${CATEGORY}/.cache /home/${CATEGORY}/.local/share && \
     touch /home/${CATEGORY}/.hushlogin /home/${CATEGORY}/.bashrc && \
-    chown -R ${CATEGORY}:${CATEGORY} /home/${CATEGORY} && \
     chmod 755 /home/${CATEGORY} && \
     rm -rf /root/.gnupg /home/${CATEGORY}/.gnupg
 
@@ -63,14 +62,6 @@ ENV PATH=/opt/nvm/versions/node/default/bin:${PATH}
 # BUILD_DATE busts this layer's cache on each build so permissions are always applied fresh.
 ARG BUILD_DATE
 RUN mkdir -p \
-        /home/${CATEGORY}/.vscode-server \
-        /home/${CATEGORY}/.bash_backups \
-        /home/${CATEGORY}/.gnupg \
-        /home/${CATEGORY}/.ssh \
-        /home/${CATEGORY}/.cache \
-        /home/${CATEGORY}/.config \
-        /home/${CATEGORY}/.devcontainer && \
-    chown -R ${CATEGORY}:${CATEGORY} \
         /home/${CATEGORY}/.vscode-server \
         /home/${CATEGORY}/.bash_backups \
         /home/${CATEGORY}/.gnupg \
