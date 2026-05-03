@@ -765,15 +765,21 @@ generate_devcontainer_json() {
     # user UID matches the host UID, so including it in runArgs causes duplication
     # (podman run --userns=keep-id --userns=keep-id) which breaks user namespace
     # mapping and produces EACCES errors on .gnupg / .ssh / .cache at runtime.
-    local run_args=""
+    #
+    # Always mount a fresh tmpfs on /tmp. Build-layer /tmp permissions are unreliable
+    # (fuse-overlayfs loses the sticky/world-write bits), so /tmp ends up 755 root:root
+    # at container start. That prevents the devcontainers CLI from creating its session
+    # staging dir (/tmp/devcontainers-<session>/) which in turn blocks postCreateCommand
+    # from ever running. A tmpfs mount guarantees 1777 at container start regardless.
+    local run_args="\"--tmpfs=/tmp:exec,nosuid,size=512m\""
     if [[ "$CFG_ENABLE_NVIDIA_DEVICES" == "true" ]]; then
-        run_args="\"--shm-size=1g\",\"--device=/dev/dri\",\"--device=/dev/nvidia0\",\"--device=/dev/nvidiactl\",\"--device=/dev/nvidia-modeset\",\"--device=/dev/nvidia-uvm\",\"--device=/dev/nvidia-uvm-tools\""
+        run_args+=",\"--shm-size=1g\",\"--device=/dev/dri\",\"--device=/dev/nvidia0\",\"--device=/dev/nvidiactl\",\"--device=/dev/nvidia-modeset\",\"--device=/dev/nvidia-uvm\",\"--device=/dev/nvidia-uvm-tools\""
     fi
     
     # Streaming category: Always enable NVIDIA devices and DRI/KMS access.
     # Do not hard-require a specific USB video node at start time.
     if [[ "$category" == "streaming" ]]; then
-        run_args="\"--shm-size=1g\",\"--device=/dev/dri\",\"--device=/dev/nvidia0\",\"--device=/dev/nvidiactl\",\"--device=/dev/nvidia-modeset\",\"--device=/dev/nvidia-uvm\",\"--device=/dev/nvidia-uvm-tools\",\"--group-add=video\",\"--group-add=render\",\"--security-opt=label=disable\""
+        run_args="\"--tmpfs=/tmp:exec,nosuid,size=512m\",\"--shm-size=1g\",\"--device=/dev/dri\",\"--device=/dev/nvidia0\",\"--device=/dev/nvidiactl\",\"--device=/dev/nvidia-modeset\",\"--device=/dev/nvidia-uvm\",\"--device=/dev/nvidia-uvm-tools\",\"--group-add=video\",\"--group-add=render\",\"--security-opt=label=disable\""
     fi
     
     # Build extensions array (default + category-specific)
@@ -862,7 +868,7 @@ generate_devcontainer_json() {
   "containerEnv": {
     ${container_env}
   },
-  "postCreateCommand": "sudo chown -R ${uid}:${uid} . 2>/dev/null || true && sudo chmod 755 /home/${remote_user} 2>/dev/null || true && sudo chown -R ${uid}:${uid} /home/${remote_user}/.vscode-server 2>/dev/null || true && sudo mkdir -p /home/${remote_user}/.gnupg /home/${remote_user}/.ssh /home/${remote_user}/.cache /home/${remote_user}/.config && sudo chown ${uid}:${uid} /home/${remote_user}/.gnupg /home/${remote_user}/.ssh /home/${remote_user}/.cache /home/${remote_user}/.config && sudo chmod 700 /home/${remote_user}/.gnupg /home/${remote_user}/.ssh && sudo chmod 755 /home/${remote_user}/.cache /home/${remote_user}/.config && sudo mkdir -p /run/user/${uid}/gnupg && sudo chown -R ${uid}:${uid} /run/user/${uid} 2>/dev/null || true && ln -sf /tmp/wayland-0 /run/user/${uid}/wayland-0 2>/dev/null || true${git_config_line} && bash -c 'bash /opt/dev-control/scripts/alias-loading.sh <<< A'",
+  "postCreateCommand": "sudo chown -R ${uid}:${uid} . 2>/dev/null || true && sudo chown ${uid}:${uid} /home/${remote_user} 2>/dev/null || true && sudo chmod 755 /home/${remote_user} 2>/dev/null || true && sudo chown -R ${uid}:${uid} /home/${remote_user}/.vscode-server 2>/dev/null || true && sudo mkdir -p /home/${remote_user}/.gnupg /home/${remote_user}/.ssh /home/${remote_user}/.cache /home/${remote_user}/.config && sudo chown ${uid}:${uid} /home/${remote_user}/.gnupg /home/${remote_user}/.ssh /home/${remote_user}/.cache /home/${remote_user}/.config && sudo chmod 700 /home/${remote_user}/.gnupg /home/${remote_user}/.ssh && sudo chmod 755 /home/${remote_user}/.cache /home/${remote_user}/.config && sudo mkdir -p /run/user/${uid}/gnupg && sudo chown -R ${uid}:${uid} /run/user/${uid} 2>/dev/null || true && ln -sf /tmp/wayland-0 /run/user/${uid}/wayland-0 2>/dev/null || true${git_config_line} && bash -c 'bash /opt/dev-control/scripts/alias-loading.sh <<< A'",
   "customizations": {
     "vscode": {
       "settings": {
