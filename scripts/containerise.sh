@@ -753,6 +753,12 @@ generate_devcontainer_json() {
         mounts+="\"source=/dev,target=/host-dev,type=bind,readonly\""
     fi
     
+    # Mount .vscode-server as a named volume so VS Code server files are written
+    # at runtime (not build time), bypassing fuse-overlayfs layer commit issues
+    # on NTFS-backed graphRoot where build-time chown/chmod silently fail.
+    if [[ -n "$mounts" ]]; then mounts+=","; fi
+    mounts+="\"source=${remote_user}-vscode-server,target=/home/${remote_user}/.vscode-server,type=volume\""
+
     # Build NVIDIA device mounts if enabled.
     # Note: --userns=keep-id is intentionally omitted here.
     # VS Code Dev Containers automatically adds it for Podman when the container
