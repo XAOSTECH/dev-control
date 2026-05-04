@@ -753,11 +753,22 @@ generate_devcontainer_json() {
         mounts+="\"source=/dev,target=/host-dev,type=bind,readonly\""
     fi
     
-    # Mount .vscode-server as a named volume so VS Code server files are written
-    # at runtime (not build time), bypassing fuse-overlayfs layer commit issues
-    # on NTFS-backed graphRoot where build-time chown/chmod silently fail.
+    # Mount .vscode-server, .gnupg, .ssh, and .cache as named volumes so their
+    # contents are written at runtime (not build time), bypassing fuse-overlayfs
+    # layer commit issues on NTFS-backed graphRoot where build-time chown/chmod
+    # silently fail. VS Code tries to create sockets in .gnupg and mkdir inside
+    # .cache before postCreateCommand runs, so both must be writable from the
+    # very first moment the container starts.
     if [[ -n "$mounts" ]]; then mounts+=","; fi
     mounts+="\"source=${remote_user}-vscode-server,target=/home/${remote_user}/.vscode-server,type=volume\""
+    mounts+=",\"source=${remote_user}-gnupg,target=/home/${remote_user}/.gnupg,type=volume\""
+    mounts+=",\"source=${remote_user}-ssh,target=/home/${remote_user}/.ssh,type=volume\""
+    mounts+=",\"source=${remote_user}-cache,target=/home/${remote_user}/.cache,type=volume\""
+    # .devcontainer must also be a named volume: the devcontainers CLI writes its
+    # lifecycle marker files (.onCreateCommandMarker, .postCreateCommandMarker, …)
+    # there before postCreateCommand runs.  Without a writable volume the markers
+    # can never be created and postCreate is silently skipped every time.
+    mounts+=",\"source=${remote_user}-devcontainer,target=/home/${remote_user}/.devcontainer,type=volume\""
 
     # Build NVIDIA device mounts if enabled.
     # Note: --userns=keep-id is intentionally omitted here.
