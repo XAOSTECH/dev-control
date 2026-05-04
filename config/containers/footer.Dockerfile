@@ -77,34 +77,11 @@ RUN mkdir -p \
     chmod 755 /home/${CATEGORY}/.config && \
     chmod 700 /home/${CATEGORY}/.devcontainer
 
-# Root entrypoint: repairs filesystem bits stripped by fuse-overlayfs on
-# NTFS-backed graphRoot (loses setuid + ownership across layer commits).
-# Runs once at container start, then exec's the original command (VS Code's
-# overrideCommand sleep loop). VS Code's exec sessions still attach as
-# remoteUser=${CATEGORY} per devcontainer.json — only the long-running PID 1
-# is root, which is required to restore the bits below.
-RUN printf '%s\n' \
-    '#!/bin/sh' \
-    'set -e' \
-    'chmod u+s /usr/bin/sudo 2>/dev/null || true' \
-    'chown 1000:1000 /home/${CATEGORY} 2>/dev/null || true' \
-    'chmod 755 /home/${CATEGORY} 2>/dev/null || true' \
-    'chmod 700 /home/${CATEGORY}/.gnupg /home/${CATEGORY}/.ssh 2>/dev/null || true' \
-    'exec "$@"' \
-    > /usr/local/bin/dc-entrypoint.sh && \
-    chmod 755 /usr/local/bin/dc-entrypoint.sh
-
 # Metadata label for container discovery and category identification
 LABEL dev-control.category="${CATEGORY}" \
       dev-control.type="base-image" \
       dev-control.source="https://github.com/xaostech/dev-control"
 
-# NOTE: No final `USER ${CATEGORY}` directive. The container's PID 1 must run
-# as root so the ENTRYPOINT can restore setuid on /usr/bin/sudo and ownership
-# of /home/${CATEGORY} (both lost by fuse-overlayfs on NTFS). VS Code's
-# remoteUser=${CATEGORY} setting in devcontainer.json controls who interactive
-# shells run as — independent of the container's PID 1 user.
-ENTRYPOINT ["/usr/local/bin/dc-entrypoint.sh"]
-CMD ["sleep", "infinity"]
+USER ${CATEGORY}
 
 WORKDIR /workspaces

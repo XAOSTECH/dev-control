@@ -866,7 +866,6 @@ generate_devcontainer_json() {
   "name": "${project_name^^}",
   ${image_or_build}
   "remoteUser": "${remote_user}",
-  "overrideCommand": false,
   "workspaceMount": "source=\${localWorkspaceFolder},target=/workspaces/${project_name},type=bind,consistency=cached",
   "workspaceFolder": "/workspaces/${project_name}",
   ${run_args_block}
@@ -876,7 +875,7 @@ generate_devcontainer_json() {
   "containerEnv": {
     ${container_env}
   },
-  "postCreateCommand": "sudo chown -R ${uid}:${uid} . 2>/dev/null || true && sudo chmod 700 /home/${remote_user}/.gnupg /home/${remote_user}/.ssh 2>/dev/null || true && sudo mkdir -p /run/user/${uid}/gnupg && sudo chown -R ${uid}:${uid} /run/user/${uid} 2>/dev/null || true && ln -sf /tmp/wayland-0 /run/user/${uid}/wayland-0 2>/dev/null || true${git_config_line} && bash -c 'bash /opt/dev-control/scripts/alias-loading.sh <<< A'",
+  "postCreateCommand": "CID=$(cat /etc/hostname) && docker exec -u root $CID chmod u+s /usr/bin/sudo 2>/dev/null || true && docker exec -u root $CID chown ${uid}:${uid} /home/${remote_user} 2>/dev/null || true && docker exec -u root $CID chmod 755 /home/${remote_user} 2>/dev/null || true && docker exec -u root $CID chmod 700 /home/${remote_user}/.gnupg /home/${remote_user}/.ssh 2>/dev/null || true && sudo chown -R ${uid}:${uid} . 2>/dev/null || true && sudo mkdir -p /run/user/${uid}/gnupg && sudo chown -R ${uid}:${uid} /run/user/${uid} 2>/dev/null || true && ln -sf /tmp/wayland-0 /run/user/${uid}/wayland-0 2>/dev/null || true${git_config_line} && bash -c 'bash /opt/dev-control/scripts/alias-loading.sh <<< A'",
   "customizations": {
     "vscode": {
       "settings": {
