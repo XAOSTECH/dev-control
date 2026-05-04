@@ -42,3 +42,16 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | d
     && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" > /etc/apt/sources.list.d/github-cli.list \
     && apt-get update && apt-get install -y gh \
     && rm -rf /var/lib/apt/lists/*
+
+# Install docker CLI (static binary, no daemon). Required by postCreateCommand
+# to issue `docker exec -u root` calls against the mounted podman socket so it
+# can repair filesystem bits that fuse-overlayfs strips on NTFS-backed graphRoot
+# (setuid on /usr/bin/sudo, ownership of /home/${CATEGORY}). Without this,
+# postCreate cannot elevate privileges because sudo's setuid bit is missing.
+RUN DOCKER_VERSION=$(curl -fsSL https://download.docker.com/linux/static/stable/x86_64/ \
+        | grep -oE 'docker-[0-9]+\.[0-9]+\.[0-9]+\.tgz' | sort -V | tail -1) \
+    && curl -fsSL "https://download.docker.com/linux/static/stable/x86_64/${DOCKER_VERSION}" -o /tmp/docker.tgz \
+    && tar -xzf /tmp/docker.tgz -C /tmp \
+    && mv /tmp/docker/docker /usr/local/bin/docker \
+    && chmod 755 /usr/local/bin/docker \
+    && rm -rf /tmp/docker /tmp/docker.tgz
