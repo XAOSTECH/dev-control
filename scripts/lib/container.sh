@@ -762,9 +762,10 @@ DOCKERFILE_GROUPS
             cat << DOCKERFILE_STREAMING_GROUPS
 
 # Add ${category} to video and render groups for DRI/KMS access
+# (USER directive intentionally omitted: footer's ENTRYPOINT requires PID 1
+# to remain root so it can restore setuid/ownership lost by fuse-overlayfs.)
 USER root
 RUN usermod -aG video,render ${category}
-USER ${category}
 DOCKERFILE_STREAMING_GROUPS
         fi
         

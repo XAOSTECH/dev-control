@@ -753,22 +753,18 @@ generate_devcontainer_json() {
         mounts+="\"source=/dev,target=/host-dev,type=bind,readonly\""
     fi
     
-    # Mount .vscode-server, .gnupg, .ssh, and .cache as named volumes so their
-    # contents are written at runtime (not build time), bypassing fuse-overlayfs
-    # layer commit issues on NTFS-backed graphRoot where build-time chown/chmod
-    # silently fail. VS Code tries to create sockets in .gnupg and mkdir inside
-    # .cache before postCreateCommand runs, so both must be writable from the
-    # very first moment the container starts.
+    # User-writable dirs as named volumes with U=true (chown to container user on
+    # mount). Required because fuse-overlayfs on NTFS-backed graphRoot loses mode
+    # bits and ownership across layer commits, so build-time chown/chmod on these
+    # paths is unreliable. Volumes also avoid the fuse-overlayfs layer entirely.
+    # .devcontainer holds VS Code lifecycle markers (.postCreateCommandMarker etc.)
+    # which must be writable before postCreate runs, or postCreate is silently skipped.
     if [[ -n "$mounts" ]]; then mounts+=","; fi
-    mounts+="\"source=${remote_user}-vscode-server,target=/home/${remote_user}/.vscode-server,type=volume\""
-    mounts+=",\"source=${remote_user}-gnupg,target=/home/${remote_user}/.gnupg,type=volume\""
-    mounts+=",\"source=${remote_user}-ssh,target=/home/${remote_user}/.ssh,type=volume\""
-    mounts+=",\"source=${remote_user}-cache,target=/home/${remote_user}/.cache,type=volume\""
-    # .devcontainer must also be a named volume: the devcontainers CLI writes its
-    # lifecycle marker files (.onCreateCommandMarker, .postCreateCommandMarker, …)
-    # there before postCreateCommand runs.  Without a writable volume the markers
-    # can never be created and postCreate is silently skipped every time.
-    mounts+=",\"source=${remote_user}-devcontainer,target=/home/${remote_user}/.devcontainer,type=volume\""
+    mounts+="\"source=${remote_user}-vscode-server,target=/home/${remote_user}/.vscode-server,type=volume,U=true\""
+    mounts+=",\"source=${remote_user}-gnupg,target=/home/${remote_user}/.gnupg,type=volume,U=true\""
+    mounts+=",\"source=${remote_user}-ssh,target=/home/${remote_user}/.ssh,type=volume,U=true\""
+    mounts+=",\"source=${remote_user}-cache,target=/home/${remote_user}/.cache,type=volume,U=true\""
+    mounts+=",\"source=${remote_user}-devcontainer,target=/home/${remote_user}/.devcontainer,type=volume,U=true\""
 
     # Build NVIDIA device mounts if enabled.
     # Note: --userns=keep-id is intentionally omitted here.
@@ -870,6 +866,7 @@ generate_devcontainer_json() {
   "name": "${project_name^^}",
   ${image_or_build}
   "remoteUser": "${remote_user}",
+  "overrideCommand": false,
   "workspaceMount": "source=\${localWorkspaceFolder},target=/workspaces/${project_name},type=bind,consistency=cached",
   "workspaceFolder": "/workspaces/${project_name}",
   ${run_args_block}
@@ -879,7 +876,7 @@ generate_devcontainer_json() {
   "containerEnv": {
     ${container_env}
   },
-  "postCreateCommand": "sudo chown -R ${uid}:${uid} . 2>/dev/null || true && sudo chown ${uid}:${uid} /home/${remote_user} 2>/dev/null || true && sudo chmod 755 /home/${remote_user} 2>/dev/null || true && sudo chown -R ${uid}:${uid} /home/${remote_user}/.vscode-server 2>/dev/null || true && sudo mkdir -p /home/${remote_user}/.gnupg /home/${remote_user}/.ssh /home/${remote_user}/.cache /home/${remote_user}/.config && sudo chown ${uid}:${uid} /home/${remote_user}/.gnupg /home/${remote_user}/.ssh /home/${remote_user}/.cache /home/${remote_user}/.config && sudo chmod 700 /home/${remote_user}/.gnupg /home/${remote_user}/.ssh && sudo chmod 755 /home/${remote_user}/.cache /home/${remote_user}/.config && sudo mkdir -p /run/user/${uid}/gnupg && sudo chown -R ${uid}:${uid} /run/user/${uid} 2>/dev/null || true && ln -sf /tmp/wayland-0 /run/user/${uid}/wayland-0 2>/dev/null || true${git_config_line} && bash -c 'bash /opt/dev-control/scripts/alias-loading.sh <<< A'",
+  "postCreateCommand": "sudo chown -R ${uid}:${uid} . 2>/dev/null || true && sudo chmod 700 /home/${remote_user}/.gnupg /home/${remote_user}/.ssh 2>/dev/null || true && sudo mkdir -p /run/user/${uid}/gnupg && sudo chown -R ${uid}:${uid} /run/user/${uid} 2>/dev/null || true && ln -sf /tmp/wayland-0 /run/user/${uid}/wayland-0 2>/dev/null || true${git_config_line} && bash -c 'bash /opt/dev-control/scripts/alias-loading.sh <<< A'",
   "customizations": {
     "vscode": {
       "settings": {
