@@ -55,12 +55,12 @@ RUN echo 'export NVM_DIR=/opt/nvm && [ -s "$NVM_DIR/nvm.sh" ] && source "$NVM_DI
 
 ENV PATH=/opt/nvm/versions/node/default/bin:${PATH}
 
-# Pre-create directories with proper permissions before VS Code init runs.
-# VS Code's container setup (pre-postCreateCommand) creates missing dirs as root,
-# which permanently breaks writability for the container user.
-# Pre-creating here with correct ownership prevents that race condition.
-# BUILD_DATE busts this layer's cache on each build so permissions are always applied fresh.
-ARG BUILD_DATE
+# Pre-create directories so VS Code never creates them as root before postCreate runs.
+# All of these are also mounted as named volumes at runtime, so fuse-overlayfs xattr
+# failures on NTFS-backed graphRoot cannot affect writability — but having them in the
+# image prevents any fallback path that would create them root-owned.
+# No ARG BUILD_DATE cache-buster: all affected dirs are named volumes, so runtime
+# permissions are correct regardless of image layer cache age.
 RUN mkdir -p \
         /home/${CATEGORY}/.vscode-server \
         /home/${CATEGORY}/.bash_backups \
