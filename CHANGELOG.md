@@ -5,6 +5,33 @@ All notable changes to Dev-Control will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.9] - 2026-05-04 (re-release)
+
+### Added
+- bind ephemeral GPG key to fixtures so signing is testable
+- add deterministic test-repo recycler
+- add --blossom for surgical non-tip commit amend
+
+### Fixed
+- add mode=1777 to tmpfs mount to override tmpcopyup
+- mount tmpfs on /tmp and chown home dir in postCreate
+- mount .vscode-server as named volume to bypass fuse-overlayfs NTFS xattr failure
+- revert chown 1000:1000 back to ${CATEGORY}:${CATEGORY} in footer.Dockerfile
+- chmod 777 .vscode-server to survive userns=keep-id build/run namespace mismatch
+- revert conda env to python=3.12; pybedtools/HTSeq have no 3.14 builds in conda-forge/bioconda
+- cd / before rm -rf of build dirs to prevent getcwd() hang
+- use 1000:1000 for chown and move bashrc writes to root in footer.Dockerfile
+- create .hushlogin/.bashrc as root before USER switch in footer.Dockerfile
+
+### Changed
+- chore: update conda to latest after Miniforge install in data-science build
+- chore: replace pinned versions with dynamic latest fetches
+- chore: update CHANGELOG for v0.5.9 (re-release)
+- chore: update CHANGELOG for v0.5.9
+- refactor(dc-fix): split fix-history.sh into 5 focused lib modules
+- refactor(dc-fix): extract blossom mode into lib/git/blossom.sh
+- chore: update git tree visualisation
+
 ## [0.5.9] - 2026-05-01 (re-release)
 
 ### Added
