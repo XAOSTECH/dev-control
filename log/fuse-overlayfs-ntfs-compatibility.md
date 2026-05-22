@@ -2,6 +2,17 @@
 
 > Operational log of the rootless-podman-on-NTFS investigation. Steps required to keep the `containerise.sh` flow working across NTFS driver choices and `fuse-overlayfs` versions.
 
+## Index of recorded NTFS-related issues
+
+Observations against an NTFS-backed graphRoot. Chronological, discrete data points with reference commits that are in this repository's history.
+
+| # | Observation | Recorded in | Workaround applied at the time |
+|---|---|---|---|
+| 1 | Build-time `chown` / `chmod` on `.vscode-server` did not persist across layer commits on NTFS-backed graphRoot | `7fca3b5` | Move `.vscode-server` to a named volume so VS Code populates it at container runtime instead of during the image build |
+| 2 | `/usr/bin/sudo` setuid bit absent and `/home/${CATEGORY}` not writable at first runtime | `42d33f2` | Bake a root-owned `dc-entrypoint.sh` as PID 1 that runs `chmod u+s /usr/bin/sudo`, `chown 1000:1000 /home/${CATEGORY}`, `chmod 755 /home/${CATEGORY}`, `chmod 700 .gnupg .ssh` before exec'ing the original CMD |
+| 3 | Same class of perms damage observed after entrypoint stage; repaired via runtime `docker exec` against the podman socket inside `postCreateCommand` | `dbdbd98`, `8fb8901` | `docker exec -u root \$CID chmod u+s /usr/bin/sudo` and `chown` of `/home/<remote_user>` from the dev container's `postCreateCommand` |
+| 4 | `fuse-overlayfs` binary on Ubuntu 26.04 self-reports `1.13-dev`; mode bits (incl. setuid on `/usr/bin/sudo`) and `/home/<user>` ownership do not survive layer commits | (see [§ 1.13-dev xattr regression](#the-fuse-overlayfs-113-dev-xattr-regression)) | Switch `mount_program` to upstream v1.16 at `/usr/local/bin/fuse-overlayfs` + `podman system reset -f` |
+
 ## TL;DR
 
 ```
@@ -13,7 +24,7 @@ podman ──▶ fuse-overlayfs (userspace) ──▶ user.* xattrs ──▶ NT
                  └── only the `1.13-dev` binary is known to misbehave (see below)
 ```
 
-Project is **driver-agnostic** at the NTFS layer and **largely version-agnostic** for `fuse-overlayfs` itself: the flow has worked on releases ranging from `1.7.x` through current upstream. The single known regression is the `1.13-dev` development snapshot, which strips mode bits on `copy_up`. Anything that is not that specific snapshot - older stable releases, or `1.14+` - has worked here.
+Project is **driver-agnostic** at the NTFS layer and **largely version-agnostic** for `fuse-overlayfs` itself: the flow has worked on releases ranging from `1.7.x` through current upstream.
 
 ## The fuse-overlayfs 1.13-dev xattr regression
 
@@ -26,11 +37,20 @@ Verified data points so far:
 | resolute (26.04 LTS) | `fuse-overlayfs 1.14-1build2` | `1.13-dev` | **confirmed broken on this host** |
 | noble, stonking, others | (per `packages.ubuntu.com`) | not measured | unverified |
 
-The `1.13-dev` binary predates the xattr-permission fixes from PRs [#408](https://github.com/containers/fuse-overlayfs/pull/408) / [#409](https://github.com/containers/fuse-overlayfs/pull/409) / [#410](https://github.com/containers/fuse-overlayfs/pull/410) (issue [containers/fuse-overlayfs#407](https://github.com/containers/fuse-overlayfs/issues/407)), so when present it does strip mode bits on `copy_up`.
+The `1.13-dev` binary predates the xattr-permission fixes from PRs [#408](https://github.com/containers/fuse-overlayfs/pull/408) / [#409](https://github.com/containers/fuse-overlayfs/pull/409) / [#410](https://github.com/containers/fuse-overlayfs/pull/410) (issue [containers/fuse-overlayfs#407](https://github.com/containers/fuse-overlayfs/issues/407)). That issue documents a bug class in which `user.containers.override_stat` (the xattr fuse-overlayfs uses to emulate root-owned files in rootless mode) is dropped or corrupted during `copy_up`. The observed symptoms on this host - missing setuid on `/usr/bin/sudo`, wrong ownership on `/home/<user>`, mode `0755` on `.gnupg` - are the footprint that an override-stripping bug would leave behind. This is treated here as **highly probable root cause, consistent with all observed evidence and confirmed by the fix**, rather than formally proven on this machine via xattr inspection of a poisoned layer.
 
 **Diagnostic is the binary, not the package.** Run `fuse-overlayfs --version`; if it prints `1.13-dev`, treat the binary as suspect regardless of `apt` / `dpkg` metadata. If it prints anything else, no action needed.
 
 **Operational impact is small once diagnosed:** one line in `~/.config/containers/storage.conf` (`mount_program = "/usr/local/bin/fuse-overlayfs"` after installing the upstream binary) plus `podman system reset -f`.
+
+Optional belt-and-braces confirmation on this host (five minutes) - inspect a freshly-rebuilt upper layer for the expected xattr:
+
+```sh
+podman image inspect <fresh_image_tag> --format '{{.GraphDriver.Data.UpperDir}}'
+sudo getfattr -dm '.*' <that_path>/usr/bin/sudo 2>/dev/null \
+  | grep -E 'override_stat|opaque'
+# Expect to SEE user.containers.override_stat after the v1.16 rebuild.
+```
 
 | Symptom inside container | Real cause |
 |---|---|
@@ -111,24 +131,6 @@ rm -rf "$graphroot"/*         # residual .lock files are safe to remove
 | `force` | Mount RW despite dirty bit; journal still present | Writes near pending Windows transactions can corrupt; chkdsk will struggle later |
 | `nojournal` | Skip journal replay entirely | Silently discards any in-flight Windows transactions |
 | both | Maximum override | Use only for forensic recovery |
-
-## Compatibility within `containerise.sh`
-
-The flow makes **no NTFS-driver-specific decisions**. Same `storage.conf`, same Dockerfiles, same runtime behaviour regardless of `ntfs-3g` vs `ntfs3` under graphRoot, because every interaction with the on-disk layer goes through the `user.*` xattr API which both drivers expose identically.
-
-Switching the NTFS driver after a successful rebuild is safe:
-
-1. `podman stop -a`
-2. `umount /mnt/drive1 && mount /mnt/drive1`  (fstab change in between)
-3. Round-trip test:
-   ```sh
-   f=$(mktemp -p /mnt/drive1/.data/containers) \
-     && setfattr -n user.test -v hi "$f" \
-     && getfattr -n user.test "$f"; rm -f "$f"
-   ```
-4. Resume podman.
-
-No image rebuild required for the driver swap alone.
 
 ## Resolved / non-issues
 
