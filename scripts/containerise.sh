@@ -712,10 +712,7 @@ generate_devcontainer_json() {
     uid=$(id -u)
     
     if [[ "$CFG_MOUNT_GPG" == "true" ]]; then
-        # VS Code's Remote Containers extension automatically forwards the host gpg-agent
-        # socket into the container at ~/.gnupg/S.gpg-agent via its built-in forwarding.
-        # Mounting the raw socket file here would create a second competing path and
-        # also fails hard at container start if the host gpg-agent socket does not exist.
+        # VS Code's Remote Containers extension forwards the host gpg-agent socket into the container at ~/.gnupg/S.gpg-agent. A bind-mount here would create a second competing path and fails hard at container start if the host socket does not exist.
         : # GPG agent forwarding is handled by VS Code's built-in mechanism
     fi
     
@@ -748,43 +745,31 @@ generate_devcontainer_json() {
     if [[ "$category" == "streaming" ]]; then
         if [[ -n "$mounts" ]]; then mounts+=","; fi
         mounts+="\"source=/usr/lib/x86_64-linux-gnu/libnvidia-encode.so.1,target=/usr/lib/x86_64-linux-gnu/libnvidia-encode.so.1,type=bind,readonly\","
-        # Bind host /dev so late-attached capture devices are visible at /host-dev/*
-        # without forcing a hard --device path that can fail when unplugged.
+        # Bind host /dev so late-attached capture devices appear under /host-dev/* without a hard --device path that fails when unplugged.
         mounts+="\"source=/dev,target=/host-dev,type=bind,readonly\""
     fi
     
-    # User-writable dirs as named volumes with U=true (chown to container user on
-    # mount). Required because fuse-overlayfs on NTFS-backed graphRoot loses mode
-    # bits and ownership across layer commits, so build-time chown/chmod on these
-    # paths is unreliable. Volumes also avoid the fuse-overlayfs layer entirely.
-    # .devcontainer holds VS Code lifecycle markers (.postCreateCommandMarker etc.)
-    # which must be writable before postCreate runs, or postCreate is silently skipped.
+    # User-writable dirs as named volumes with U=true (chowns to container user on mount). Avoids fuse-overlayfs perm/ownership loss on NTFS graphRoot.
+    # Per-project (${remote_user}-${proj_slug}-*): .vscode-server, .devcontainer, .cache — must not be shared across projects on the same base image, or restored terminal sessions point at a stale cwd and the postCreate marker leaks across containers.
+    # Shared per-category (${remote_user}-*): .gnupg, .ssh — identity material is intentionally reused.
+    local proj_slug
+    proj_slug=$(basename "${PROJECT_PATH:-$(pwd)}" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9._-' '-')
     if [[ -n "$mounts" ]]; then mounts+=","; fi
-    mounts+="\"source=${remote_user}-vscode-server,target=/home/${remote_user}/.vscode-server,type=volume,U=true\""
+    mounts+="\"source=${remote_user}-${proj_slug}-vscode-server,target=/home/${remote_user}/.vscode-server,type=volume,U=true\""
     mounts+=",\"source=${remote_user}-gnupg,target=/home/${remote_user}/.gnupg,type=volume,U=true\""
     mounts+=",\"source=${remote_user}-ssh,target=/home/${remote_user}/.ssh,type=volume,U=true\""
-    mounts+=",\"source=${remote_user}-cache,target=/home/${remote_user}/.cache,type=volume,U=true\""
-    mounts+=",\"source=${remote_user}-devcontainer,target=/home/${remote_user}/.devcontainer,type=volume,U=true\""
+    mounts+=",\"source=${remote_user}-${proj_slug}-cache,target=/home/${remote_user}/.cache,type=volume,U=true\""
+    mounts+=",\"source=${remote_user}-${proj_slug}-devcontainer,target=/home/${remote_user}/.devcontainer,type=volume,U=true\""
 
     # Build NVIDIA device mounts if enabled.
-    # Note: --userns=keep-id is intentionally omitted here.
-    # VS Code Dev Containers automatically adds it for Podman when the container
-    # user UID matches the host UID, so including it in runArgs causes duplication
-    # (podman run --userns=keep-id --userns=keep-id) which breaks user namespace
-    # mapping and produces EACCES errors on .gnupg / .ssh / .cache at runtime.
-    #
-    # Always mount a fresh tmpfs on /tmp. Build-layer /tmp permissions are unreliable
-    # (fuse-overlayfs loses the sticky/world-write bits), so /tmp ends up 755 root:root
-    # at container start. That prevents the devcontainers CLI from creating its session
-    # staging dir (/tmp/devcontainers-<session>/) which in turn blocks postCreateCommand
-    # from ever running. A tmpfs mount guarantees 1777 at container start regardless.
+    # --userns=keep-id is intentionally omitted: VS Code Dev Containers auto-adds it for Podman when container UID matches host UID, so including it in runArgs duplicates the flag, breaks user namespace mapping, and produces EACCES on .gnupg / .ssh / .cache at runtime.
+    # The tmpfs on /tmp is always required: build-layer /tmp perms are unreliable on fuse-overlayfs (loses sticky/world-write bits → 755 root:root at start), which blocks the devcontainers CLI from staging its session dir and silently skips postCreateCommand. A tmpfs mount guarantees 1777 from the start.
     local run_args="\"--tmpfs=/tmp:exec,nosuid,size=512m,mode=1777\""
     if [[ "$CFG_ENABLE_NVIDIA_DEVICES" == "true" ]]; then
         run_args+=",\"--shm-size=1g\",\"--device=/dev/dri\",\"--device=/dev/nvidia0\",\"--device=/dev/nvidiactl\",\"--device=/dev/nvidia-modeset\",\"--device=/dev/nvidia-uvm\",\"--device=/dev/nvidia-uvm-tools\""
     fi
     
-    # Streaming category: Always enable NVIDIA devices and DRI/KMS access.
-    # Do not hard-require a specific USB video node at start time.
+    # Streaming category: always enable NVIDIA devices and DRI/KMS access. Do not hard-require a specific USB video node at start time.
     if [[ "$category" == "streaming" ]]; then
         run_args="\"--tmpfs=/tmp:exec,nosuid,size=512m,mode=1777\",\"--shm-size=1g\",\"--device=/dev/dri\",\"--device=/dev/nvidia0\",\"--device=/dev/nvidiactl\",\"--device=/dev/nvidia-modeset\",\"--device=/dev/nvidia-uvm\",\"--device=/dev/nvidia-uvm-tools\",\"--group-add=video\",\"--group-add=render\",\"--security-opt=label=disable\""
     fi
@@ -806,8 +791,7 @@ generate_devcontainer_json() {
     fi
     
     # Build container environment vars
-    # Note: GPG_TTY cannot be set here (tty is not known at JSON generation time).
-    # It is set correctly at shell startup via postCreateCommand or terminal init.
+    # GPG_TTY cannot be set here (tty unknown at JSON generation time); it is set at shell startup via postCreateCommand or terminal init.
     local container_env="\"GPG_KEY_ID\": \"${CFG_GPG_KEY_ID}\",
     \"GITHUB_USER\": \"${CFG_GITHUB_USER}\",
     \"DOCKER_HOST\": \"unix:///var/run/docker.sock\",
@@ -1211,12 +1195,7 @@ build_base_image() {
             print_info "Verify: ${CYAN}podman images | grep ${image_tag%%:*}${NC}"
             print_info "Use in other projects: ${CYAN}dc-contain --img --$category${NC}"
             echo ""
-            # Prune stale VS Code UID-wrapper images (vsc-*-uid).
-            # VS Code names these by a hash of devcontainer.json content, not the
-            # image digest. Podman's layer cache resolves the FROM mutable tag to
-            # the OLD digest when rebuilding, so the wrapper is silently built from
-            # the pre-fix base image. Pruning forces VS Code to rebuild the wrapper
-            # transparently from the new base on next container open (~5s rebuild).
+            # Prune stale VS Code UID-wrapper images (vsc-*-uid). VS Code names these by a hash of devcontainer.json content, not the image digest, so Podman's layer cache resolves the FROM mutable tag to the old digest on rebuild and the wrapper is silently built from the pre-fix base. Pruning forces VS Code to rebuild the wrapper from the new base on next open (~5s).
             local stale_wrappers=()
             mapfile -t stale_wrappers < <(
                 podman images --format "{{.Repository}}" 2>/dev/null \
@@ -1643,10 +1622,7 @@ run_nest_mode() {
         echo ""
     fi
     
-    # During --regen, prune all stale VS Code UID-wrapper images (vsc-*-uid) upfront
-    # BEFORE any base images are built. This makes the prune order-independent and
-    # predictable: it fires once here, not after whichever base happened to build first.
-    # (The per-build prune in build_base_image() remains for standalone --base runs.)
+    # During --regen, prune all stale VS Code UID-wrapper images (vsc-*-uid) upfront, before any base is built. Makes the prune order-independent: fires once here rather than after whichever base happens to build first. The per-build prune in build_base_image() remains for standalone --base runs.
     if [[ "$NEST_REGEN" == true ]]; then
         local stale_wrappers=()
         mapfile -t stale_wrappers < <(
