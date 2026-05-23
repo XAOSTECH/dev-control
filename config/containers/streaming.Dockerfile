@@ -63,7 +63,7 @@ RUN git clone --depth 1 https://git.ffmpeg.org/ffmpeg.git /tmp/ffmpeg \
     && rm -rf /tmp/ffmpeg && ldconfig
 
 # Build NGINX with RTMP module
-RUN apt-get update && apt-get install -y libpcre3-dev libssl-dev zlib1g-dev \
+RUN apt-get update && apt-get install -y libpcre2-dev libssl-dev zlib1g-dev \
     && rm -rf /var/lib/apt/lists/* \
     && git clone --depth 1 https://github.com/arut/nginx-rtmp-module.git /tmp/nginx-rtmp \
     && curl -fsSL https://nginx.org/keys/nginx_signing.key | gpg --import \
