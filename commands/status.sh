@@ -17,7 +17,7 @@ fi
 
 source "$DC_ROOT/scripts/lib/colours.sh"
 source "$DC_ROOT/scripts/lib/print.sh"
-source "$DC_ROOT/scripts/lib/git-utils.sh"
+source "$DC_ROOT/scripts/lib/git/utils.sh"
 source "$DC_ROOT/scripts/lib/output.sh"
 source "$DC_ROOT/scripts/lib/config.sh"
 
@@ -26,7 +26,7 @@ show_help() {
 Dev-Control Status - Show Dev-Control and repository status
 
 USAGE:
-  gc status [options]
+  dc status [options]
 
 OPTIONS:
   -q, --quiet       Only output essential information
@@ -35,9 +35,9 @@ OPTIONS:
   -h, --help        Show this help
 
 EXAMPLES:
-  gc status
-  gc status --json
-  gc status --verbose
+  dc status
+  dc status --json
+  dc status --verbose
 
 EOF
 }
@@ -98,7 +98,7 @@ gather_status() {
 output_json() {
     cat << EOF
 {
-  "gc": {
+  "dc": {
     "version": "$DC_VERSION",
     "location": "$DC_LOCATION"
   },

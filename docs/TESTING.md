@@ -6,7 +6,7 @@ Dev-Control uses [bats-core](https://github.com/bats-core/bats-core) for testing
 
 ```
 tests/
-├── gc.bats           # Integration tests for main command
+├── dc.bats           # Integration tests for main command
 ├── run_tests.sh      # Test runner script
 ├── lib/              # Unit tests for libraries
 │   ├── common.bats
@@ -33,10 +33,10 @@ tests/
 ./tests/run_tests.sh lib/
 
 # Specific test file
-./tests/run_tests.sh gc.bats
+./tests/run_tests.sh dc.bats
 
 # Specific test by name
-bats --filter "gc --help" tests/gc.bats
+bats --filter "dc --help" tests/dc.bats
 ```
 
 ### With Coverage
@@ -108,12 +108,12 @@ assert [ -d "$dir" ]     # Directory exists
 ### Testing Commands
 
 ```bash
-@test "gc init creates config" {
+@test "dc init creates config" {
     local temp_dir=$(mktemp -d)
     cd "$temp_dir"
     git init --quiet
     
-    run "$GC" init
+    run "$DC" init
     assert_success
     assert [ -f ".dc-init.yaml" ]
     
@@ -144,6 +144,6 @@ jobs:
 
 1. **Isolate tests**: Use temp directories, reset globals
 2. **Test one thing**: Each test should verify a single behaviour
-3. **Use descriptive names**: `@test "gc init with --licence creates LICENCE"`
+3. **Use descriptive names**: `@test "dc init with --licence creates LICENCE"`
 4. **Clean up**: Always remove temp files in teardown
 5. **Test edge cases**: Empty inputs, missing files, invalid args

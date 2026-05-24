@@ -11,7 +11,7 @@ plugins/
 └── my-plugin/
     ├── plugin.yaml      # Plugin metadata (required)
     ├── commands/         # Command scripts
-    │   └── my-cmd.sh    # Becomes: gc my-cmd
+    │   └── my-cmd.sh    # Becomes: dc my-cmd
     └── lib/              # Shared libraries (optional)
 ```
 
@@ -41,7 +41,7 @@ commands:
 1. Create a directory in `plugins/`
 2. Add `plugin.yaml` with metadata
 3. Add command scripts in `commands/`
-4. Scripts automatically become available as `gc <command>`
+4. Scripts automatically become available as `dc <command>`
 
 ## Command Script Requirements
 
@@ -61,7 +61,7 @@ if [[ "$1" == "--help" || "$1" == "-h" ]]; then
     cat << 'EOF'
 My Command - Does something useful
 
-Usage: gc my-cmd [options]
+Usage: dc my-cmd [options]
 
 Options:
   -h, --help    Show this help
@@ -77,12 +77,12 @@ print_info "Hello from my plugin!"
 
 ### From GitHub
 ```bash
-gc plugin install gh:user/dc-plugin-name
+dc plugin install gh:user/dc-plugin-name
 ```
 
 ### From Local Path
 ```bash
-gc plugin install /path/to/plugin
+dc plugin install /path/to/plugin
 ```
 
 ### Manual
@@ -91,9 +91,9 @@ Clone or copy the plugin directory to `plugins/`
 ## Built-in Plugin Commands
 
 ```bash
-gc plugin list           # List installed plugins
-gc plugin install <src>  # Install a plugin
-gc plugin remove <name>  # Remove a plugin
-gc plugin update <name>  # Update a plugin
-gc plugin info <name>    # Show plugin details
+dc plugin list           # List installed plugins
+dc plugin install <src>  # Install a plugin
+dc plugin remove <name>  # Remove a plugin
+dc plugin update <name>  # Update a plugin
+dc plugin info <name>    # Show plugin details
 ```

@@ -15,7 +15,7 @@
 # ============================================================================
 
 # Output modes (set via environment or --flags)
-# DC_QUIET, DC_VERBOSE, DC_JSON are set by gc entry point
+# DC_QUIET, DC_VERBOSE, DC_JSON are set by dc entry point
 # Scripts can also parse their own flags
 
 init_output_mode() {

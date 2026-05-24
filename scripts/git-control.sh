@@ -20,7 +20,7 @@
 #   ./git-control.sh gpg-setup          # Setup GPG bot for Actions
 #   ./git-control.sh help               # Show this help
 #
-# Aliases: dc-git, gc-git
+# Aliases: dc-git, dc-git
 #
 # SPDX-Licence-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025-2026 xaoscience

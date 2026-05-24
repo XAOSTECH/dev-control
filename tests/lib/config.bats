@@ -26,32 +26,39 @@ teardown() {
 # Config loading tests
 # ============================================================================
 
-@test "gc_config returns empty for missing key" {
-    result=$(gc_config "nonexistent.key")
+@test "dc_config returns empty for missing key" {
+    result=$(dc_config "nonexistent.key")
     assert_equal "$result" ""
 }
 
-@test "gc_config returns default for missing key" {
-    result=$(gc_config "nonexistent.key" "default_value")
+@test "dc_config returns default for missing key" {
+    result=$(dc_config "nonexistent.key" "default_value")
     assert_equal "$result" "default_value"
 }
 
-@test "gc_config reads from config file" {
+@test "dc_config reads from config file" {
     cat > "$TEST_CONFIG_DIR/dev-control/config.yaml" << 'EOF'
-defaults:
-  author: "Test Author"
-  licence: MIT
+author: "Test Author"
+default_licence: MIT
 EOF
     
-    load_gc_config
-    result=$(gc_config "defaults.author")
+    load_dc_config
+    result=$(dc_config "author")
     assert_equal "$result" "Test Author"
 }
 
-@test "gc_config_set writes to config" {
-    gc_config_set "test.key" "test_value"
-    result=$(gc_config "test.key")
+@test "dc_config_set writes to config" {
+    local project_dir
+    project_dir=$(mktemp -d)
+    cd "$project_dir"
+    git init --quiet
+    
+    dc_config_set "test_key" "test_value"
+    load_dc_config
+    result=$(dc_config "test_key")
     assert_equal "$result" "test_value"
+    
+    rm -rf "$project_dir"
 }
 
 # ============================================================================
@@ -69,15 +76,15 @@ EOF
     rm "$yaml_file"
 }
 
-@test "parse_yaml handles nested structure" {
-    local yaml_file=$(mktemp)
+@test "parse_yaml maps hyphens to underscores in keys" {
+    local yaml_file
+    yaml_file=$(mktemp)
     cat > "$yaml_file" << 'EOF'
-parent:
-  child: nested_value
+default-licence: GPL-3.0
 EOF
     
     eval $(parse_yaml "$yaml_file" "test_")
-    assert_equal "$test_parent_child" "nested_value"
+    assert_equal "$test_default_licence" "GPL-3.0"
     rm "$yaml_file"
 }
 
@@ -97,24 +104,23 @@ EOF
 # ============================================================================
 
 @test "project config overrides global config" {
-    # Create global config
+    # Create global config (flat schema)
     cat > "$TEST_CONFIG_DIR/dev-control/config.yaml" << 'EOF'
-defaults:
-  licence: MIT
+default_licence: MIT
 EOF
     
     # Create project config in temp dir
-    local project_dir=$(mktemp -d)
+    local project_dir
+    project_dir=$(mktemp -d)
     cat > "$project_dir/.dc-init.yaml" << 'EOF'
-defaults:
-  licence: GPL-3.0
+default_licence: GPL-3.0
 EOF
     
     cd "$project_dir"
     git init --quiet
     
-    load_gc_config
-    result=$(gc_config "defaults.licence")
+    load_dc_config
+    result=$(dc_config "default_licence")
     assert_equal "$result" "GPL-3.0"
     
     rm -rf "$project_dir"

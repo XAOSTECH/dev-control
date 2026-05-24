@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# gc version - Version and update management
+# dc version - Version and update management
 #
 # SPDX-Licence-Identifier: GPL-3.0-or-later
 
@@ -18,11 +18,11 @@ show_version() {
     local verbose=false
     [[ "${1:-}" == "-v" || "${1:-}" == "--verbose" ]] && verbose=true
     
-    gc_version_string
+    dc_version_string
     
     if [[ "$verbose" == "true" ]]; then
         echo ""
-        gc_install_info
+        dc_install_info
         echo ""
         echo "Dependencies:"
         echo "  bash:  $(bash --version | head -n1)"
@@ -57,19 +57,19 @@ EOF
 }
 
 check_update() {
-    gc_check_update
+    dc_check_update
 }
 
 do_update() {
-    gc_update
+    dc_update
 }
 
 show_changelog() {
     local version="${1:-}"
     if [[ -n "$version" ]]; then
-        gc_changelog "$version"
+        dc_changelog "$version"
     else
-        gc_recent_changes 3
+        dc_recent_changes 3
     fi
 }
 
@@ -78,7 +78,7 @@ show_help() {
 Version and update management
 
 USAGE:
-  gc version [COMMAND] [OPTIONS]
+  dc version [COMMAND] [OPTIONS]
 
 COMMANDS:
   show            Show version information (default)
@@ -91,13 +91,13 @@ OPTIONS:
   --json          Output as JSON
 
 EXAMPLES:
-  gc version                # Show version
-  gc version -v             # Detailed info
-  gc version --json         # JSON output
-  gc version check          # Check for updates
-  gc version update         # Perform update
-  gc version changelog      # Show recent changes
-  gc version changelog 1.0.0  # Show specific version
+  dc version                # Show version
+  dc version -v             # Detailed info
+  dc version --json         # JSON output
+  dc version check          # Check for updates
+  dc version update         # Perform update
+  dc version changelog      # Show recent changes
+  dc version changelog 1.0.0  # Show specific version
 
 EOF
 }

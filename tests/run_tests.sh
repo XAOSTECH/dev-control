@@ -5,7 +5,7 @@
 # Usage:
 #   ./run_tests.sh           # Run all tests
 #   ./run_tests.sh lib/      # Run lib tests only
-#   ./run_tests.sh gc.bats   # Run specific test file
+#   ./run_tests.sh dc.bats   # Run specific test file
 #
 
 set -e
@@ -63,7 +63,12 @@ run_tests() {
     echo ""
     
     if [[ -d "$test_target" ]]; then
-        bats --recursive "$test_target"
+        # Collect only our own .bats files; skip the upstream bats helper test suites.
+        local files=()
+        while IFS= read -r -d '' f; do
+            files+=("$f")
+        done < <(find "$test_target" -type f -name '*.bats' -not -path '*/test_helper/*' -print0)
+        bats "${files[@]}"
     else
         bats "$test_target"
     fi

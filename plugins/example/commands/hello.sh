@@ -7,7 +7,7 @@ set -e
 
 # Use DC_ROOT for shared libraries
 if [[ -z "$DC_ROOT" ]]; then
-    echo "Error: DC_ROOT not set. Run via 'gc hello' instead." >&2
+    echo "Error: DC_ROOT not set. Run via 'dc hello' instead." >&2
     exit 1
 fi
 
@@ -19,14 +19,14 @@ if [[ "$1" == "--help" || "$1" == "-h" ]]; then
     cat << 'EOF'
 Hello - Example plugin command
 
-Usage: gc hello [name]
+Usage: dc hello [name]
 
 Options:
   -h, --help    Show this help
 
 Examples:
-  gc hello
-  gc hello World
+  dc hello
+  dc hello World
 
 EOF
     exit 0

@@ -4,11 +4,11 @@
 # Install, remove, and manage plugins
 #
 # Usage:
-#   gc plugin list              List installed plugins
-#   gc plugin install <source>  Install a plugin
-#   gc plugin remove <name>     Remove a plugin
-#   gc plugin update <name>     Update a plugin
-#   gc plugin info <name>       Show plugin details
+#   dc plugin list              List installed plugins
+#   dc plugin install <source>  Install a plugin
+#   dc plugin remove <name>     Remove a plugin
+#   dc plugin update <name>     Update a plugin
+#   dc plugin info <name>       Show plugin details
 #
 # SPDX-Licence-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025-2026 xaoscience
@@ -78,7 +78,7 @@ show_plugin_info() {
         [[ -f "$cmd" ]] || continue
         local cmd_name
         cmd_name=$(basename "$cmd" .sh)
-        echo "  - gc $cmd_name"
+        echo "  - dc $cmd_name"
     done
 }
 
@@ -90,7 +90,7 @@ install_plugin() {
     local source="$1"
     
     if [[ -z "$source" ]]; then
-        print_error "Usage: gc plugin install <source>"
+        print_error "Usage: dc plugin install <source>"
         echo "  Sources:"
         echo "    gh:user/repo     - GitHub repository"
         echo "    /path/to/plugin  - Local directory"
@@ -192,7 +192,7 @@ show_help() {
 Dev-Control Plugin Manager
 
 USAGE:
-  gc plugin <command> [args]
+  dc plugin <command> [args]
 
 COMMANDS:
   list              List installed plugins
@@ -206,10 +206,10 @@ SOURCES:
   /path/to/plugin   Local directory
 
 EXAMPLES:
-  gc plugin list
-  gc plugin install gh:user/dc-plugin-example
-  gc plugin remove example
-  gc plugin info example
+  dc plugin list
+  dc plugin install gh:user/dc-plugin-example
+  dc plugin remove example
+  dc plugin info example
 
 EOF
 }

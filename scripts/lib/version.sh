@@ -25,20 +25,20 @@ DC_REPO="xaoscience/dev-control"
 DC_BRANCH="Main"
 
 # Get full version string
-# Usage: gc_version_string
-gc_version_string() {
+# Usage: dc_version_string
+dc_version_string() {
     echo "dev-control v${DC_VERSION} (${DC_VERSION_DATE})"
 }
 
 # Get version number only
-# Usage: gc_version
-gc_version() {
+# Usage: dc_version
+dc_version() {
     echo "$DC_VERSION"
 }
 
 # Get installation info
-# Usage: gc_install_info
-gc_install_info() {
+# Usage: dc_install_info
+dc_install_info() {
     local install_dir="${DC_INSTALL_DIR:-$(cd "$_VERSION_LIB_DIR/../.." && pwd)}"
     
     if [[ -d "$install_dir/.git" ]]; then
@@ -129,8 +129,8 @@ version_gt() {
 # ============================================================================
 
 # Check for updates from GitHub
-# Usage: gc_check_update
-gc_check_update() {
+# Usage: dc_check_update
+dc_check_update() {
     local current="$DC_VERSION"
     local latest
     local update_url="https://api.github.com/repos/${DC_REPO}/releases/latest"
@@ -149,7 +149,7 @@ gc_check_update() {
     
     if version_gt "$latest" "$current"; then
         echo "Update available: v$current -> v$latest"
-        echo "Run: gc update"
+        echo "Run: dc update"
         return 0
     else
         echo "Already at latest version: v$current"
@@ -158,8 +158,8 @@ gc_check_update() {
 }
 
 # Perform update
-# Usage: gc_update
-gc_update() {
+# Usage: dc_update
+dc_update() {
     local install_dir="${DC_INSTALL_DIR:-$(cd "$_VERSION_LIB_DIR/../.." && pwd)}"
     
     if [[ ! -d "$install_dir/.git" ]]; then
@@ -172,7 +172,7 @@ gc_update() {
     git -C "$install_dir" fetch origin
     git -C "$install_dir" reset --hard "origin/${DC_BRANCH}"
     
-    echo "Updated to: $(gc_version_string)"
+    echo "Updated to: $(dc_version_string)"
 }
 
 # ============================================================================
@@ -180,8 +180,8 @@ gc_update() {
 # ============================================================================
 
 # Get changelog for version
-# Usage: gc_changelog [version]
-gc_changelog() {
+# Usage: dc_changelog [version]
+dc_changelog() {
     local version="${1:-$DC_VERSION}"
     local changelog_file="${DC_INSTALL_DIR:-$(cd "$_VERSION_LIB_DIR/../.." && pwd)}/CHANGELOG.md"
     
@@ -201,8 +201,8 @@ gc_changelog() {
 }
 
 # Get recent changes
-# Usage: gc_recent_changes [count]
-gc_recent_changes() {
+# Usage: dc_recent_changes [count]
+dc_recent_changes() {
     local count="${1:-5}"
     local changelog_file="${DC_INSTALL_DIR:-$(cd "$_VERSION_LIB_DIR/../.." && pwd)}/CHANGELOG.md"
     

@@ -1,78 +1,89 @@
 #!/usr/bin/env bats
 #
-# Integration tests for gc command
+# Integration tests for the `dc` CLI entrypoint
 #
+# SPDX-Licence-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2025-2026 xaoscience
 
-load '../test_helper/bats-support/load'
-load '../test_helper/bats-assert/load'
+load 'test_helper/bats-support/load'
+load 'test_helper/bats-assert/load'
 
 setup() {
-    GC="$BATS_TEST_DIRNAME/../gc"
+    DC="$BATS_TEST_DIRNAME/../dc"
 }
 
-# ============================================================================
-# Basic invocation tests
-# ============================================================================
+# Basic invocation
 
-@test "gc --help shows usage" {
-    run "$GC" --help
+@test "dc --help shows usage banner" {
+    run bash "$DC" --help
     assert_success
-    assert_output --partial "Usage:"
+    assert_output --partial "USAGE"
+    assert_output --partial "Dev-Control"
+}
+
+@test "dc --help lists known commands" {
+    run bash "$DC" --help
+    assert_success
+    assert_output --partial "COMMANDS"
+    assert_output --partial "init"
+    assert_output --partial "repo"
+    assert_output --partial "fix"
+}
+
+@test "dc --version prints version line" {
+    run bash "$DC" --version
+    assert_success
     assert_output --partial "dev-control"
 }
 
-@test "gc --version shows version" {
-    run "$GC" --version
+@test "dc --version --json emits structured payload" {
+    run bash "$DC" --json --version
     assert_success
-    assert_output --partial "dev-control"
+    assert_output --partial '"version"'
+    assert_output --partial '"root"'
 }
 
-@test "gc with unknown command shows error" {
-    run "$GC" nonexistent-command
+@test "dc with unknown command fails with a clear message" {
+    run bash "$DC" nonexistent-command-xyz
     assert_failure
     assert_output --partial "Unknown command"
 }
 
-@test "gc without arguments shows help" {
-    run "$GC"
+@test "dc --list-commands enumerates the registry" {
+    run bash "$DC" --list-commands
     assert_success
-    assert_output --partial "Usage:"
+    assert_output --partial "init"
+    assert_output --partial "status"
+    assert_output --partial "config"
 }
 
-# ============================================================================
-# Command discovery tests
-# ============================================================================
+# Built-in subcommands
 
-@test "gc lists available commands" {
-    run "$GC" --help
-    assert_output --partial "Commands:"
-}
-
-@test "gc status works with --json" {
-    run "$GC" status --json
+@test "dc status --json emits valid-shaped JSON" {
+    run bash "$DC" status --json
     assert_success
-    # Should output valid JSON
-    assert_output --partial "{"
-    assert_output --partial "}"
+    assert_output --partial '"dc"'
+    assert_output --partial '"git"'
+    assert_output --partial '"version"'
 }
 
-@test "gc config show works" {
-    run "$GC" config show
+@test "dc config --help is documented" {
+    run bash "$DC" config --help
     assert_success
+    assert_output --partial "Configuration"
+    assert_output --partial "USAGE"
 }
 
-# ============================================================================
-# Plugin tests
-# ============================================================================
-
-@test "gc plugin list works" {
-    run "$GC" plugin list
+@test "dc plugin --help is documented" {
+    run bash "$DC" plugin --help
     assert_success
+    assert_output --partial "Plugin Manager"
+    assert_output --partial "list"
 }
 
-@test "gc plugin info shows plugin details" {
-    run "$GC" plugin info example
-    # May succeed or fail depending on plugin presence
-    # Just verify it doesn't crash
-    [[ $status -eq 0 || $status -eq 1 ]]
+@test "dc version --help is documented" {
+    run bash "$DC" version --help
+    assert_success
+    assert_output --partial "Version"
+    assert_output --partial "USAGE"
 }

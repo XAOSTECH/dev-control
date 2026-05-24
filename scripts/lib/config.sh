@@ -79,7 +79,7 @@ parse_yaml() {
 # CONFIGURATION LOADING
 # ============================================================================
 
-load_gc_config() {
+load_dc_config() {
     local key value
     
     # Start with defaults
@@ -105,7 +105,7 @@ load_gc_config() {
     return 0
 }
 
-gc_config() {
+dc_config() {
     local key="$1"
     local default="${2:-}"
     local var_name
@@ -121,7 +121,7 @@ gc_config() {
     fi
 }
 
-gc_config_set() {
+dc_config_set() {
     local key="$1"
     local value="$2"
     local scope="${3:-project}"
@@ -154,7 +154,7 @@ gc_config_set() {
     printf -v "$var_name" '%s' "$value"
 }
 
-gc_config_show() {
+dc_config_show() {
     local format="${1:-text}"
     local key var
     
@@ -178,7 +178,7 @@ gc_config_show() {
 }
 
 # ============================================================================
-# LEGACY GC-INIT CONFIG
+# LEGACY DC-INIT CONFIG
 # ============================================================================
 
 # Load Dev-Control metadata from git config

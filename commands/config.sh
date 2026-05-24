@@ -23,12 +23,12 @@ show_help() {
 Dev-Control Configuration Manager
 
 USAGE:
-  gc config                    Show current configuration
-  gc config get <key>          Get a specific value
-  gc config set <key> <value>  Set a value (project scope)
-  gc config set --global <key> <value>  Set globally
-  gc config edit               Open config in editor
-  gc config init               Initialise project config
+  dc config                    Show current configuration
+  dc config get <key>          Get a specific value
+  dc config set <key> <value>  Set a value (project scope)
+  dc config set --global <key> <value>  Set globally
+  dc config edit               Open config in editor
+  dc config init               Initialise project config
 
 KEYS:
   default-licence       Default licence (MIT, GPL-3.0, etc.)
@@ -39,11 +39,11 @@ KEYS:
   template-set          Template set (default/minimal/full)
 
 EXAMPLES:
-  gc config
-  gc config get default-licence
-  gc config set default-licence Apache-2.0
-  gc config set --global github-org myorg
-  gc config init
+  dc config
+  dc config get default-licence
+  dc config set default-licence Apache-2.0
+  dc config set --global github-org myorg
+  dc config init
 
 FILES:
   Global:  ~/.config/dev-control/config.yaml
@@ -55,10 +55,10 @@ EOF
 cmd_show() {
     print_header "Dev-Control Configuration"
     
-    load_gc_config
+    load_dc_config
     
     print_section "Current Values:"
-    gc_config_show "${DC_JSON:+json}"
+    dc_config_show "${DC_JSON:+json}"
     
     echo ""
     print_section "Config Files:"
@@ -69,7 +69,7 @@ cmd_show() {
         if [[ -f "$project_root/$DC_PROJECT_CONFIG" ]]; then
             print_detail "Project" "$project_root/$DC_PROJECT_CONFIG"
         else
-            print_detail "Project" "(none - run 'gc config init' to create)"
+            print_detail "Project" "(none - run 'dc config init' to create)"
         fi
     fi
     echo ""
@@ -78,12 +78,12 @@ cmd_show() {
 cmd_get() {
     local key="$1"
     if [[ -z "$key" ]]; then
-        print_error "Usage: gc config get <key>"
+        print_error "Usage: dc config get <key>"
         return 1
     fi
     
-    load_gc_config
-    gc_config "${key//-/_}"
+    load_dc_config
+    dc_config "${key//-/_}"
 }
 
 cmd_set() {
@@ -99,11 +99,11 @@ cmd_set() {
     local value="$2"
     
     if [[ -z "$key" || -z "$value" ]]; then
-        print_error "Usage: gc config set [--global] <key> <value>"
+        print_error "Usage: dc config set [--global] <key> <value>"
         return 1
     fi
     
-    gc_config_set "$key" "$value" "$scope"
+    dc_config_set "$key" "$value" "$scope"
     print_success "Set $key = $value ($scope)"
 }
 

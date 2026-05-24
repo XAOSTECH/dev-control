@@ -40,7 +40,7 @@ source ~/.bashrc
 Then run:
 
 ```bash
-gc --help
+dc --help
 ```
 
 ## Upgrading

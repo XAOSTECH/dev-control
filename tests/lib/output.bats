@@ -40,25 +40,25 @@ setup() {
 # ============================================================================
 
 @test "out prints message in normal mode" {
-    DC_QUIET=false
+    OUTPUT_QUIET=false
     run out "test message"
     assert_output "test message"
 }
 
 @test "out suppresses output in quiet mode" {
-    DC_QUIET=true
+    OUTPUT_QUIET=true
     run out "test message"
     assert_output ""
 }
 
 @test "verbose prints in verbose mode" {
-    DC_VERBOSE=true
+    OUTPUT_VERBOSE=true
     run verbose "debug info"
     assert_output --partial "debug info"
 }
 
 @test "verbose suppresses in normal mode" {
-    DC_VERBOSE=false
+    OUTPUT_VERBOSE=false
     run verbose "debug info"
     assert_output ""
 }
@@ -67,9 +67,14 @@ setup() {
 # JSON output tests
 # ============================================================================
 
-@test "json_field creates valid field" {
+@test "json_field creates valid field (non-last entry includes trailing comma)" {
     result=$(json_field "name" "value")
-    assert_equal "$result" '"name": "value"'
+    assert_equal "$result" '  "name": "value",'
+}
+
+@test "json_field omits trailing comma when marked last" {
+    result=$(json_field "name" "value" "true")
+    assert_equal "$result" '  "name": "value"'
 }
 
 @test "json_field escapes quotes" {
