@@ -87,3 +87,39 @@ setup() {
     assert_output --partial "Version"
     assert_output --partial "USAGE"
 }
+
+# JSON structural validation (requires jq)
+
+@test "dc status --json parses as valid JSON" {
+    if ! command -v jq &>/dev/null; then skip "jq not installed"; fi
+    run bash -c "bash '$DC' status --json | jq -e ."
+    assert_success
+}
+
+@test "dc status --json has expected top-level keys" {
+    if ! command -v jq &>/dev/null; then skip "jq not installed"; fi
+    run bash -c "bash '$DC' status --json | jq -er '[.dc, .git, .config, .tools] | length'"
+    assert_success
+    assert_output "4"
+}
+
+@test "dc status --json reports inRepo=true inside the dev-control checkout" {
+    if ! command -v jq &>/dev/null; then skip "jq not installed"; fi
+    run bash -c "bash '$DC' status --json | jq -er '.git.inRepo'"
+    assert_success
+    assert_output "true"
+}
+
+@test "dc status --json exposes dc.version as a non-empty string" {
+    if ! command -v jq &>/dev/null; then skip "jq not installed"; fi
+    run bash -c "bash '$DC' status --json | jq -er '.dc.version | test(\"^[0-9]+\\\\.\")'"
+    assert_success
+    assert_output "true"
+}
+
+@test "dc --json --version parses as valid JSON with version + root fields" {
+    if ! command -v jq &>/dev/null; then skip "jq not installed"; fi
+    run bash -c "bash '$DC' --json --version | jq -er '[.version, .root] | all(type == \"string\")'"
+    assert_success
+    assert_output "true"
+}

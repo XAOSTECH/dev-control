@@ -6,13 +6,15 @@ Dev-Control uses [bats-core](https://github.com/bats-core/bats-core) for testing
 
 ```
 tests/
-├── dc.bats           # Integration tests for main command
-├── run_tests.sh      # Test runner script
-├── lib/              # Unit tests for libraries
-│   ├── common.bats
-│   ├── config.bats
-│   └── output.bats
-└── test_helper/      # bats plugins (auto-installed)
+├── dc.bats              # Integration tests for the `dc` entrypoint (help, --version, status JSON)
+├── plugin.bats          # Tests for plugin discovery via `dc plugin list/info`
+├── run_tests.sh         # Test runner script (bootstraps bats if missing)
+├── lib/                 # Unit tests for the shared library modules
+│   ├── cli.bats         # scripts/lib/cli.sh + scripts/lib/validation.sh
+│   ├── config.bats      # scripts/lib/config.sh (YAML parser, dc_config, dc_config_set)
+│   ├── git_utils.bats   # scripts/lib/git/utils.sh (parse_github_url, branch/remote helpers, ...)
+│   └── output.bats      # scripts/lib/output.sh (out, verbose, json_field, parse_output_flags)
+└── test_helper/         # bats plugins (auto-installed by run_tests.sh)
     ├── bats/
     ├── bats-support/
     └── bats-assert/
@@ -61,7 +63,7 @@ load 'test_helper/bats-assert/load'
 
 setup() {
     # Runs before each test
-    source "$BATS_TEST_DIRNAME/../scripts/lib/common.sh"
+    source "$BATS_TEST_DIRNAME/../scripts/lib/cli.sh"
 }
 
 teardown() {
@@ -99,9 +101,9 @@ assert [ -d "$dir" ]     # Directory exists
 ### Testing Functions
 
 ```bash
-@test "trim removes whitespace" {
-    result=$(trim "  hello  ")
-    assert_equal "$result" "hello"
+@test "to_slug lowercases and hyphenates" {
+    result=$(to_slug "My Project Name")
+    assert_equal "$result" "my-project-name"
 }
 ```
 
