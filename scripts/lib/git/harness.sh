@@ -1,40 +1,35 @@
 #!/usr/bin/env bash
-# ============================================================================
-# harness.sh - Test harness utilities for git history operations
-# ============================================================================
-# This module provides a minimal in-script harness to run safe test operations
-# in temporary branches with automatic backup and restoration capabilities.
 #
-# Functions:
-#   harness_post_checks()       - Verify operation results (commit absent, clean tree)
-#   harness_finish_success()    - Cleanup after successful harness run
-#   harness_restore_backup()    - Restore from backup bundle on failure
-#   harness_run()               - Main harness execution entry point
+# Dev-Control Shared Library: Harness — minimal in-script harness for safe test operations on temporary branches, with automatic backup and restoration.
 #
-# Required globals (defined in parent script):
-#   DRY_RUN            - If true, show what would be done without executing
-#   HARNESS_MODE       - If true, run in harness mode
-#   HARNESS_OP         - Operation to perform (drop, sign)
-#   HARNESS_ARG        - Argument for the operation
-#   HARNESS_CLEANUP    - If true, cleanup temp branch after success
-#   HARNESS_FORCE      - If true, proceed despite existing tmp branches
-#   REPORT_DIR         - Directory for harness reports
-#   RESTORE_LIST_N     - Number of commits to show in logs
-#   TEMP_BACKUP        - Path to backup bundle
+# Required globals when sourced (set by the caller):
+#   DRY_RUN            — if true, show what would be done without executing
+#   HARNESS_MODE       — if true, run in harness mode
+#   HARNESS_OP         — operation to perform (drop, sign)
+#   HARNESS_ARG        — argument for the operation
+#   HARNESS_CLEANUP    — if true, cleanup temp branch after success
+#   HARNESS_FORCE      — if true, proceed despite existing tmp branches
+#   REPORT_DIR         — directory for harness reports
+#   RESTORE_LIST_N     — number of commits to show in logs
+#   TEMP_BACKUP        — path to backup bundle
 #
-# Required functions (from parent script):
-#   drop_single_commit()  - Drop a commit from history
-#   sign_mode()           - Sign commits in range
-#   backup_repo()         - Create backup bundle
-#
-# Required functions (from lib/output.sh):
+# Required functions when sourced (from the parent or sibling libs):
+#   drop_single_commit(), sign_mode(), backup_repo()
 #   print_info(), print_success(), print_warning(), print_error()
-# ============================================================================
+#
+# SPDX-Licence-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2025-2026 xaoscience
 
-# Ensure we're being sourced, not executed directly
+# Dual-mode bootstrap. When executed directly (rather than sourced), enable strict mode and pull in the shared colour/print libs so the module's functions can be exercised standalone. When sourced by a master, skip this block — the parent owns those globals.
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-    echo "Error: This script should be sourced, not executed directly." >&2
-    exit 1
+    set -euo pipefail
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+    DEV_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
+    export DEV_CONTROL_DIR
+    # shellcheck source=../colours.sh
+    source "$SCRIPT_DIR/lib/colours.sh"
+    # shellcheck source=../print.sh
+    source "$SCRIPT_DIR/lib/print.sh"
 fi
 
 # ============================================================================

@@ -33,6 +33,18 @@
 # SPDX-Licence-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025-2026 xaoscience
 
+# Dual-mode bootstrap. When executed directly (rather than sourced), enable strict mode and pull in the shared colour/print libs so the module's functions can be exercised standalone. When sourced by a master, skip this block — the parent owns those globals.
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    set -euo pipefail
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+    DEV_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
+    export DEV_CONTROL_DIR
+    # shellcheck source=../colours.sh
+    source "$SCRIPT_DIR/lib/colours.sh"
+    # shellcheck source=../print.sh
+    source "$SCRIPT_DIR/lib/print.sh"
+fi
+
 # ============================================================================
 # RECREATE HISTORY WITH CAPTURED DATES
 # ============================================================================

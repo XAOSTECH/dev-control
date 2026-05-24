@@ -1,26 +1,27 @@
 #!/usr/bin/env bash
-# ============================================================================
-# rewrite.sh - Git history rewrite utilities
-# ============================================================================
-# This module provides functions for handling conflicts and other utilities
-# used during git history rewriting operations.
 #
-# Functions:
-#   auto_add_conflicted_files()   - Resolve conflicts automatically (ours/theirs)
-#   auto_resolve_all_conflicts()  - Repeatedly attempt auto-resolution until done
+# Dev-Control Shared Library: Rewrite — conflict resolution helpers used during git history rewriting operations.
 #
-# Required globals (defined in parent script):
-#   NO_EDIT_MODE       - If true, skip editor prompts
-#   DRY_RUN            - If true, show what would be done without executing
+# Required globals when sourced (set by the caller):
+#   NO_EDIT_MODE       — if true, skip editor prompts
+#   DRY_RUN            — if true, show what would be done without executing
 #
-# Required functions (from lib/output.sh):
+# Required functions when sourced:
 #   print_info(), print_success(), print_warning(), print_error()
-# ============================================================================
+#
+# SPDX-Licence-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2025-2026 xaoscience
 
-# Ensure we're being sourced, not executed directly
+# Dual-mode bootstrap. When executed directly (rather than sourced), enable strict mode and pull in the shared colour/print libs so the module's functions can be exercised standalone. When sourced by a master, skip this block — the parent owns those globals.
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-    echo "Error: This script should be sourced, not executed directly." >&2
-    exit 1
+    set -euo pipefail
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+    DEV_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
+    export DEV_CONTROL_DIR
+    # shellcheck source=../colours.sh
+    source "$SCRIPT_DIR/lib/colours.sh"
+    # shellcheck source=../print.sh
+    source "$SCRIPT_DIR/lib/print.sh"
 fi
 
 # ============================================================================

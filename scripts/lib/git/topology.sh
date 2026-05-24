@@ -1,34 +1,31 @@
 #!/usr/bin/env bash
-# ============================================================================
-# topology.sh - Git topology preservation utilities
-# ============================================================================
-# This module provides functions for preserving and manipulating git commit
-# topology (parent relationships, merge commits) during history rewriting.
 #
-# Functions:
-#   linearise_range_to_branch()           - Create linear branch from range
-#   preserve_topology_range_to_branch()   - Preserve merges/topology in new branch
-#   preserve_and_sign_topology_range_to_branch() - Preserve + prepare for signing
-#   sign_commits_preserving_dates()       - Sign commits via filter-branch
-#   sign_preserved_topology_branch()      - Sign preserved branch via rebase
-#   atomic_preserve_range_to_branch()     - Deterministic preserve with immediate signing
+# Dev-Control Shared Library: Topology — preserve and manipulate git commit topology (parent relationships, merge commits) during history rewriting.
 #
-# Required globals (defined in parent script):
-#   TEMP_ALL_DATES     - Path to temp file for storing dates
-#   DRY_RUN            - If true, show what would be done without executing
-#   ALLOW_UNSIGNED_PRESERVE - If true, continue despite unsigned commits
-#   LAST_PRESERVE_MAP  - Set by atomic_preserve to track old->new sha mapping
-#   LAST_PRESERVE_UNSIGNED - Set if unsigned commits encountered
-#   TIMED_SIGN_MODE    - If true, use timed signing mode for PRs
+# Required globals when sourced (set by the caller):
+#   TEMP_ALL_DATES          — path to temp file for storing dates
+#   DRY_RUN                 — if true, show what would be done without executing
+#   ALLOW_UNSIGNED_PRESERVE — if true, continue despite unsigned commits
+#   LAST_PRESERVE_MAP       — set by atomic_preserve to track old->new sha mapping
+#   LAST_PRESERVE_UNSIGNED  — set if unsigned commits encountered
+#   TIMED_SIGN_MODE         — if true, use timed signing mode for PRs
 #
-# Required functions (from lib/output.sh):
+# Required functions when sourced:
 #   print_info(), print_success(), print_warning(), print_error()
-# ============================================================================
+#
+# SPDX-Licence-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2025-2026 xaoscience
 
-# Ensure we're being sourced, not executed directly
+# Dual-mode bootstrap. When executed directly (rather than sourced), enable strict mode and pull in the shared colour/print libs so the module's functions can be exercised standalone. When sourced by a master, skip this block — the parent owns those globals.
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-    echo "Error: This script should be sourced, not executed directly." >&2
-    exit 1
+    set -euo pipefail
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+    DEV_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
+    export DEV_CONTROL_DIR
+    # shellcheck source=../colours.sh
+    source "$SCRIPT_DIR/lib/colours.sh"
+    # shellcheck source=../print.sh
+    source "$SCRIPT_DIR/lib/print.sh"
 fi
 
 # ============================================================================

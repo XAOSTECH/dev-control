@@ -1,34 +1,37 @@
 #!/usr/bin/env bash
 #
-# Batch rename Main -> main across repositories
+# Dev-Control Shared Library: Rename — batch-rename a default branch (e.g. Main → main) across one or more repositories, locally and on GitHub.
 #
 # Usage:
-#   rename.sh [OWNER] [OLD_BRANCH] [NEW_BRANCH] [PATHS...]
-#   rename.sh xaoscience Main main /path/to/repo1 /path/to/repo2
-#   rename.sh xaoscience Main main  # Auto-discover from GitHub
+#   source "${SCRIPT_DIR}/lib/git/rename.sh"                          # exposes detect_default_branch(), get_repo_name(), rename_repo_branch()
+#   bash    .../lib/git/rename.sh [OWNER] [BRANCH_SPEC] [PATHS...]    # standalone CLI; see --help
+#
+# When sourced, the parent is assumed to have set strict mode, exported SCRIPT_DIR/DEV_CONTROL_DIR, and sourced colours.sh + print.sh. When executed directly, this module bootstraps those itself and then runs main() + main_dispatch().
 #
 # SPDX-Licence-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025-2026 xaoscience
 
-set -e
+# Dual-mode bootstrap. When executed directly (rather than sourced), enable strict mode and pull in the shared colour/print libs so the module's functions can be exercised standalone. When sourced by a master, skip this block — the parent owns those globals.
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    set -euo pipefail
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+    DEV_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
+    export DEV_CONTROL_DIR
+    # shellcheck source=../colours.sh
+    source "$SCRIPT_DIR/lib/colours.sh"
+    # shellcheck source=../print.sh
+    source "$SCRIPT_DIR/lib/print.sh"
+fi
 
-# Get the directory where this script is located
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-LIB_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
-DEV_CONTROL_DIR="$(dirname "$LIB_DIR")"
-export DEV_CONTROL_DIR
-
-# Source shared libraries
-source "$LIB_DIR/lib/colours.sh"
-source "$LIB_DIR/lib/print.sh"
-
-# Parse arguments
+# Globals consumed by main()/main_dispatch() and the rename functions below. Callers that source this module may override these before invoking the public functions.
 OWNER=""
 OLD_BRANCH=""
 NEW_BRANCH=""
 REPO_PATHS=()
 DRY_RUN=false
 
+# main() — parse CLI args, apply defaults, print the run banner. Only invoked when the module is executed directly (see the guarded call at the foot of the file).
+main() {
 # Argument parsing
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -119,6 +122,7 @@ if [[ "$DRY_RUN" == "true" ]]; then
 fi
 
 print_header "Branch Renaming Tool"
+}
 
 # Function to detect default branch in a git repo
 detect_default_branch() {
@@ -326,6 +330,8 @@ rename_repo_branch() {
     return 0
 }
 
+# main_dispatch() — drive the actual rename, either over the locally supplied paths or by listing matching repositories from GitHub. Only invoked when the module is executed directly.
+main_dispatch() {
 # Main execution
 if [[ ${#REPO_PATHS[@]} -gt 0 ]]; then
     # Local mode: process specified paths
@@ -409,3 +415,10 @@ fi
 
 print_header_success "Branch Renaming Complete!"
 print_info "All repositories now use '$NEW_BRANCH' as default branch"
+}
+
+# Direct-execution entrypoint. When sourced, this block is skipped and the caller drives the public functions itself.
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    main "$@"
+    main_dispatch
+fi
