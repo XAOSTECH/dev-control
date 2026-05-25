@@ -5,6 +5,21 @@ All notable changes to Dev-Control will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.10] - 2026-05-25
+
+### Added
+- expand BATS coverage with git utilities, plugin discovery and JSON validation
+
+### Fixed
+- complete dc.bats suite and migrate residual gc_* identifiers
+- scope per-project volumes by project slug
+
+### Changed
+- refactor(lib/git): dual-mode source/execute bootstrap
+- chore(contain-streaming): patch libpcre3-dev to libpcre2-dev
+- docs(log): index NTFS-related issues + refine 1.13-dev framing
+- docs(log): introduce log/ with fuse-overlayfs/NTFS compatibility notes
+
 ## [0.5.9] - 2026-05-11 (re-release)
 
 ### Added
