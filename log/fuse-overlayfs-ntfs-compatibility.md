@@ -1,8 +1,10 @@
-# FUSE-Overlayfs / NTFS Compatibility - Findings & Survival Guide
+# 31 May, 2026
+
+##  FUSE-Overlayfs / NTFS Compatibility - Findings & Survival Guide
 
 > Operational log of the rootless-podman-on-NTFS investigation. Steps required to keep the `containerise.sh` flow working across NTFS driver choices and `fuse-overlayfs` versions.
 
-## Index of recorded NTFS-related issues
+### Index of recorded NTFS-related issues
 
 Observations against an NTFS-backed graphRoot. Chronological, discrete data points with reference commits that are in this repository's history.
 
@@ -13,7 +15,7 @@ Observations against an NTFS-backed graphRoot. Chronological, discrete data poin
 | 3 | Same class of perms damage observed after entrypoint stage; repaired via runtime `docker exec` against the podman socket inside `postCreateCommand` | `dbdbd98`, `8fb8901` | `docker exec -u root \$CID chmod u+s /usr/bin/sudo` and `chown` of `/home/<remote_user>` from the dev container's `postCreateCommand` |
 | 4 | `fuse-overlayfs` binary on Ubuntu 26.04 self-reports `1.13-dev`; mode bits (incl. setuid on `/usr/bin/sudo`) and `/home/<user>` ownership do not survive layer commits | (see [§ 1.13-dev xattr regression](#the-fuse-overlayfs-113-dev-xattr-regression)) | Switch `mount_program` to upstream v1.16 at `/usr/local/bin/fuse-overlayfs` + `podman system reset -f` |
 
-## TL;DR
+### TL;DR
 
 ```
 podman ──▶ fuse-overlayfs (userspace) ──▶ user.* xattrs ──▶ NTFS driver ──▶ disk
@@ -26,8 +28,10 @@ podman ──▶ fuse-overlayfs (userspace) ──▶ user.* xattrs ──▶ NT
 
 Project is **driver-agnostic** at the NTFS layer and **largely version-agnostic** for `fuse-overlayfs` itself: the flow has worked on releases ranging from `1.7.x` through current upstream.
 
-## The fuse-overlayfs 1.13-dev xattr regression
+<details>
+<summary><strong>The fuse-overlayfs 1.13-dev xattr regression
 
+</strong></summary>
 On one upgrade path (Ubuntu 25.10 → 26.04 LTS) the `fuse-overlayfs` binary at `/usr/bin/fuse-overlayfs` began self-reporting `version 1.13-dev` despite the source package being labelled `1.14-1build2`. The same workstation on 25.10 (`1.14-1build1`) had not exhibited the bug.
 Verified data points so far:
 
@@ -61,9 +65,10 @@ sudo getfattr -dm '.*' <that_path>/usr/bin/sudo 2>/dev/null \
 
 **Cached layers built while the `1.13-dev` binary was active carry the broken xattrs forward.** No `chmod` / `chown` from inside the container fixes them - the driver re-emulates the corrupted state on every `copy_up`. Recovery requires switching to a binary that does not self-report `1.13-dev` *and* wiping the affected layer cache.
 
-## Preemptive setup (one-time, per host)
 
-### Pick a driver binary, then point `storage.conf` at it
+### Solution
+
+#### Pick a driver binary, then point `storage.conf` at it
 
 Two viable installation paths. Pick one; the `mount_program` line in `storage.conf` must match.
 
@@ -79,33 +84,44 @@ curl -L -o /usr/local/bin/fuse-overlayfs \
   https://github.com/containers/fuse-overlayfs/releases/download/v1.16/fuse-overlayfs-x86_64
 chmod +x /usr/local/bin/fuse-overlayfs
 ```
+</details>
 
-### `~/.config/containers/storage.conf`
+### Preemptive setup (one-time, per host)
+
+#### `~/.config/containers/storage.conf`
+
+`graphroot` is where Podman stores all image layers, container diffs, and volumes. Pointing it to an external or secondary drive keeps the root filesystem free. On ext4 the `mount_program` line is not needed and should be omitted — native overlayfs is used instead.
 
 ```toml
 [storage]
 driver    = "overlay"
-graphroot = "/mnt/drive1/.data/containers"   # any FS with user.* xattrs
+graphroot = "/mnt/drive1/.data/containers"   # ext4 or any FS with native overlayfs / user.* xattr support
 runroot   = "/run/user/1000/containers"
-[storage.options.overlay]
-mount_program = "/usr/local/bin/fuse-overlayfs"  # or /usr/bin/... per table above
+# mount_program not needed on ext4; keep only when graphroot is on NTFS/btrfs/zfs/overlay
 ```
 
-### Verify
+> **TMPDIR:** Podman and buildah write temporary layer tarballs and work dirs to `$TMPDIR` during builds. When `graphroot` is on a secondary drive, set `TMPDIR` to a path on the **same filesystem** so layer commits are a near-instant `rename()` rather than a cross-device copy. Add to `~/.bashrc`:
+> ```sh
+> export TMPDIR=/mnt/drive1/.data/.tmp   # same mount as graphroot
+> mkdir -p "$TMPDIR" && chmod 700 "$TMPDIR"
+> ```
+> On a small root filesystem this is especially important — without it, build temporaries default to `/tmp` and can fill the root FS mid-build.
+
+#### Verify
 
 ```sh
 podman info | grep -A6 mount_program     # must NOT report 1.13-dev
 fuse-overlayfs --version                  # primary diagnostic
 ```
 
-### Wipe poisoned cache after a driver swap
+#### Wipe poisoned cache after a driver swap
 
 ```sh
 podman system reset -f        # then optionally:
 rm -rf "$graphroot"/*         # residual .lock files are safe to remove
 ```
 
-## NTFS driver choice - both supported, neither required
+### NTFS driver choice - both supported, neither required
 
 | Aspect | `ntfs-3g` (FUSE userspace) | `ntfs3` (kernel, ≥ 5.15) |
 |---|---|---|
@@ -132,11 +148,12 @@ rm -rf "$graphroot"/*         # residual .lock files are safe to remove
 | `nojournal` | Skip journal replay entirely | Silently discards any in-flight Windows transactions |
 | both | Maximum override | Use only for forensic recovery |
 
-## Resolved / non-issues
+### Resolved / non-issues
 
 - **NTFS-3g xattr capacity** verified round-tripping `user.containers.override_stat` and `user.overlay.opaque` on `/mnt/drive1`. Both drivers handle the sizes podman writes.
 - **`force_mask` in storage.conf** not set in this project; do not enable (drove issue #407's reproducer).
 
-## Notes
+### Notes
 
-- Development is moving back to a ntfs3 filesystem, please append any future incompatabilities with a ntfs-3g configuration to this file.
+- Development has moved to an **ext4**-backed graphRoot. `fuse-overlayfs` and `mount_program` are no longer required for the primary workflow; native overlayfs is used. The NTFS compatibility notes above are retained as reference for NTFS-backed setups.
+- Please append any future incompatabilities with a NTFS (ntfs3/ntfs-3g) configuration to this file, under a new date.
