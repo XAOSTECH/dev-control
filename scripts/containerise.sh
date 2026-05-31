@@ -50,6 +50,7 @@ SHOW_HELP=false
 NEST_MODE=false
 NEST_REGEN=false
 NO_CACHE=false
+ASSUME_YES=false
 EXCLUDE_DIRS=()
 
 ################################################################################
@@ -73,7 +74,10 @@ MODES:
             Use --nest . to include the root directory itself
   --regen   Delete all .devcontainer dirs before nest rebuild (forces regeneration)
   --no-cache  Build base images without layer cache (force full image rebuild)
-  --exclude DIR [DIR..]  Exclude directories (and their children) from nest discovery
+  --exclude DIR [DIR..]  Exclude directories (and their children) from nest discovery,
+                         container/volume removal, .devcontainer deletion and image prune.
+                         Accepts absolute paths or paths relative to the nest root.
+  -y, --yes, --force     Assume "yes" to every confirmation prompt (non-interactive)
 
 CATEGORIES:
   --game-dev        Godot, Vulkan, SDL2, GLFW, CUDA
@@ -146,6 +150,10 @@ parse_args() {
                 ;;
             --no-cache)
                 NO_CACHE=true
+                shift
+                ;;
+            -y|--yes|--force)
+                ASSUME_YES=true
                 shift
                 ;;
             --exclude|--skip)
@@ -1287,6 +1295,30 @@ generate_image_devcontainer() {
 # Nest Mode - Recursively rebuild all base and img containers
 ################################################################################
 
+# Return 0 if an ABSOLUTE candidate path falls under any --exclude entry.
+# EXCLUDE_DIRS entries may be absolute, or relative to the nest root ($2);
+# both forms (and "./"-prefixed relatives) are normalised before comparison.
+nest_path_is_excluded() {
+    local candidate="${1%/}"
+    local start_dir="${2%/}"
+    local _excl abs_excl
+    for _excl in "${EXCLUDE_DIRS[@]}"; do
+        _excl="${_excl%/}"
+        if [[ "$_excl" == /* ]]; then
+            abs_excl="$_excl"
+        else
+            _excl="${_excl#./}"
+            abs_excl="$start_dir/$_excl"
+        fi
+        abs_excl="${abs_excl%/}"
+        if [[ "$candidate" == "$abs_excl" || "$candidate" == "$abs_excl/"* ]]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+
 run_nest_mode() {
     local start_dir="${1:-$(pwd)}"
     local include_root=false
@@ -1423,23 +1455,61 @@ run_nest_mode() {
         print_warning "This will DELETE all dev-control containers and .devcontainer directories under $start_dir (except root)"
 
         # First, delete any matching containers
-        local -a container_ids
-        mapfile -t container_ids < <(
+        local -a all_container_ids
+        mapfile -t all_container_ids < <(
             docker ps -q -a --filter "label=devcontainer.local_folder" 2>/dev/null | grep -v "^$" || true
         )
-        
+
+        # Partition containers into those to delete and those kept by --exclude.
+        # NOTE: the label key is dotted ("devcontainer.local_folder"), so it must be
+        # read with {{index .Config.Labels "..."}} — the {{.Config.Labels.devcontainer.local_folder}}
+        # form treats the dots as nested fields and always yields "<no value>".
+        local -a container_ids=()
+        local -a kept_container_ids=()
+        local container_id
+        for container_id in "${all_container_ids[@]}"; do
+            local folder
+            folder=$(docker inspect "$container_id" --format='{{index .Config.Labels "devcontainer.local_folder"}}' 2>/dev/null || echo "")
+            if [[ ${#EXCLUDE_DIRS[@]} -gt 0 && -n "$folder" ]] && nest_path_is_excluded "$folder" "$start_dir"; then
+                kept_container_ids+=("$container_id")
+            else
+                container_ids+=("$container_id")
+            fi
+        done
+
+        if [[ ${#kept_container_ids[@]} -gt 0 ]]; then
+            print_info "Excluding ${#kept_container_ids[@]} container(s) matched by --exclude (kept):"
+            for container_id in "${kept_container_ids[@]}"; do
+                local folder
+                folder=$(docker inspect "$container_id" --format='{{index .Config.Labels "devcontainer.local_folder"}}' 2>/dev/null || echo "")
+                echo "  - ${folder:-unknown} (${container_id:0:12})"
+            done
+            echo ""
+        fi
+
         if [[ ${#container_ids[@]} -gt 0 ]]; then
             echo ""
             print_info "Found ${#container_ids[@]} dev-control containers to delete:"
-            local container_id
             for container_id in "${container_ids[@]}"; do
-                local folder=$(docker inspect "$container_id" --format='{{.Config.Labels.devcontainer.local_folder}}' 2>/dev/null || echo "unknown")
-                echo "  - $folder (${container_id:0:12})"
+                local folder
+                folder=$(docker inspect "$container_id" --format='{{index .Config.Labels "devcontainer.local_folder"}}' 2>/dev/null || echo "")
+                echo "  - ${folder:-unknown} (${container_id:0:12})"
             done
             echo ""
             
             if confirm "Delete these containers?"; then
                 echo ""
+                # Volumes belonging to kept (excluded) containers must be preserved even
+                # if a soon-to-be-deleted container happens to share them.
+                local -a keep_vol_names=()
+                for container_id in "${kept_container_ids[@]}"; do
+                    mapfile -t -O "${#keep_vol_names[@]}" keep_vol_names < <(
+                        docker inspect "$container_id" \
+                            --format='{{range .Mounts}}{{if eq .Type "volume"}}{{.Name}}{{"\n"}}{{end}}{{end}}' \
+                            2>/dev/null | grep -v "^$" || true
+                    )
+                done
+
                 # Collect all associated volume names upfront before any removal
                 local -a all_vol_names=()
                 for container_id in "${container_ids[@]}"; do
@@ -1460,11 +1530,25 @@ run_nest_mode() {
                 echo ""
                 print_success "Deleted ${#container_ids[@]} containers"
 
+                # Filter out any volume that a kept container still depends on.
+                local -a vols_to_remove=()
+                local vol keep_vol is_kept
+                for vol in "${all_vol_names[@]}"; do
+                    is_kept=false
+                    for keep_vol in "${keep_vol_names[@]}"; do
+                        [[ "$vol" == "$keep_vol" ]] && { is_kept=true; break; }
+                    done
+                    [[ "$is_kept" == false ]] && vols_to_remove+=("$vol")
+                done
+
                 # Remove associated volumes in one batch (clears stale postCreateCommandMarker)
-                if [[ ${#all_vol_names[@]} -gt 0 ]]; then
-                    print_info "Removing ${#all_vol_names[@]} associated volume(s)..."
-                    docker volume rm "${all_vol_names[@]}" 2>/dev/null || true
-                    print_success "Removed volumes: ${all_vol_names[*]}"
+                if [[ ${#vols_to_remove[@]} -gt 0 ]]; then
+                    print_info "Removing ${#vols_to_remove[@]} associated volume(s)..."
+                    docker volume rm "${vols_to_remove[@]}" 2>/dev/null || true
+                    print_success "Removed volumes: ${vols_to_remove[*]}"
+                fi
+                if [[ ${#keep_vol_names[@]} -gt 0 ]]; then
+                    print_info "Preserved ${#keep_vol_names[@]} volume(s) for excluded container(s)"
                 fi
             else
                 print_info "Skipped container deletion"
@@ -1478,6 +1562,20 @@ run_nest_mode() {
                 | grep -vE '/(\.tmp|\.bak)/' \
                 | sort
         )
+
+        # Drop any .devcontainer dir whose project dir is under an --exclude entry.
+        if [[ ${#EXCLUDE_DIRS[@]} -gt 0 && ${#regen_dirs[@]} -gt 0 ]]; then
+            local -a filtered_regen_dirs=()
+            local _rd
+            for _rd in "${regen_dirs[@]}"; do
+                if nest_path_is_excluded "$(dirname "$_rd")" "$start_dir"; then
+                    print_info "Excluding (kept): ${_rd#$start_dir/}"
+                else
+                    filtered_regen_dirs+=("$_rd")
+                fi
+            done
+            regen_dirs=("${filtered_regen_dirs[@]}")
+        fi
 
         if [[ ${#regen_dirs[@]} -eq 0 ]]; then
             print_info "No .devcontainer directories found to delete"
@@ -1607,15 +1705,12 @@ run_nest_mode() {
     # Skip if --regen was used (user already confirmed delete operation)
     if [[ "$NEST_REGEN" != true ]]; then
         print_warning "Regenerate ${#known_projects[@]} recognised containers?"
-        read -p "Proceed? [y/N] " -n 1 -r
-        echo ""
-        echo ""
-        
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        if ! confirm "Proceed?"; then
             print_info "Aborted - no changes made"
             rm -f "$nest_json.tmp"
             return 0
         fi
+        echo ""
     else
         # With --regen, auto-proceed after deletion confirmation
         print_info "Auto-proceeding with rebuild of ${#known_projects[@]} containers..."
@@ -1624,18 +1719,44 @@ run_nest_mode() {
     
     # During --regen, prune all stale VS Code UID-wrapper images (vsc-*-uid) upfront, before any base is built. Makes the prune order-independent: fires once here rather than after whichever base happens to build first. The per-build prune in build_base_image() remains for standalone --base runs.
     if [[ "$NEST_REGEN" == true ]]; then
+        # Build a list of basename patterns for --exclude entries so their
+        # wrapper images (localhost/vsc-<basename>-<hash>[-uid]) are preserved.
+        local -a excl_basenames=()
+        if [[ ${#EXCLUDE_DIRS[@]} -gt 0 ]]; then
+            local _ed
+            for _ed in "${EXCLUDE_DIRS[@]}"; do
+                excl_basenames+=( "$(basename "${_ed%/}" | tr '[:upper:]' '[:lower:]')" )
+            done
+        fi
+
         local stale_wrappers=()
         mapfile -t stale_wrappers < <(
             podman images --format "{{.Repository}}" 2>/dev/null \
                 | grep "^localhost/vsc-" || true
         )
         if [[ ${#stale_wrappers[@]} -gt 0 ]]; then
-            print_info "Pruning ${#stale_wrappers[@]} stale VS Code UID-wrapper image(s) before rebuild..."
+            local -a wrappers_to_prune=()
+            local wrapper _bn keep_wrapper
             for wrapper in "${stale_wrappers[@]}"; do
-                podman rmi --force "$wrapper" 2>/dev/null || true
+                keep_wrapper=false
+                for _bn in "${excl_basenames[@]}"; do
+                    [[ -n "$_bn" && "$wrapper" == "localhost/vsc-$_bn-"* ]] && { keep_wrapper=true; break; }
+                done
+                if [[ "$keep_wrapper" == true ]]; then
+                    print_info "Excluding wrapper image (kept): $wrapper"
+                else
+                    wrappers_to_prune+=("$wrapper")
+                fi
             done
-            print_success "Pruned. VS Code will rebuild wrappers from new base images."
-            echo ""
+
+            if [[ ${#wrappers_to_prune[@]} -gt 0 ]]; then
+                print_info "Pruning ${#wrappers_to_prune[@]} stale VS Code UID-wrapper image(s) before rebuild..."
+                for wrapper in "${wrappers_to_prune[@]}"; do
+                    podman rmi --force "$wrapper" 2>/dev/null || true
+                done
+                print_success "Pruned. VS Code will rebuild wrappers from new base images."
+                echo ""
+            fi
         fi
     fi
 
@@ -1668,6 +1789,12 @@ run_nest_mode() {
 main() {
     # Parse arguments
     parse_args "$@"
+    
+    # Propagate the auto-confirm switch to the shared confirm() helper and to
+    # any child containerise.sh invocations spawned during --nest rebuilds.
+    if [[ "$ASSUME_YES" == true ]]; then
+        export DC_ASSUME_YES=true
+    fi
     
     # Show help if requested
     if [[ "$SHOW_HELP" == true ]]; then
