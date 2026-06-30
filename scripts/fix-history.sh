@@ -51,6 +51,7 @@ source "$SCRIPT_DIR/lib/git/drop.sh"
 source "$SCRIPT_DIR/lib/git/restore.sh"
 source "$SCRIPT_DIR/lib/git/blossom.sh"
 source "$SCRIPT_DIR/lib/git/dedu.sh"
+source "$SCRIPT_DIR/lib/git/combine.sh"
 
 # Configuration
 RANGE="HEAD=10"
@@ -75,6 +76,9 @@ AUTO_SIGN_MODE=false    # Auto-sign: detect unsigned commits, confirm, then auto
 REAUTHOR_MODE=false
 REAUTHOR_TARGET=""
 DEDUP_MODE=false
+COMBINE_MODE=false
+COMBINE_A=""
+COMBINE_B=""
 DROP_COMMIT=""
 # Auto-resolve strategy: empty|ours|theirs
 # Can be set via environment (AUTO_RESOLVE=ours|theirs|OURS|THEIRS) or via --auto-resolve <mode|=mode>
@@ -202,6 +206,14 @@ Options:
                              refreshes the committer date, and discards the later
                              duplicates' changes (resets to the first commit's tree).
                              Honours --range, --dry-run, --sign and --no-cleanup.
+  --combine A B             Fuse two subsequent (adjacent) commits into one and
+                             surgically rebuild the rest of history. The pair
+                             collapses to a single commit using the newer commit's
+                             tree (both changes) and a joined message, preserving
+                             the older commit's author/committer dates and identity;
+                             later commits are recreated verbatim. Commits need not
+                             be duplicates. Honours --dry-run, --sign, --no-cleanup.
+                             Example: --combine abc1234 def5678
 
   --harness-drop <commit>    Run a minimal harness that drops a commit in a temporary branch,
                              creates a backup bundle and performs post-checks (safe wrapper)
@@ -318,6 +330,12 @@ parse_args() {
             --dedu|--deduplicate)
                 DEDUP_MODE=true
                 shift
+                ;;
+            --combine)
+                COMBINE_MODE=true
+                COMBINE_A="${2:-}"
+                COMBINE_B="${3:-}"
+                if [[ $# -ge 3 ]]; then shift 3; elif [[ $# -ge 2 ]]; then shift 2; else shift; fi
                 ;;
             --drop)
                 DROP_COMMIT="$2"
@@ -1102,6 +1120,12 @@ main() {
     # Handle deduplicate mode (squash consecutive identical-subject commits)
     if [[ "$DEDUP_MODE" == "true" ]]; then
         deduplicate_mode
+        exit 0
+    fi
+
+    # Handle combine mode (fuse two adjacent commits into one)
+    if [[ "$COMBINE_MODE" == "true" ]]; then
+        combine_commits
         exit 0
     fi
 
