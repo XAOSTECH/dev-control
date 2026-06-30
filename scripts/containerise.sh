@@ -1313,14 +1313,24 @@ nest_path_is_excluded() {
     for _excl in "${EXCLUDE_DIRS[@]}"; do
         _excl="${_excl%/}"
         if [[ "$_excl" == /* ]]; then
-            abs_excl="$_excl"
-        else
+            # Absolute path: exact or ancestor match
+            abs_excl="${_excl%/}"
+            if [[ "$candidate" == "$abs_excl" || "$candidate" == "$abs_excl/"* ]]; then
+                return 0
+            fi
+        elif [[ "$_excl" == */* ]]; then
+            # Relative path (contains a slash): resolve against the nest root
             _excl="${_excl#./}"
-            abs_excl="$start_dir/$_excl"
-        fi
-        abs_excl="${abs_excl%/}"
-        if [[ "$candidate" == "$abs_excl" || "$candidate" == "$abs_excl/"* ]]; then
-            return 0
+            abs_excl="${start_dir}/${_excl}"
+            abs_excl="${abs_excl%/}"
+            if [[ "$candidate" == "$abs_excl" || "$candidate" == "$abs_excl/"* ]]; then
+                return 0
+            fi
+        else
+            # Bare folder name: match that folder anywhere in the tree (and its descendants)
+            if [[ "$candidate" == "$_excl" || "$candidate" == *"/$_excl" || "$candidate" == *"/$_excl/"* ]]; then
+                return 0
+            fi
         fi
     done
     return 1
@@ -1377,17 +1387,8 @@ run_nest_mode() {
             
             [[ -z "$path" || -z "$type" || -z "$category" ]] && continue
 
-            # Filter by --exclude directories
-            local skip_this=false
-            for _excl in "${EXCLUDE_DIRS[@]}"; do
-                _excl="${_excl%/}"
-                if [[ "$path" == "$_excl" || "$path" == "$_excl/"* || "$path" == "./$_excl" || "$path" == "./$_excl/"* ]]; then
-                    skip_this=true
-                    break
-                fi
-            done
-            [[ "$skip_this" == "true" ]] && continue
-            
+            # NOTE: --exclude is intentionally NOT applied here. Excluded projects
+            # must remain recorded in nest.json; they are skipped at build time only.
             # Filter by allowed categories if specified
             if [[ -n "$allowed_cats" ]]; then
                 local match=0
@@ -1778,6 +1779,12 @@ run_nest_mode() {
         
         # Verify project directory exists
         [[ ! -d "$full_path" ]] && continue
+        
+        # Skip --exclude'd projects at build time (they stay recorded in nest.json)
+        if [[ ${#EXCLUDE_DIRS[@]} -gt 0 ]] && nest_path_is_excluded "$full_path" "$start_dir"; then
+            print_info "Excluding (kept in nest.json): $path"
+            continue
+        fi
         
         echo ""
         print_info "$type: $path ($category)"
