@@ -1416,8 +1416,9 @@ run_nest_mode() {
             local rel_path="${project_dir#$start_dir/}"
             [[ "$rel_path" == "$project_dir" ]] && rel_path="."
             
-            # Skip root unless explicitly included with "."
-            if [[ "$rel_path" == "." && "$include_root" != true ]]; then
+            # Root is handled separately as a dedicated scaffold (see the include_root
+            # block after the build loop); never record it as a tracked nest project.
+            if [[ "$rel_path" == "." ]]; then
                 continue
             fi
             
@@ -1790,6 +1791,22 @@ run_nest_mode() {
         print_info "$type: $path ($category)"
         (cd "$full_path" && NESTED=true "$SCRIPT_DIR/containerise.sh" --defaults --"${type,,}" --"$category" <<< y)
     done
+
+    # Regenerate the root scaffold when invoked with "." — independent of nest.json.
+    # Root is intentionally NOT a tracked nest project; it is a minimal scaffold that
+    # reuses the dev-tools base image so it inherits the same runArgs (the /tmp tmpfs
+    # that lets the CLI stage its session dir and actually run postCreate) and the
+    # standard postCreate (git/GPG config) as every other container.
+    if [[ "$include_root" == true ]]; then
+        if [[ ${#EXCLUDE_DIRS[@]} -gt 0 ]] && nest_path_is_excluded "$start_dir" "$start_dir"; then
+            echo ""
+            print_info "Excluding root scaffold (--exclude)"
+        else
+            echo ""
+            print_info "Root scaffold: $start_dir (dev-tools img)"
+            (cd "$start_dir" && NESTED=true "$SCRIPT_DIR/containerise.sh" --defaults --img --dev-tools <<< y)
+        fi
+    fi
     
     rm -f "$nest_json.tmp"
     echo ""
