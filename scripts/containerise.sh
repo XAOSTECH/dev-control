@@ -687,6 +687,14 @@ DOCKERFILE_EOF
 ENV TZ=${CFG_TIMEZONE}
 RUN ln -snf /usr/share/zoneinfo/\${TZ} /etc/localtime && echo \${TZ} > /etc/timezone 2>/dev/null || true
 DOCKERFILE_EOF
+
+        local git_config_cmd
+        git_config_cmd=$(generate_git_config_dockerfile "$CFG_GITHUB_USER" "$CFG_GITHUB_USER_EMAIL" "$CFG_GPG_KEY_ID")
+        cat >> "$dockerfile_path" << DOCKERFILE_EOF
+
+# Bake git config into image
+RUN $git_config_cmd
+DOCKERFILE_EOF
     fi
 
     print_success "Created: $dockerfile_path"
