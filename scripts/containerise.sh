@@ -1218,11 +1218,11 @@ build_base_image() {
                     | grep "^localhost/vsc-" || true
             )
             if [[ ${#stale_wrappers[@]} -gt 0 ]]; then
-                print_info "Pruning ${#stale_wrappers[@]} stale VS Code UID-wrapper image(s)..."
+                print_info "Pruning orphaned VS Code UID-wrapper image(s) (in-use wrappers are skipped by Podman)..."
                 for wrapper in "${stale_wrappers[@]}"; do
-                    podman rmi --force "$wrapper" 2>/dev/null || true
+                    podman rmi "$wrapper" 2>/dev/null || true
                 done
-                print_success "Pruned. VS Code will rebuild wrappers from the new base on next open."
+                print_success "Pruned orphaned wrappers. VS Code rebuilds them from the new base on next open."
             fi
         else
             echo ""
