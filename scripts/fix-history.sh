@@ -50,6 +50,7 @@ source "$SCRIPT_DIR/lib/git/sign.sh"
 source "$SCRIPT_DIR/lib/git/drop.sh"
 source "$SCRIPT_DIR/lib/git/restore.sh"
 source "$SCRIPT_DIR/lib/git/blossom.sh"
+source "$SCRIPT_DIR/lib/git/dedu.sh"
 
 # Configuration
 RANGE="HEAD=10"
@@ -73,6 +74,7 @@ RESIGN_MODE=false       # Force re-sign even if already signed
 AUTO_SIGN_MODE=false    # Auto-sign: detect unsigned commits, confirm, then auto-configure flags
 REAUTHOR_MODE=false
 REAUTHOR_TARGET=""
+DEDUP_MODE=false
 DROP_COMMIT=""
 # Auto-resolve strategy: empty|ours|theirs
 # Can be set via environment (AUTO_RESOLVE=ours|theirs|OURS|THEIRS) or via --auto-resolve <mode|=mode>
@@ -194,6 +196,12 @@ Options:
                              `git commit-tree`, immediately sign and set author/committer dates (atomic)
   --drop COMMIT              Drop (remove) a single non-root commit from history
                              Example: --drop 181cab0 (dropping commit by hash)
+  --dedu, --deduplicate     Squash consecutive commits that share an identical
+                             subject line into the first commit of each run.
+                             Preserves the first commit's author date/name/email,
+                             refreshes the committer date, and discards the later
+                             duplicates' changes (resets to the first commit's tree).
+                             Honours --range, --dry-run, --sign and --no-cleanup.
 
   --harness-drop <commit>    Run a minimal harness that drops a commit in a temporary branch,
                              creates a backup bundle and performs post-checks (safe wrapper)
@@ -305,6 +313,10 @@ parse_args() {
                 SIGN_MODE=true
                 TIMED_SIGN_MODE=true
                 export TIMED_SIGN_MODE
+                shift
+                ;;
+            --dedu|--deduplicate)
+                DEDUP_MODE=true
                 shift
                 ;;
             --drop)
@@ -1084,6 +1096,12 @@ main() {
     # Handle sign mode (re-sign commits in a range)
     if [[ "$SIGN_MODE" == "true" || "$REAUTHOR_MODE" == "true" ]]; then
         sign_mode
+        exit 0
+    fi
+
+    # Handle deduplicate mode (squash consecutive identical-subject commits)
+    if [[ "$DEDUP_MODE" == "true" ]]; then
+        deduplicate_mode
         exit 0
     fi
 
