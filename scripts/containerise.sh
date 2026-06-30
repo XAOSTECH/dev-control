@@ -1725,46 +1725,45 @@ run_nest_mode() {
         echo ""
     fi
     
-    # During --regen, prune all stale VS Code UID-wrapper images (vsc-*-uid) upfront, before any base is built. Makes the prune order-independent: fires once here rather than after whichever base happens to build first. The per-build prune in build_base_image() remains for standalone --base runs.
-    if [[ "$NEST_REGEN" == true ]]; then
-        # Build a list of basename patterns for --exclude entries so their
-        # wrapper images (localhost/vsc-<basename>-<hash>[-uid]) are preserved.
-        local -a excl_basenames=()
-        if [[ ${#EXCLUDE_DIRS[@]} -gt 0 ]]; then
-            local _ed
-            for _ed in "${EXCLUDE_DIRS[@]}"; do
-                excl_basenames+=( "$(basename "${_ed%/}" | tr '[:upper:]' '[:lower:]')" )
-            done
-        fi
+    # Prune stale VS Code UID-wrapper images (vsc-*-uid) ONCE here, before any base is built, for both --nest and --nest --regen. The per-build prune in build_base_image() is suppressed during nest via NESTED=true, so this is the single prune for the whole tree. --force only under --regen (which deleted the containers first); plain --nest relies on Podman skipping wrappers still in use by an active container.
+    local -a excl_basenames=()
+    if [[ ${#EXCLUDE_DIRS[@]} -gt 0 ]]; then
+        local _ed
+        for _ed in "${EXCLUDE_DIRS[@]}"; do
+            excl_basenames+=( "$(basename "${_ed%/}" | tr '[:upper:]' '[:lower:]')" )
+        done
+    fi
 
-        local stale_wrappers=()
-        mapfile -t stale_wrappers < <(
-            podman images --format "{{.Repository}}" 2>/dev/null \
-                | grep "^localhost/vsc-" || true
-        )
-        if [[ ${#stale_wrappers[@]} -gt 0 ]]; then
-            local -a wrappers_to_prune=()
-            local wrapper _bn keep_wrapper
-            for wrapper in "${stale_wrappers[@]}"; do
-                keep_wrapper=false
-                for _bn in "${excl_basenames[@]}"; do
-                    [[ -n "$_bn" && "$wrapper" == "localhost/vsc-$_bn-"* ]] && { keep_wrapper=true; break; }
-                done
-                if [[ "$keep_wrapper" == true ]]; then
-                    print_info "Excluding wrapper image (kept): $wrapper"
-                else
-                    wrappers_to_prune+=("$wrapper")
-                fi
-            done
+    local -a rmi_force=()
+    [[ "$NEST_REGEN" == true ]] && rmi_force=(--force)
 
-            if [[ ${#wrappers_to_prune[@]} -gt 0 ]]; then
-                print_info "Pruning ${#wrappers_to_prune[@]} stale VS Code UID-wrapper image(s) before rebuild..."
-                for wrapper in "${wrappers_to_prune[@]}"; do
-                    podman rmi --force "$wrapper" 2>/dev/null || true
-                done
-                print_success "Pruned. VS Code will rebuild wrappers from new base images."
-                echo ""
+    local stale_wrappers=()
+    mapfile -t stale_wrappers < <(
+        podman images --format "{{.Repository}}" 2>/dev/null \
+            | grep "^localhost/vsc-" || true
+    )
+    if [[ ${#stale_wrappers[@]} -gt 0 ]]; then
+        local -a wrappers_to_prune=()
+        local wrapper _bn keep_wrapper
+        for wrapper in "${stale_wrappers[@]}"; do
+            keep_wrapper=false
+            for _bn in "${excl_basenames[@]}"; do
+                [[ -n "$_bn" && "$wrapper" == "localhost/vsc-$_bn-"* ]] && { keep_wrapper=true; break; }
+            done
+            if [[ "$keep_wrapper" == true ]]; then
+                print_info "Excluding wrapper image (kept): $wrapper"
+            else
+                wrappers_to_prune+=("$wrapper")
             fi
+        done
+
+        if [[ ${#wrappers_to_prune[@]} -gt 0 ]]; then
+            print_info "Pruning ${#wrappers_to_prune[@]} stale VS Code UID-wrapper image(s) before rebuild..."
+            for wrapper in "${wrappers_to_prune[@]}"; do
+                podman rmi "${rmi_force[@]}" "$wrapper" 2>/dev/null || true
+            done
+            print_success "Pruned. VS Code will rebuild wrappers from new base images."
+            echo ""
         fi
     fi
 
@@ -1782,7 +1781,7 @@ run_nest_mode() {
         
         echo ""
         print_info "$type: $path ($category)"
-        (cd "$full_path" && "$SCRIPT_DIR/containerise.sh" --defaults --"${type,,}" --"$category" <<< y)
+        (cd "$full_path" && NESTED=true "$SCRIPT_DIR/containerise.sh" --defaults --"${type,,}" --"$category" <<< y)
     done
     
     rm -f "$nest_json.tmp"
