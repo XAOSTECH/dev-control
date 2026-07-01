@@ -1,0 +1,26 @@
+# SPDX-Licence-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2025-2026 xaoscience
+#
+# GitHub App manifest for the Dev-Control GitHub App.
+# Used with the App-manifest flow: https://docs.github.com/apps/creating-github-apps/setting-up-a-github-app/creating-a-github-app-from-a-manifest
+# Adjust `url` / `redirect_url` for your deployment before registering.
+
+name: Dev-Control
+url: https://github.com/xaoscience/dev-control
+hook_attributes:
+  url: https://example.invalid/api/github/webhooks
+  active: true
+redirect_url: https://example.invalid/api/github/callback
+public: false
+
+default_events:
+  - issue_comment
+  - pull_request
+
+default_permissions:
+  # Rewrite history / force-push and read commit trees
+  contents: write
+  # Post status comments and read PR head refs
+  pull_requests: write
+  # Resolve repository metadata
+  metadata: read

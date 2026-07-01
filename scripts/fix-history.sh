@@ -80,6 +80,7 @@ COMBINE_MODE=false
 COMBINE_A=""
 COMBINE_B=""
 DROP_COMMIT=""
+DROP_COMMITS=()
 # Auto-resolve strategy: empty|ours|theirs
 # Can be set via environment (AUTO_RESOLVE=ours|theirs|OURS|THEIRS) or via --auto-resolve <mode|=mode>
 AUTO_RESOLVE="${AUTO_RESOLVE:-}"
@@ -198,8 +199,10 @@ Options:
                                                          If a single commit is provided, rewrites from that commit to HEAD
   --atomic-preserve          Deterministic preserve: recreate commits (including merges) with
                              `git commit-tree`, immediately sign and set author/committer dates (atomic)
-  --drop COMMIT              Drop (remove) a single non-root commit from history
-                             Example: --drop 181cab0 (dropping commit by hash)
+  --drop COMMIT [COMMIT…]   Drop (remove) one or more non-root commits from history.
+                             Multiple commits are ordered newest-first and dropped
+                             sequentially. Examples: --drop 181cab0
+                                                     --drop 181cab0 a61b084
   --dedu, --deduplicate     Squash consecutive commits that share an identical
                              subject line into the first commit of each run.
                              Preserves the first commit's author date/name/email,
@@ -338,8 +341,15 @@ parse_args() {
                 if [[ $# -ge 3 ]]; then shift 3; elif [[ $# -ge 2 ]]; then shift 2; else shift; fi
                 ;;
             --drop)
-                DROP_COMMIT="$2"
-                shift 2
+                # Accept one or more commits: --drop <A> [B ...]
+                # Reset first: parse_args runs twice (entry + main), so += would accumulate.
+                DROP_COMMITS=()
+                shift
+                while [[ $# -gt 0 && "$1" != -* ]]; do
+                    DROP_COMMITS+=("$1")
+                    shift
+                done
+                DROP_COMMIT="${DROP_COMMITS[0]:-}"
                 ;;
             --harness-drop)
                 HARNESS_MODE=true
@@ -1129,9 +1139,13 @@ main() {
         exit 0
     fi
 
-    # Handle drop-commit mode (surgically remove a single commit)
-    if [[ -n "$DROP_COMMIT" ]]; then
-        drop_single_commit "$DROP_COMMIT"
+    # Handle drop-commit mode (surgically remove one or more commits)
+    if [[ ${#DROP_COMMITS[@]} -gt 0 ]]; then
+        if [[ ${#DROP_COMMITS[@]} -eq 1 ]]; then
+            drop_single_commit "${DROP_COMMITS[0]}"
+        else
+            drop_multiple_commits "${DROP_COMMITS[@]}"
+        fi
         exit 0
     fi
 

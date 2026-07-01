@@ -128,6 +128,90 @@ prompt_and_push_branch() {
 }
 
 # ============================================================================
+# DROP MULTIPLE — drop two or more commits in a single interactive rebase.
+# All targets are flipped to `drop` in one todo edit, so there is exactly one
+# rewrite and one push (no per-commit reconstruction/push). Dates of the
+# surviving rewritten commits are restored afterwards.
+# ============================================================================
+
+drop_multiple_commits() {
+    local -a targets=("$@")
+    check_git_repo
+    backup_repo
+    ORIGINAL_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
+    # Resolve every target to a full SHA and require it be reachable from HEAD
+    local -a full=()
+    local t sha
+    for t in "${targets[@]}"; do
+        sha=$(git rev-parse --verify --quiet "${t}^{commit}") || { print_error "Commit not found: $t"; exit 1; }
+        if ! git merge-base --is-ancestor "$sha" HEAD 2>/dev/null; then
+            print_error "Commit ${sha:0:7} is not reachable from HEAD; cannot drop."
+            exit 1
+        fi
+        full+=("$sha")
+    done
+
+    # Order newest-first from the HEAD walk; the last entry is the oldest target,
+    # whose parent becomes the rebase base.
+    local -a ordered=()
+    local c
+    while IFS= read -r c; do
+        for sha in "${full[@]}"; do
+            [[ "$c" == "$sha" ]] && ordered+=("$sha")
+        done
+    done < <(git rev-list HEAD)
+    local oldest="${ordered[-1]}"
+
+    local parent
+    parent=$(git rev-parse "${oldest}~1" 2>/dev/null) || true
+    if [[ -z "$parent" ]]; then
+        print_error "Cannot drop the root commit"
+        exit 1
+    fi
+
+    # Build one sed program that flips every target line (pick|merge) to drop
+    local seq_editor="sed -i"
+    local short
+    for sha in "${full[@]}"; do
+        short=$(git rev-parse --short "$sha")
+        seq_editor+=" -e '/^pick .*${short}/s/^pick/drop/' -e '/^merge .*${short}/s/^merge/drop/'"
+    done
+
+    print_info "Dropping ${#full[@]} commits in one rebase onto ${parent:0:7}"
+    if [[ "$DRY_RUN" == "true" ]]; then
+        print_info "DRY RUN: would drop: $(for sha in "${full[@]}"; do printf '%s ' "${sha:0:7}"; done)"
+        return 0
+    fi
+
+    # Author dates are preserved by rebase; --committer-date-is-author-date keeps
+    # the committer timeline aligned too, so no fragile post-rebase reconstruction
+    # is needed (that logic assumes single-drop topology and corrupts multi-drop).
+    export GIT_SEQUENCE_EDITOR="$seq_editor"
+    if GIT_EDITOR=':' git rebase -i --rebase-merges --committer-date-is-author-date "$parent"; then
+        :
+    elif [[ -n "$AUTO_RESOLVE" ]] && auto_resolve_all_conflicts "$AUTO_RESOLVE"; then
+        print_info "Conflicts auto-resolved via '$AUTO_RESOLVE'"
+    else
+        print_error "Rebase stopped due to conflicts. Resolve then run 'git rebase --continue', or re-run with --auto-resolve ours|theirs."
+        exit 2
+    fi
+
+    # Verify every target was removed
+    for sha in "${full[@]}"; do
+        if git merge-base --is-ancestor "$sha" HEAD 2>/dev/null; then
+            print_error "Commit ${sha:0:7} still present after drop."
+            exit 1
+        fi
+    done
+
+    print_success "Dropped ${#full[@]} commits"
+
+    # One push for the whole operation
+    prompt_and_push_branch || print_warning "Automatic push failed or was cancelled"
+}
+
+# ============================================================================
 # DROP — surgically remove a single non-root commit via rebase -i
 # ============================================================================
 
