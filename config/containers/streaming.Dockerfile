@@ -90,6 +90,20 @@ RUN apt-get update && apt-get install -y \
     libavformat-dev libavcodec-dev libavutil-dev libswscale-dev \
     && rm -rf /var/lib/apt/lists/*
 
+# Install ONNX Runtime GPU (latest)
+RUN ONNX_VERSION=$(curl -s https://api.github.com/repos/microsoft/onnxruntime/releases/latest | jq -r '.tag_name' | tr -d 'v') \
+    && curl -fsSL "https://github.com/microsoft/onnxruntime/releases/download/v${ONNX_VERSION}/onnxruntime-linux-x64-${ONNX_VERSION}.tgz" -o /tmp/onnxruntime.tgz \
+    && tar -xzf /tmp/onnxruntime.tgz -C /opt \
+    && mv /opt/onnxruntime-linux-x64-${ONNX_VERSION} /opt/onnxruntime \
+    && ln -sf /opt/onnxruntime/include/* /usr/local/include/ \
+    && ln -sf /opt/onnxruntime/lib/libonnxruntime.so* /usr/local/lib/ \
+    && ln -sf /opt/onnxruntime/lib/libonnxruntime_providers_cuda.so /usr/local/lib/ \
+    && ln -sf /opt/onnxruntime/lib/libonnxruntime_providers_shared.so /usr/local/lib/ \
+    && ldconfig && rm -f /tmp/onnxruntime.tgz
+
+ENV ONNXRUNTIME_DIR=/opt/onnxruntime \
+    LD_LIBRARY_PATH=/opt/onnxruntime/lib:${LD_LIBRARY_PATH}
+
 # Install yt-dlp
 RUN YT_DLP_VERSION=$(curl -s https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest | jq -r '.tag_name') \
     && curl -fsSL "https://github.com/yt-dlp/yt-dlp/releases/download/${YT_DLP_VERSION}/yt-dlp" -o /usr/local/bin/yt-dlp \
@@ -101,20 +115,6 @@ RUN apt-get update && apt-get install -y \
     libnvinfer-dispatch10 libnvinfer-headers-dev \
     bc sqlite3 \
     && rm -rf /var/lib/apt/lists/*
-
-# Install ONNX Runtime GPU (latest)
-RUN ONNX_VERSION=$(curl -s https://api.github.com/repos/microsoft/onnxruntime/releases/latest | jq -r '.tag_name' | tr -d 'v') \
-    && curl -fsSL "https://github.com/microsoft/onnxruntime/releases/download/v${ONNX_VERSION}/onnxruntime-linux-x64-gpu-${ONNX_VERSION}.tgz" -o /tmp/onnxruntime.tgz \
-    && tar -xzf /tmp/onnxruntime.tgz -C /opt \
-    && mv /opt/onnxruntime-linux-x64-gpu-${ONNX_VERSION} /opt/onnxruntime \
-    && ln -sf /opt/onnxruntime/include/* /usr/local/include/ \
-    && ln -sf /opt/onnxruntime/lib/libonnxruntime.so* /usr/local/lib/ \
-    && ln -sf /opt/onnxruntime/lib/libonnxruntime_providers_cuda.so /usr/local/lib/ \
-    && ln -sf /opt/onnxruntime/lib/libonnxruntime_providers_shared.so /usr/local/lib/ \
-    && ldconfig && rm -f /tmp/onnxruntime.tgz
-
-ENV ONNXRUNTIME_DIR=/opt/onnxruntime \
-    LD_LIBRARY_PATH=/opt/onnxruntime/lib:${LD_LIBRARY_PATH}
 
 # Export YOLOv8n to ONNX format
 RUN apt-get update && apt-get install -y --no-install-recommends python3-pip python3-venv \
