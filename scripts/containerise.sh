@@ -51,6 +51,9 @@ NEST_MODE=false
 NEST_REGEN=false
 NO_CACHE=false
 ASSUME_YES=false
+PRUNE_MODE=false
+PRUNE_ALL=false
+PRUNE_IMAGES=false
 EXCLUDE_DIRS=()
 
 ################################################################################
@@ -146,6 +149,19 @@ parse_args() {
                 ;;
             --regen)
                 NEST_REGEN=true
+                shift
+                ;;
+            --prune)
+                PRUNE_MODE=true
+                USE_DEFAULTS=true
+                shift
+                ;;
+            -a|--all)
+                PRUNE_ALL=true
+                shift
+                ;;
+            --images)
+                PRUNE_IMAGES=true
                 shift
                 ;;
             --no-cache)
@@ -1201,7 +1217,7 @@ build_base_image() {
         echo ""
         
         cd "$devcontainer_dir"
-        local build_args=()
+        local build_args=(--pull=true)
         [[ "$NO_CACHE" == "true" ]] && build_args+=("--no-cache")
         if podman build "${build_args[@]}" -t "$image_tag" .; then
             echo ""
@@ -1212,17 +1228,19 @@ build_base_image() {
             print_info "Use in other projects: ${CYAN}dc-contain --img --$category${NC}"
             echo ""
             # Prune stale VS Code UID-wrapper images (vsc-*-uid). VS Code names these by a hash of devcontainer.json content, not the image digest, so Podman's layer cache resolves the FROM mutable tag to the old digest on rebuild and the wrapper is silently built from the pre-fix base. Pruning forces VS Code to rebuild the wrapper from the new base on next open (~5s).
-            local stale_wrappers=()
-            mapfile -t stale_wrappers < <(
-                podman images --format "{{.Repository}}" 2>/dev/null \
-                    | grep "^localhost/vsc-" || true
-            )
-            if [[ ${#stale_wrappers[@]} -gt 0 ]]; then
-                print_info "Pruning orphaned VS Code UID-wrapper image(s) (in-use wrappers are skipped by Podman)..."
-                for wrapper in "${stale_wrappers[@]}"; do
-                    podman rmi "$wrapper" 2>/dev/null || true
-                done
-                print_success "Pruned orphaned wrappers. VS Code rebuilds them from the new base on next open."
+            if [[ "$NESTED" != "true" ]]; then
+                local stale_wrappers=()
+                mapfile -t stale_wrappers < <(
+                    podman images --format "{{.Repository}}" 2>/dev/null \
+                        | grep "^localhost/vsc-" || true
+                )
+                if [[ ${#stale_wrappers[@]} -gt 0 ]]; then
+                    print_info "Pruning orphaned VS Code UID-wrapper image(s) (in-use wrappers are skipped by Podman)..."
+                    for wrapper in "${stale_wrappers[@]}"; do
+                        podman rmi "$wrapper" 2>/dev/null || true
+                    done
+                    print_success "Pruned orphaned wrappers. VS Code rebuilds them from the new base on next open."
+                fi
             fi
         else
             echo ""
@@ -1337,6 +1355,173 @@ nest_path_is_excluded() {
 }
 
 
+run_prune_mode() {
+    local start_dir="${1:-$(pwd)}"
+    print_header "Prune Mode"
+    
+    # Prune devcontainers under this start_dir
+    local -a all_container_ids
+    mapfile -t all_container_ids < <(
+        docker ps -q -a --filter "label=devcontainer.local_folder" 2>/dev/null | grep -v "^$" || true
+    )
+
+    local -a container_ids=()
+    local -a kept_container_ids=()
+    local container_id
+    for container_id in "${all_container_ids[@]}"; do
+        local folder
+        folder=$(docker inspect "$container_id" --format='{{index .Config.Labels "devcontainer.local_folder"}}' 2>/dev/null || echo "")
+        
+        # In prune mode, -a implies we prune ALL dev-control containers across the system, unless excluded.
+        if [[ "$PRUNE_ALL" != true && -n "$folder" && "$folder" != "$start_dir"* && "$folder" != "$start_dir" ]]; then
+            continue
+        fi
+        
+        if [[ ${#EXCLUDE_DIRS[@]} -gt 0 && -n "$folder" ]] && nest_path_is_excluded "$folder" "$start_dir"; then
+            kept_container_ids+=("$container_id")
+        else
+            container_ids+=("$container_id")
+        fi
+    done
+
+    if [[ ${#kept_container_ids[@]} -gt 0 ]]; then
+        print_info "Excluding ${#kept_container_ids[@]} container(s) matched by --exclude (kept):"
+        for container_id in "${kept_container_ids[@]}"; do
+            local folder
+            folder=$(docker inspect "$container_id" --format='{{index .Config.Labels "devcontainer.local_folder"}}' 2>/dev/null || echo "")
+            echo "  - ${folder:-unknown} (${container_id:0:12})"
+        done
+        echo ""
+    fi
+
+    if [[ ${#container_ids[@]} -gt 0 ]]; then
+        print_info "Found ${#container_ids[@]} dev-control containers to delete:"
+        for container_id in "${container_ids[@]}"; do
+            local folder
+            folder=$(docker inspect "$container_id" --format='{{index .Config.Labels "devcontainer.local_folder"}}' 2>/dev/null || echo "")
+            echo "  - ${folder:-unknown} (${container_id:0:12})"
+        done
+        echo ""
+        
+        if confirm "Delete these containers and associated volumes?"; then
+            echo ""
+            local -a keep_vol_names=()
+            for container_id in "${kept_container_ids[@]}"; do
+                mapfile -t -O "${#keep_vol_names[@]}" keep_vol_names < <(
+                    docker inspect "$container_id" \
+                        --format='{{range .Mounts}}{{if eq .Type "volume"}}{{.Name}}{{"\n"}}{{end}}{{end}}' \
+                        2>/dev/null | grep -v "^$" || true
+                )
+            done
+
+            local -a all_vol_names=()
+            for container_id in "${container_ids[@]}"; do
+                mapfile -t -O "${#all_vol_names[@]}" all_vol_names < <(
+                    docker inspect "$container_id" \
+                        --format='{{range .Mounts}}{{if eq .Type "volume"}}{{.Name}}{{"\n"}}{{end}}{{end}}' \
+                        2>/dev/null | grep -v "^$" || true
+                )
+            done
+
+            for container_id in "${container_ids[@]}"; do
+                print_info "Stopping container ${container_id:0:12}..."
+                docker stop "$container_id" 2>/dev/null || true
+                print_info "Removing container ${container_id:0:12}..."
+                docker rm "$container_id" 2>/dev/null || true
+            done
+            print_success "Deleted ${#container_ids[@]} containers"
+
+            local -a vols_to_remove=()
+            local vol keep_vol is_kept
+            for vol in "${all_vol_names[@]}"; do
+                is_kept=false
+                for keep_vol in "${keep_vol_names[@]}"; do
+                    [[ "$vol" == "$keep_vol" ]] && { is_kept=true; break; }
+                done
+                [[ "$is_kept" == false ]] && vols_to_remove+=("$vol")
+            done
+
+            if [[ ${#vols_to_remove[@]} -gt 0 ]]; then
+                print_info "Removing ${#vols_to_remove[@]} associated volume(s)..."
+                docker volume rm "${vols_to_remove[@]}" 2>/dev/null || true
+                print_success "Removed volumes: ${vols_to_remove[*]}"
+            fi
+        fi
+    else
+        print_info "No dev-control containers found to delete."
+        echo ""
+    fi
+    
+    if [[ "$PRUNE_IMAGES" == true ]]; then
+        local -a excl_basenames=()
+        if [[ ${#EXCLUDE_DIRS[@]} -gt 0 ]]; then
+            local _ed
+            for _ed in "${EXCLUDE_DIRS[@]}"; do
+                excl_basenames+=( "$(basename "${_ed%/}" | tr '[:upper:]' '[:lower:]')" )
+            done
+        fi
+
+        # Prune wrapper images (localhost/vsc-*)
+        local stale_wrappers=()
+        mapfile -t stale_wrappers < <(
+            podman images --format "{{.Repository}}" 2>/dev/null \
+                | grep "^localhost/vsc-" || true
+        )
+        if [[ ${#stale_wrappers[@]} -gt 0 ]]; then
+            local -a wrappers_to_prune=()
+            local wrapper _bn keep_wrapper
+            for wrapper in "${stale_wrappers[@]}"; do
+                keep_wrapper=false
+                for _bn in "${excl_basenames[@]}"; do
+                    [[ -n "$_bn" && "$wrapper" == "localhost/vsc-$_bn-"* ]] && { keep_wrapper=true; break; }
+                done
+                if [[ "$keep_wrapper" == true ]]; then
+                    print_info "Excluding wrapper image (kept): $wrapper"
+                else
+                    wrappers_to_prune+=("$wrapper")
+                fi
+            done
+
+            if [[ ${#wrappers_to_prune[@]} -gt 0 ]]; then
+                if confirm "Prune ${#wrappers_to_prune[@]} VS Code UID-wrapper image(s)?"; then
+                    for wrapper in "${wrappers_to_prune[@]}"; do
+                        podman rmi "$wrapper" 2>/dev/null || true
+                    done
+                    print_success "Pruned VS Code UID-wrapper images."
+                fi
+            fi
+        fi
+        
+        if [[ "$PRUNE_ALL" == true ]]; then
+            if confirm "Run podman system prune -a --volumes (Warning: deletes all stopped containers and unused images globally)?"; then
+                # Graceful state awareness: start kept containers to protect them and their images from global prune
+                local -a started_for_protection=()
+                if [[ ${#kept_container_ids[@]} -gt 0 ]]; then
+                    print_info "Temporarily starting ${#kept_container_ids[@]} excluded container(s) to protect them from global prune..."
+                    for container_id in "${kept_container_ids[@]}"; do
+                        local state
+                        state=$(docker inspect "$container_id" --format='{{.State.Running}}' 2>/dev/null || echo "false")
+                        if [[ "$state" != "true" ]]; then
+                            docker start "$container_id" >/dev/null 2>&1 && started_for_protection+=("$container_id") || true
+                        fi
+                    done
+                fi
+
+                print_info "Running global podman system prune..."
+                podman system prune -a --volumes -f
+                print_success "Global prune complete."
+
+                if [[ ${#started_for_protection[@]} -gt 0 ]]; then
+                    print_info "Stopping temporarily started containers..."
+                    for container_id in "${started_for_protection[@]}"; do
+                        docker stop "$container_id" >/dev/null 2>&1 || true
+                    done
+                fi
+            fi
+        fi
+    fi
+    print_header_success "Prune complete"
+}
 run_nest_mode() {
     local start_dir="${1:-$(pwd)}"
     local include_root=false
@@ -1844,6 +2029,11 @@ main() {
     # Handle --nest mode early and exit
     if [[ "$NEST_MODE" == true ]]; then
         run_nest_mode "$PROJECT_PATH"
+        exit 0
+    fi
+    
+    if [[ "$PRUNE_MODE" == true ]]; then
+        run_prune_mode "$PROJECT_PATH"
         exit 0
     fi
     

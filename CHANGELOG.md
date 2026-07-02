@@ -1,5 +1,14 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- `dc-contain --prune` mode with graceful state awareness to prune containers/images while protecting excluded projects by temporarily starting them.
+
+### Fixed
+- `dc-contain`: Fix 1/33 devcontainer cache miss by passing `--pull=true` to podman build, matching VS Code DevContainers default behaviour.
+- `dc-contain`: Fix cache invalidation by skipping per-build wrapper prune when `NESTED=true` during `--nest`.
+
 All notable changes to Dev-Control will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
