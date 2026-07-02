@@ -1201,7 +1201,7 @@ build_base_image() {
         echo ""
         
         cd "$devcontainer_dir"
-        local build_args=()
+        local build_args=(--pull=true)
         [[ "$NO_CACHE" == "true" ]] && build_args+=("--no-cache")
         if podman build "${build_args[@]}" -t "$image_tag" .; then
             echo ""
