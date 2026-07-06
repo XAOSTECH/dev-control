@@ -1,5 +1,38 @@
 # Changelog
 
+## [0.5.10] - 2026-07-06 (re-release)
+
+### Added
+- add --prune mode with graceful state awareness to protect excluded projects during global prune
+- scaffold Dev-Control GitHub App; feat(fix-history): --drop accepts multiple commits
+- add --combine to fuse two adjacent commits with preserved dates and signing
+- add deduplication by squash
+- expand BATS coverage with git utilities, plugin discovery and JSON validation
+
+### Fixed
+- correct ONNX Runtime download URL
+- pass --pull=true to podman build to match VS Code defaults and avoid cache miss
+- skip per-build wrapper prune when NESTED to prevent devcontainer cache miss
+- regenerate root scaffold via dev-tools img on --nest . so postCreate runs
+- --exclude matches bare folder names and no longer strips entries from nest.json
+- prune wrappers once preliminarily for nest, skip per-build prune when NESTED
+- drop --force from per-build wrapper prune so Podman skips in-use containers
+- add git config to barebones (e.g. root) container
+- auto-yes flag, dotted-label inspect, and exclude across all removal paths
+- complete dc.bats suite and migrate residual gc_* identifiers
+- scope per-project volumes by project slug
+
+### Changed
+- Merge pull request #99 from XAOSTECH/copilot/fix-container-startup-issues
+- docs(changelog): record containerise cache fixes and new prune mode
+- chore: update git tree visualisation
+- chore(logs): actualise NTFS-compatibility log
+- chore: update CHANGELOG for v0.5.10
+- refactor(lib/git): dual-mode source/execute bootstrap
+- chore(contain-streaming): patch libpcre3-dev to libpcre2-dev
+- docs(log): index NTFS-related issues + refine 1.13-dev framing
+- docs(log): introduce log/ with fuse-overlayfs/NTFS compatibility notes
+
 ## [Unreleased]
 
 ### Added
