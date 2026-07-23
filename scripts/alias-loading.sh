@@ -49,7 +49,7 @@ declare -a DC_ALIASES=(
     "alias dc-pkg='${SCRIPT_DIR}/packaging.sh'"
     "alias dc-cluster='${SCRIPT_DIR}/dev-control.sh cluster'"
     "alias dc-gpg='source ${SCRIPT_DIR}/lib/git/gpg.sh && setup_bot_gpg_for_repo'"
-    "alias dca-alias='${SCRIPT_DIR}/alias-loading.sh <<< A && source ~/.bashrc && echo \"Changes applied (source ~/.bashrc already done)!\"'"
+    "alias dca-alias='${SCRIPT_DIR}/alias-loading.sh <<< A && source ~/.bashrc && echo -e \"\033[1mChanges applied (source ~/.bashrc already done)!\033[0m\"'"
     "alias dc-help='echo \"dc-control: Main menu for all Dev-Control tools\"; echo \"dc-git: Unified git services menu\"; echo \"dc-init: Initialise repo with templates\"; echo \"dc-repo: Create GitHub repo from current folder\"; echo \"dc-pr: Create pull request from current branch\"; echo \"dc-modules: Manage git submodules\"; echo \"dc-licences: Detect and audit licences\"; echo \"dc-fix: Fix commit history interactively\"; echo \"dc-pkg: Build multi-platform packages\"; echo \"dc-cluster: Setup fully fledged development environment\"; echo \"dc-gpg-setup: Setup GPG bot for GitHub Actions\"; echo \"dc-aliases: Reload alias installer\"'"
 )
 
@@ -140,6 +140,8 @@ declare -a DIR_ALIASES=(
 # Network utility aliases
 declare -a NET_ALIASES=(
     "# Network utilities"
+    "alias upd='sudo -v && sudo apt update && sudo apt dist-upgrade -y && sudo apt autoremove -y && sudo apt autoclean && sudo snap refresh'"
+    "alias lpp='sudo -v && sudo pro disable livepatch && sudo pro enable livepatch && upd'"
     "alias myip='curl -s ifconfig.me && echo'"
     "alias myip6='curl -s ifconfig.me/ip6 && echo'"
     "alias localip='hostname -I | awk \"{print \\\$1}\"'"

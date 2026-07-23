@@ -15,7 +15,7 @@ set -e
 
 # Configuration
 DC_REPO="xaoscience/dev-control"
-DC_BRANCH="Main"
+DC_BRANCH="main"
 DEFAULT_PREFIX="$HOME/.local/share/dev-control"
 DEFAULT_BIN="$HOME/.local/bin"
 
