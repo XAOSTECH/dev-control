@@ -246,7 +246,10 @@ dc contain --base --dev-tools --defaults && \
 dc contain --nest  <<< y                                          # Discover, update and rebuild all containers recursively
 dc contain --nest --regen                                         # Agressively do same (remove config files and containers)
 dc contain --nest --regen .                                       # Include root in same
+dc contain --nest --regen --dev-tools                             # Filter rebuild to one category; multiple categories supported (--web-dev --streaming)
 ```
+
+> Git identity (`user.name` / `user.email`) is sourced from `~/.config/dev-control/container.yaml` if present, falling back to the host's global git config — so `git config --global user.email` on the host is both the simplest and most resilient setup, with the YAML file as an optional explicit override.
 
 ### `dc package` — Multi-Platform Packaging
 
