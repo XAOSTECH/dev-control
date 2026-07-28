@@ -188,7 +188,8 @@ parse_container_yaml() {
             # Replace hyphens with underscores for variable names
             key="${key//-/_}"
 
-            # Export to current config
+            # Export to current config (skipping empty values).
+            [[ -z "$value" ]] && continue
             case "$key" in
                 container_name)   CFG_CONTAINER_NAME="$value" ;;
                 github_user)      CFG_GITHUB_USER="$value" ;;
@@ -535,8 +536,6 @@ select_mirror() {
 # ============================================================================
 
 # Add personal devcontainer files to project .gitignore
-# Ensures generated Dockerfile and devcontainer.json (with personal config)
-# are not committed, while _example and _minimal variants are tracked
 add_devcontainer_to_gitignore() {
     local project_root="${1:-$PROJECT_PATH}"
     local gitignore="$project_root/.gitignore"
