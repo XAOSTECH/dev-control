@@ -42,6 +42,7 @@ source "$SCRIPT_DIR/lib/container.sh"
 # CLI options
 MODE=""  # "base" or "image"
 CATEGORY_FLAG=""
+CATEGORY_FLAGS=()  # All category flags (for --nest filter)
 BARE_MODE=false
 USE_DEFAULTS=false
 CONFIG_FILE=""
@@ -75,7 +76,9 @@ MODES:
   --bare    Generate minimal devcontainer (no category, custom base image)
   --nest    Recursively rebuild all base and img containers in subdirectories
             Use --nest . to include the root directory itself
+            Optionally filter to one or more categories: --nest --dev-tools
   --regen   Delete all .devcontainer dirs before nest rebuild (forces regeneration)
+            Category filters apply here too: --nest --regen --dev-tools
   --no-cache  Build base images without layer cache (force full image rebuild)
   --exclude DIR [DIR..]  Exclude directories (and their children) from nest discovery,
                          container/volume removal, .devcontainer deletion and image prune.
@@ -101,6 +104,13 @@ EXAMPLES:
 
   # Rebuild all containers in a project tree
   cd ~/PRO && containerise.sh --nest
+
+  # Rebuild only dev-tools containers (base + img) in a project tree
+  cd ~/PRO && containerise.sh --nest --dev-tools
+  cd ~/PRO && containerise.sh --nest --regen --dev-tools
+
+  # Rebuild multiple categories at once
+  cd ~/PRO && containerise.sh --nest --web-dev --streaming
 
   # Rebuild current directory as root + all subdirectories
   cd ~/PRO/ART && containerise.sh --nest .
@@ -181,6 +191,7 @@ parse_args() {
                 ;;
             --game-dev|--art|--data-science|--streaming|--web-dev|--dev-tools)
                 CATEGORY_FLAG="${1#--}"
+                CATEGORY_FLAGS+=("$1")  # Keep -- prefix for run_nest_mode passthrough
                 shift
                 ;;
             -d|--defaults)
@@ -518,7 +529,12 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | d
 DOCKERFILE_EOF
         fi
 
-        # Add CUDA Toolkit if enabled
+        # Suppress "Emulate Docker CLI using podman" advisory
+        cat >> "$dockerfile_path" << 'DOCKERFILE_EOF'
+
+# Suppress "Emulate Docker CLI using podman" advisory message
+RUN mkdir -p /etc/containers && touch /etc/containers/nodocker
+DOCKERFILE_EOF
         if [[ "$CFG_INSTALL_CUDA" == "true" ]]; then
             cat >> "$dockerfile_path" << 'DOCKERFILE_EOF'
 
@@ -1219,6 +1235,20 @@ build_base_image() {
         cd "$devcontainer_dir"
         local build_args=(--pull=true)
         [[ "$NO_CACHE" == "true" ]] && build_args+=("--no-cache")
+
+        # Ensure buildah layer tarballs go to the real filesystem.
+        if [[ -z "${TMPDIR:-}" || "$TMPDIR" == /tmp* || "$TMPDIR" == /run* ]]; then
+            local _gr
+            _gr=$(podman info --format '{{.Store.GraphRoot}}' 2>/dev/null || true)
+            if [[ -n "$_gr" ]]; then
+                export TMPDIR="${_gr%/*}/.build-tmp"
+            else
+                export TMPDIR="$HOME/.cache/dev-control/.build-tmp"
+            fi
+            mkdir -p "$TMPDIR"
+            print_info "Build TMPDIR → $TMPDIR"
+        fi
+
         if podman build "${build_args[@]}" -t "$image_tag" .; then
             echo ""
             print_header_success "Base Image Built Successfully!"
@@ -1322,8 +1352,7 @@ generate_image_devcontainer() {
 ################################################################################
 
 # Return 0 if an ABSOLUTE candidate path falls under any --exclude entry.
-# EXCLUDE_DIRS entries may be absolute, or relative to the nest root ($2);
-# both forms (and "./"-prefixed relatives) are normalised before comparison.
+# EXCLUDE_DIRS entries may be absolute, or relative to the nest root ($2); both forms (and "./"-prefixed relatives) are normalised before comparison.
 nest_path_is_excluded() {
     local candidate="${1%/}"
     local start_dir="${2%/}"
@@ -1532,7 +1561,19 @@ run_nest_mode() {
         include_root=true
         start_dir="$(pwd)"
     fi
-    
+
+    # Route buildah/podman layer writes to the real filesystem.
+    if [[ -z "${TMPDIR:-}" || "$TMPDIR" == /tmp* || "$TMPDIR" == /run* ]]; then
+        local _gr
+        _gr=$(podman info --format '{{.Store.GraphRoot}}' 2>/dev/null || true)
+        if [[ -n "$_gr" ]]; then
+            export TMPDIR="${_gr%/*}/.build-tmp"
+        else
+            export TMPDIR="$HOME/.cache/dev-control/.build-tmp"
+        fi
+        mkdir -p "$TMPDIR"
+        print_info "Build TMPDIR → $TMPDIR"
+    fi
     # Collect allowed categories from remaining args (--art, --game-dev, etc.)
     local allowed_cats=""
     for arg in "$@"; do
@@ -1601,8 +1642,7 @@ run_nest_mode() {
             local rel_path="${project_dir#$start_dir/}"
             [[ "$rel_path" == "$project_dir" ]] && rel_path="."
             
-            # Root is handled separately as a dedicated scaffold (see the include_root
-            # block after the build loop); never record it as a tracked nest project.
+            # Root is handled separately as a dedicated scaffold (see the include_root block after the build loop); never record it as a tracked nest project.
             if [[ "$rel_path" == "." ]]; then
                 continue
             fi
@@ -1656,9 +1696,7 @@ run_nest_mode() {
         )
 
         # Partition containers into those to delete and those kept by --exclude.
-        # NOTE: the label key is dotted ("devcontainer.local_folder"), so it must be
-        # read with {{index .Config.Labels "..."}} — the {{.Config.Labels.devcontainer.local_folder}}
-        # form treats the dots as nested fields and always yields "<no value>".
+        # NOTE: the label key is dotted ("devcontainer.local_folder"), so it must be read with {{index .Config.Labels "..."}} — the {{.Config.Labels.devcontainer.local_folder}} form treats the dots as nested fields and always yields "<no value>".
         local -a container_ids=()
         local -a kept_container_ids=()
         local container_id
@@ -1977,11 +2015,7 @@ run_nest_mode() {
         (cd "$full_path" && NESTED=true "$SCRIPT_DIR/containerise.sh" --defaults --"${type,,}" --"$category" <<< y)
     done
 
-    # Regenerate the root scaffold when invoked with "." — independent of nest.json.
-    # Root is intentionally NOT a tracked nest project; it is a minimal scaffold that
-    # reuses the dev-tools base image so it inherits the same runArgs (the /tmp tmpfs
-    # that lets the CLI stage its session dir and actually run postCreate) and the
-    # standard postCreate (git/GPG config) as every other container.
+    # Regenerate the root scaffold
     if [[ "$include_root" == true ]]; then
         if [[ ${#EXCLUDE_DIRS[@]} -gt 0 ]] && nest_path_is_excluded "$start_dir" "$start_dir"; then
             echo ""
@@ -2006,10 +2040,28 @@ main() {
     # Parse arguments
     parse_args "$@"
     
-    # Propagate the auto-confirm switch to the shared confirm() helper and to
-    # any child containerise.sh invocations spawned during --nest rebuilds.
+    # Propagate the auto-confirm switch to the shared confirm() helper and to any child containerise.sh invocations spawned during --nest rebuilds.
     if [[ "$ASSUME_YES" == true ]]; then
         export DC_ASSUME_YES=true
+    fi
+    
+    # Suppress "Emulate Docker CLI using podman" advisory on the host.
+    # The VS Code Dev Containers extension probes the Docker socket (docker version,
+    # docker buildx version) on the host machine, which triggers this message when
+    # podman is emulating the Docker CLI.  The presence of either the system-wide or
+    # user-level sentinel file is the documented opt-out mechanism.
+    # Only run on the host (not inside a devcontainer) to avoid redundant work.
+    if [[ -z "${REMOTE_CONTAINERS:-}" && -z "${CODESPACES:-}" && ! -f /.dockerenv ]]; then
+        local _nodocker_sys=/etc/containers/nodocker
+        local _nodocker_usr="${XDG_CONFIG_HOME:-$HOME/.config}/containers/nodocker"
+        if [[ ! -f "$_nodocker_sys" && ! -f "$_nodocker_usr" ]]; then
+            if sudo -n true 2>/dev/null; then
+                sudo mkdir -p /etc/containers && sudo touch "$_nodocker_sys"
+            else
+                mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/containers"
+                touch "$_nodocker_usr"
+            fi
+        fi
     fi
     
     # Show help if requested
@@ -2028,7 +2080,7 @@ main() {
     
     # Handle --nest mode early and exit
     if [[ "$NEST_MODE" == true ]]; then
-        run_nest_mode "$PROJECT_PATH"
+        run_nest_mode "$PROJECT_PATH" "${CATEGORY_FLAGS[@]}"
         exit 0
     fi
     
