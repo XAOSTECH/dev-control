@@ -158,6 +158,20 @@ install_dev_control() {
     local config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/dev-control"
     mkdir -p "$config_dir"
     
+    # Suppress "Emulate Docker CLI using podman" advisory (host-level).
+    local _nodocker_sys=/etc/containers/nodocker
+    local _nodocker_usr="${XDG_CONFIG_HOME:-$HOME/.config}/containers/nodocker"
+    if [[ ! -f "$_nodocker_sys" && ! -f "$_nodocker_usr" ]]; then
+        if sudo -n true 2>/dev/null; then
+            sudo mkdir -p /etc/containers && sudo touch "$_nodocker_sys" && \
+                print_info "Created /etc/containers/nodocker (system-wide)" || true
+        else
+            mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/containers"
+            touch "$_nodocker_usr"
+            print_info "Created $_nodocker_usr (user-level)"
+        fi
+    fi
+    
     # Copy example config if doesn't exist
     if [[ ! -f "$config_dir/config.yaml" ]]; then
         if [[ -f "$PREFIX/config/example-global.config.yaml" ]]; then

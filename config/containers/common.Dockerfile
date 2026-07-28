@@ -43,11 +43,7 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | d
     && apt-get update && apt-get install -y gh \
     && rm -rf /var/lib/apt/lists/*
 
-# Install docker CLI (static binary, no daemon). Required by postCreateCommand
-# to issue `docker exec -u root` calls against the mounted podman socket so it
-# can repair filesystem bits that fuse-overlayfs strips on NTFS-backed graphRoot
-# (setuid on /usr/bin/sudo, ownership of /home/${CATEGORY}). Without this,
-# postCreate cannot elevate privileges because sudo's setuid bit is missing.
+# Install docker CLI (static binary, no daemon). Required by postCreateCommand to issue `docker exec -u root` calls against the mounted podman socket so it can repair filesystem bits that fuse-overlayfs strips on NTFS-backed graphRoot (setuid on /usr/bin/sudo, ownership of /home/${CATEGORY}). Without this, postCreate cannot elevate privileges because sudo's setuid bit is missing.
 RUN DOCKER_VERSION=$(curl -fsSL https://download.docker.com/linux/static/stable/x86_64/ \
         | grep -oE 'docker-[0-9]+\.[0-9]+\.[0-9]+\.tgz' | sort -V | tail -1) \
     && curl -fsSL "https://download.docker.com/linux/static/stable/x86_64/${DOCKER_VERSION}" -o /tmp/docker.tgz \
@@ -55,3 +51,6 @@ RUN DOCKER_VERSION=$(curl -fsSL https://download.docker.com/linux/static/stable/
     && mv /tmp/docker/docker /usr/local/bin/docker \
     && chmod 755 /usr/local/bin/docker \
     && rm -rf /tmp/docker /tmp/docker.tgz
+
+# Suppress "Emulate Docker CLI using podman" advisory message.
+RUN mkdir -p /etc/containers && touch /etc/containers/nodocker
