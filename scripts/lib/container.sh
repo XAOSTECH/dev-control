@@ -268,6 +268,19 @@ load_container_config() {
     if [[ -z "${CFG_CONTAINER_NAME:-}" && -n "${PROJECT_PATH:-}" ]]; then
         CFG_CONTAINER_NAME=$(basename "$PROJECT_PATH")
     fi
+
+    # Fallback: read git identity from the host's global git config when no
+    # container.yaml has been created (e.g. fresh OS install).
+    # containerise.sh runs on the HOST, so git config --global reads the host
+    # user's identity, which is then baked into every postCreateCommand.
+    # This is the zero-config path: if the host has global git config set,
+    # all containers inherit the correct author identity automatically.
+    if [[ -z "$CFG_GITHUB_USER" ]]; then
+        CFG_GITHUB_USER=$(git config --global --get user.name 2>/dev/null || true)
+    fi
+    if [[ -z "$CFG_GITHUB_USER_EMAIL" ]]; then
+        CFG_GITHUB_USER_EMAIL=$(git config --global --get user.email 2>/dev/null || true)
+    fi
 }
 
 # Save configuration to file
