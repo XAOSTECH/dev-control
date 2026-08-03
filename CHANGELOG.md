@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.5.11] - 2026-08-03
+
+### Fixed
+- drop --global from git identity fallback in load_container_config
+- fall back to host git identity in load_container_config
+- suppress podman advisory on host; feat: add --nest category filter
+- suppress podman Docker CLI advisory
+- skip empty values in parse_container_yaml
+
+### Changed
+- docs(README): note --nest category filter and git identity config inheritance
+- chore(alias-loading): add system aliases (fullscan clamav scan, showtime GSK renderer)
+
 ## [0.5.10] - 2026-07-06 (re-release)
 
 ### Added
