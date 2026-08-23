@@ -364,8 +364,8 @@ git push origin feature/amazing-feature
 - [x] MCP server configuration for AI assistants
 - [x] Licence auditing with SPDX detection
 - [x] Devcontainer generator
-- [ ] Zsh compatibility layer
-- [ ] Fish shell support
+- [x] Zsh compatibility layer
+- [x] Fish shell support
 - [ ] GUI wrapper (Bubble Tea / Tauri)
 - [ ] Remote plugin registry
 
