@@ -172,6 +172,34 @@ if [[ "$IN_CONTAINER" == "false" ]]; then
     fi
 fi
 
+# Patch GPG_KEY_ID in static devcontainer configs across the nest (no dc-contain needed)
+if [[ "$IN_CONTAINER" == "false" ]]; then
+    _keygen_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    _nest_json=""
+    for _c in \
+            "$(dirname "$DC_CONFIG")/nest.json" \
+            "$_keygen_dir/../../config/containers/nest.json"; do
+        [[ -f "$_c" ]] && { _nest_json="$_c"; break; }
+    done
+
+    if [[ -n "$_nest_json" ]]; then
+        _start_dir=$(sed -n 's/.*"start_dir":[[:space:]]*"\([^"]*\)".*/\1/p' "$_nest_json" | head -1)
+        echo "Patching devcontainer configs under $_start_dir (from $_nest_json)..."
+        while IFS= read -r _p; do
+            _dc="$_start_dir/$_p/.devcontainer"
+            [[ -d "$_dc" ]] || continue
+            if [[ -f "$_dc/devcontainer.json" ]]; then
+                sed -i "s/\"GPG_KEY_ID\":[[:space:]]*\"[^\"]*\"/\"GPG_KEY_ID\": \"${KEY_ID}\"/g" \
+                    "$_dc/devcontainer.json" && echo "  → $_p/devcontainer.json"
+            fi
+            if [[ -f "$_dc/Dockerfile" ]]; then
+                sed -i "s/user\.signingkey \"[^\"]*\"/user.signingkey \"${KEY_ID}\"/g" \
+                    "$_dc/Dockerfile" && echo "  → $_p/Dockerfile"
+            fi
+        done < <(sed -n 's/.*"path":[[:space:]]*"\([^"]*\)".*/\1/p' "$_nest_json")
+    fi
+fi
+
 if [[ "$IN_CONTAINER" == "false" ]]; then
 # 9. Automate Boot Unlocking (Fixed Native D-Bus GNOME Keyring Storage)
 echo "Binding GPG passphrase securely to GNOME Keyring using native gdbus..."
