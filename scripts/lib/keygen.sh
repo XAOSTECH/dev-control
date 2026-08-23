@@ -113,7 +113,7 @@ gpg --batch --pinentry-mode loopback --generate-key "$GPG_BATCH_CONF"
 rm -f "$GPG_BATCH_CONF"
 
 # Isolate the exact newly generated single Key fingerprint string
-KEY_ID=$(gpg --list-secret-keys --keyid-format LONG "$EMAIL" 2>/dev/null | awk '/^sec/ {print $2}' | cut -d'/' -f2 | head -n 1) || ""
+KEY_ID=$(gpg --list-secret-keys --keyid-format LONG "$EMAIL" 2>/dev/null | awk '/^sec/ {print $2}' | cut -d'/' -f2 | head -n 1) || true
 if [ -z "$KEY_ID" ]; then
     echo "Error: Key generation completed but failed to parse Key ID from keyring." >&2
     exit 1
