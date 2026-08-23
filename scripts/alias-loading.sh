@@ -103,7 +103,9 @@ declare -a SAFE_ALIASES=(
 
 # System aliases
 declare -a SYSMON_ALIASES=(
-    "# System monitoring"
+    "# System monitoring/operations"
+    "alias rb!='sudo systemctl -i reboot'"
+    "alias reboot='sudo systemctl -i reboot'"
     "alias ports='netstat -tulanp 2>/dev/null || ss -tulanp'"
     "alias meminfo='free -h'"
     "alias cpuinfo='lscpu'"
@@ -115,7 +117,7 @@ declare -a SYSMON_ALIASES=(
     "alias top10='du -hsx * 2>/dev/null | sort -rh | head -10'"
     "alias temp='sensors 2>/dev/null || echo \"lm-sensors not installed\"'"
     "alias watch='watch -n 1'"
-    "alias fullscan='sudo find / -mindepth 1 \( -path "/proc" -o -path "/sys" -o -path "/dev" -o -path "/run" -o -path "/snap" -o -path "/var/lib/flatpak" -o -path "*/.steam/steam/steamapps" -o -path "*/SteamLibrary" \) -prune -o -type f -print0 2>/dev/null | xargs -0 -P 16 -n 100 clamdscan --fdpass'"
+    "alias fullscan='sudo find / -mindepth 1 \\( -path /proc -o -path /sys -o -path /dev -o -path /run -o -path /snap -o -path /var/lib/flatpak -o -path */.steam/steam/steamapps -o -path */SteamLibrary \\) -prune -o -type f -print0 2>/dev/null | xargs -0 -P 16 -n 100 clamdscan --fdpass  2>&1 | tee \"/tmp/terminal_fullscan_\$(date +%Y%m%d_%H%M%S).log\"'"
     "alias gst='GSK_RENDERER=gl showtime'"
 )
 
