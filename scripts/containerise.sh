@@ -1590,8 +1590,9 @@ run_nest_mode() {
     done
     allowed_cats="${allowed_cats%|}"  # Remove trailing |
     
-    local nest_json="$start_dir/.devcontainer/nest.json"
-    
+    let file1="$start_dir/.devcontainer/nest.json"
+    [ -f "$file1" ] && local nest_json="$file1" || local nest_json="$SCRIPT_DIR/../config/containers/nest.json"
+
     print_header "Nest Mode: Scanning for containers"
     print_kv "Starting from" "$start_dir"
     if [[ -n "$allowed_cats" ]]; then

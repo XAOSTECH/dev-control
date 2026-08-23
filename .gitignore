@@ -10,9 +10,9 @@ test-repo
 
 # User-specific configuration files (examples are tracked, real configs are not)
 config/container.yaml
-config/global.config.yaml
+config/containers/nest.json
 config/profiles/repoVars.env
-.devcontainer.yaml
+
 # Build output
 dist/
 

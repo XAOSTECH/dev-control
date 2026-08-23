@@ -1,0 +1,14 @@
+// I personally use a larger mother_nest.json whence I eliminate lines to save storage.
+{
+  "start_dir": "/opt/dev-control", // Should be something like /home/user/projects, but you can test it out from here.
+  "detected_at": "2026-08-23T02:27:31+02:00",
+  "projects": [
+    {"path": "ART", "type": "BASE", "category": "art"},
+    {"path": "SYS", "type": "BASE", "category": "dev-tools"},
+    {"path": "SYS/ubu-tools", "type": "IMG", "category": "dev-tools"},
+    {"path": "SYS/wine-gaming", "type": "IMG", "category": "dev-tools"},
+    {"path": "SYS/win-tools", "type": "IMG", "category": "dev-tools"},
+    {"path": "WEB", "type": "BASE", "category": "web-dev"},
+    {"path": "WEB/CST", "type": "BASE", "category": "streaming"}
+  ]
+}
