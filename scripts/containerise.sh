@@ -911,7 +911,7 @@ generate_devcontainer_json() {
   "postCreateCommand": {
     "fixPerms": "CID=\$(cat /etc/hostname) && docker exec -u root \$CID chmod u+s /usr/bin/sudo 2>/dev/null || true && docker exec -u root \$CID chown ${uid}:${uid} /home/${remote_user} 2>/dev/null || true && docker exec -u root \$CID chmod 755 /home/${remote_user} 2>/dev/null || true && docker exec -u root \$CID chmod 700 /home/${remote_user}/.gnupg /home/${remote_user}/.ssh 2>/dev/null || true && sudo chown -R ${uid}:${uid} . 2>/dev/null || true && sudo mkdir -p /run/user/${uid}/gnupg && sudo chown -R ${uid}:${uid} /run/user/${uid} 2>/dev/null || true && ln -sf /tmp/wayland-0 /run/user/${uid}/wayland-0 2>/dev/null || true",
     "gitCfg": "${git_config_cmd}",
-    "aliases": "bash /opt/dev-control/scripts/alias-loading.sh <<< A"
+    "aliases": "echo A | bash /opt/dev-control/scripts/alias-loading.sh"
   },
   "customizations": {
     "vscode": {
@@ -1590,7 +1590,7 @@ run_nest_mode() {
     done
     allowed_cats="${allowed_cats%|}"  # Remove trailing |
     
-    let file1="$start_dir/.devcontainer/nest.json"
+    local file1="$start_dir/.devcontainer/nest.json"
     [ -f "$file1" ] && local nest_json="$file1" || local nest_json="$SCRIPT_DIR/../config/containers/nest.json"
 
     print_header "Nest Mode: Scanning for containers"
