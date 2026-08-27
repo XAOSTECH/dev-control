@@ -25,8 +25,7 @@ RUN if id ubuntu &>/dev/null; then \
     chmod 755 /home/${CATEGORY} && \
     rm -rf /root/.gnupg /home/${CATEGORY}/.gnupg
 
-# Configure nvm for user shell and GPG_TTY (run as root with explicit path — avoids
-# UID name resolution instability in rootless podman layer snapshots)
+# Configure nvm for user shell and GPG_TTY (run as root with explicit path — avoids UID name resolution instability in rootless podman layer snapshots)
 RUN echo 'export NVM_DIR="/opt/nvm"' >> /home/${CATEGORY}/.bashrc && \
     echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> /home/${CATEGORY}/.bashrc && \
     echo 'export GPG_TTY=$(tty)' >> /home/${CATEGORY}/.bashrc
@@ -36,11 +35,16 @@ WORKDIR /home/${CATEGORY}
 
 # Install dev-control system-wide to /opt
 USER root
-RUN mkdir -p /opt/dev-control && \
-    wget -O- https://github.com/XAOSTECH/dev-control/archive/refs/tags/latest.tar.gz | tar -xz --strip-components=1 -C /opt/dev-control && \
-    chmod +x /opt/dev-control/scripts/*.sh /opt/dev-control/lib/*.sh /opt/dev-control/lib/git/*.sh 2>/dev/null || true && \
-    echo 'export PATH=/opt/dev-control/scripts:$PATH' >> /etc/profile.d/dev-control.sh && \
-    chmod 644 /etc/profile.d/dev-control.sh
+RUN mkdir -p /opt/dev-control \
+    && { wget -q --tries=3 --waitretry=3 -O- \
+             https://github.com/XAOSTECH/dev-control/archive/refs/tags/latest.tar.gz \
+         || wget -q --tries=3 --waitretry=3 -O- \
+             https://github.com/XAOSTECH/dev-control/archive/refs/heads/main.tar.gz; } \
+       | tar -xz --strip-components=1 -C /opt/dev-control \
+    && test -f /opt/dev-control/scripts/alias-loading.sh \
+    && { chmod +x /opt/dev-control/scripts/*.sh /opt/dev-control/lib/*.sh /opt/dev-control/lib/git/*.sh 2>/dev/null || true; } \
+    && echo 'export PATH=/opt/dev-control/scripts:$PATH' >> /etc/profile.d/dev-control.sh \
+    && chmod 644 /etc/profile.d/dev-control.sh
 
 # Install nvm and Node.js system-wide (required for npx-dependent MCP servers like firecrawl)
 ENV NVM_DIR=/opt/nvm
@@ -55,12 +59,7 @@ RUN echo 'export NVM_DIR=/opt/nvm && [ -s "$NVM_DIR/nvm.sh" ] && source "$NVM_DI
 
 ENV PATH=/opt/nvm/versions/node/default/bin:${PATH}
 
-# Pre-create directories so VS Code never creates them as root before postCreate runs.
-# All of these are also mounted as named volumes at runtime, so fuse-overlayfs xattr
-# failures on NTFS-backed graphRoot cannot affect writability — but having them in the
-# image prevents any fallback path that would create them root-owned.
-# No ARG BUILD_DATE cache-buster: all affected dirs are named volumes, so runtime
-# permissions are correct regardless of image layer cache age.
+# Pre-create directories to ensure proper permissions and avoid root-owned fallback paths
 RUN mkdir -p \
         /home/${CATEGORY}/.vscode-server \
         /home/${CATEGORY}/.bash_backups \
