@@ -122,8 +122,10 @@ declare -a SAFE_ALIASES=(
 # System aliases
 declare -a SYSMON_ALIASES=(
     "# System monitoring/operations"
-    "alias rb!='sudo systemctl -i reboot'"
-    "alias reboot='sudo systemctl -i reboot'"
+    "for cmd in reboot rb!; do alias '$cmd'='sudo systemctl -i reboot'; done"
+    "#for cmd in suspend sp!; do alias '$cmd'='sudo systemctl -i suspend'; done"
+    "#for cmd in sp-to-hi s2h! sth!; do alias '$cmd'='sudo systemctl -i suspend-then-hibernate'; done"
+    "#for cmd in hibernate hi! bye!; do alias '$cmd'='sudo systemctl -i hibernate'; done"
     "alias ports='netstat -tulanp 2>/dev/null || ss -tulanp'"
     "alias meminfo='free -h'"
     "alias cpuinfo='lscpu'"
@@ -162,8 +164,8 @@ declare -a DIR_ALIASES=(
 # Network utility aliases
 declare -a NET_ALIASES=(
     "# Network utilities"
-    "alias upd='sudo -v && sudo apt update && sudo apt dist-upgrade -y && sudo apt autoremove -y && sudo apt autoclean && sudo snap refresh'"
-    "alias lpp='sudo -v && sudo pro disable livepatch && sudo pro enable livepatch && upd'"
+    "alias upd='sudo apt update && sudo apt dist-upgrade -y && sudo apt autoremove -y && sudo apt autoclean && sudo snap refresh'"
+    "alias lpp='sudo pro disable livepatch && sudo pro enable livepatch && upd'"
     "alias myip='curl -s ifconfig.me && echo'"
     "alias myip6='curl -s ifconfig.me/ip6 && echo'"
     "alias localip='hostname -I | awk \"{print \\\$1}\"'"
