@@ -258,6 +258,12 @@ EOF
 }
 
 parse_args() {
+    # rename is a self-contained subcommand — delegate to rename.sh and replace process
+    if [[ "${1:-}" == "rename" ]]; then
+        shift
+        exec bash "$SCRIPT_DIR/lib/git/rename.sh" "$@"
+    fi
+
     while [[ $# -gt 0 ]]; do
         case "$1" in
             -r|--range)

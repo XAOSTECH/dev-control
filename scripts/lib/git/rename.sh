@@ -29,6 +29,8 @@ OLD_BRANCH=""
 NEW_BRANCH=""
 REPO_PATHS=()
 DRY_RUN=false
+MODE=""          # "branch" (default) or "repo"
+REPO_NEW_NAME="" # target name for --repo mode
 
 # main() — parse CLI args, apply defaults, print the run banner. Only invoked when the module is executed directly (see the guarded call at the foot of the file).
 main() {
@@ -37,37 +39,39 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         -h|--help)
             cat << 'EOF'
-Branch Renaming Tool - Rename default branches across repositories
+Branch Renaming Tool - Rename branches or repositories
 
 USAGE:
   rename.sh [OPTIONS] [OWNER] [BRANCH_SPEC] [PATHS...]
+  rename.sh --branch [SPEC]    # Rename a branch
+  rename.sh --repo NEW_NAME    # Rename the GitHub repository
 
 ARGUMENTS:
   OWNER         GitHub user/org (default: current gh user)
   BRANCH_SPEC   Branch rename in format:
                   Main:main   - Rename Main to main
                   Main->main  - Rename Main to main
-                  Main main   - Rename Main to main (two args)
                   main        - Auto-detect old branch, rename to main
   PATHS         Local repo paths (if omitted, fetches from GitHub)
 
 OPTIONS:
+  --branch [SPEC]   Rename a branch; SPEC is a new name or Old:New / Old->New
+  --repo NEW_NAME   Rename the GitHub repository and update the local remote URL
   -n, --dry-run     Show what would be done without making changes
   -h, --help        Show this help
 
 EXAMPLES:
-  rename.sh                              # Auto-detect everything
-  rename.sh xaoscience Main:main         # Rename Main to main
-  rename.sh Main:main ~/repos/*          # Local repos only
-  rename.sh -n xaoscience Main:main      # Dry run
-  rename.sh "" Main:main ~/proj1 ~/proj2 # Multiple local repos
-  rename.sh xaoscience main              # Auto-detect old, rename to main
+  dc fix rename --branch main              # Rename default branch to main
+  dc fix rename --repo modern-dating       # Rename repo on GitHub + update remote
+  dc fix rename Main:main ~/repos/*        # Local repos, explicit spec
+  rename.sh -n xaoscience Main:main        # Dry run
+  rename.sh "" Main:main ~/proj1 ~/proj2   # Multiple local repos
 
 NOTES:
-  - Works with local repos (no cloning required)
-  - Auto-detects current default branch if not specified
-  - Skips repos that already use the target branch
-  - Updates GitHub default branch setting
+  - --repo renames on GitHub and updates the local remote.origin URL
+  - --branch auto-detects the old branch when only the new name is given
+  - Skips repos that already use the target branch name
+  - Updates GitHub default branch setting after branch rename
 
 EOF
             exit 0
@@ -75,6 +79,31 @@ EOF
         -n|--dry-run)
             DRY_RUN=true
             shift
+            ;;
+        --branch)
+            MODE="branch"
+            if [[ -n "${2:-}" && "${2}" != -* ]]; then
+                if [[ "$2" =~ ^([^:]+):([^:]+)$ ]]; then
+                    OLD_BRANCH="${BASH_REMATCH[1]}"
+                    NEW_BRANCH="${BASH_REMATCH[2]}"
+                elif [[ "$2" =~ ^([^-]+)-\>(.+)$ ]]; then
+                    OLD_BRANCH="${BASH_REMATCH[1]}"
+                    NEW_BRANCH="${BASH_REMATCH[2]}"
+                else
+                    NEW_BRANCH="$2"
+                fi
+                shift 2
+            else
+                shift
+            fi
+            ;;
+        --repo)
+            MODE="repo"
+            if [[ -z "${2:-}" || "${2}" == -* ]]; then
+                echo "Error: --repo requires a new repository name." >&2; exit 1
+            fi
+            REPO_NEW_NAME="$2"
+            shift 2
             ;;
         *)
             # Check if it's a branch spec (contains : or ->)
@@ -116,6 +145,7 @@ done
 # Set defaults
 OWNER="${OWNER:-$(gh api user --jq '.login' 2>/dev/null || echo "")}"
 NEW_BRANCH="${NEW_BRANCH:-main}"
+[[ -z "$MODE" ]] && MODE="branch"
 
 if [[ "$DRY_RUN" == "true" ]]; then
     print_warning "DRY RUN MODE - No changes will be made"
@@ -330,8 +360,85 @@ rename_repo_branch() {
     return 0
 }
 
+# rename_repository() — rename the GitHub repository and update the local remote URL.
+rename_repository() {
+    local new_name="$1"
+    local repo_path="${REPO_PATHS[0]:-$(pwd)}"
+
+    pushd "$repo_path" &>/dev/null || { print_error "Failed to access: $repo_path"; return 1; }
+
+    if [[ ! -d ".git" ]]; then
+        print_error "Not a git repository: $repo_path"
+        popd &>/dev/null || true
+        return 1
+    fi
+
+    local old_name
+    old_name=$(git rev-parse --show-toplevel 2>/dev/null | xargs basename)
+
+    local remote_url
+    remote_url=$(git remote get-url origin 2>/dev/null || echo "")
+
+    if [[ -z "$OWNER" && -n "$remote_url" ]]; then
+        if [[ "$remote_url" =~ github\.com[:/]([^/]+)/ ]]; then
+            OWNER="${BASH_REMATCH[1]}"
+        fi
+    fi
+
+    print_header "Repository Rename: $old_name → $new_name"
+    print_kv "Owner"    "${OWNER:-unknown}"
+    print_kv "Old name" "$old_name"
+    print_kv "New name" "$new_name"
+    echo ""
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        print_info "[DRY RUN] Would rename GitHub repo: $OWNER/$old_name → $OWNER/$new_name"
+        print_info "[DRY RUN] Would update remote URL to: github.com/$OWNER/$new_name"
+        popd &>/dev/null || true
+        print_success "[DRY RUN] ✓ Rename preview complete"
+        return 0
+    fi
+
+    print_info "Renaming repository on GitHub..."
+    local api_resp
+    if ! api_resp=$(gh api "repos/$OWNER/$old_name" -X PATCH -f name="$new_name" 2>&1); then
+        print_error "GitHub API rename failed: $api_resp"
+        popd &>/dev/null || true
+        return 1
+    fi
+    print_success "GitHub repository renamed: $OWNER/$old_name → $OWNER/$new_name"
+
+    local new_url
+    if [[ "$remote_url" == git@* ]]; then
+        new_url="git@github.com:$OWNER/$new_name.git"
+    else
+        new_url="https://github.com/$OWNER/$new_name.git"
+    fi
+    git remote set-url origin "$new_url"
+    print_success "Remote URL updated: $new_url"
+
+    print_info "Verifying new remote..."
+    if git ls-remote --heads origin &>/dev/null; then
+        print_success "Remote reachable at new URL"
+    else
+        print_warning "Remote not yet reachable (GitHub propagation may take a moment)"
+    fi
+
+    popd &>/dev/null || true
+    echo ""
+    print_success "✓ $old_name → $new_name"
+}
+
 # main_dispatch() — drive the actual rename, either over the locally supplied paths or by listing matching repositories from GitHub. Only invoked when the module is executed directly.
 main_dispatch() {
+# Repository rename mode: single GitHub API call + remote URL update
+if [[ "$MODE" == "repo" ]]; then
+    rename_repository "$REPO_NEW_NAME"
+    print_header_success "Repository Rename Complete!"
+    return 0
+fi
+
+# Branch rename mode (default)
 # Main execution
 if [[ ${#REPO_PATHS[@]} -gt 0 ]]; then
     # Local mode: process specified paths
