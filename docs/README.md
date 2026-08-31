@@ -37,9 +37,9 @@
 
 ---
 
-**Dev-Control** is a modular CLI toolkit that automates customising and setting up repos (100% community standards), nested gitmodules, centralised and cleaned up .tmp and .bak folders, nested rootless podman docker containers, vscode mcp-servers, GitHub release (with lib tarbal, re-releases, automated version tagging and signed latest + version tag) and app packages.
+**Dev-Control** is a modular Bash CLI that automates the repetitive parts of running many repositories: scaffolding repos to community standards, nested submodules, consolidated `.tmp`/`.bak` folders, rootless Podman devcontainers, VS Code MCP servers, signed GitHub releases (library tarballs, re-releases and automated version tagging) and multi-platform packages.
 
-This attempts to make arduous CLI and Git tasks (such as signing woktrees with topology and surgically dropping commits) easy and robust, so you can focus on your code - while, ironically, I focus on optimising this. All functions have a --dry-run option, so test it out and feel free to let me know of any issues or requests! Contributions are also lauded!  
+It aims to make awkward Git and CLI tasks — signing a worktree while preserving topology, or surgically dropping a commit — routine and reversible. Every command has a `--dry-run` mode. Issues and contributions are welcome.  
 
 ```bash
 # Install
@@ -133,7 +133,7 @@ source ~/.bashrc      # Or restart your shell
 ### Verify
 
 ```bash
-dc --version          # Should print v2.x.x
+dc --version          # Print the installed version
 dc --help             # List all commands
 ```
 
@@ -141,7 +141,23 @@ dc --help             # List all commands
 
 ## 🔧 Core Commands
 
-Below is a quick reference. Run `dc <command> --help` for full options.
+Run `dc <command> --help` for full options.
+
+| Command | Purpose |
+|---------|---------|
+| `dc alias` | Install shell aliases for Git, Docker and system monitoring |
+| `dc init` | Populate a repo with docs, licence, workflows and GitHub templates |
+| `dc repo` | Create a GitHub repo from the local project |
+| `dc pr` | Open a pull request from the current branch |
+| `dc fix` | Rewrite commits — edit messages, sign, fix dates, drop or combine |
+| `dc modules` | Auto-generate `.gitmodules`; consolidate temp folders |
+| `dc licences` | Detect, check compatibility and apply licences |
+| `dc mcp` | Configure MCP servers for AI coding assistants |
+| `dc contain` | Generate a `.devcontainer/` setup |
+| `dc package` | Build tarball, Homebrew, Snap, Deb, Nix and Docker packages |
+
+<details>
+<summary>Command examples &rsaquo;</summary>
 
 ### `dc aliases` — Shell Alias Installer
 
@@ -260,6 +276,9 @@ dc package --init                   # Create .dc-package.yaml
 dc package --all                    # Build everything
 dc package --docker --theme cyber   # Docker image with ttyd + theme
 ```
+
+</details>
+
 ---
 
 ## 🔌 Plugin System
@@ -345,7 +364,7 @@ Located in `scripts/lib/`:
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) first.
+Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) first.
 
 ```bash
 # Fork → Clone → Branch → Commit → PR
@@ -376,18 +395,6 @@ See [open issues](https://github.com/xaostech/dev-control/issues) for more.
 ## 📄 Licence
 
 GPL-3.0. See [LICENCE](../LICENCE).
-
----
-
-<p align="center">
-  <a href="https://github.com/xaostech">
-    <img src="https://img.shields.io/badge/Made%20with%20%E2%9D%A4%EF%B8%8F%20by-xaostech-red?style=for-the-badge">
-  </a>
-</p>
-
-<p align="center">
-  <a href="#dev-control">⬆️ Back to Top</a>
-</p>
 
 <!-- TREE-VIZ-START -->
 
