@@ -30,7 +30,7 @@ source "$SCRIPT_DIR/lib/print.sh"
 source "$SCRIPT_DIR/lib/git/tree-viz.sh"
 
 # Configuration
-OUTPUT_DIR="${REPO_ROOT}/.github/tree-viz"
+OUTPUT_DIR="${REPO_ROOT}/.github/static/tree-viz"
 MAX_COMMITS=0
 GENERATE_SVG=true
 GENERATE_HTML=true
@@ -70,7 +70,7 @@ Options:
   --html-only             Generate only HTML (interactive with animations)
   --no-embed              Don't auto-inject into README
   --max-commits N         Limit visualisation to N commits (default: all)
-  --output-dir DIR        Output directory (default: .github/tree-viz)
+  --output-dir DIR        Output directory (default: .github/static/tree-viz)
   -h, --help              Show this help
 
 Generated files:

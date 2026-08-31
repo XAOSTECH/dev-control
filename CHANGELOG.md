@@ -56,6 +56,7 @@
 - `dc-contain`: Fix 1/33 devcontainer cache miss by passing `--pull=true` to podman build, matching VS Code DevContainers default behaviour.
 - `dc-contain`: Fix cache invalidation by skipping per-build wrapper prune when `NESTED=true` during `--nest`.
 - `tree-viz`: derive the JSON and SVG `generated` timestamp from the HEAD committer date instead of wall-clock time, so unchanged history no longer produces an endless stream of spurious "update git tree visualisation" commits.
+- `tree-viz`: point the workflow template at `.github/static/tree-viz/` (matching the active mirror, the `update.yml` detection path and the README embed) and add a `concurrency` guard, so freshly template-loaded repos no longer loop on a path mismatch.
 
 All notable changes to Dev-Control will be documented in this file.
 

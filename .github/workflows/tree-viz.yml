@@ -70,6 +70,11 @@ permissions:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
+# Serialise runs on a ref so overlapping regenerations cannot race and double-commit.
+concurrency:
+  group: tree-viz-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   generate-tree:
     name: Generate Git Tree Visualisation
