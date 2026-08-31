@@ -367,10 +367,19 @@ jobs:
           RERELEASE="${{ steps.check_release.outputs.rerelease }}"
           TODAY=$(date +%Y-%m-%d)
 
-          # Build grouped commit categories from .commits-subjects.txt
+          # Build grouped commit categories from .commits-subjects.txt.
+          # Skip bot housekeeping/merge noise and de-duplicate identical subjects.
           ADDED="" FIXED="" CHANGED="" DOCS=""
+          declare -A SEEN_SUBJECTS
           while IFS= read -r line; do
             [[ -z "$line" ]] && continue
+            case "$line" in
+              "chore: update CHANGELOG"*|"chore(changelog):"*) continue ;;
+              "chore: update git tree visualisation"*|"chore(tree-viz):"*) continue ;;
+              "Merge pull request"*|"Merge branch"*|"Merge remote-tracking"*) continue ;;
+            esac
+            [[ -n "${SEEN_SUBJECTS["$line"]:-}" ]] && continue
+            SEEN_SUBJECTS["$line"]=1
             msg="${line#*: }"
             case "$line" in
               feat:*|feat\(*) ADDED="${ADDED}\n- ${msg}" ;;
