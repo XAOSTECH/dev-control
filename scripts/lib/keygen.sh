@@ -53,11 +53,30 @@ if ! gh auth status &> /dev/null; then
 fi
 
 # 2. Nuclear Cleanup: Purge Entire Local Keyring Structure
-echo "Executing nuclear purge of local GPG storage to prevent engine collisions..."
-gpgconf --kill gpg-agent &> /dev/null || true
-pkill -9 gpg-agent &> /dev/null || true
+if [[ -d "$HOME/.gnupg" ]]; then
+    echo "Warning: Existing GPG keyring detected at $HOME/.gnupg."
+    echo "  wipe   — delete keyring and continue (recommended for a clean key generation)"
+    echo "  skip   — keep existing keyring and continue"
+    echo "  cancel — exit now to back up or decide"
+    read -rp "Choice [wipe/skip/cancel]: " _choice
+    case "${_choice,,}" in
+        wipe)
+            echo "Executing nuclear purge of local GPG storage to prevent engine collisions..."
+            gpgconf --kill gpg-agent &> /dev/null || true
+            pkill -9 gpg-agent &> /dev/null || true
+            rm -rf "$HOME/.gnupg"
+            ;;
+        skip)
+            echo "Keeping existing keyring."
+            ;;
+        *)
+            echo "Cancelled. No changes made." >&2
+            exit 0
+            ;;
+    esac
+fi
 
-rm -rf "$HOME/.gnupg"
+# Ensure .gnupg dir exists with correct permissions (covers wipe path and fresh install)
 mkdir -p "$HOME/.gnupg"
 chmod 700 "$HOME/.gnupg"
 
@@ -65,7 +84,6 @@ chmod 700 "$HOME/.gnupg"
 echo "pinentry-mode loopback" > "$HOME/.gnupg/gpg.conf"
 echo "allow-loopback-pinentry" > "$HOME/.gnupg/gpg-agent.conf"
 echo "no-allow-external-cache" >> "$HOME/.gnupg/gpg-agent.conf"
-
 cat <<EOF >> "$HOME/.gnupg/gpg.conf"
 personal-cipher-preferences AES256
 personal-digest-preferences SHA512
