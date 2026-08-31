@@ -911,7 +911,8 @@ generate_devcontainer_json() {
   "postCreateCommand": {
     "fixPerms": "CID=\$(cat /etc/hostname) && docker exec -u root \$CID chmod u+s /usr/bin/sudo 2>/dev/null || true && docker exec -u root \$CID chown ${uid}:${uid} /home/${remote_user} 2>/dev/null || true && docker exec -u root \$CID chmod 755 /home/${remote_user} 2>/dev/null || true && docker exec -u root \$CID chmod 700 /home/${remote_user}/.gnupg /home/${remote_user}/.ssh 2>/dev/null || true && sudo chown -R ${uid}:${uid} . 2>/dev/null || true && sudo mkdir -p /run/user/${uid}/gnupg && sudo chown -R ${uid}:${uid} /run/user/${uid} 2>/dev/null || true && ln -sf /tmp/wayland-0 /run/user/${uid}/wayland-0 2>/dev/null || true",
     "gitCfg": "${git_config_cmd}",
-    "aliases": "echo A | bash /opt/dev-control/scripts/alias-loading.sh"
+    "ghAuth": "command -v gh >/dev/null 2>&1 && { gh auth status -h github.com 2>/dev/null || echo 'WARNING: gh credentials stale — run: gh auth login -h github.com'; } || true",
+    "aliases": "echo A | bash /opt/dev-control/scripts/alias-loading.sh 2>/dev/null || echo A | bash \${containerWorkspaceFolder}/scripts/alias-loading.sh 2>/dev/null || true"
   },
   "customizations": {
     "vscode": {
