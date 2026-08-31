@@ -200,8 +200,15 @@ jobs:
             exit 0
           fi
           
+          # Bot housekeeping commits must not, on their own, accumulate toward a release.
+          EXCLUDE_CHORES=(--invert-grep
+            --grep='^chore: update git tree visualisation'
+            --grep='^chore(tree-viz):'
+            --grep='^chore: update CHANGELOG'
+            --grep='^chore(changelog):')
+
           # Count commits since last release (for minimum threshold)
-          COMMIT_COUNT=$(git log "${LATEST_TAG}..HEAD" --oneline | wc -l)
+          COMMIT_COUNT=$(git log "${LATEST_TAG}..HEAD" --oneline "${EXCLUDE_CHORES[@]}" | wc -l)
           
           # Cumulative count: commits since the PRIOR different version tag
           # Re-releases move the tag to HEAD, resetting the above count.
@@ -213,7 +220,7 @@ jobs:
                         [[ "$v" != "$LATEST_VERSION" ]] && echo "$t" && break
                       done) || true
           if [[ -n "$PRIOR_TAG" ]]; then
-            CUMULATIVE_COUNT=$(git log "${PRIOR_TAG}..HEAD" --oneline | wc -l)
+            CUMULATIVE_COUNT=$(git log "${PRIOR_TAG}..HEAD" --oneline "${EXCLUDE_CHORES[@]}" | wc -l)
           else
             CUMULATIVE_COUNT=$COMMIT_COUNT
           fi
