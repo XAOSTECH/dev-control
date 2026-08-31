@@ -76,6 +76,7 @@ AUTO_SIGN_MODE=false    # Auto-sign: detect unsigned commits, confirm, then auto
 REAUTHOR_MODE=false
 REAUTHOR_TARGET=""
 DEDUP_MODE=false
+DEDUP_TIMES="${DEDUP_TIMES:-1}"   # dedup repeat/nest multiplier: >=2 (e.g. --dedu x2) enables nested resolution; env-overridable
 COMBINE_MODE=false
 COMBINE_A=""
 COMBINE_B=""
@@ -205,10 +206,18 @@ Options:
                                                      --drop 181cab0 a61b084
   --dedu, --deduplicate     Squash consecutive commits that share an identical
                              subject line into the first commit of each run.
+                             (--dedup is accepted as an alias.)
                              Preserves the first commit's author date/name/email,
                              refreshes the committer date, and discards the later
                              duplicates' changes (resets to the first commit's tree).
                              Honours --range, --dry-run, --sign and --no-cleanup.
+  --dedu xN                 Nest check: add a multiplier (e.g. x2 / x3, or a bare
+                             integer) to also resolve NON-adjacent "abba abba"
+                             duplicates. Groups every occurrence of a subject
+                             across the range onto its LAST occurrence (tip-safe),
+                             loops up to N rounds stopping early once converged,
+                             and verifies the net working tree is unchanged
+                             (restoring on any mismatch). Bare --dedu is unchanged.
   --combine A B             Fuse two subsequent (adjacent) commits into one and
                              surgically rebuild the rest of history. The pair
                              collapses to a single commit using the newer commit's
@@ -222,6 +231,9 @@ Options:
                              creates a backup bundle and performs post-checks (safe wrapper)
   --harness-sign <range>     Run a minimal harness that re-signs commits in a range (requires GPG)
                              (Honours global ${CYAN}--dry-run${NC} flag)
+  --harness-dedu <range>     Run a minimal harness that deduplicates commits in a range on a
+                             temporary branch, backs up a bundle, and verifies the working tree
+                             is byte-identical before/after (Honours global ${CYAN}--dry-run${NC} flag)
   --harness-no-cleanup       Keep temporary branch after running the harness for inspection
   --no-cleanup               Skip cleanup prompt at end of operation; do not offer to delete tmp/backup refs
   --only-cleanup             Only cleanup tmp/backup tags and branches (no other operations)
@@ -336,9 +348,17 @@ parse_args() {
                 export TIMED_SIGN_MODE
                 shift
                 ;;
-            --dedu|--deduplicate)
+            --dedu|--dedup|--deduplicate)
                 DEDUP_MODE=true
-                shift
+                # Optional nest multiplier: xN / N (e.g. x2) => up to N dedup
+                # rounds with non-adjacent (nested) duplicate resolution.
+                # Bare --dedu stays consecutive-only (back-compatible).
+                if [[ -n "${2:-}" && "$2" =~ ^[xX]?([0-9]+)$ ]]; then
+                    DEDUP_TIMES="${BASH_REMATCH[1]}"
+                    shift 2
+                else
+                    shift
+                fi
                 ;;
             --combine)
                 COMBINE_MODE=true
@@ -366,6 +386,12 @@ parse_args() {
             --harness-sign)
                 HARNESS_MODE=true
                 HARNESS_OP="sign"
+                HARNESS_ARG="$2"
+                shift 2
+                ;;
+            --harness-dedu)
+                HARNESS_MODE=true
+                HARNESS_OP="dedu"
                 HARNESS_ARG="$2"
                 shift 2
                 ;;

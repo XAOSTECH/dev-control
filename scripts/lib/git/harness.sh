@@ -5,7 +5,7 @@
 # Required globals when sourced (set by the caller):
 #   DRY_RUN            — if true, show what would be done without executing
 #   HARNESS_MODE       — if true, run in harness mode
-#   HARNESS_OP         — operation to perform (drop, sign)
+#   HARNESS_OP         — operation to perform (drop, sign, dedu)
 #   HARNESS_ARG        — argument for the operation
 #   HARNESS_CLEANUP    — if true, cleanup temp branch after success
 #   HARNESS_FORCE      — if true, proceed despite existing tmp branches
@@ -14,7 +14,7 @@
 #   TEMP_BACKUP        — path to backup bundle
 #
 # Required functions when sourced (from the parent or sibling libs):
-#   drop_single_commit(), sign_mode(), backup_repo()
+#   drop_single_commit(), sign_mode(), deduplicate_mode(), backup_repo()
 #   print_info(), print_success(), print_warning(), print_error()
 #
 # SPDX-Licence-Identifier: GPL-3.0-or-later
@@ -213,6 +213,36 @@ harness_run() {
                 return 1
             fi
             RANGE="$OLD_RANGE"
+            ;;
+        dedu)
+            echo "Running dedup for range: $HARNESS_ARG" | tee -a "$REPORT_FILE"
+            OLD_RANGE="$RANGE"
+            RANGE="$HARNESS_ARG"
+            # Suppress the interactive cleanup prompt while inside the harness
+            OLD_NO_CLEANUP="${NO_CLEANUP:-false}"
+            NO_CLEANUP=true
+            # Capture the pre-op tree so we can prove the rewrite preserved content
+            PRE_TREE=$(git rev-parse "HEAD^{tree}" 2>/dev/null || echo "")
+            if ! deduplicate_mode 2>&1 | tee -a "$REPORT_FILE"; then
+                echo "Dedup failed" | tee -a "$REPORT_FILE"
+                harness_restore_backup "$BUNDLE" "$REPORT_FILE"
+                RANGE="$OLD_RANGE"; NO_CLEANUP="$OLD_NO_CLEANUP"
+                DRY_RUN="$PREV_DRY_RUN"
+                return 1
+            fi
+            RANGE="$OLD_RANGE"; NO_CLEANUP="$OLD_NO_CLEANUP"
+            # Content-preservation check ("changes between periods"): a real
+            # dedup run must leave the net working tree byte-identical.
+            if [[ "$PREV_DRY_RUN" != "true" ]]; then
+                POST_TREE=$(git rev-parse "HEAD^{tree}" 2>/dev/null || echo "")
+                if [[ -n "$PRE_TREE" && "$PRE_TREE" != "$POST_TREE" ]]; then
+                    echo "ERROR: dedup changed the working tree (pre ${PRE_TREE:0:12} != post ${POST_TREE:0:12})" | tee -a "$REPORT_FILE"
+                    harness_restore_backup "$BUNDLE" "$REPORT_FILE"
+                    DRY_RUN="$PREV_DRY_RUN"
+                    return 1
+                fi
+                echo "OK: dedup preserved the working tree (tree ${POST_TREE:0:12})" | tee -a "$REPORT_FILE"
+            fi
             ;;
         *)
             echo "Unknown harness operation: $HARNESS_OP" | tee -a "$REPORT_FILE"
