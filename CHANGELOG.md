@@ -55,6 +55,7 @@
 
 ### Changed
 - `dc-init`: extract README/docs generation into `scripts/lib/readme.sh` with dynamic placeholder discovery — a template can be extended with new `{{TOKEN}}` placeholders and each resolves from a same-named variable, a git-config cache, an interactive prompt (skipped with `--defaults`) or empty, so generated docs carry no leftover literal placeholders.
+- `dc-init`: slim the generated README template from ~250 to ~80 lines, remove promotional filler and the unbacked example/roadmap/support scaffolding, and rely on resolvable placeholders so a generated README is complete out of the box.
 
 ### Fixed
 - `dc-contain`: Fix 1/33 devcontainer cache miss by passing `--pull=true` to podman build, matching VS Code DevContainers default behaviour.
