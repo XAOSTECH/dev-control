@@ -51,6 +51,7 @@
 ### Added
 - `dc-fix --dedu xN` nest check: an optional multiplier (e.g. `x2`) that also resolves non-adjacent "abba abba" duplicates by collapsing every occurrence of a subject onto its last one, looping up to N rounds with fixpoint early-stop and verifying the net working tree is byte-identical (restoring on any mismatch). Bare `--dedu` stays consecutive-only. Adds a `--harness-dedu <range>` safe wrapper and BATS coverage.
 - `dc-contain --prune` mode with graceful state awareness to prune containers/images while protecting excluded projects by temporarily starting them.
+- `humanise.yml`: new self-contained workflow (template + active mirror) that reflows editor/AI hard-wrapped comments and prose paragraphs onto single logical lines and opens a pull request; bullets, headings, tables, code blocks, SPDX headers, shebangs and deliberate short lines are preserved.
 
 ### Fixed
 - `dc-contain`: Fix 1/33 devcontainer cache miss by passing `--pull=true` to podman build, matching VS Code DevContainers default behaviour.

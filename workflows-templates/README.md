@@ -15,14 +15,16 @@ This README is for maintainers editing templates in this repo. It is not copied 
 - `automerge.yml`: privileged merge workflow triggered after successful `Validate PR for Automerge`.
 - `anglicise.yml`: automated UK spelling updates with PR creation.
 - `replace.yml`: search/replace automation with PR creation.
+- `humanise.yml`: reflow editor/AI hard-wrapped comments and prose onto single logical lines, with PR creation.
 - `update.yml`: scheduled/manual dependency/repo maintenance automation.
 - `release.yml`: release/tag/changelog automation.
 - `sign-artifacts.yml`: reusable Authenticode code signing via SignPath.io (called standalone or from release.yml).
 - `security-autofix.yml`: CodeQL-driven autofix workflow and security PR creation.
+- `tree-viz.yml`: generate the git tree visualisation and commit it to `.github/static/tree-viz/` (manual dispatch or called by `update.yml`).
 
 ## Requisites by Template
 
-- Needs bot app credentials (`anglicise`, `replace`, `update`, `release`):
+- Needs bot app credentials (`anglicise`, `replace`, `humanise`, `update`, `release`):
 `{{BOT_APP_ID_SECRET}}`, `{{BOT_PRIVATE_KEY_SECRET}}`.
 - Needs security app credentials (`bash-lint-advanced`):
 `{{SECURITY_APP_ID_SECRET}}`, `{{SECURITY_PRIVATE_KEY_SECRET}}`.
