@@ -122,10 +122,10 @@ declare -a SAFE_ALIASES=(
 # System aliases
 declare -a SYSMON_ALIASES=(
     "# System monitoring/operations"
-    "for cmd in reboot rb!; do alias '$cmd'='sudo systemctl -i reboot'; done"
-    "#for cmd in suspend sp!; do alias '$cmd'='sudo systemctl -i suspend'; done"
-    "#for cmd in sp-to-hi s2h! sth!; do alias '$cmd'='sudo systemctl -i suspend-then-hibernate'; done"
-    "#for cmd in hibernate hi! bye!; do alias '$cmd'='sudo systemctl -i hibernate'; done"
+    "alias reboot='sudo systemctl -i reboot' 'rb!'='sudo systemctl -i reboot'"
+    "#alias suspend='sudo systemctl -i suspend' 'sp!'='sudo systemctl -i suspend'"
+    "#alias 'sp-to-hi!'='sudo systemctl -i suspend-then-hibernate' 's2h!'='sudo systemctl -i suspend-then-hibernate' 'sth!'='sudo systemctl -i suspend-then-hibernate'"
+    "#alias hibernate='sudo systemctl -i hibernate' 'hi!'='sudo systemctl -i hibernate' 'bye!'='sudo systemctl -i hibernate'"
     "alias ports='netstat -tulanp 2>/dev/null || ss -tulanp'"
     "alias meminfo='free -h'"
     "alias cpuinfo='lscpu'"
