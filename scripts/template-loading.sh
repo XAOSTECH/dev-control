@@ -33,6 +33,7 @@ DEV_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
 # Source shared libraries
 source "$SCRIPT_DIR/lib/colours.sh"
 source "$SCRIPT_DIR/lib/print.sh"
+source "$SCRIPT_DIR/lib/readme.sh"
 
 # CLI options
 CLI_FILES=""
@@ -883,7 +884,7 @@ install_templates() {
         if [[ "$folder_type" == "docs" && -n "$suffix" ]]; then
             # If suffix contains X -> add badges after title
             if [[ "$suffix" =~ [Xx] ]]; then
-                add_badges_after_title "$target_dir/docs/README.md"
+                readme_insert_badges "$target_dir/docs/README.md"
                 # if only X present, continue to next selection
                 if [[ ! "$suffix" =~ [AaBbCcDd] ]]; then
                     continue
@@ -901,7 +902,7 @@ install_templates() {
                 for f in "${docs_files[@]}"; do
                     local tpl="$DEV_CONTROL_DIR/docs-templates/$f"
                     if [[ -f "$tpl" ]]; then
-                        process_template "$tpl" "$target_dir/docs/$f"
+                        readme_apply "$tpl" "$target_dir/docs/$f"
                     else
                         print_warning "Template not found: $f"
                     fi
@@ -937,72 +938,7 @@ install_templates() {
 }
 
 install_docs_templates() {
-    local target_dir="$1"
-    local docs_dir="$DEV_CONTROL_DIR/docs-templates"
-    
-    print_info "Installing documentation templates to docs/..."
-    mkdir -p "$target_dir/docs"
-    
-    for file in "$docs_dir"/*.md; do
-        if [[ -f "$file" ]]; then
-            local filename=$(basename "$file")
-            process_template "$file" "$target_dir/docs/$filename"
-        fi
-    done
-}
-
-# Insert badges block after the first title line in README (idempotent)
-add_badges_after_title() {
-    local readme_path="$1"
-    local tmp
-    tmp=$(mktemp)
-
-    local badges
-    badges=$(cat <<'EOF'
-
-<p align="center">
-  <a href="{{REPO_URL}}">
-    <img alt="GitHub repo" src="https://img.shields.io/badge/GitHub-{{ORG_NAME}}%2F-{{REPO_SLUG}}-181717?style=for-the-badge&logo=github">
-  </a>
-  <a href="{{REPO_URL}}/releases">
-    <img alt="GitHub release" src="https://img.shields.io/github/v/release/{{ORG_NAME}}/{{REPO_SLUG}}?style=for-the-badge&logo=semantic-release&colour=blue">
-  </a>
-  <a href="{{REPO_URL}}/blob/main/LICENCE">
-    <img alt="Licence" src="https://img.shields.io/github/licence/{{ORG_NAME}}/{{REPO_SLUG}}?style=for-the-badge&colour=green">
-  </a>
-</p>
-
-EOF
-)
-    # Replace placeholders
-    badges="${badges//\{\{REPO_URL\}\}/$REPO_URL}"
-    badges="${badges//\{\{ORG_NAME\}\}/$ORG_NAME}"
-    badges="${badges//\{\{REPO_SLUG\}\}/$REPO_SLUG}"
-
-    # If README doesn't exist, create from template if available
-    if [[ ! -f "$readme_path" ]]; then
-        mkdir -p "$(dirname "$readme_path")"
-        if [[ -f "$DEV_CONTROL_DIR/docs-templates/README.md" ]]; then
-            process_template "$DEV_CONTROL_DIR/docs-templates/README.md" "$readme_path"
-        else
-            echo -e "# $PROJECT_NAME\n" > "$readme_path"
-        fi
-    fi
-
-    # Check if badges already present
-    if grep -q 'img alt="GitHub repo"' "$readme_path"; then
-        print_info "Badges already present in README, skipping insertion"
-        rm -f "$tmp"
-        return
-    fi
-
-    # Insert badges after the first H1
-    awk -v badges="$badges" 'BEGIN{inserted=0} /^# / && !inserted{print; print badges; inserted=1; next} {print}' "$readme_path" > "$tmp" || {
-        # Fallback: prepend badges
-        printf "%s\n%s" "$badges" "$(cat "$readme_path")" > "$tmp"
-    }
-    mv "$tmp" "$readme_path"
-    print_success "Inserted badges into $readme_path"
+    readme_install_docs "$1"
 }
 
 install_actions_templates() {

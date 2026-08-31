@@ -53,12 +53,16 @@
 - `dc-contain --prune` mode with graceful state awareness to prune containers/images while protecting excluded projects by temporarily starting them.
 - `humanise.yml`: new self-contained workflow (template + active mirror) that reflows editor/AI hard-wrapped comments and prose paragraphs onto single logical lines and opens a pull request; bullets, headings, tables, code blocks, SPDX headers, shebangs and deliberate short lines are preserved.
 
+### Changed
+- `dc-init`: extract README/docs generation into `scripts/lib/readme.sh` with dynamic placeholder discovery — a template can be extended with new `{{TOKEN}}` placeholders and each resolves from a same-named variable, a git-config cache, an interactive prompt (skipped with `--defaults`) or empty, so generated docs carry no leftover literal placeholders.
+
 ### Fixed
 - `dc-contain`: Fix 1/33 devcontainer cache miss by passing `--pull=true` to podman build, matching VS Code DevContainers default behaviour.
 - `dc-contain`: Fix cache invalidation by skipping per-build wrapper prune when `NESTED=true` during `--nest`.
 - `tree-viz`: derive the JSON and SVG `generated` timestamp from the HEAD committer date instead of wall-clock time, so unchanged history no longer produces an endless stream of spurious "update git tree visualisation" commits.
 - `tree-viz`: point the workflow template at `.github/static/tree-viz/` (matching the active mirror, the `update.yml` detection path and the README embed) and add a `concurrency` guard, so freshly template-loaded repos no longer loop on a path mismatch.
 - `update`: exclude bot housekeeping commits (`chore: update git tree visualisation`, `chore: update CHANGELOG`) from the release-trigger commit count, so visualisation refreshes can no longer cascade into automatic re-releases.
+- `dc-init`: fix the generated README badges (stray dash in the GitHub slug; use shields `color=` so the release and licence badges render).
 
 All notable changes to Dev-Control will be documented in this file.
 
