@@ -111,24 +111,41 @@ fi
 DATA_FILE=$(generate_tree_data_json "$OUTPUT_DIR/git-tree-data.json" "$MAX_COMMITS")
 print_success "Git data extracted: $DATA_FILE"
 
-# Step 2: Calculate positions
+# Step 2: Calculate positions (full detail — used by the interactive HTML)
 print_info "Calculating fractal tree positions..."
 POSITIONS_FILE=$(calculate_tree_positions "$DATA_FILE" "$OUTPUT_DIR/git-tree-positions.json")
 print_success "Positions calculated: $POSITIONS_FILE"
 
-# Step 3: Generate SVG
+# Collapsed variant for the static SVG/mini so a long linear history stays within a
+# reasonable frame. Small repos are left untouched; the HTML keeps full detail.
+COMMIT_TOTAL=$(jq '.commits | length' "$DATA_FILE" 2>/dev/null || echo 0)
+COLLAPSE_MIN=0
+if [[ "$COMMIT_TOTAL" -gt 250 ]]; then
+    COLLAPSE_MIN=2
+elif [[ "$COMMIT_TOTAL" -gt 60 ]]; then
+    COLLAPSE_MIN=3
+fi
+SVG_POSITIONS_FILE="$POSITIONS_FILE"
+if [[ "$COLLAPSE_MIN" -gt 1 ]]; then
+    print_info "Collapsing linear runs (history=$COMMIT_TOTAL, min_run=$COLLAPSE_MIN)..."
+    COLLAPSED_DATA=$(collapse_linear_runs "$DATA_FILE" "$OUTPUT_DIR/git-tree-data-collapsed.json" "$COLLAPSE_MIN")
+    SVG_POSITIONS_FILE=$(calculate_tree_positions "$COLLAPSED_DATA" "$OUTPUT_DIR/git-tree-positions-collapsed.json")
+    print_success "Collapsed to $(jq '.commits|length' "$SVG_POSITIONS_FILE" 2>/dev/null || echo '?') nodes"
+fi
+
+# Step 3: Generate SVG (from the collapsed positions)
 if [[ "$GENERATE_SVG" == "true" ]]; then
     print_info "Generating static SVG..."
     source "$SCRIPT_DIR/lib/git/tree-render-svg.sh"
-    SVG_FILE=$(render_svg_tree "$POSITIONS_FILE" "$OUTPUT_DIR/git-tree.svg")
+    SVG_FILE=$(render_svg_tree "$SVG_POSITIONS_FILE" "$OUTPUT_DIR/git-tree.svg")
     print_success "SVG generated: $SVG_FILE"
 
     # Also generate mini SVG for README inline embedding
-    MINI_SVG_FILE=$(render_mini_svg_tree "$POSITIONS_FILE" "$OUTPUT_DIR/git-tree-mini.svg")
+    MINI_SVG_FILE=$(render_mini_svg_tree "$SVG_POSITIONS_FILE" "$OUTPUT_DIR/git-tree-mini.svg")
     print_success "Mini SVG generated: $MINI_SVG_FILE"
 fi
 
-# Step 4: Generate HTML
+# Step 4: Generate HTML (full detail — the interactive version)
 if [[ "$GENERATE_HTML" == "true" ]]; then
     print_info "Generating interactive HTML..."
     source "$SCRIPT_DIR/lib/git/tree-render-html.sh"

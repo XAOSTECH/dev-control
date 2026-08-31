@@ -172,6 +172,80 @@ calculate_tree_positions() {
     echo "$output_file"
 }
 
+# Collapse maximal linear runs (single parent, single child, untagged, not a tip)
+# into one {collapsed:true, count:N} node — on the trunk or inside a branch — so a
+# long non-branching history no longer stretches the rendered frame. Merges, forks,
+# tagged commits and tips are kept; parent links are rewired to keep lanes continuous.
+# min_run <= 1 disables collapsing (small repos keep their full, detailed tree).
+collapse_linear_runs() {
+    local input_json="$1"
+    local output_file="${2:-/tmp/git-tree-collapsed.json}"
+    local min_run="${3:-3}"
+
+    if ! command -v jq &>/dev/null || [[ "${min_run}" -le 1 ]]; then
+        cp "$input_json" "$output_file"
+        echo "$output_file"
+        return
+    fi
+
+    local jq_prog
+    jq_prog=$(cat <<'COLLAPSE_JQ'
+def flushrun($run; $by_sha):
+  if ($run | length) >= $min_run then
+    ($run[0]) as $r0 | ($run[-1]) as $rk
+    | [ { sha: ("collapsed:" + $r0 + ":" + $rk),
+          short: (($run | length) | tostring),
+          parents: ($by_sha[$rk].parents),
+          author: "", email: "",
+          date: ($by_sha[$r0].date), timestamp: ($by_sha[$r0].timestamp),
+          subject: ((($run | length) | tostring) + " commits"),
+          refs: "", collapsed: true, count: ($run | length), _r0: $r0 } ]
+  else ($run | map($by_sha[.])) end;
+
+(.commits | map({(.sha): .}) | add // {}) as $by_sha
+| (.commits | map(.sha)) as $order
+| (reduce .commits[] as $c ({};
+    ($c.parents // "" | split(" ") | map(select(. != ""))) as $pp
+    | reduce $pp[] as $p (.; .[$p] = ((.[$p] // []) + [$c.sha]))
+  )) as $children
+| ([.tags[]? | .sha] | map({(.): true}) | add // {}) as $is_tag
+| (reduce $order[] as $sha ({};
+    ($by_sha[$sha]) as $c
+    | ($c.parents // "" | split(" ") | map(select(. != ""))) as $pp
+    | ($children[$sha] // []) as $ch
+    | .[$sha] = (
+        (($pp | length) == 1) and (($ch | length) == 1)
+        and (($is_tag[$sha] // false) | not)
+        and ((($c.refs // "") | contains("tag:")) | not)
+        and ($sha != $order[0])
+      )
+  )) as $isc
+| (reduce range(0; ($order | length)) as $i (
+    {out: [], run: []};
+    $order[$i] as $sha
+    | ($isc[$sha]) as $c
+    | (if (.run | length) == 0 then true
+       else (($by_sha[(.run[-1])].parents // "" | split(" ") | map(select(. != "")) | .[0]) == $sha) end) as $chain
+    | if $c and $chain then .run += [$sha]
+      elif $c then (.out += flushrun(.run; $by_sha)) | .run = [$sha]
+      else (.out += flushrun(.run; $by_sha)) | (.out += [ $by_sha[$sha] ]) | .run = []
+      end
+  )
+  | (.out += flushrun(.run; $by_sha))
+  | .out) as $reduced
+| ([ $reduced[] | select(.collapsed == true) | {(._r0): .sha} ] | add // {}) as $rewire
+| ($reduced | map(
+    (.parents // "" | split(" ") | map(select(. != "")) | map($rewire[.] // .) | join(" ")) as $np
+    | .parents = $np
+    | del(._r0)
+  )) as $final
+| .commits = $final
+COLLAPSE_JQ
+)
+    jq --argjson min_run "$min_run" "$jq_prog" "$input_json" > "$output_file" 2>/dev/null || cp "$input_json" "$output_file"
+    echo "$output_file"
+}
+
 # ============================================================================
 # VISUALISATION METRICS
 # ============================================================================
