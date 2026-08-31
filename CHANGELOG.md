@@ -55,6 +55,7 @@
 ### Fixed
 - `dc-contain`: Fix 1/33 devcontainer cache miss by passing `--pull=true` to podman build, matching VS Code DevContainers default behaviour.
 - `dc-contain`: Fix cache invalidation by skipping per-build wrapper prune when `NESTED=true` during `--nest`.
+- `tree-viz`: derive the JSON and SVG `generated` timestamp from the HEAD committer date instead of wall-clock time, so unchanged history no longer produces an endless stream of spurious "update git tree visualisation" commits.
 
 All notable changes to Dev-Control will be documented in this file.
 

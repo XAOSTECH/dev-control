@@ -172,7 +172,7 @@ SVGHEADER
       Repository: $repo_name
     </text>
     <text x="0" y="20" class="branch-label" font-size="10" fill="#999">
-      Generated: $(date -u +%Y-%m-%d\ %H:%M:%S\ UTC)
+      Generated: $(TZ=UTC git log -1 --format=%cd --date=format-local:'%Y-%m-%d %H:%M:%S UTC' 2>/dev/null || echo unknown)
     </text>
   </g>
 </svg>

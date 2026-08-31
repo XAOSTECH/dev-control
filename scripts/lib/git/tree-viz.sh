@@ -124,14 +124,18 @@ generate_tree_data_json() {
             repo_url="${repo_url/://}"
         fi
     fi
-    
+
+    # Derive from HEAD committer date, not wall clock, so identical history yields identical output (no spurious re-commits).
+    local generated
+    generated=$(TZ=UTC git log -1 --format=%cd --date=format-local:'%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || echo "1970-01-01T00:00:00Z")
+
     cat > "$output_file" <<-EOF
 {
   "metadata": {
     "repository": "$repo_name",
     "current_branch": "$current_branch",
     "repo_url": "$repo_url",
-    "generated": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+    "generated": "$generated",
     "max_commits": $max_commits
   },
   "commits": $(extract_commits_json "$current_branch" "$max_commits"),
