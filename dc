@@ -77,6 +77,9 @@ declare -A COMMAND_MAP=(
     ["containerize"]="containerise.sh"
     ["aliases"]="alias-loading.sh"
     ["alias"]="alias-loading.sh"
+    ["key"]="lib/keygen.sh"
+    ["keygen"]="lib/keygen.sh"
+    ["gpg"]="lib/keygen.sh"
     ["menu"]="dev-control.sh"
     ["recycle"]="recycle-test-repo.sh"
     ["cycle"]="recycle-test-repo.sh"
@@ -94,6 +97,7 @@ declare -A COMMAND_DESC=(
     ["mcp"]="Configure Model Context Protocol servers"
     ["container"]="Setup devcontainer for project"
     ["aliases"]="Install bash aliases for Dev-Control"
+    ["key"]="Manage GPG signing keys and bot repo secrets (dc-key)"
     ["menu"]="Open interactive menu (default)"
     ["recycle"]="Wipe and rebuild deterministic test-repo fixtures (dev-only)"
 )
