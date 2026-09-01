@@ -1,7 +1,26 @@
 #!/usr/bin/env bash
+#
+# Dev-Control: dc-key — unified GPG identity & repo-secret manager
+# A sleek TUI (and flags) over the personal signing key, the machine/bot repo-secret
+# refresh, and the user-token rotation. Shared logic lives in lib/gpg.sh; every secret
+# name is resolved from the project's own config (repoVars.env), never hardcoded.
+#
+# SPDX-Licence-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2025-2026 xaoscience
 
 # Exit immediately on errors, unassigned variables, or pipe failures
 set -euo pipefail
+
+LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DEV_CONTROL_DIR="$(cd "$LIB_DIR/../.." && pwd)"
+export DEV_CONTROL_DIR
+source "$LIB_DIR/colours.sh" 2>/dev/null || true
+source "$LIB_DIR/print.sh" 2>/dev/null || true
+source "$LIB_DIR/tui.sh" 2>/dev/null || true
+source "$LIB_DIR/gpg.sh"
+
+DRY_RUN=false
+FORCE=false
 
 # Identity resolution — mirrors load_container_config in lib/container.sh
 # Priority: container.yaml → git config → gh API
@@ -10,6 +29,9 @@ EXPIRY="${EXPIRY:-1y}"
 
 _yaml_get() { sed -n "s/^${1}:[[:space:]]*//p" "$2" 2>/dev/null | head -1 | tr -d "'\""; }
 
+# Personal signing key: generate a modern Ed25519 key, enrol it to this GitHub
+# account, configure git signing and cache the passphrase for zero-prompt commits.
+keygen_user_flow() {
 USERNAME=""
 [[ -f "$DC_CONFIG" ]] && USERNAME=$(_yaml_get "github-user" "$DC_CONFIG")
 [[ -z "$USERNAME" ]] && USERNAME=$(git config --get user.name 2>/dev/null || true)
@@ -98,16 +120,7 @@ gpg-connect-agent RELOADAGENT /bye &> /dev/null
 # 4. Generate High-Entropy Passphrase
 PASSPHRASE=$(LC_ALL=C tr -dc 'A-Za-z0-9!#%^&*()-_=+' < /dev/urandom | head -c 32 || true)
 
-echo ""
-echo "===================================================="
-echo "⚠️  YOUR GENERATED PASSPHRASE (NOT SAVED TO HISTORY) ⚠️"
-echo "===================================================="
-printf "%s\n" "$PASSPHRASE"
-echo "===================================================="
-printf "Copy this passphrase NOW. Press [Enter] to clear the screen and finalize automation..."
-read -r _ < /dev/tty
-
-clear || printf "\033c"
+gpg_reveal_once "Generated passphrase (not saved to history)" "$PASSPHRASE"
 
 # 5. Build Temporary Configuration Payload (ECC Formatting)
 GPG_BATCH_CONF=$(mktemp)
@@ -144,7 +157,7 @@ PUB_KEY_FILE=$(mktemp)
 chmod 600 "$PUB_KEY_FILE"
 gpg --batch --pinentry-mode loopback --armor --export "$KEY_ID" > "$PUB_KEY_FILE"
 
-echo "GPG Key generated successfully. Key ID: $KEY_ID"
+echo "GPG Key generated successfully. Key ID: $(gpg_mask "$KEY_ID" 4)"
 
 # 7. Upload directly to the GitHub Dashboard via native API
 echo "Enrolling public key into your GitHub account..."
@@ -171,7 +184,7 @@ if [[ -f "$DC_CONFIG" ]]; then
     else
         printf '\ngpg-key-id: %s\n' "$KEY_ID" >> "$DC_CONFIG"
     fi
-    echo "Updated $DC_CONFIG with gpg-key-id: $KEY_ID"
+    echo "Updated $DC_CONFIG with gpg-key-id: $(gpg_mask "$KEY_ID" 4)"
 fi
 
 # Patch the signing key in all running dev-control containers (label-based, same as containerise.sh)
@@ -184,7 +197,7 @@ if [[ "$IN_CONTAINER" == "false" ]]; then
             for _cid in "${_ctrs[@]}"; do
                 _folder=$("$_ctr" inspect "$_cid" --format '{{index .Config.Labels "devcontainer.local_folder"}}' 2>/dev/null || echo "$_cid")
                 "$_ctr" exec "$_cid" git config --global user.signingkey "$KEY_ID" 2>/dev/null || true
-                echo "  → $KEY_ID in ${_folder##*/}"
+                echo "  → $(gpg_mask "$KEY_ID" 4) in ${_folder##*/}"
             done
         fi
     fi
@@ -287,3 +300,75 @@ gpgconf --kill gpg-agent &> /dev/null || true
 
 unset PASSPHRASE
 echo "Setup complete. GPG passphrase linked via native D-Bus channels. Ready for zero-prompt testing."
+}
+
+# ============================================================================
+# dc-key HUB (TUI + flags)
+# ============================================================================
+
+dc_key_menu() {
+    declare -f tui_set_theme &>/dev/null && tui_set_theme "${DC_THEME:-matrix}"
+    declare -f check_gum &>/dev/null && check_gum || true
+    while true; do
+        declare -f tui_banner &>/dev/null && tui_banner "dc-key" "GPG identity & repo secrets"
+        local choice
+        choice=$(tui_choose "Select an action" \
+            "Personal signing key (this GitHub account)" \
+            "Refresh machine/bot repo secrets" \
+            "Set / rotate user token (PAT)" \
+            "Status" \
+            "Quit") || true
+        case "$choice" in
+            Personal*) ( keygen_user_flow ) || true ;;
+            Refresh*)  gpg_refresh_bot_secrets "$DRY_RUN" || true ;;
+            Set*)      gpg_set_user_token "$DRY_RUN" || true ;;
+            Status)    gpg_status || true ;;
+            Quit|"")   break ;;
+        esac
+        echo ""
+    done
+}
+
+show_help() {
+    cat <<'EOF'
+dc-key — unified GPG identity & repo-secret manager
+
+USAGE:
+  dc-key                 Interactive menu
+  dc-key --user          Personal signing key: generate, enrol, cache
+  dc-key --bot           Refresh machine/bot repo secrets (GPG private key + passphrase)
+  dc-key --token         Set / rotate the user token (PAT) repo secret
+  dc-key --status        Show key/secret status (read-only; values are never shown)
+  dc-key --dry-run       Report actions without making changes
+  dc-key --force         Override idempotency guards (rotate even if current)
+  dc-key --help          This help
+
+All secret names are resolved from config/profiles/repoVars.env; nothing is hardcoded.
+EOF
+}
+
+main() {
+    local action=""
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --user|user)         action="user" ;;
+            --bot|--refresh|bot) action="bot" ;;
+            --token|token)       action="token" ;;
+            --status|status)     action="status" ;;
+            --dry-run)           DRY_RUN=true ;;
+            --force|--rotate)    FORCE=true ;;
+            -h|--help|help)      show_help; exit 0 ;;
+            *) print_warning "Unknown option: $1 (see --help)" ;;
+        esac
+        shift
+    done
+    case "$action" in
+        user)   keygen_user_flow ;;
+        bot)    gpg_refresh_bot_secrets "$DRY_RUN" ;;
+        token)  gpg_set_user_token "$DRY_RUN" ;;
+        status) gpg_status ;;
+        *)      dc_key_menu ;;
+    esac
+}
+
+main "$@"
