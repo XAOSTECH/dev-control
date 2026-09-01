@@ -131,9 +131,10 @@ SVGHEADER
             gsub("<"; "&lt;") | gsub(">"; "&gt;")
         ) as $safe_subj |
         (.short // .sha[:7]) as $short |
+        (($tag_shas[.sha]) or ((.refs // "") | contains("tag:"))) as $is_tag |
         # Pick gradient
         (
-            if $tag_shas[.sha] then "tagGradient"
+            if $is_tag then "tagGradient"
             elif .position.is_merge then "mergeGradient"
             elif .position.is_fork then "forkGradient"
             else "leafGradient"
@@ -141,13 +142,17 @@ SVGHEADER
         ) as $grad |
         # Pick stroke
         (
-            if $tag_shas[.sha] then "#0284c7"
+            if $is_tag then "#0284c7"
             elif .position.is_merge then "#7c3aed"
             elif .position.is_fork then "#ea580c"
             else "#16a34a"
             end
         ) as $stroke |
-        "    <circle class=\"commit-leaf\" cx=\"\(.position.x)\" cy=\"\(.position.y)\" r=\"\(.position.radius // 6)\" fill=\"url(#\($grad))\" stroke=\"\($stroke)\" stroke-width=\"1.5\"><title>\($short): \($safe_subj)</title></circle>"
+        if (.collapsed // false) then
+            "    <g class=\"commit-leaf\"><rect x=\"\(.position.x - 9)\" y=\"\(.position.y - 9)\" width=\"18\" height=\"18\" rx=\"3\" transform=\"rotate(45 \(.position.x) \(.position.y))\" fill=\"#475569\" stroke=\"#cbd5e1\" stroke-width=\"1.5\"/><text x=\"\(.position.x)\" y=\"\(.position.y + 4)\" text-anchor=\"middle\" font-family=\"sans-serif\" font-size=\"11\" font-weight=\"bold\" fill=\"#f8fafc\">\(.count // 0)</text><title>\($safe_subj)</title></g>"
+        else
+            "    <circle class=\"commit-leaf\" cx=\"\(.position.x)\" cy=\"\(.position.y)\" r=\"\(.position.radius // 6)\" fill=\"url(#\($grad))\" stroke=\"\($stroke)\" stroke-width=\"1.5\"><title>\($short): \($safe_subj)</title></circle>"
+        end
     ' "$input_json" 2>/dev/null >> "$output_file"
 
     cat >> "$output_file" <<-SVGFOOTER
@@ -185,89 +190,82 @@ SVGFOOTER
 # MINI SVG RENDERING (for README inline embedding)
 # ============================================================================
 
-# Renders a simplified, miniaturised SVG with CSS sway animation.
-# Meant to be embedded inline in Markdown via <img> or raw SVG include.
+# Renders a compact, bounded horizontal "railway" banner for README embedding.
+# History flows left (old) to right (new); lanes are clamped and the height is fixed
+# so the frame stays reasonable regardless of history length. Collapsed runs appear as
+# grey diamonds; tags, merges and forks are colour-coded.
 render_mini_svg_tree() {
     local input_json="$1"
     local output_file="${2:-git-tree-mini.svg}"
 
-    # Compute bounding box from actual positions
-    local max_y max_x min_x min_y commit_count
-    max_y=$(jq '[.commits[].position.y // 0] | max' "$input_json" 2>/dev/null || echo 400)
-    min_y=$(jq '[.commits[].position.y // 0] | min' "$input_json" 2>/dev/null || echo 0)
-    max_x=$(jq '[.commits[].position.x // 600] | max' "$input_json" 2>/dev/null || echo 600)
-    min_x=$(jq '[.commits[].position.x // 600] | min' "$input_json" 2>/dev/null || echo 600)
-    commit_count=$(jq '.commits | length' "$input_json" 2>/dev/null || echo 0)
+    local total max_depth tag_count
+    total=$(jq '[.commits[] | select(.position)] | length' "$input_json" 2>/dev/null || echo 1)
+    max_depth=$(jq '[.commits[].position.depth // 0] | max' "$input_json" 2>/dev/null || echo 0)
+    tag_count=$(jq '[.commits[] | select((.refs // "") | contains("tag:"))] | length' "$input_json" 2>/dev/null || echo 0)
+    [[ -z "$total" || "$total" -lt 1 ]] && total=1
+    [[ -z "$max_depth" || "$max_depth" -lt 0 ]] && max_depth=0
 
-    # Scale to fit within ~300px wide, proportional height
-    local data_w=$(( max_x - min_x + 40 ))
-    local data_h=$(( max_y - min_y + 40 ))
-    [[ $data_w -lt 200 ]] && data_w=200
-
-    # Viewbox covers data bounds with padding
-    local vb_x=$(( min_x - 20 ))
-    local vb_y=$(( min_y - 20 ))
-
-    # Displayed width, capped for README readability
-    local display_w=300
-    local display_h=$(( display_w * data_h / data_w ))
-    [[ $display_h -lt 100 ]] && display_h=100
-    [[ $display_h -gt 600 ]] && display_h=600
+    # Fixed-height banner; width bounded by MAXW so it never overflows a README frame.
+    local pad=20 lanes=2 lane_gap=20 vpad=26 maxw=1000
+    local h=$(( vpad * 2 + lanes * lane_gap * 2 ))
+    local mid_y=$(( h / 2 ))
+    local denom=$(( max_depth > 0 ? max_depth : 1 ))
+    local step=$(( (maxw - pad * 2) / denom ))
+    [[ $step -gt 18 ]] && step=18
+    [[ $step -lt 4 ]] && step=4
+    local w=$(( pad * 2 + max_depth * step ))
+    [[ $w -gt $maxw ]] && w=$maxw
+    [[ $w -lt 240 ]] && w=240
 
     cat > "$output_file" <<-MINIHEADER
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg"
-     width="$display_w" height="$display_h"
-     viewBox="$vb_x $vb_y $data_w $data_h">
-  <style>
-    @keyframes sway {
-      0%   { transform: translateX(0); }
-      25%  { transform: translateX(3px); }
-      50%  { transform: translateX(-2px); }
-      75%  { transform: translateX(4px); }
-      100% { transform: translateX(0); }
-    }
-    .mini-node { animation: sway 4s ease-in-out infinite; }
-    .mini-line { stroke-width: 1.5; fill: none; opacity: 0.5; }
-  </style>
-  <rect width="100%" height="100%" fill="#0a0a1a" rx="6"/>
-  <g class="mini-node">
+<svg xmlns="http://www.w3.org/2000/svg" width="$w" height="$h" viewBox="0 0 $w $h">
+  <rect width="100%" height="100%" fill="#0d1117" rx="8"/>
+  <g id="edges" stroke-linecap="round">
 MINIHEADER
 
-    # Draw branch connections (simplified — thin lines)
-    jq -r '
-        (.commits | map({(.sha): .position}) | add // {}) as $positions |
-        .commits[] | select(.position) |
-        .position as $pos |
+    jq -r --argjson pad "$pad" --argjson step "$step" --argjson maxd "$max_depth" \
+          --argjson midY "$mid_y" --argjson laneGap "$lane_gap" --argjson lanes "$lanes" '
+        def cl($l): if $l > $lanes then $lanes elif $l < (-$lanes) then (-$lanes) else $l end;
+        (.commits | map(select(.position)) | map({(.sha): {
+            x: ($pad + ($maxd - .position.depth) * $step),
+            y: ($midY + (cl(.position.lane)) * $laneGap)
+        }}) | add // {}) as $P |
+        .commits[] | select(.position) | ($P[.sha]) as $a |
         (.parents // "" | split(" ") | map(select(. != "")))[] |
-        ($positions[.] // null) | select(. != null) |
-        . as $pp |
-        (if $pos.lane == $pp.lane then "#4ade80" else "#64748b" end) as $col |
-        if $pos.lane != $pp.lane then
-            (($pos.y + ($pp.y - $pos.y) * 0.4) | floor) as $cy1 |
-            (($pos.y + ($pp.y - $pos.y) * 0.6) | floor) as $cy2 |
-            "    <path class=\"mini-line\" stroke=\"\($col)\" d=\"M \($pos.x) \($pos.y) C \($pos.x) \($cy1), \($pp.x) \($cy2), \($pp.x) \($pp.y)\"/>"
+        ($P[.] // null) | select(. != null) | . as $b |
+        if ($a.y == $b.y) then
+            "    <line x1=\"\($a.x)\" y1=\"\($a.y)\" x2=\"\($b.x)\" y2=\"\($b.y)\" stroke=\"#2ea043\" stroke-width=\"1.6\" opacity=\"0.7\"/>"
         else
-            "    <line class=\"mini-line\" stroke=\"\($col)\" x1=\"\($pos.x)\" y1=\"\($pos.y)\" x2=\"\($pp.x)\" y2=\"\($pp.y)\"/>"
+            (($a.x + $b.x) / 2) as $mx |
+            "    <path d=\"M \($a.x) \($a.y) C \($mx) \($a.y), \($mx) \($b.y), \($b.x) \($b.y)\" fill=\"none\" stroke=\"#388bfd\" stroke-width=\"1.4\" opacity=\"0.65\"/>"
         end
     ' "$input_json" 2>/dev/null >> "$output_file"
 
-    # Draw commit dots (small, colour-coded)
-    jq -r '
-        ([.tags[]? | .sha] | map({(.): true}) | add // {}) as $tag_shas |
+    echo '  </g>' >> "$output_file"
+    echo '  <g id="nodes">' >> "$output_file"
+
+    jq -r --argjson pad "$pad" --argjson step "$step" --argjson maxd "$max_depth" \
+          --argjson midY "$mid_y" --argjson laneGap "$lane_gap" --argjson lanes "$lanes" '
+        def cl($l): if $l > $lanes then $lanes elif $l < (-$lanes) then (-$lanes) else $l end;
         .commits[] | select(.position) |
-        (
-            if $tag_shas[.sha] then "#38bdf8"
-            elif .position.is_merge then "#c084fc"
-            elif .position.is_fork then "#fb923c"
-            else "#4ade80"
-            end
-        ) as $fill |
-        "    <circle cx=\"\(.position.x)\" cy=\"\(.position.y)\" r=\"\((.position.radius // 6) * 0.7 | floor | if . < 3 then 3 else . end)\" fill=\"\($fill)\" opacity=\"0.9\"/>"
+        ($pad + ($maxd - .position.depth) * $step) as $x |
+        ($midY + (cl(.position.lane)) * $laneGap) as $y |
+        if (.collapsed // false) then
+            "    <rect x=\"\($x - 4)\" y=\"\($y - 4)\" width=\"8\" height=\"8\" rx=\"1.5\" transform=\"rotate(45 \($x) \($y))\" fill=\"#6e7681\" stroke=\"#c9d1d9\" stroke-width=\"0.7\" opacity=\"0.9\"/>"
+        else
+            (if ((.refs // "") | contains("tag:")) then "#e3b341"
+             elif .position.is_merge then "#a371f7"
+             elif .position.is_fork then "#f0883e"
+             else "#3fb950" end) as $fill |
+            (if ((.refs // "") | contains("tag:")) or .position.is_merge or .position.is_fork then 4 else 3 end) as $r |
+            "    <circle cx=\"\($x)\" cy=\"\($y)\" r=\"\($r)\" fill=\"\($fill)\" opacity=\"0.95\"/>"
+        end
     ' "$input_json" 2>/dev/null >> "$output_file"
 
-    cat >> "$output_file" <<-'MINIFOOTER'
+    cat >> "$output_file" <<-MINIFOOTER
   </g>
+  <text x="$(( w - 8 ))" y="$(( h - 7 ))" text-anchor="end" font-family="sans-serif" font-size="9" fill="#6e7681">${total} nodes &#183; ${tag_count} tags</text>
 </svg>
 MINIFOOTER
 
