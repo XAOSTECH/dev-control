@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+#
+# Minimal `gh` stub for dc-key tests. Emulates the GitHub side: records secret
+# writes to $GH_FAKE_SECRETS (value from stdin, never echoed) and returns dummy
+# repo metadata. No network, no real account.
+#
+# SPDX-Licence-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2025-2026 xaoscience
+set -euo pipefail
+
+sub="${1:-}"; shift || true
+
+case "$sub" in
+    auth)
+        exit 0 ;;                       # `gh auth status`
+    repo)
+        field=""
+        while [[ $# -gt 0 ]]; do
+            case "$1" in
+                --json) field="$2"; shift 2 ;;
+                --jq)   shift 2 ;;
+                *)      shift ;;
+            esac
+        done
+        case "$field" in
+            name)          echo "dummyrepo" ;;
+            owner)         echo "dummyorg" ;;
+            nameWithOwner) echo "dummyorg/dummyrepo" ;;
+            *)             echo "" ;;
+        esac ;;
+    secret)
+        action="${1:-}"; shift || true
+        case "$action" in
+            set)
+                name="${1:-}"
+                mkdir -p "${GH_FAKE_SECRETS:?GH_FAKE_SECRETS unset}"
+                cat > "$GH_FAKE_SECRETS/$name" ;;   # value consumed from stdin, never printed
+            list)
+                mkdir -p "${GH_FAKE_SECRETS:?GH_FAKE_SECRETS unset}"
+                for f in "$GH_FAKE_SECRETS"/*; do
+                    [[ -e "$f" ]] && printf '%s\tUpdated 2026-01-01T00:00:00Z\n' "$(basename "$f")"
+                done ;;
+        esac ;;
+    *)
+        exit 0 ;;
+esac
