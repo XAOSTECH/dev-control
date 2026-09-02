@@ -76,6 +76,15 @@ teardown() {
     assert_output --partial "BEGIN PGP PRIVATE KEY BLOCK"
 }
 
+@test "bot refresh with BOT_TOKEN registers public key to bot account (sandboxed GH_TOKEN)" {
+    export BOT_TOKEN="ghp_DUMMY_BOT_PAT"
+    run bash -c "source '$GPG_LIB'; printf 'y\n' | gpg_refresh_bot_secrets false"
+    assert_success
+    assert_output --partial "registered to bot account"
+    refute_output --partial "ghp_DUMMY_BOT_PAT"
+    unset BOT_TOKEN
+}
+
 @test "user token is captured from stdin and never echoed" {
     run bash -c "source '$GPG_LIB'; printf 'ghp_DUMMYTOKEN123\n' | gpg_set_user_token false"
     assert_success

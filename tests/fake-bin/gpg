@@ -26,6 +26,11 @@ if [[ "$args" == *"--export-secret-keys"* ]]; then
     exit 0
 fi
 
+if [[ "$args" == *"--export"* ]]; then
+    printf -- '-----BEGIN PGP PUBLIC KEY BLOCK-----\nZHVtbXlwdWJsaWNrZXk=\n-----END PGP PUBLIC KEY BLOCK-----\n'
+    exit 0
+fi
+
 if [[ "$args" == *"--list-secret-keys"* ]]; then
     if [[ -n "${GNUPGHOME:-}" && -f "${GNUPGHOME:-}/keys" ]]; then
         cat "$GNUPGHOME/keys"

@@ -108,6 +108,8 @@ gpg_resolve_vars() {
     GPG_PRIVATE_KEY_SECRET="${GPG_PRIVATE_KEY_SECRET:-}"
     GPG_PASSPHRASE_SECRET="${GPG_PASSPHRASE_SECRET:-}"
     USER_TOKEN_SECRET="${USER_TOKEN_SECRET:-}"
+    # Optional: actual PAT for the bot account with write:gpg_key scope. Used locally for sandboxed GPG key registration. Never a secret name — value only. Stays in gitignored repoVars.env.
+    BOT_TOKEN="${BOT_TOKEN:-}"
 }
 
 # ============================================================================
@@ -153,6 +155,64 @@ gpg_status() {
 # ============================================================================
 # BOT / MACHINE REPO-SECRET REFRESH
 # ============================================================================
+
+# Register a bot GPG public key to the bot's GitHub account using a sandboxed GH_TOKEN so the user's own gh auth is never touched. If BOT_TOKEN is not set in repoVars.env, the user is prompted once (masked, not stored) or can skip — the identity action handles registration automatically at next workflow run. Auto-skips when stdin is not a TTY (CI / non-interactive contexts).
+gpg_register_bot_pubkey() {
+    local gnupg_home="$1" fpr="$2"
+
+    local pubkey key_id
+    pubkey=$(GNUPGHOME="$gnupg_home" gpg --armor --export "$fpr" 2>/dev/null) || true
+    [[ -n "$pubkey" ]] || { print_warning "Could not export public key — registration skipped"; return 0; }
+    key_id=$(GNUPGHOME="$gnupg_home" gpg --list-secret-keys --keyid-format=long "$fpr" 2>/dev/null \
+             | grep -oE '[0-9A-F]{16}' | head -1)
+
+    local _tok="${BOT_TOKEN:-}"
+    if [[ -z "$_tok" ]]; then
+        # Auto-skip in CI / non-interactive shells so bats and pipelines are unaffected.
+        if [[ ! -t 0 ]] || ! { : >/dev/tty; } 2>/dev/null; then
+            print_info "Non-interactive terminal — skipping bot GPG key registration. The identity action handles it at next workflow run."
+            return 0
+        fi
+        echo ""
+        print_info "BOT_TOKEN is not set in repoVars.env. To automate this step, add:"
+        print_info "  BOT_TOKEN=\"ghp_...\""
+        print_info "to your gitignored config/profiles/repoVars.env (classic PAT, write:gpg_key scope, bot account)."
+        echo ""
+        printf '  1) Enter a bot PAT now (masked, used once, not stored)\n  2) Skip — the identity action registers the key at next workflow run\n\n' >&2
+        local _n
+        read -rp "  Choice [1/2, default 2]: " _n </dev/tty
+        case "${_n:-2}" in
+            1)
+                if declare -f tui_password &>/dev/null; then
+                    _tok=$(tui_password "Bot PAT for ${BOT_NAME:-bot} account (masked, not stored)")
+                else
+                    read -rsp "  Bot PAT (hidden): " _tok </dev/tty; echo "" >&2
+                fi ;;
+            *)
+                print_info "Skipped — the identity action will register the key at next workflow run."
+                return 0 ;;
+        esac
+    fi
+    [[ -n "$_tok" ]] || { print_info "No token supplied — registration skipped."; return 0; }
+
+    # One sandboxed call per the bot's token; the user's gh session state is untouched.
+    local existing
+    existing=$(GH_TOKEN="$_tok" gh api /user/gpg_keys \
+        --jq ".[] | select(.key_id == \"$key_id\") | .id" 2>/dev/null || true)
+    if [[ "$existing" =~ ^[0-9]+$ ]]; then
+        print_success "GPG key already registered to bot account (id: $existing)"
+        unset _tok; return 0
+    fi
+    local result
+    result=$(GH_TOKEN="$_tok" gh api /user/gpg_keys --method POST \
+        -f armored_public_key="$pubkey" --jq '.id' 2>/dev/null) || result=""
+    unset _tok
+    if [[ "$result" =~ ^[0-9]+$ ]]; then
+        print_success "GPG key registered to bot account (id: $result) — commits will show Verified"
+    else
+        print_warning "Registration did not return a key id — the identity action will retry at next workflow run"
+    fi
+}
 
 # Read Key-Type/Length/Expire from a bot profile (identity is ignored — it comes from repoVars BOT_NAME/BOT_EMAIL so the UID matches the committer and verifies).
 _gpg_profile_field() {
@@ -242,17 +302,20 @@ EOF
     gh secret set "$GPG_PRIVATE_KEY_SECRET" --repo "$REPO_NWO" < "$keyfile"       || set_ok=false
     printf '%s' "$passphrase" | gh secret set "$GPG_PASSPHRASE_SECRET" --repo "$REPO_NWO" || set_ok=false
 
-    # Shred/wipe every trace of the key material.
+    # Key file is no longer needed; shred it before any further network calls.
     shred -u "$keyfile" 2>/dev/null || rm -f "$keyfile"
-    rm -rf "$gnupg_home"
     unset passphrase
 
     if [[ "$set_ok" != "true" ]]; then
+        rm -rf "$gnupg_home"
         print_error "One or more secrets failed to set — check gh permissions on $REPO_NWO"
         return 1
     fi
     print_success "Refreshed $GPG_PRIVATE_KEY_SECRET + $GPG_PASSPHRASE_SECRET on $REPO_NWO (fingerprint $(gpg_mask "$fpr" 6))"
-    print_info "The identity action will register the new public key on the bot account at the next workflow run."
+
+    # Register the new public key to the bot account before discarding the ephemeral keyring.
+    gpg_register_bot_pubkey "$gnupg_home" "$fpr"
+    rm -rf "$gnupg_home"
 }
 
 # ============================================================================

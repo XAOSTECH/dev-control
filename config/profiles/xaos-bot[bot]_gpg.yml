@@ -1,37 +1,19 @@
-# ============================================================================
 # GPG Key Configuration for xaos-bot GitHub App Bot
-# ============================================================================
 #
-# This configuration is used by scripts/lib/git/gpg.sh to generate a GPG key
-# specifically for the xaos-bot[bot] automated signing identity.
+# Algorithm settings for the bot signing key. Identity (Name-Real / Name-Email) is resolved automatically by dc key from BOT_NAME and BOT_EMAIL in repoVars.env, so the BOT_ID placeholder below is only relevant when calling the legacy dc-gpg-setup path directly.
 #
-# IMPORTANT: Before using this profile, replace BOT_ID below with the actual
-# numeric GitHub user ID of xaos-bot[bot]. Find it with:
-#
+# To find the numeric GitHub user ID of xaos-bot[bot] for the legacy path:
 #   gh api "/users/xaos-bot[bot]" --jq '.id'
 #
-# The Name-Email MUST match the bot's GitHub noreply address exactly, because
-# GitHub's commit verification checks that:
-#   1. The signing key is registered on the committer's GitHub account
-#   2. The commit email matches a UID email on the signing key
-#
-# Usage (after updating BOT_ID):
-#   dc-gpg-setup config/profiles/xaos-bot[bot]_gpg.yml
-#   # OR
-#   source scripts/lib/git/gpg.sh
-#   generate_bot_gpg_key config/profiles/xaos-bot[bot]_gpg.yml
+# Recommended: run the full flow via dc key (see scripts/lib/keygen.sh):
+#   dc key --bot           # interactive
+#   dc key --bot --dry-run # preview only
 #
 # After generating, update repository secrets:
 #   XB_GK  — the new GPG private key (armored)
 #   XB_GP  — the new GPG passphrase
 #
-# SECURITY NOTE:
-#   - Passphrase is auto-generated in memory during script execution
-#   - NEVER stored in this config file or any other file
-#   - Generated using: openssl rand -base64 32
-#   - Both key and passphrase are stored securely in GitHub Secrets
-#
-# ============================================================================
+# SECURITY NOTE: the passphrase is auto-generated in memory and never stored in any file; both key and passphrase are written straight to GitHub Secrets via gh.
 
 Key-Type: RSA
 Key-Length: 4096

@@ -41,6 +41,28 @@ case "$sub" in
                     [[ -e "$f" ]] && printf '%s\tUpdated 2026-01-01T00:00:00Z\n' "$(basename "$f")"
                 done ;;
         esac ;;
+    api)
+        endpoint="${1:-}"; shift || true
+        method="GET"
+        jq_filter="."
+        fields=()
+        while [[ $# -gt 0 ]]; do
+            case "$1" in
+                --method)  method="$2"; shift 2 ;;
+                --jq)      jq_filter="$2"; shift 2 ;;
+                -f)        fields+=("$2"); shift 2 ;;
+                *)         shift ;;
+            esac
+        done
+        case "$endpoint" in
+            /user/gpg_keys)
+                if [[ "$method" == "POST" ]]; then
+                    echo '42'
+                else
+                    echo '[]'
+                fi ;;
+            *) echo '{}' ;;
+        esac ;;
     *)
         exit 0 ;;
 esac
