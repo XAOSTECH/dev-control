@@ -12,7 +12,7 @@
 set -euo pipefail
 
 LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DEV_CONTROL_DIR="$(cd "$LIB_DIR/../.." && pwd)"
+: "${DEV_CONTROL_DIR:=$(cd "$LIB_DIR/../.." && pwd)}"
 export DEV_CONTROL_DIR
 source "$LIB_DIR/colours.sh" 2>/dev/null || true
 source "$LIB_DIR/print.sh" 2>/dev/null || true

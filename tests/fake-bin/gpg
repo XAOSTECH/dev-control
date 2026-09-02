@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+#
+# Minimal `gpg` stub for dc-key tests. Honours GNUPGHOME and never performs real
+# crypto: --gen-key writes a canned key record, --list-secret-keys echoes it and
+# --export-secret-keys emits a dummy armoured block. Deterministic and instant.
+#
+# SPDX-Licence-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2025-2026 xaoscience
+set -euo pipefail
+
+args="$*"
+
+if [[ "$args" == *"--gen-key"* ]]; then
+    : "${GNUPGHOME:?GNUPGHOME unset}"
+    mkdir -p "$GNUPGHOME"
+    {
+        printf 'sec:u:4096:1:AAAABBBBCCCCDDDD:1700000000:1800000000::::sc::::::\n'
+        printf 'fpr:::::::::ABCDEF0123456789ABCDEF0123456789ABCDEF01:\n'
+        printf 'uid:u::::1700000000::HH::Dummy Bot <bot@example.invalid>::::::::::0:\n'
+    } > "$GNUPGHOME/keys"
+    exit 0
+fi
+
+if [[ "$args" == *"--export-secret-keys"* ]]; then
+    printf -- '-----BEGIN PGP PRIVATE KEY BLOCK-----\nZHVtbXlrZXk=\n-----END PGP PRIVATE KEY BLOCK-----\n'
+    exit 0
+fi
+
+if [[ "$args" == *"--list-secret-keys"* ]]; then
+    if [[ -n "${GNUPGHOME:-}" && -f "${GNUPGHOME:-}/keys" ]]; then
+        cat "$GNUPGHOME/keys"
+    fi
+    exit 0
+fi
+
+exit 0
