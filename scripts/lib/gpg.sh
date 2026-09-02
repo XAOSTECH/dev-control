@@ -2,19 +2,14 @@
 #
 # Dev-Control Shared Library: GPG identity & repo-secret management
 #
-# Unifies the personal signing key (see keygen.sh) and the machine/bot repo-secret
-# refresh under one resolver. Every secret NAME is read from the project's own
-# config (repoVars.env / container.yaml / git / gh) and never hardcoded here, so the
-# same XB_* indirection the workflows use drives this flow untouched.
+# Unifies the personal signing key (see keygen.sh) and the machine/bot repo-secret refresh under one resolver. Every secret NAME is read from the project's own config (repoVars.env / container.yaml / git / gh) and never hardcoded here, so the same XB_* indirection the workflows use drives this flow untouched.
 #
-# Zero-trust: key material and passphrases are generated in an ephemeral keyring,
-# streamed straight to gh, and never printed. Fingerprints are masked on display.
+# Zero-trust: key material and passphrases are generated in an ephemeral keyring, streamed straight to gh, and never printed. Fingerprints are masked on display.
 #
 # SPDX-Licence-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025-2026 xaoscience
 
-# Dual-mode bootstrap. When executed directly, enable strict mode and pull in the
-# shared colour/print/TUI libs; when sourced by a master (keygen.sh), the parent owns them.
+# Dual-mode bootstrap. When executed directly, enable strict mode and pull in the shared colour/print/TUI libs; when sourced by a master (keygen.sh), the parent owns them.
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     set -euo pipefail
     _GPG_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -72,8 +67,7 @@ gpg_reveal_once() {
 # VARIABLE RESOLUTION (repoVars.env -> container.yaml -> git -> gh)
 # ============================================================================
 
-# Populate the GPG-flow variables from the project's own configuration. Secret NAMES
-# (e.g. GPG_PRIVATE_KEY_SECRET=XB_GK) are read verbatim from repoVars.env — never invented.
+# Populate the GPG-flow variables from the project's own configuration. Secret NAMES (e.g. GPG_PRIVATE_KEY_SECRET=XB_GK) are read verbatim from repoVars.env — never invented.
 gpg_resolve_vars() {
     local repovars="$DEV_CONTROL_DIR/config/profiles/repoVars.env"
     if [[ -f "$repovars" ]]; then
@@ -160,17 +154,14 @@ gpg_status() {
 # BOT / MACHINE REPO-SECRET REFRESH
 # ============================================================================
 
-# Read Key-Type/Length/Expire from a bot profile (identity is ignored — it comes
-# from repoVars BOT_NAME/BOT_EMAIL so the UID matches the committer and verifies).
+# Read Key-Type/Length/Expire from a bot profile (identity is ignored — it comes from repoVars BOT_NAME/BOT_EMAIL so the UID matches the committer and verifies).
 _gpg_profile_field() {
     local field="$1" profile="$2" default="$3" val
     val=$(sed -n "s/^${field}:[[:space:]]*//p" "$profile" 2>/dev/null | head -1)
     printf '%s' "${val:-$default}"
 }
 
-# Generate a fresh machine/bot key and push it to the repo secrets named by
-# GPG_PRIVATE_KEY_SECRET / GPG_PASSPHRASE_SECRET. Everything is ephemeral and masked.
-# The workflow identity action re-registers the public key on the bot account next run.
+# Generate a fresh machine/bot key and push it to the repo secrets named by GPG_PRIVATE_KEY_SECRET / GPG_PASSPHRASE_SECRET. Everything is ephemeral and masked. The workflow identity action re-registers the public key on the bot account next run.
 gpg_refresh_bot_secrets() {
     local dry_run="${1:-false}"
     gpg_resolve_vars
@@ -268,8 +259,7 @@ EOF
 # USER TOKEN (PAT) SET / ROTATE
 # ============================================================================
 
-# Store a classic PAT (write:gpg_key scope) in the repo secret named by USER_TOKEN_SECRET.
-# The token is read masked and streamed to gh; it is never echoed or stored locally.
+# Store a classic PAT (write:gpg_key scope) in the repo secret named by USER_TOKEN_SECRET. The token is read masked and streamed to gh; it is never echoed or stored locally.
 gpg_set_user_token() {
     local dry_run="${1:-false}"
     gpg_resolve_vars

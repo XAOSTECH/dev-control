@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
 #
-# Dev-Control: dc-key — unified GPG identity & repo-secret manager
-# A sleek TUI (and flags) over the personal signing key, the machine/bot repo-secret
-# refresh, and the user-token rotation. Shared logic lives in lib/gpg.sh; every secret
-# name is resolved from the project's own config (repoVars.env), never hardcoded.
+# Dev-Control: dc-key — unified GPG identity & repo-secret manager. A sleek TUI (and flags) over the personal signing key, the machine/bot repo-secret refresh, and the user-token rotation. Shared logic lives in lib/gpg.sh; every secret name is resolved from the project's own config (repoVars.env), never hardcoded.
 #
 # SPDX-Licence-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025-2026 xaoscience
@@ -29,8 +26,7 @@ EXPIRY="${EXPIRY:-1y}"
 
 _yaml_get() { sed -n "s/^${1}:[[:space:]]*//p" "$2" 2>/dev/null | head -1 | tr -d "'\""; }
 
-# Personal signing key: generate a modern Ed25519 key, enrol it to this GitHub
-# account, configure git signing and cache the passphrase for zero-prompt commits.
+# Personal signing key: generate a modern Ed25519 key, enrol it to this GitHub account, configure git signing and cache the passphrase for zero-prompt commits.
 keygen_user_flow() {
 USERNAME=""
 [[ -f "$DC_CONFIG" ]] && USERNAME=$(_yaml_get "github-user" "$DC_CONFIG")
