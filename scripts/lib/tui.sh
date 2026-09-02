@@ -298,9 +298,9 @@ tui_choose() {
         fi
     else
         local i=1
-        [[ -n "$header" ]] && echo "$header"
+        [[ -n "$header" ]] && echo "$header" >&2
         for opt in "${options[@]}"; do
-            echo "  $i) $opt"
+            echo "  $i) $opt" >&2
             ((i++))
         done
         read -rp "Select [1-${#options[@]}]: " choice
@@ -331,10 +331,10 @@ tui_multiselect() {
                 --selected.foreground "${CURRENT_THEME[primary]}"
         fi
     else
-        echo "$header (enter numbers separated by spaces):"
+        echo "$header (enter numbers separated by spaces):" >&2
         local i=1
         for opt in "${options[@]}"; do
-            echo "  $i) $opt"
+            echo "  $i) $opt" >&2
             ((i++))
         done
         read -rp "Select: " selections
@@ -450,9 +450,9 @@ tui_banner() {
             --padding "1 4"
     else
         local width=60
-        local border_char="═"
-        local top_border=$(printf "%${width}s" | tr ' ' "$border_char")
-        
+        local top_border="" j
+        for ((j=0; j<width; j++)); do top_border+="═"; done
+
         echo "╔${top_border}╗"
         printf "║%*s%s%*s║\n" $(( (width - ${#title}) / 2 )) "" "$title" $(( (width - ${#title} + 1) / 2 )) ""
         if [[ -n "$subtitle" ]]; then

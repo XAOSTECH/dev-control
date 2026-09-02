@@ -309,21 +309,44 @@ echo "Setup complete. GPG passphrase linked via native D-Bus channels. Ready for
 dc_key_menu() {
     declare -f tui_set_theme &>/dev/null && tui_set_theme "${DC_THEME:-matrix}"
     declare -f check_gum &>/dev/null && check_gum || true
+    local _opts=(
+        "Personal signing key (this GitHub account)"
+        "Refresh machine/bot repo secrets"
+        "Set / rotate user token (PAT)"
+        "Status"
+        "Quit"
+    )
     while true; do
         declare -f tui_banner &>/dev/null && tui_banner "dc-key" "GPG identity & repo secrets"
         local choice
-        choice=$(tui_choose "Select an action" \
-            "Personal signing key (this GitHub account)" \
-            "Refresh machine/bot repo secrets" \
-            "Set / rotate user token (PAT)" \
-            "Status" \
-            "Quit") || true
+        if [[ "${GUM_AVAILABLE:-false}" == "true" ]]; then
+            choice=$(printf '%s\n' "${_opts[@]}" | gum choose \
+                --header "Select an action" \
+                --cursor "${CURRENT_THEME[prompt_indicator]:-▶} " \
+                --cursor.foreground "${CURRENT_THEME[accent]:-#39ff14}" \
+                --selected.foreground "${CURRENT_THEME[primary]:-#00ff00}") || choice="Quit"
+        else
+            local i=1
+            printf '\n  Select an action:\n\n' >/dev/tty
+            for opt in "${_opts[@]}"; do
+                printf '  %d) %s\n' "$i" "$opt" >/dev/tty
+                ((i++))
+            done
+            printf '\n' >/dev/tty
+            local _n
+            read -rp "  Choice [1-${#_opts[@]}]: " _n </dev/tty
+            if [[ "$_n" =~ ^[0-9]+$ ]] && (( _n >= 1 && _n <= ${#_opts[@]} )); then
+                choice="${_opts[$((_n - 1))]}"
+            else
+                choice="Quit"
+            fi
+        fi
         case "$choice" in
-            Personal*) ( keygen_user_flow ) || true ;;
-            Refresh*)  gpg_refresh_bot_secrets "$DRY_RUN" || true ;;
-            Set*)      gpg_set_user_token "$DRY_RUN" || true ;;
-            Status)    gpg_status || true ;;
-            Quit|"")   break ;;
+            Personal*)  ( keygen_user_flow ) || true ;;
+            Refresh*)   gpg_refresh_bot_secrets "$DRY_RUN" || true ;;
+            Set*)       gpg_set_user_token "$DRY_RUN" || true ;;
+            Status)     gpg_status || true ;;
+            Quit|"")    break ;;
         esac
         echo ""
     done
