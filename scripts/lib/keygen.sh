@@ -270,7 +270,7 @@ if [[ "$IN_CONTAINER" == "false" ]]; then
 # Automated Background GPG Key Unlock Engine (Pure Native D-Bus)
 if command -v gdbus &>/dev/null && command -v gpg-connect-agent &>/dev/null; then
     export GPG_TTY=\$(tty)
-    G_FPR=\$(gpg --with-colons --fingerprint "$EMAIL" 2>/dev/null | awk -F: '/^fpr/ {print \$10}' | head -n 1) || ""
+    G_FPR=\$(gpg --with-colons --fingerprint "$EMAIL" 2>/dev/null | awk -F: '/^fpr/ {print \$10}' | head -n 1)
     if [ -n "\$G_FPR" ]; then
         SEARCH_RES=\$(gdbus call --session --dest org.freedesktop.secrets --object-path /org/freedesktop/secrets --method org.freedesktop.Secret.Service.SearchItems "{'gpg_fingerprint': <'\$G_FPR'>}" 2>/dev/null || echo "")
         ITEM_PATH=\$(echo "\$SEARCH_RES" | awk -F"'" '{print \$2}' || echo "")
