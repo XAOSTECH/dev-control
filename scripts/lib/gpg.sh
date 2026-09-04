@@ -201,22 +201,11 @@ gpg_register_bot_pubkey() {
 
     local _tok="${BOT_TOKEN:-}"
 
-    # If BOT_TOKEN looks like a secret NAME (e.g. XB_UT — all-caps/underscores, no ghp_ prefix)
-    # rather than an actual PAT value, the primary path is to trigger keygen.yml on GitHub where
-    # that secret is injected automatically. No local PAT needed; no local auth needed.
+    # If BOT_TOKEN is a secret name (all-caps pattern) rather than an actual PAT value, it cannot be used
+    # locally. The workflow path above would have handled this; if we reached here, inform and fall through.
     if [[ -n "$_tok" && "$_tok" =~ ^[A-Z][A-Z0-9_]+$ ]]; then
-        local _wf_ref _repo
-        _repo=$(gh repo view --json nameWithOwner --jq .nameWithOwner 2>/dev/null || echo "${REPO_NWO:-}")
-        _wf_ref=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
-        print_info "BOT_TOKEN=\"$_tok\" looks like an org secret name — triggering keygen.yml on GitHub where it is injected automatically."
-        if gh workflow run keygen.yml --repo "$_repo" --ref "$_wf_ref" 2>/dev/null; then
-            print_success "keygen.yml triggered on $_repo@$_wf_ref — the workflow will set secrets and register the pubkey."
-            print_info "Monitor: gh run list --repo \"$_repo\" --workflow keygen.yml"
-        else
-            print_warning "Could not trigger keygen.yml (workflow may not exist or app token lacks actions:write). Falling through to local options."
-            _tok=""  # clear so the chain falls through
-        fi
-        return 0
+        print_info "BOT_TOKEN=\"$_tok\" is a secret name, not a local PAT — keygen.yml unavailable. Falling to isolated auth or skip."
+        _tok=""
     fi
 
     if [[ -z "$_tok" ]]; then
@@ -302,10 +291,30 @@ gpg_refresh_bot_secrets() {
     local dry_run="${1:-false}"
     gpg_resolve_vars
 
-    command -v gpg &>/dev/null     || { print_error "gpg is not installed"; return 1; }
-    command -v gh &>/dev/null      || { print_error "gh CLI is not installed"; return 1; }
-    command -v openssl &>/dev/null || { print_error "openssl is not installed"; return 1; }
+    command -v gh &>/dev/null || { print_error "gh CLI is not installed"; return 1; }
     if ! gh auth status &>/dev/null; then print_error "gh is not authenticated (run: gh auth login)"; return 1; fi
+
+    # Priority: trigger keygen.yml on GitHub where all secrets (including the user token for pubkey registration)
+    # are injected automatically — no local key generation, no prompts, full rotation on the edge.
+    local _wf_repo _wf_ref
+    _wf_repo=$(gh repo view --json nameWithOwner --jq .nameWithOwner 2>/dev/null || echo "${REPO_NWO:-}")
+    _wf_ref=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
+    if [[ -n "$_wf_repo" ]] && gh workflow view keygen.yml --repo "$_wf_repo" &>/dev/null; then
+        if [[ "$dry_run" == "true" ]]; then
+            print_info "[dry-run] Would trigger keygen.yml on $_wf_repo@$_wf_ref (secrets injected automatically, no local key generation)"
+            return 0
+        fi
+        print_info "keygen.yml found on $_wf_repo — triggering workflow (all secrets available on the runner, no local key generation needed)."
+        if gh workflow run keygen.yml --repo "$_wf_repo" --ref "$_wf_ref" 2>/dev/null; then
+            print_success "keygen.yml triggered on $_wf_repo@$_wf_ref."
+            print_info "Monitor: gh run list --repo \"$_wf_repo\" --workflow keygen.yml"
+            return 0
+        fi
+        print_warning "Could not trigger keygen.yml — falling through to local key generation."
+    fi
+
+    command -v gpg &>/dev/null     || { print_error "gpg is not installed"; return 1; }
+    command -v openssl &>/dev/null || { print_error "openssl is not installed"; return 1; }
     # For org scope, only REPO_OWNER is needed; REPO_NWO is not used for secret writes.
     if [[ "${SECRET_SCOPE:-repo}" == "org" ]]; then
         [[ -n "${REPO_OWNER:-}" ]] || { print_error "Could not resolve REPO_OWNER — set it in repoVars.env"; return 1; }

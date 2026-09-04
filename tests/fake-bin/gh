@@ -13,6 +13,9 @@ sub="${1:-}"; shift || true
 case "$sub" in
     auth)
         exit 0 ;;                       # `gh auth status`
+    workflow)
+        # Simulate no keygen.yml on the dummy repo so tests exercise the local fallback path.
+        exit 1 ;;
     repo)
         field=""
         while [[ $# -gt 0 ]]; do
