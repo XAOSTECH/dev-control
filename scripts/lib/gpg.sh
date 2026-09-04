@@ -110,6 +110,23 @@ gpg_resolve_vars() {
     USER_TOKEN_SECRET="${USER_TOKEN_SECRET:-}"
     # Optional: actual PAT for the bot account with write:gpg_key scope. Used locally for sandboxed GPG key registration. Never a secret name — value only. Stays in gitignored repoVars.env.
     BOT_TOKEN="${BOT_TOKEN:-}"
+    # Secret scope: "org" to write org-level secrets, "repo" for repo-level. Auto-defaults to "org" when REPO_OWNER is set.
+    SECRET_SCOPE="${SECRET_SCOPE:-}"
+    if [[ -z "$SECRET_SCOPE" && -n "${REPO_OWNER:-}" ]]; then
+        SECRET_SCOPE="org"
+    elif [[ -z "$SECRET_SCOPE" ]]; then
+        SECRET_SCOPE="repo"
+    fi
+}
+
+# Set a named secret at the correct scope (org or repo), reading the value from stdin. The NAME comes from repoVars, so nothing is hardcoded here.
+_gpg_secret_set() {
+    local name="$1"
+    if [[ "${SECRET_SCOPE:-repo}" == "org" && -n "${REPO_OWNER:-}" ]]; then
+        gh secret set "$name" --org "$REPO_OWNER"
+    else
+        gh secret set "$name" --repo "$REPO_NWO"
+    fi
 }
 
 # ============================================================================
@@ -133,20 +150,34 @@ gpg_status() {
         expd="never"
         [[ -n "$exp" && "$exp" != "0" ]] && expd=$(date -u -d "@$exp" +%Y-%m-%d 2>/dev/null || echo "$exp")
         echo "    - $(gpg_mask "$fpr" 6)  expires: ${expd}  uid: ${uid:-?}"
-    done < <(gpg --list-secret-keys --with-colons 2>/dev/null | awk -F: '
+    done < <({ gpg --list-secret-keys --with-colons 2>/dev/null || true; } | awk -F: '
         $1=="sec"{ if(f!=""){print f"|"e"|"u}; e=$7; f=""; u="" }
         $1=="fpr" && f==""{ f=$10 }
         $1=="uid" && u==""{ u=$10 }
         END{ if(f!=""){print f"|"e"|"u} }')
     $found || echo "    (none)"
 
-    if command -v gh &>/dev/null && [[ -n "$REPO_NWO" ]]; then
+    if command -v gh &>/dev/null; then
         echo ""
-        echo "  Repo secret metadata (values are write-only, never readable):"
-        if gh secret list --repo "$REPO_NWO" >/tmp/_dckey_secrets 2>/dev/null; then
-            sed 's/^/    /' /tmp/_dckey_secrets
-        else
-            echo "    (unable to list — check gh auth / repo access)"
+        local _scope_label
+        if [[ "${SECRET_SCOPE:-repo}" == "org" && -n "${REPO_OWNER:-}" ]]; then
+            _scope_label="org ${REPO_OWNER} secrets (values are write-only, never readable):"
+            if gh secret list --org "$REPO_OWNER" >/tmp/_dckey_secrets 2>/dev/null; then
+                echo "  $_scope_label"
+                sed 's/^/    /' /tmp/_dckey_secrets
+            else
+                echo "  $_scope_label"
+                echo "    (unable to list — check gh auth / org admin access)"
+            fi
+        elif [[ -n "${REPO_NWO:-}" ]]; then
+            _scope_label="repo ${REPO_NWO} secrets (values are write-only, never readable):"
+            if gh secret list --repo "$REPO_NWO" >/tmp/_dckey_secrets 2>/dev/null; then
+                echo "  $_scope_label"
+                sed 's/^/    /' /tmp/_dckey_secrets
+            else
+                echo "  $_scope_label"
+                echo "    (unable to list — check gh auth / repo access)"
+            fi
         fi
         rm -f /tmp/_dckey_secrets
     fi
@@ -250,6 +281,7 @@ gpg_refresh_bot_secrets() {
     print_info "Repository:     $REPO_NWO"
     print_info "Bot identity:   $BOT_NAME <$BOT_EMAIL>"
     print_info "Key algorithm:  ${key_type}/${key_length} (expires ${expire})"
+    print_info "Secret scope:   ${SECRET_SCOPE} (${REPO_OWNER:-$REPO_NWO})"
     print_info "Target secrets: $GPG_PRIVATE_KEY_SECRET, $GPG_PASSPHRASE_SECRET"
 
     if [[ "$dry_run" == "true" ]]; then
@@ -299,8 +331,8 @@ EOF
         --armor --export-secret-keys "$fpr" > "$keyfile" 2>/dev/null
 
     local set_ok=true
-    gh secret set "$GPG_PRIVATE_KEY_SECRET" --repo "$REPO_NWO" < "$keyfile"       || set_ok=false
-    printf '%s' "$passphrase" | gh secret set "$GPG_PASSPHRASE_SECRET" --repo "$REPO_NWO" || set_ok=false
+    _gpg_secret_set "$GPG_PRIVATE_KEY_SECRET" < "$keyfile"       || set_ok=false
+    printf '%s' "$passphrase" | _gpg_secret_set "$GPG_PASSPHRASE_SECRET" || set_ok=false
 
     # Key file is no longer needed; shred it before any further network calls.
     shred -u "$keyfile" 2>/dev/null || rm -f "$keyfile"
@@ -308,10 +340,10 @@ EOF
 
     if [[ "$set_ok" != "true" ]]; then
         rm -rf "$gnupg_home"
-        print_error "One or more secrets failed to set — check gh permissions on $REPO_NWO"
+        print_error "One or more secrets failed to set — check gh permissions (${SECRET_SCOPE}:${REPO_OWNER:-$REPO_NWO})"
         return 1
     fi
-    print_success "Refreshed $GPG_PRIVATE_KEY_SECRET + $GPG_PASSPHRASE_SECRET on $REPO_NWO (fingerprint $(gpg_mask "$fpr" 6))"
+    print_success "Refreshed $GPG_PRIVATE_KEY_SECRET + $GPG_PASSPHRASE_SECRET (${SECRET_SCOPE}:${REPO_OWNER:-$REPO_NWO}) — fingerprint $(gpg_mask "$fpr" 6)"
 
     # Register the new public key to the bot account before discarding the ephemeral keyring.
     gpg_register_bot_pubkey "$gnupg_home" "$fpr"
@@ -332,11 +364,11 @@ gpg_set_user_token() {
     [[ -n "$REPO_NWO" ]] || { print_error "Could not resolve the repository (owner/name)"; return 1; }
     [[ -n "$USER_TOKEN_SECRET" ]] || { print_error "USER_TOKEN_SECRET unresolved — set it in repoVars.env"; return 1; }
 
-    print_info "Target secret: $USER_TOKEN_SECRET on $REPO_NWO"
+    print_info "Target secret: $USER_TOKEN_SECRET (${SECRET_SCOPE}:${REPO_OWNER:-$REPO_NWO})"
     print_info "Provide a classic PAT for the bot account with 'write:gpg_key' scope (input is masked)."
 
     if [[ "$dry_run" == "true" ]]; then
-        print_info "[dry-run] Would set $USER_TOKEN_SECRET on $REPO_NWO (no changes made)"
+        print_info "[dry-run] Would set $USER_TOKEN_SECRET (${SECRET_SCOPE}:${REPO_OWNER:-$REPO_NWO}) (no changes made)"
         return 0
     fi
 
@@ -348,12 +380,12 @@ gpg_set_user_token() {
     fi
     [[ -n "$token" ]] || { print_warning "No token entered — aborting"; return 1; }
 
-    if printf '%s' "$token" | gh secret set "$USER_TOKEN_SECRET" --repo "$REPO_NWO"; then
+    if printf '%s' "$token" | _gpg_secret_set "$USER_TOKEN_SECRET"; then
         unset token
-        print_success "Set $USER_TOKEN_SECRET on $REPO_NWO"
+        print_success "Set $USER_TOKEN_SECRET (${SECRET_SCOPE}:${REPO_OWNER:-$REPO_NWO})"
     else
         unset token
-        print_error "Failed to set $USER_TOKEN_SECRET — check gh permissions on $REPO_NWO"
+        print_error "Failed to set $USER_TOKEN_SECRET — check gh permissions (${SECRET_SCOPE}:${REPO_OWNER:-$REPO_NWO})"
         return 1
     fi
 }

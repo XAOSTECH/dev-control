@@ -27,6 +27,7 @@ BOT_EMAIL="0+dummy-bot@users.noreply.invalid"
 GPG_PRIVATE_KEY_SECRET="DUMMY_GK"
 GPG_PASSPHRASE_SECRET="DUMMY_GP"
 USER_TOKEN_SECRET="DUMMY_UT"
+SECRET_SCOPE="org"
 EOF
     cat > "$TEST_HOME/config/profiles/xaos-bot[bot]_gpg.yml" <<'EOF'
 Key-Type: RSA
@@ -83,6 +84,12 @@ teardown() {
     assert_output --partial "registered to bot account"
     refute_output --partial "ghp_DUMMY_BOT_PAT"
     unset BOT_TOKEN
+}
+
+@test "resolver reads SECRET_SCOPE from repoVars and defaults to org when REPO_OWNER set" {
+    run bash -c "source '$GPG_LIB'; gpg_resolve_vars; echo \"\$SECRET_SCOPE\""
+    assert_success
+    assert_output "org"
 }
 
 @test "user token is captured from stdin and never echoed" {

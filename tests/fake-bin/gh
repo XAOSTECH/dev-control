@@ -32,10 +32,19 @@ case "$sub" in
         action="${1:-}"; shift || true
         case "$action" in
             set)
-                name="${1:-}"
+                name="${1:-}"; shift || true
+                # consume all flags (--org, --repo, --env, --visibility, etc.) silently
+                while [[ $# -gt 0 ]]; do
+                    case "$1" in
+                        --org|--repo|--env|--visibility) shift 2 2>/dev/null || shift ;;
+                        *) shift ;;
+                    esac
+                done
                 mkdir -p "${GH_FAKE_SECRETS:?GH_FAKE_SECRETS unset}"
                 cat > "$GH_FAKE_SECRETS/$name" ;;   # value consumed from stdin, never printed
             list)
+                # consume all flags silently
+                while [[ $# -gt 0 ]]; do shift; done
                 mkdir -p "${GH_FAKE_SECRETS:?GH_FAKE_SECRETS unset}"
                 for f in "$GH_FAKE_SECRETS"/*; do
                     [[ -e "$f" ]] && printf '%s\tUpdated 2026-01-01T00:00:00Z\n' "$(basename "$f")"
