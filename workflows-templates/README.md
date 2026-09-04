@@ -16,6 +16,7 @@ This README is for maintainers editing templates in this repo. It is not copied 
 - `anglicise.yml`: automated UK spelling updates with PR creation.
 - `replace.yml`: search/replace automation with PR creation.
 - `humanise.yml`: reflow editor/AI hard-wrapped comments and prose onto single logical lines, with PR creation.
+- `keygen.yml`: one-click bot GPG key rotation via workflow dispatch — generates a new key pair, sets the private key and passphrase as org/repo secrets, and registers the public key to the bot account. Requires the GitHub App to have Secrets read/write permission at the org level.
 - `update.yml`: scheduled/manual dependency/repo maintenance automation.
 - `release.yml`: release/tag/changelog automation.
 - `sign-artifacts.yml`: reusable Authenticode code signing via SignPath.io (called standalone or from release.yml).
