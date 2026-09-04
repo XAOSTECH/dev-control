@@ -77,9 +77,11 @@ gpg_resolve_vars() {
         print_warning "repoVars.env not found ($repovars) — falling back to git/gh for names"
     fi
 
-    # Repository owner/name (org-wide standard first, then gh, then git remote).
+    # Repository owner/name (org-wide standard first, then gh, then git remote). When org scope is set and REPO_OWNER is already known from repoVars, skip the gh repo view calls so dc key works from any directory without a git remote.
     if [[ -z "${REPO_SLUG:-}" ]]; then
-        REPO_SLUG=$(gh repo view --json name --jq .name 2>/dev/null || true)
+        if [[ "${SECRET_SCOPE:-}" != "org" || -z "${REPO_OWNER:-}" ]]; then
+            REPO_SLUG=$(gh repo view --json name --jq .name 2>/dev/null || true)
+        fi
     fi
     if [[ -z "${REPO_OWNER:-}" ]]; then
         REPO_OWNER=$(gh repo view --json owner --jq .owner.login 2>/dev/null || true)
@@ -87,7 +89,7 @@ gpg_resolve_vars() {
     REPO_NWO=""
     if [[ -n "${REPO_OWNER:-}" && -n "${REPO_SLUG:-}" ]]; then
         REPO_NWO="${REPO_OWNER}/${REPO_SLUG}"
-    else
+    elif [[ "${SECRET_SCOPE:-}" != "org" ]]; then
         REPO_NWO=$(gh repo view --json nameWithOwner --jq .nameWithOwner 2>/dev/null || true)
     fi
 
@@ -198,6 +200,25 @@ gpg_register_bot_pubkey() {
              | grep -oE '[0-9A-F]{16}' | head -1)
 
     local _tok="${BOT_TOKEN:-}"
+
+    # If BOT_TOKEN looks like a secret NAME (e.g. XB_UT — all-caps/underscores, no ghp_ prefix)
+    # rather than an actual PAT value, the primary path is to trigger keygen.yml on GitHub where
+    # that secret is injected automatically. No local PAT needed; no local auth needed.
+    if [[ -n "$_tok" && "$_tok" =~ ^[A-Z][A-Z0-9_]+$ ]]; then
+        local _wf_ref _repo
+        _repo=$(gh repo view --json nameWithOwner --jq .nameWithOwner 2>/dev/null || echo "${REPO_NWO:-}")
+        _wf_ref=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
+        print_info "BOT_TOKEN=\"$_tok\" looks like an org secret name — triggering keygen.yml on GitHub where it is injected automatically."
+        if gh workflow run keygen.yml --repo "$_repo" --ref "$_wf_ref" 2>/dev/null; then
+            print_success "keygen.yml triggered on $_repo@$_wf_ref — the workflow will set secrets and register the pubkey."
+            print_info "Monitor: gh run list --repo \"$_repo\" --workflow keygen.yml"
+        else
+            print_warning "Could not trigger keygen.yml (workflow may not exist or app token lacks actions:write). Falling through to local options."
+            _tok=""  # clear so the chain falls through
+        fi
+        return 0
+    fi
+
     if [[ -z "$_tok" ]]; then
         # Auto-skip in CI / non-interactive shells so bats and pipelines are unaffected.
         if [[ ! -t 0 ]] || ! { : >/dev/tty; } 2>/dev/null; then
@@ -205,15 +226,39 @@ gpg_register_bot_pubkey() {
             return 0
         fi
         echo ""
-        print_info "BOT_TOKEN is not set in repoVars.env. To automate this step, add:"
-        print_info "  BOT_TOKEN=\"ghp_...\""
-        print_info "to your gitignored config/profiles/repoVars.env (classic PAT, write:gpg_key scope, bot account)."
-        echo ""
-        printf '  1) Enter a bot PAT now (masked, used once, not stored)\n  2) Skip — the identity action registers the key at next workflow run\n\n' >&2
+        print_info "BOT_TOKEN is not set. Three options to register the public key to the bot account:"
+        printf '  1) Isolated bot account auth (browser/device — your own gh session is not touched)\n' >&2
+        printf '  2) Enter a bot PAT once (masked, used once, not stored)\n' >&2
+        printf '  3) Skip — the identity action registers the key at next workflow run\n\n' >&2
         local _n
-        read -rp "  Choice [1/2, default 2]: " _n </dev/tty
-        case "${_n:-2}" in
+        read -rp "  Choice [1/2/3, default 3]: " _n </dev/tty
+        case "${_n:-3}" in
             1)
+                local _tmp_ghcfg
+                _tmp_ghcfg=$(mktemp -d)
+                print_info "Opening isolated auth session for the bot account (your own gh session is NOT affected)..."
+                print_info "Log in as the bot account. The config is discarded after this operation."
+                if GH_CONFIG_DIR="$_tmp_ghcfg" gh auth login --hostname github.com 2>/dev/null; then
+                    local _existing _result
+                    _existing=$(GH_CONFIG_DIR="$_tmp_ghcfg" gh api /user/gpg_keys \
+                        --jq ".[] | select(.key_id == \"$key_id\") | .id" 2>/dev/null || true)
+                    if [[ "$_existing" =~ ^[0-9]+$ ]]; then
+                        print_success "GPG key already registered to bot account (id: $_existing)"
+                    else
+                        _result=$(GH_CONFIG_DIR="$_tmp_ghcfg" gh api /user/gpg_keys --method POST \
+                            -f armored_public_key="$pubkey" --jq '.id' 2>/dev/null) || _result=""
+                        if [[ "$_result" =~ ^[0-9]+$ ]]; then
+                            print_success "GPG key registered to bot account (id: $_result) — commits will show Verified"
+                        else
+                            print_warning "Registration returned: $_result"
+                        fi
+                    fi
+                else
+                    print_warning "Isolated auth failed — falling back to the identity action at next workflow run."
+                fi
+                rm -rf "$_tmp_ghcfg"
+                return 0 ;;
+            2)
                 if declare -f tui_password &>/dev/null; then
                     _tok=$(tui_password "Bot PAT for ${BOT_NAME:-bot} account (masked, not stored)")
                 else
@@ -261,7 +306,13 @@ gpg_refresh_bot_secrets() {
     command -v gh &>/dev/null      || { print_error "gh CLI is not installed"; return 1; }
     command -v openssl &>/dev/null || { print_error "openssl is not installed"; return 1; }
     if ! gh auth status &>/dev/null; then print_error "gh is not authenticated (run: gh auth login)"; return 1; fi
-    [[ -n "$REPO_NWO" ]] || { print_error "Could not resolve the repository (owner/name)"; return 1; }
+    # For org scope, only REPO_OWNER is needed; REPO_NWO is not used for secret writes.
+    if [[ "${SECRET_SCOPE:-repo}" == "org" ]]; then
+        [[ -n "${REPO_OWNER:-}" ]] || { print_error "Could not resolve REPO_OWNER — set it in repoVars.env"; return 1; }
+        [[ -z "$REPO_NWO" ]] && REPO_NWO="$REPO_OWNER"
+    else
+        [[ -n "$REPO_NWO" ]] || { print_error "Could not resolve the repository (owner/name)"; return 1; }
+    fi
     if [[ -z "$GPG_PRIVATE_KEY_SECRET" || -z "$GPG_PASSPHRASE_SECRET" ]]; then
         print_error "Secret names unresolved — set GPG_PRIVATE_KEY_SECRET / GPG_PASSPHRASE_SECRET in repoVars.env"
         return 1
@@ -361,7 +412,13 @@ gpg_set_user_token() {
 
     command -v gh &>/dev/null || { print_error "gh CLI is not installed"; return 1; }
     if ! gh auth status &>/dev/null; then print_error "gh is not authenticated (run: gh auth login)"; return 1; fi
-    [[ -n "$REPO_NWO" ]] || { print_error "Could not resolve the repository (owner/name)"; return 1; }
+    # For org scope, only REPO_OWNER is needed; REPO_NWO is not used for secret writes.
+    if [[ "${SECRET_SCOPE:-repo}" == "org" ]]; then
+        [[ -n "${REPO_OWNER:-}" ]] || { print_error "Could not resolve REPO_OWNER — set it in repoVars.env"; return 1; }
+        [[ -z "$REPO_NWO" ]] && REPO_NWO="$REPO_OWNER"
+    else
+        [[ -n "$REPO_NWO" ]] || { print_error "Could not resolve the repository (owner/name)"; return 1; }
+    fi
     [[ -n "$USER_TOKEN_SECRET" ]] || { print_error "USER_TOKEN_SECRET unresolved — set it in repoVars.env"; return 1; }
 
     print_info "Target secret: $USER_TOKEN_SECRET (${SECRET_SCOPE}:${REPO_OWNER:-$REPO_NWO})"

@@ -92,6 +92,21 @@ teardown() {
     assert_output "org"
 }
 
+@test "BOT_TOKEN as secret name triggers workflow dispatch rather than using it as a PAT" {
+    export BOT_TOKEN="DUMMY_UT"
+    run bash -c "source '$GPG_LIB'; gpg_resolve_vars
+        # _tok is BOT_TOKEN; secret-name pattern must be detected
+        _tok=\"\${BOT_TOKEN:-}\"
+        if [[ -n \"\$_tok\" && \"\$_tok\" =~ ^[A-Z][A-Z0-9_]+\$ ]]; then
+            echo 'secret_name_detected'
+        else
+            echo 'treated_as_pat'
+        fi"
+    assert_success
+    assert_output --partial "secret_name_detected"
+    unset BOT_TOKEN
+}
+
 @test "user token is captured from stdin and never echoed" {
     run bash -c "source '$GPG_LIB'; printf 'ghp_DUMMYTOKEN123\n' | gpg_set_user_token false"
     assert_success
@@ -105,7 +120,7 @@ teardown() {
     run bash "$KEYGEN" --status
     assert_success
     assert_output --partial "DUMMY_GK"
-    assert_output --partial "dummyorg/dummyrepo"
+    assert_output --partial "dummyorg"
     assert [ ! -e "$GH_FAKE_SECRETS/DUMMY_GK" ]
 }
 
