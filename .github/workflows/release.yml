@@ -187,9 +187,28 @@ jobs:
             VERSION="${{ github.event.inputs.version }}"
             VERSION="${VERSION#v}"  # strip leading 'v' if present
             if [[ -z "$VERSION" ]]; then
-              LATEST=$(gh api repos/${{ github.repository }}/releases/latest --jq '.tag_name' 2>/dev/null || \
-                       git tag --list 'v*' --sort=-version:refname | grep -vE 'latest|alpha|beta|rc' | head -1)
-              LATEST=${LATEST#v}
+              # Fetch tag name and release title in one API call for rich diagnostics.
+              _REL_JSON=$(gh api repos/${{ github.repository }}/releases/latest 2>/dev/null || echo '{}')
+              _LATEST_TAG=$(echo "$_REL_JSON" | jq -r '.tag_name // ""' 2>/dev/null || echo "")
+              _LATEST_TITLE=$(echo "$_REL_JSON" | jq -r '.name // ""' 2>/dev/null || echo "")
+              LATEST="${_LATEST_TAG#v}"
+              echo "🔍 Latest release: tag='${_LATEST_TAG:-none}' title='${_LATEST_TITLE:-none}'"
+
+              # When the tag is not semver (e.g. 'Main', 'latest'), try to extract the version
+              # from the release title before giving up.
+              if [[ ! "$LATEST" =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+                echo "⚠️ Tag '${_LATEST_TAG}' is not semver — checking release title '${_LATEST_TITLE}' for version..."
+                _TITLE_VER=$(echo "$_LATEST_TITLE" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+)?' | head -1 || echo "")
+                if [[ -n "$_TITLE_VER" ]]; then
+                  echo "✅ Found version in release title: ${_TITLE_VER}"
+                  LATEST="$_TITLE_VER"
+                else
+                  _GIT_TAG=$(git tag --list 'v*' --sort=-version:refname | grep -vE 'latest|alpha|beta|rc' | head -1 || echo "")
+                  echo "⚠️ No semver in title — falling back to latest v* git tag: ${_GIT_TAG:-none}"
+                  LATEST="${_GIT_TAG#v}"
+                fi
+              fi
+
               if [[ "$LATEST" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
                 MAJOR=${BASH_REMATCH[1]}
                 MINOR=${BASH_REMATCH[2]}
@@ -200,10 +219,12 @@ jobs:
                   echo "📐 Normalising v${LATEST} → v${VERSION} (standard semver convention)"
                 else
                   VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))"
-                  echo "🔢 Auto-detected next version: ${VERSION} (from latest: v${LATEST})"
+                  echo "🔢 Auto-detected next version: ${VERSION} (resolved from tag='${_LATEST_TAG}' → '${LATEST}')"
                 fi
               else
-                echo "❌ Could not determine latest version to auto-increment"
+                echo "❌ Could not determine version to auto-increment."
+                echo "   tag='${_LATEST_TAG:-none}' title='${_LATEST_TITLE:-none}' resolved='${LATEST:-none}'"
+                echo "ℹ️ Specify the version explicitly via the workflow dispatch input."
                 exit 1
               fi
             fi
