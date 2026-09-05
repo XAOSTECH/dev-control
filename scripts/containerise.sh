@@ -760,8 +760,9 @@ generate_devcontainer_json() {
     uid=$(id -u)
     
     if [[ "$CFG_MOUNT_GPG" == "true" ]]; then
-        # VS Code's Remote Containers extension forwards the host gpg-agent socket into the container at ~/.gnupg/S.gpg-agent. A bind-mount here would create a second competing path and fails hard at container start if the host socket does not exist.
-        : # GPG agent forwarding is handled by VS Code's built-in mechanism
+        if [[ -n "$mounts" ]]; then mounts+=","; fi
+        # VS Code no longer auto-forwards the host gpg-agent socket; bind-mount it so GPG 2.1+ finds it at the XDG_RUNTIME_DIR path.
+        mounts+="\"source=/run/user/${uid}/gnupg/S.gpg-agent,target=/run/user/${uid}/gnupg/S.gpg-agent,type=bind\""
     fi
     
     if [[ "$CFG_MOUNT_DOCKER_SOCKET" == "true" ]]; then
@@ -804,7 +805,12 @@ generate_devcontainer_json() {
     proj_slug=$(basename "${PROJECT_PATH:-$(pwd)}" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9._-' '-')
     if [[ -n "$mounts" ]]; then mounts+=","; fi
     mounts+="\"source=${remote_user}-${proj_slug}-vscode-server,target=/home/${remote_user}/.vscode-server,type=volume,U=true\""
-    mounts+=",\"source=${remote_user}-gnupg,target=/home/${remote_user}/.gnupg,type=volume,U=true\""
+    if [[ "$CFG_MOUNT_GPG" == "true" ]]; then
+        # Bind-mount host ~/.gnupg for keyring access; the agent socket is forwarded separately above.
+        mounts+=",\"source=\${localEnv:HOME}/.gnupg,target=/home/${remote_user}/.gnupg,type=bind,consistency=cached\""
+    else
+        mounts+=",\"source=${remote_user}-gnupg,target=/home/${remote_user}/.gnupg,type=volume,U=true\""
+    fi
     mounts+=",\"source=${remote_user}-ssh,target=/home/${remote_user}/.ssh,type=volume,U=true\""
     mounts+=",\"source=${remote_user}-${proj_slug}-cache,target=/home/${remote_user}/.cache,type=volume,U=true\""
     mounts+=",\"source=${remote_user}-${proj_slug}-devcontainer,target=/home/${remote_user}/.devcontainer,type=volume,U=true\""
@@ -894,6 +900,11 @@ generate_devcontainer_json() {
   },"
     fi
     
+    local init_cmd_field=""
+    if [[ "$CFG_MOUNT_GPG" == "true" ]]; then
+        init_cmd_field='"initializeCommand": "gpgconf --launch gpg-agent 2>/dev/null || true",'
+    fi
+
     cat > "$devcontainer_file" << DEVCONTAINER_EOF
 {
   "name": "${project_name^^}",
@@ -908,6 +919,7 @@ generate_devcontainer_json() {
   "containerEnv": {
     ${container_env}
   },
+  ${init_cmd_field}
   "postCreateCommand": {
     "fixPerms": "CID=\$(cat /etc/hostname) && docker exec -u root \$CID chmod u+s /usr/bin/sudo 2>/dev/null || true && docker exec -u root \$CID chown ${uid}:${uid} /home/${remote_user} 2>/dev/null || true && docker exec -u root \$CID chmod 755 /home/${remote_user} 2>/dev/null || true && docker exec -u root \$CID chmod 700 /home/${remote_user}/.gnupg /home/${remote_user}/.ssh 2>/dev/null || true && sudo chown -R ${uid}:${uid} . 2>/dev/null || true && sudo mkdir -p /run/user/${uid}/gnupg && sudo chown -R ${uid}:${uid} /run/user/${uid} 2>/dev/null || true && ln -sf /tmp/wayland-0 /run/user/${uid}/wayland-0 2>/dev/null || true",
     "gitCfg": "${git_config_cmd}",
