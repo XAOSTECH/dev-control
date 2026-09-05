@@ -125,7 +125,7 @@ gpg_resolve_vars() {
 _gpg_secret_set() {
     local name="$1"
     if [[ "${SECRET_SCOPE:-repo}" == "org" && -n "${REPO_OWNER:-}" ]]; then
-        gh secret set "$name" --org "$REPO_OWNER"
+        gh secret set "$name" --org "$REPO_OWNER" --visibility all
     else
         gh secret set "$name" --repo "$REPO_NWO"
     fi
