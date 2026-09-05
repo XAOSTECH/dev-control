@@ -17,8 +17,12 @@
 # in any log, output, or intermediate file.
 #
 # PREREQUISITES:
-#   - GitHub App must have "Secrets: read/write" permission at the org or repo level
-#   - USER_TOKEN_SECRET must be a classic PAT for the bot account with write:gpg_key scope
+#   - GitHub App must have "Organisation permissions → Secrets → Read and write" in its App settings
+#     (github.com/settings/apps → your App → Permissions). After changing, the org installation must re-approve.
+#     Alternative: store a fine-grained PAT with "Organisation secrets: write" as USER_TOKEN_SECRET — the
+#     workflow uses it as a fallback and prefers it over expanding any classic PAT to admin:org scope.
+#   - USER_TOKEN_SECRET must be a classic or fine-grained PAT for the bot account with write:gpg_key scope
+#     (required for the pubkey-registration step; separate from secret-write permissions).
 #   - config/profiles/*_gpg.yml defines Key-Type, Key-Length, and Expire-Date
 #
 # ============================================================================
@@ -71,8 +75,45 @@ jobs:
         with:
           token: ${{ steps.app_token.outputs.token }}
 
+      # Preflight: verify secrets-write access BEFORE generating any key material.
+      # Failing here is safe — no cryptographic material has been produced or consumed yet.
+      - name: Preflight — verify secrets write permission
+        id: preflight
+        if: ${{ !inputs.dry_run }}
+        env:
+          APP_TOKEN: ${{ steps.app_token.outputs.token }}
+          USER_TOKEN: ${{ secrets['{{USER_TOKEN_SECRET}}'] }}
+          SCOPE: ${{ inputs.scope }}
+        run: |
+          _ok=false
+          # Try the App token first (requires Secrets: write org permission on the App installation).
+          if GH_TOKEN="$APP_TOKEN" gh api \
+              "$([[ "$SCOPE" == org ]] && echo "orgs/${{ github.repository_owner }}" || echo "repos/${{ github.repository }}")/actions/secrets/public-key" \
+              &>/dev/null 2>&1; then
+            echo "✅ App token has secrets write permission — will be used for secret operations" | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "token_for_secrets=app" >> "$GITHUB_OUTPUT"
+            _ok=true
+          elif [[ -n "$USER_TOKEN" ]] && GH_TOKEN="$USER_TOKEN" gh api \
+              "$([[ "$SCOPE" == org ]] && echo "orgs/${{ github.repository_owner }}" || echo "repos/${{ github.repository }}")/actions/secrets/public-key" \
+              &>/dev/null 2>&1; then
+            echo "✅ USER_TOKEN_SECRET has secrets write permission — will be used as fallback" | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "ℹ️ Preferred: grant the GitHub App 'Organisation permissions → Secrets → Read and write' to avoid needing this PAT for secret writes." | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "token_for_secrets=user" >> "$GITHUB_OUTPUT"
+            _ok=true
+          fi
+          if [[ "$_ok" == false ]]; then
+            echo "❌ Neither the App token nor USER_TOKEN_SECRET can access the secrets API." | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "" | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "To fix (choose one):" | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "  1. GitHub App settings → Permissions → Organisation permissions → Secrets → Read and write" | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "     Then re-approve the installation at: github.com/organizations/${{ github.repository_owner }}/settings/installations" | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "  2. Store a fine-grained PAT with 'Organisation secrets: write' as {{USER_TOKEN_SECRET}}" | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "     (fine-grained PATs support targeted secret write without admin:org scope)" | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
       - name: Dry-run report
-        if: inputs.dry_run == true
+        if: ${{ inputs.dry_run }}
         env:
           BOT_NAME: ${{ vars.BOT_NAME || '{{BOT_NAME}}' }}
           BOT_EMAIL: '{{BOT_EMAIL}}'
@@ -87,9 +128,11 @@ jobs:
 
       - name: Generate GPG key and rotate secrets
         id: keygen
-        if: inputs.dry_run != true
+        if: ${{ !inputs.dry_run }}
         env:
-          GH_TOKEN: ${{ steps.app_token.outputs.token }}
+          APP_TOKEN: ${{ steps.app_token.outputs.token }}
+          USER_TOKEN: ${{ secrets['{{USER_TOKEN_SECRET}}'] }}
+          TOKEN_SOURCE: ${{ steps.preflight.outputs.token_for_secrets }}
           BOT_NAME: ${{ vars.BOT_NAME || '{{BOT_NAME}}' }}
           BOT_EMAIL: '{{BOT_EMAIL}}'
           SCOPE: ${{ inputs.scope }}
@@ -125,17 +168,21 @@ jobs:
           _KID=$(GNUPGHOME="$_HOME" gpg --list-secret-keys --keyid-format=long 2>/dev/null | grep -oE '[0-9A-F]{16}' | head -1)
           [[ -z "$_FPR" || -z "$_KID" ]] && { echo "❌ Key generation failed"; rm -rf "$_HOME"; exit 1; }
 
+          # Select the token that passed preflight for secret writes — never derived from workflow inputs.
+          _SEC_TOK="$([[ "$TOKEN_SOURCE" == user ]] && echo "$USER_TOKEN" || echo "$APP_TOKEN")"
+
           if [[ "$SCOPE" == "org" ]]; then
             GNUPGHOME="$_HOME" gpg --batch --pinentry-mode loopback --passphrase "$_PASS" \
               --armor --export-secret-keys "$_FPR" \
-              | gh secret set "{{GPG_PRIVATE_KEY_SECRET}}" --org "$ORG"
-            printf '%s' "$_PASS" | gh secret set "{{GPG_PASSPHRASE_SECRET}}" --org "$ORG"
+              | GH_TOKEN="$_SEC_TOK" gh secret set "{{GPG_PRIVATE_KEY_SECRET}}" --org "$ORG"
+            printf '%s' "$_PASS" | GH_TOKEN="$_SEC_TOK" gh secret set "{{GPG_PASSPHRASE_SECRET}}" --org "$ORG"
           else
             GNUPGHOME="$_HOME" gpg --batch --pinentry-mode loopback --passphrase "$_PASS" \
               --armor --export-secret-keys "$_FPR" \
-              | gh secret set "{{GPG_PRIVATE_KEY_SECRET}}" --repo "$REPO"
-            printf '%s' "$_PASS" | gh secret set "{{GPG_PASSPHRASE_SECRET}}" --repo "$REPO"
+              | GH_TOKEN="$_SEC_TOK" gh secret set "{{GPG_PRIVATE_KEY_SECRET}}" --repo "$REPO"
+            printf '%s' "$_PASS" | GH_TOKEN="$_SEC_TOK" gh secret set "{{GPG_PASSPHRASE_SECRET}}" --repo "$REPO"
           fi
+          unset _SEC_TOK
 
           # Public key is not sensitive; write to runner temp for the next step
           GNUPGHOME="$_HOME" gpg --armor --export "$_FPR" > "$RUNNER_TEMP/bot-pubkey.asc"
@@ -146,7 +193,7 @@ jobs:
           echo "✅ Secrets rotated — key \`$_KID\`" | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Register public key to bot account
-        if: inputs.dry_run != true && steps.keygen.outputs.key_id != ''
+        if: ${{ !inputs.dry_run && steps.keygen.outputs.key_id != '' }}
         env:
           USER_TOKEN: ${{ secrets['{{USER_TOKEN_SECRET}}'] }}
         run: |
