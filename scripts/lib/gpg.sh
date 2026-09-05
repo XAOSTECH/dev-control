@@ -202,61 +202,17 @@ gpg_register_bot_pubkey() {
     local _tok="${BOT_TOKEN:-}"
 
     # If BOT_TOKEN is a secret name (all-caps pattern) rather than an actual PAT value, it cannot be used
-    # locally. The workflow path above would have handled this; if we reached here, inform and fall through.
+    # locally — the workflow path above would have used it. Auto-skip without prompting.
     if [[ -n "$_tok" && "$_tok" =~ ^[A-Z][A-Z0-9_]+$ ]]; then
-        print_info "BOT_TOKEN=\"$_tok\" is a secret name, not a local PAT — keygen.yml unavailable. Falling to isolated auth or skip."
-        _tok=""
+        print_info "Pubkey registration deferred to the identity action (keygen.yml was unavailable; BOT_TOKEN is a secret name, not a local PAT)."
+        return 0
     fi
 
+    # Use a real PAT silently if present; otherwise auto-skip — no interactive prompt.
     if [[ -z "$_tok" ]]; then
-        # Auto-skip in CI / non-interactive shells so bats and pipelines are unaffected.
-        if [[ ! -t 0 ]] || ! { : >/dev/tty; } 2>/dev/null; then
-            print_info "Non-interactive terminal — skipping bot GPG key registration. The identity action handles it at next workflow run."
-            return 0
-        fi
-        echo ""
-        print_info "BOT_TOKEN is not set. Three options to register the public key to the bot account:"
-        printf '  1) Isolated bot account auth (browser/device — your own gh session is not touched)\n' >&2
-        printf '  2) Enter a bot PAT once (masked, used once, not stored)\n' >&2
-        printf '  3) Skip — the identity action registers the key at next workflow run\n\n' >&2
-        local _n
-        read -rp "  Choice [1/2/3, default 3]: " _n </dev/tty
-        case "${_n:-3}" in
-            1)
-                local _tmp_ghcfg
-                _tmp_ghcfg=$(mktemp -d)
-                print_info "Opening isolated auth session for the bot account (your own gh session is NOT affected)..."
-                print_info "Log in as the bot account. The config is discarded after this operation."
-                if GH_CONFIG_DIR="$_tmp_ghcfg" gh auth login --hostname github.com 2>/dev/null; then
-                    local _existing _result
-                    _existing=$(GH_CONFIG_DIR="$_tmp_ghcfg" gh api /user/gpg_keys \
-                        --jq ".[] | select(.key_id == \"$key_id\") | .id" 2>/dev/null || true)
-                    if [[ "$_existing" =~ ^[0-9]+$ ]]; then
-                        print_success "GPG key already registered to bot account (id: $_existing)"
-                    else
-                        _result=$(GH_CONFIG_DIR="$_tmp_ghcfg" gh api /user/gpg_keys --method POST \
-                            -f armored_public_key="$pubkey" --jq '.id' 2>/dev/null) || _result=""
-                        if [[ "$_result" =~ ^[0-9]+$ ]]; then
-                            print_success "GPG key registered to bot account (id: $_result) — commits will show Verified"
-                        else
-                            print_warning "Registration returned: $_result"
-                        fi
-                    fi
-                else
-                    print_warning "Isolated auth failed — falling back to the identity action at next workflow run."
-                fi
-                rm -rf "$_tmp_ghcfg"
-                return 0 ;;
-            2)
-                if declare -f tui_password &>/dev/null; then
-                    _tok=$(tui_password "Bot PAT for ${BOT_NAME:-bot} account (masked, not stored)")
-                else
-                    read -rsp "  Bot PAT (hidden): " _tok </dev/tty; echo "" >&2
-                fi ;;
-            *)
-                print_info "Skipped — the identity action will register the key at next workflow run."
-                return 0 ;;
-        esac
+        print_info "Pubkey registration will be handled by the identity action at next workflow run."
+        print_info "To register immediately, set BOT_TOKEN to a PAT (write:gpg_key scope) in the gitignored repoVars.env."
+        return 0
     fi
     [[ -n "$_tok" ]] || { print_info "No token supplied — registration skipped."; return 0; }
 
@@ -297,9 +253,22 @@ gpg_refresh_bot_secrets() {
     # Priority: trigger keygen.yml on GitHub where all secrets (including the user token for pubkey registration)
     # are injected automatically — no local key generation, no prompts, full rotation on the edge.
     local _wf_repo _wf_ref
-    _wf_repo=$(gh repo view --json nameWithOwner --jq .nameWithOwner 2>/dev/null || echo "${REPO_NWO:-}")
-    _wf_ref=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
-    if [[ -n "$_wf_repo" ]] && gh workflow view keygen.yml --repo "$_wf_repo" &>/dev/null; then
+    # Look for keygen.yml: prefer the current repo, then fall back to dev-control's own remote so
+    # dc key --bot works from any directory (SCRIPT_DIR and DEV_CONTROL_DIR are always defined).
+    local _wf_repo _wf_ref
+    _wf_repo=$(gh repo view --json nameWithOwner --jq .nameWithOwner 2>/dev/null || true)
+    if [[ -z "$_wf_repo" ]] || ! gh workflow view keygen.yml --repo "$_wf_repo" &>/dev/null 2>&1; then
+        local _dc_remote
+        _dc_remote=$(git -C "$DEV_CONTROL_DIR" remote get-url origin 2>/dev/null || true)
+        local _dc_repo
+        _dc_repo=$(echo "$_dc_remote" | sed -E 's|.*github\.com[:/]([^/]+/[^.]+)(\.git)?$|\1|' || true)
+        if [[ -n "$_dc_repo" ]] && gh workflow view keygen.yml --repo "$_dc_repo" &>/dev/null 2>&1; then
+            _wf_repo="$_dc_repo"
+        fi
+    fi
+    _wf_ref=$(git -C "${_wf_repo:+$DEV_CONTROL_DIR}" rev-parse --abbrev-ref HEAD 2>/dev/null \
+              || git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
+    if [[ -n "$_wf_repo" ]] && gh workflow view keygen.yml --repo "$_wf_repo" &>/dev/null 2>&1; then
         if [[ "$dry_run" == "true" ]]; then
             print_info "[dry-run] Would trigger keygen.yml on $_wf_repo@$_wf_ref (secrets injected automatically, no local key generation)"
             return 0
@@ -307,7 +276,14 @@ gpg_refresh_bot_secrets() {
         print_info "keygen.yml found on $_wf_repo — triggering workflow (all secrets available on the runner, no local key generation needed)."
         if gh workflow run keygen.yml --repo "$_wf_repo" --ref "$_wf_ref" 2>/dev/null; then
             print_success "keygen.yml triggered on $_wf_repo@$_wf_ref."
-            print_info "Monitor: gh run list --repo \"$_wf_repo\" --workflow keygen.yml"
+            print_info "The workflow uses $USER_TOKEN_SECRET to register the new public key to the bot account automatically."
+            # Brief pause so the run appears in the listing, then show initial state without blocking.
+            sleep 3
+            local _run_state
+            _run_state=$(gh run list --workflow keygen.yml --repo "$_wf_repo" --limit 1 \
+                --json status,databaseId \
+                --jq '.[0] | "status: \(.status) (run \(.databaseId))"' 2>/dev/null || true)
+            [[ -n "$_run_state" ]] && print_info "$_run_state"
             return 0
         fi
         print_warning "Could not trigger keygen.yml — falling through to local key generation."
