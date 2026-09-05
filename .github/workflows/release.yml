@@ -334,11 +334,27 @@ jobs:
       - name: Gather commit history
         id: commits
         if: steps.check_release.outputs.exists != 'true'
+        env:
+          GH_TOKEN: ${{ steps.app_token.outputs.token }}
         run: |
           VERSION="${{ steps.version.outputs.version }}"
 
-          # Previous release tag — excludes the version being released (doesn't exist yet)
-          PREV_TAG=$(git tag -l 'v*' --sort=-version:refname | grep -v "^v${VERSION}$" | head -1 || echo "")
+          # Walk back through version tags, skipping any whose GitHub release was deleted,
+          # so commit history spans all changes since the last live release.
+          PREV_TAG=""
+          _LATEST_GIT_TAG=""
+          while IFS= read -r _tag; do
+            [[ "$_tag" == "v${VERSION}" ]] && continue
+            [[ -z "$_LATEST_GIT_TAG" ]] && _LATEST_GIT_TAG="$_tag"
+            if gh release view "$_tag" &>/dev/null 2>&1; then
+              PREV_TAG="$_tag"
+              break
+            fi
+          done < <(git tag -l 'v*' --sort=-version:refname | grep -vE 'latest|alpha|beta|rc')
+
+          if [[ -n "$_LATEST_GIT_TAG" && "$_LATEST_GIT_TAG" != "${PREV_TAG:-}" ]]; then
+            echo "⚠️ Tags exist up to $_LATEST_GIT_TAG but their releases were deleted — using ${PREV_TAG:-initial} as base so this release includes all changes." | tee -a $GITHUB_STEP_SUMMARY
+          fi
 
           if [[ -n "$PREV_TAG" ]]; then
             COMMIT_COUNT=$(git log "${PREV_TAG}..HEAD" --oneline | wc -l)
