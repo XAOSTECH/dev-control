@@ -2060,22 +2060,34 @@ main() {
     echo ""
     print_info "Installing templates..."
     install_templates "$selection"
-    
+
     # Save metadata for dc-create to use
     save_project_metadata
 
-    # --- Push if requested ---
-    if [[ "$AUTO_PUSH" == "true" ]]; then
+    # Commit and push installed templates when in a tracked git repo.
+    # Stash any dirty working-tree changes first so staging is clean, then pop after the commit.
+    if git rev-parse --git-dir > /dev/null 2>&1; then
+        local _stashed=false
+        if [[ -n "$(git status --porcelain 2>/dev/null | grep -v '^\?\?')" ]]; then
+            print_info "Stashing local changes before template commit (will restore after)..."
+            git stash push -m "dc-init: pre-template-load stash" --quiet 2>/dev/null && _stashed=true
+        fi
+
         stage_template_paths
         if ! git diff --cached --quiet; then
             local choice_desc
             choice_desc=$(describe_template_choices "$selection")
             dc_init_commit_and_push "load" "$choice_desc" "$(basename "$PWD")"
         else
-            print_info "No template changes to push"
+            print_info "No template changes to commit"
+        fi
+
+        if [[ "$_stashed" == "true" ]]; then
+            print_info "Restoring stashed changes..."
+            git stash pop --quiet 2>/dev/null || print_warning "Stash pop failed — run 'git stash pop' manually"
         fi
     fi
-    
+
     show_summary
 }
 
