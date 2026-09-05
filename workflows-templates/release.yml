@@ -486,24 +486,27 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         run: |
           TAG_NAME="${{ steps.version.outputs.tag_name }}"
-          
-          # Check if tag already exists
+
+          # Delete the tag if it already exists — reaching this step means any existing tag is
+          # orphaned (its release was manually deleted) or otherwise stale, so always recreate.
           if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
-            echo "⚠️ Tag $TAG_NAME already exists, skipping tag creation"
-          else
-            # Create tag (signed if GPG available, annotated otherwise)
-            if [[ "${{ steps.import_gpg.outcome }}" == "success" ]]; then
-              git tag -s "$TAG_NAME" -m "Release $TAG_NAME"
-              echo "✅ Created signed tag: $TAG_NAME"
-            else
-              git tag -a "$TAG_NAME" -m "Release $TAG_NAME"
-              echo "ℹ️ Created unsigned tag: $TAG_NAME (add GPG_PRIVATE_KEY secret for signed tags)"
-            fi
-            
-            # Push via GITHUB_TOKEN so this doesn't re-trigger push:tags:v* (PAT pushes would)
-            git push "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" "$TAG_NAME"
-            echo "✅ Pushed tag: $TAG_NAME"
+            echo "ℹ️ Tag $TAG_NAME already exists — recreating to pin it to the current commit."
+            git tag -d "$TAG_NAME" 2>/dev/null || true
+            git push origin ":refs/tags/${TAG_NAME}" 2>/dev/null || true
           fi
+
+          # Create tag (signed if GPG available, annotated otherwise)
+          if [[ "${{ steps.import_gpg.outcome }}" == "success" ]]; then
+            git tag -s "$TAG_NAME" -m "Release $TAG_NAME"
+            echo "✅ Created signed tag: $TAG_NAME"
+          else
+            git tag -a "$TAG_NAME" -m "Release $TAG_NAME"
+            echo "ℹ️ Created unsigned tag: $TAG_NAME (add GPG_PRIVATE_KEY secret for signed tags)"
+          fi
+
+          # Push via GITHUB_TOKEN so this doesn't re-trigger push:tags:v* (PAT pushes would)
+          git push "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" "$TAG_NAME"
+          echo "✅ Pushed tag: $TAG_NAME"
 
       - name: Update package version in config
         if: steps.check_release.outputs.exists != 'true'
