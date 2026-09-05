@@ -383,11 +383,11 @@ generate_git_config_postcreate() {
 
     if [[ -n "$user" && -n "$email" ]]; then
         config+=" && git config --global user.email $email && git config --global user.name $user"
-
-        if [[ -n "$gpg_key" ]]; then
-            config+=" && git config --global commit.gpgsign true && git config --global user.signingkey $gpg_key && git config --global gpg.program gpg"
-        fi
     fi
+
+    # Emit GPG signing config unconditionally; resolves $GPG_KEY_ID from containerEnv at runtime
+    # so it works even when the key wasn't known at generation time.
+    config+=" && { _k=\"\${GPG_KEY_ID:-${gpg_key:-}}\"; [[ -n \"\$_k\" ]] && git config --global commit.gpgsign true && git config --global user.signingkey \"\$_k\" && git config --global gpg.program gpg || true; }"
 
     echo "$config"
 }
