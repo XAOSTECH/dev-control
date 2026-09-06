@@ -359,7 +359,7 @@ generate_git_config_dockerfile() {
         home_prefix="HOME=$home_dir "
     fi
 
-    local config="${home_prefix}git config --global --get safe.directory '*' 2>/dev/null || ${home_prefix}git config --global --add safe.directory '*'; ${home_prefix}git config --global init.defaultBranch main"
+    local config="${home_prefix}git config --global --add safe.directory '*' && ${home_prefix}git config --global init.defaultBranch main"
 
     if [[ -n "$user" && -n "$email" ]]; then
         config+=" && ${home_prefix}git config --global user.email $email && ${home_prefix}git config --global user.name $user"
