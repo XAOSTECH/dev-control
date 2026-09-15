@@ -28,8 +28,7 @@ fi
 # CONFLICT RESOLUTION
 # ============================================================================
 
-# Attempt to automatically add conflicted files and continue rebase
-# mode: 'ours' or 'theirs'
+# Attempt to automatically add conflicted files and continue rebase mode: 'ours' or 'theirs'
 auto_add_conflicted_files() {
     local mode="$1"
 
@@ -81,8 +80,7 @@ auto_add_conflicted_files() {
     fi
 }
 
-# Repeatedly attempt auto-resolution until rebase finishes or we hit an error
-# mode: 'ours' or 'theirs'
+# Repeatedly attempt auto-resolution until rebase finishes or we hit an error mode: 'ours' or 'theirs'
 auto_resolve_all_conflicts() {
     local mode="$1"
     local attempts=0

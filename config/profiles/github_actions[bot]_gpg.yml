@@ -2,8 +2,7 @@
 # GPG Key Configuration for GitHub Actions Bot
 # ============================================================================
 #
-# This configuration is used by scripts/lib/git/gpg.sh to generate a GPG key
-# for automated signing of tags and commits in GitHub Actions workflows.
+# This configuration is used by scripts/lib/git/gpg.sh to generate a GPG key for automated signing of tags and commits in GitHub Actions workflows.
 #
 # Usage:
 #   dc-gpg-setup

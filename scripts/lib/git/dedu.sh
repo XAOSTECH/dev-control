@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 #
-# Dev-Control Shared Library: Dedup — squash consecutive commits that share
-# an identical subject line into the first commit of each run.
+# Dev-Control Shared Library: Dedup — squash consecutive commits that share an identical subject line into the first commit of each run.
 #
 # Workflow:
 #   1. Snapshot the commit list for the selected range (oldest first),
@@ -16,21 +15,10 @@
 #          committer metadata preserved).
 #   4. Move the original branch to the rebuilt tip and offer to push.
 #
-# Nest check (DEDUP_TIMES >= 2, e.g. `--dedu x2`): the periodic "abba abba"
-# case where the same subjects recur but are NOT adjacent (separated by merges,
-# submodule bumps, changelog commits, …). A plain consecutive pass cannot touch
-# these — and iterating it is a no-op (it reaches a fixpoint after one pass).
-# In nest mode the grouping key is the subject across the WHOLE range: every
-# occurrence of a subject collapses onto its LAST occurrence (tip-safe), earlier
-# duplicates are dropped in place, and the run loops up to N rounds, stopping
-# early once a round finds nothing (converged). Because each surviving commit
-# keeps its own full-tree snapshot and the range tip (HEAD) is always the last
-# occurrence of its own subject, the net content is provably unchanged — this is
-# verified after rebuilding (HEAD^{tree} must equal the original) and the branch
-# is restored on any mismatch.
+# Nest check (DEDUP_TIMES >= 2, e.g. `--dedu x2`): the periodic "abba abba" case where the same subjects recur but are NOT adjacent (separated by merges, submodule bumps, changelog commits, …). A plain consecutive pass cannot touch these — and iterating it is a no-op (it reaches a fixpoint after one pass).
+# In nest mode the grouping key is the subject across the WHOLE range: every occurrence of a subject collapses onto its LAST occurrence (tip-safe), earlier duplicates are dropped in place, and the run loops up to N rounds, stopping early once a round finds nothing (converged). Because each surviving commit keeps its own full-tree snapshot and the range tip (HEAD) is always the last occurrence of its own subject, the net content is provably unchanged — this is verified after rebuilding (HEAD^{tree} must equal the original) and the branch is restored on any mismatch.
 #
-# Honours: --dry-run (preview only), --sign (commit-tree -S), --no-cleanup,
-# and the shared confirm/push/backup conventions.
+# Honours: --dry-run (preview only), --sign (commit-tree -S), --no-cleanup, and the shared confirm/push/backup conventions.
 #
 # Required from the caller:
 #   - print.sh / colours.sh sourced (print_info/print_success/print_warning/
@@ -75,8 +63,7 @@ dedup_build_plan() {
     PLAN_EMIT_HASH=(); PLAN_EMIT_CDATE=(); PLAN_ROWS=()
     PLAN_DUP_GROUPS=0; PLAN_DUP_COMMITS=0; PLAN_BASE=""
 
-    # Extract commits oldest-first using the unit separator (0x1f) so subjects
-    # containing pipes or spaces survive intact.
+    # Extract commits oldest-first using the unit separator (0x1f) so subjects containing pipes or spaces survive intact.
     local -a commits=()
     mapfile -t commits < <(git log --reverse --format="%H%x1f%s" "$RANGE")
     PLAN_TOTAL=${#commits[@]}
@@ -208,8 +195,7 @@ deduplicate_mode() {
         RANGE="$RANGE..HEAD"
     fi
 
-    # Repeat/nest multiplier: `--dedu x2` (>=2) turns on nested (non-adjacent)
-    # resolution and loops up to N rounds; bare `--dedu` stays consecutive-only.
+    # Repeat/nest multiplier: `--dedu x2` (>=2) turns on nested (non-adjacent) resolution and loops up to N rounds; bare `--dedu` stays consecutive-only.
     local times="${DEDUP_TIMES:-1}"
     (( times < 1 )) && times=1
     local nest=false
@@ -305,9 +291,7 @@ deduplicate_mode() {
         exit 0
     fi
 
-    # Nest check: the rewrite must not alter the net working tree. By construction
-    # the range tip (HEAD) is always the last occurrence of its own subject, so
-    # this holds; verify it and restore on the off-chance it does not.
+    # Nest check: the rewrite must not alter the net working tree. By construction the range tip (HEAD) is always the last occurrence of its own subject, so this holds; verify it and restore on the off-chance it does not.
     if [[ "$nest" == "true" ]]; then
         local new_tip_tree
         new_tip_tree=$(git rev-parse "HEAD^{tree}")

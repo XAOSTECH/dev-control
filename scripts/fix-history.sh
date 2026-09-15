@@ -61,8 +61,7 @@ STASH_NUM=""
 STASH_MODE=false
 AMEND_MODE=false
 AMEND_COMMIT=""
-# Blossom mode: surgical amend of a non-tip commit via interactive rebase,
-# preserving later commits.  Optional COMMIT may be supplied via --blossom <commit>;
+# Blossom mode: surgical amend of a non-tip commit via interactive rebase, preserving later commits.  Optional COMMIT may be supplied via --blossom <commit>;
 # if omitted, the user is prompted.
 BLOSSOM_MODE=false
 BLOSSOM_COMMIT=""
@@ -350,8 +349,7 @@ parse_args() {
                 ;;
             --dedu|--dedup|--deduplicate)
                 DEDUP_MODE=true
-                # Optional nest multiplier: xN / N (e.g. x2) => up to N dedup
-                # rounds with non-adjacent (nested) duplicate resolution.
+                # Optional nest multiplier: xN / N (e.g. x2) => up to N dedup rounds with non-adjacent (nested) duplicate resolution.
                 # Bare --dedu stays consecutive-only (back-compatible).
                 if [[ -n "${2:-}" && "$2" =~ ^[xX]?([0-9]+)$ ]]; then
                     DEDUP_TIMES="${BASH_REMATCH[1]}"
