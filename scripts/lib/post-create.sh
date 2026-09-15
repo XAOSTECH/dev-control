@@ -25,8 +25,7 @@ chmod u+s /usr/bin/sudo
 # We ensure the permissions are correct here.
 chown "${HOST_UID}:${HOST_UID}" "/home/${REMOTE_USER}"
 chmod 755 "/home/${REMOTE_USER}"
-# The .gnupg and .ssh directories will be created by volume mounts later,
-# but we can create them here to set initial permissions.
+# The .gnupg and .ssh directories will be created by volume mounts later, but we can create them here to set initial permissions.
 mkdir -p "/home/${REMOTE_USER}/.gnupg" "/home/${REMOTE_USER}/.ssh"
 chown -R "${HOST_UID}:${HOST_UID}" "/home/${REMOTE_USER}/.gnupg" "/home/${REMOTE_USER}/.ssh"
 chmod 700 "/home/${REMOTE_USER}/.gnupg" "/home/${REMOTE_USER}/.ssh"

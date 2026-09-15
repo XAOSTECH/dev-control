@@ -169,8 +169,7 @@ print_box() {
 #
 # Honours a global auto-confirm switch: when DC_ASSUME_YES=true (set by a
 # -y/--yes/--force flag in any caller), every prompt is answered "yes"
-# without reading stdin. Because this helper lives in the shared print.sh
-# library, the switch applies uniformly to every script that sources it.
+# without reading stdin. Because this helper lives in the shared print.sh library, the switch applies uniformly to every script that sources it.
 confirm() {
     local prompt="${1:-Continue?}"
     local default="${2:-n}"

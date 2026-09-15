@@ -1,6 +1,5 @@
 # Dev-Control container configuration
-# Copy to ~/.config/dev-control/container.yaml for global defaults
-# or to your project root as .devcontainer.yaml for project-specific settings
+# Copy to ~/.config/dev-control/container.yaml for global defaults or to your project root as .devcontainer.yaml for project-specific settings
 #
 # NOTE: You can enter custom values not listed in the interactive menus.
 #       Any valid timezone, locale, or mirror URL will work.

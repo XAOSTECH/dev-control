@@ -172,10 +172,7 @@ calculate_tree_positions() {
     echo "$output_file"
 }
 
-# Collapse maximal linear runs (single parent, single child, untagged, not a tip)
-# into one {collapsed:true, count:N} node — on the trunk or inside a branch — so a
-# long non-branching history no longer stretches the rendered frame. Merges, forks,
-# tagged commits and tips are kept; parent links are rewired to keep lanes continuous.
+# Collapse maximal linear runs (single parent, single child, untagged, not a tip) into one {collapsed:true, count:N} node — on the trunk or inside a branch — so a long non-branching history no longer stretches the rendered frame. Merges, forks, tagged commits and tips are kept; parent links are rewired to keep lanes continuous.
 # min_run <= 1 disables collapsing (small repos keep their full, detailed tree).
 collapse_linear_runs() {
     local input_json="$1"

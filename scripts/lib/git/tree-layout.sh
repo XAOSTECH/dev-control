@@ -33,9 +33,7 @@ calculate_tree_positions_bash() {
     # - y-axis: chronological order (newest at top, oldest at bottom)
     # Each branch gets its own lane; merges draw back to trunk
     jq '
-        # Topological sort: respect parent→child ordering as primary key,
-        # timestamp as secondary. This ensures merges never appear before
-        # their parent commits even when timestamps are identical.
+        # Topological sort: respect parent→child ordering as primary key, timestamp as secondary. This ensures merges never appear before their parent commits even when timestamps are identical.
         (
             # Build parent→children and child→parent maps
             (.commits | map({(.sha): .}) | add // {}) as $by_sha |

@@ -3,8 +3,7 @@
 # Dev-Control Module Nesting Script
 # Automatically manage .gitmodules for nested Git repositories
 #
-# This script scans a directory hierarchy for Git repositories and generates
-# proper .gitmodules files for each parent repository, handling nested submodules.
+# This script scans a directory hierarchy for Git repositories and generates proper .gitmodules files for each parent repository, handling nested submodules.
 #
 # Usage:
 #   ./module-nesting.sh [ROOT_DIR]
@@ -280,8 +279,7 @@ find_git_repos_for_parent() {
         content_ref+="	url = $url"$'\n'
         content_ref+=$'\n'
         
-        # Increment the caller's counter without triggering 'set -e' when the
-        # previous value is 0 (using arithmetic expansion with direct assignment)
+        # Increment the caller's counter without triggering 'set -e' when the previous value is 0 (using arithmetic expansion with direct assignment)
         count_ref=$((count_ref + 1))
         print_debug "count_ref now: ${count_ref} (parent_repo=${parent_repo}, current_dir=${current_dir})"
         print_debug "Added submodule: name=${name} rel_path=${rel_path} url=${url}"
@@ -479,9 +477,7 @@ prune_dirs() {
 
     local dest_dir="$root_dir/$dest_term"
     local recycle_base="$dest_dir/.recycle"
-    # For DRY_RUN we avoid creating $dest_dir or $recycle_base inside the repo to
-    # prevent leaving preview artifacts; instead create a temporary recycle base
-    # that will be removed at the end of the preview.
+    # For DRY_RUN we avoid creating $dest_dir or $recycle_base inside the repo to prevent leaving preview artifacts; instead create a temporary recycle base that will be removed at the end of the preview.
     local PRUNE_CREATED_TEMP=false
     if [[ "$DRY_RUN" == "true" ]]; then
         recycle_base=$(mktemp -d)
@@ -523,8 +519,7 @@ prune_dirs() {
         # verify target exists and has files
         if [[ ! -d "$tgt" ]]; then
             if [[ "$DRY_RUN" == "true" ]]; then
-                # In DRY-RUN we simulate the presence of the target so prune preview
-                # can proceed even though no real backups were created during preview.
+                # In DRY-RUN we simulate the presence of the target so prune preview can proceed even though no real backups were created during preview.
                 print_info "DRY-RUN: Target backup not found for $src -> $tgt; simulating presence for preview"
                 local file_count=1
             else
@@ -575,10 +570,7 @@ prune_dirs() {
 
         # perform action
         if [[ "$DRY_RUN" == "true" ]]; then
-            # If this target was generated as a simulated target during a dry-run
-            # preview (under SIM_TARGET_MARKER), present the logical final
-            # destination to the user (i.e., $root_dir/.tmp/<parent>) instead of
-            # exposing the ephemeral /tmp path used for simulation.
+            # If this target was generated as a simulated target during a dry-run preview (under SIM_TARGET_MARKER), present the logical final destination to the user (i.e., $root_dir/.tmp/<parent>) instead of exposing the ephemeral /tmp path used for simulation.
             local display_tgt="$tgt"
             if [[ -n "${SIM_TARGET_MARKER:-}" && "$tgt" == "${SIM_TARGET_MARKER}"/* ]]; then
                 local parent_name
@@ -618,8 +610,7 @@ prune_dirs() {
             print_info "Moved $src -> $recycle_dest"
         fi
 
-        # create symlink at original location pointing to backup target
-        # ensure parent dir exists
+        # create symlink at original location pointing to backup target ensure parent dir exists
         local parent_dir
         parent_dir=$(dirname "$src")
         mkdir -p "$parent_dir"
@@ -683,10 +674,7 @@ copy_dirs() {
 
     local dest_dir="$root_dir/$dest_term"
 
-    # In dry-run mode we do not create the destination folders in the workspace,
-    # but we do create an ephemeral COPIED_RECORD in /tmp so we can preview --prune
-    # without writing files into the repository. This keeps preview behaviour
-    # comprehensive while remaining non-destructive.
+    # In dry-run mode we do not create the destination folders in the workspace, but we do create an ephemeral COPIED_RECORD in /tmp so we can preview --prune without writing files into the repository. This keeps preview behaviour comprehensive while remaining non-destructive.
     if [[ "$DRY_RUN" == "true" ]]; then
         # Print the workspace-level preview message only once
         if [[ "${DRY_RUN_PREVIEW_SHOWN:-false}" != "true" ]]; then
@@ -761,8 +749,7 @@ copy_dirs() {
         fi
 
         # skip if the srcdir is inside a known build/output directory (e.g., build/, CMakeFiles)
-        # Use EXCLUDE_TEMP here (not EXCLUDE_DIRS) so we don't skip legitimate .tmp folders
-        # which are the target of these flows.
+        # Use EXCLUDE_TEMP here (not EXCLUDE_DIRS) so we don't skip legitimate .tmp folders which are the target of these flows.
         if path_has_excluded_temp_component "$srcdir"; then
             skipped=$((skipped + 1))
             skipped_excluded=$((skipped_excluded + 1))
@@ -775,8 +762,7 @@ copy_dirs() {
         local folder_name
         folder_name=$(basename "$srcdir")
         
-        # Determine if this folder matched a wildcard pattern (e.g., *.bak, *.tmp)
-        # by checking if folder_name ends with a pattern or IS a pattern
+        # Determine if this folder matched a wildcard pattern (e.g., *.bak, *.tmp) by checking if folder_name ends with a pattern or IS a pattern
         local matched_wildcard=false
         for pattern in "${patterns[@]}"; do
             # Check if pattern starts with * (wildcard pattern)
@@ -827,9 +813,7 @@ copy_dirs() {
 
     if [[ $found -eq 0 && $skipped -eq 0 ]]; then
         print_info "No $dest_term dirs found to copy in $root_dir"
-        # If this was a DRY-RUN with an ephemeral record, keep it only when the
-        # caller explicitly requested it (KEEP_EPHEMERAL) or when --prune was
-        # requested so a subsequent prune preview can use it. Otherwise remove it.
+        # If this was a DRY-RUN with an ephemeral record, keep it only when the caller explicitly requested it (KEEP_EPHEMERAL) or when --prune was requested so a subsequent prune preview can use it. Otherwise remove it.
         if [[ "${COPIED_RECORD_TEMP:-false}" == "true" ]]; then
             if [[ "$KEEP_EPHEMERAL" == "true" || "$PRUNE" == "true" ]]; then
                 print_info "DRY-RUN: No temp dirs found; keeping ephemeral record $COPIED_RECORD for prune preview (will be cleaned up after preview)"
@@ -874,8 +858,7 @@ copy_dirs() {
 
     # Return the record file path (if any) to caller via global COPIED_RECORD
     if [[ -n "$COPIED_RECORD" && -f "$COPIED_RECORD" ]]; then
-        # Only echo the path if the file is being intentionally kept for a
-        # follow-up prune preview or the record was created inside the repo.
+        # Only echo the path if the file is being intentionally kept for a follow-up prune preview or the record was created inside the repo.
         if [[ "${COPIED_RECORD_TEMP:-false}" == "true" && "$KEEP_EPHEMERAL" != "true" && "$PRUNE" != "true" ]]; then
             # ephemeral record is not requested to be kept; remove it and do not echo
             rm -f "$COPIED_RECORD" || true
@@ -941,9 +924,7 @@ aggressive_replace() {
         fi
     fi
 
-    # In dry-run mode we do not create the destination folder in the workspace,
-    # but create an ephemeral record so the preview includes mappings that would
-    # be used for pruning or inspection without making destructive changes.
+    # In dry-run mode we do not create the destination folder in the workspace, but create an ephemeral record so the preview includes mappings that would be used for pruning or inspection without making destructive changes.
     if [[ "$DRY_RUN" == "true" ]]; then
         # Print the workspace-level preview message only once for the whole run
         if [[ "${DRY_RUN_PREVIEW_SHOWN:-false}" != "true" ]]; then
@@ -1013,8 +994,7 @@ aggressive_replace() {
         fi
 
         # skip if the srcdir is inside a known build/output directory (e.g., build/, CMakeFiles)
-        # Use EXCLUDE_TEMP here (not EXCLUDE_DIRS) so we don't skip legitimate .tmp/.bak folders
-        # which are the target of these flows.
+        # Use EXCLUDE_TEMP here (not EXCLUDE_DIRS) so we don't skip legitimate .tmp/.bak folders which are the target of these flows.
         if path_has_excluded_temp_component "$srcdir"; then
             skipped=$((skipped + 1))
             skipped_excluded=$((skipped_excluded + 1))
@@ -1063,8 +1043,7 @@ aggressive_replace() {
             print_info "Merged $srcdir -> $target"
             
             # Fix internal .tmp symlinks that may have been created with old relative paths
-            # When we merge XAOSTECH into .bak/XAOSTECH.bak_2026-01-01, any .tmp symlink
-            # inside it needs to point to the shared .tmp location, not old relative paths
+            # When we merge XAOSTECH into .bak/XAOSTECH.bak_2026-01-01, any .tmp symlink inside it needs to point to the shared .tmp location, not old relative paths
             if [[ -L "$target/.tmp" ]]; then
                 # Remove the broken/old symlink
                 rm -f "$target/.tmp"
@@ -1170,8 +1149,7 @@ aggressive_replace() {
     fi
 
     if [[ "$DRY_RUN" == "true" ]]; then
-        # Only remove the temporary record if the caller did not request it to be
-        # kept for a follow-up prune preview (e.g., ONLY_PRUNE or explicit flag).
+        # Only remove the temporary record if the caller did not request it to be kept for a follow-up prune preview (e.g., ONLY_PRUNE or explicit flag).
         if [[ "${COPIED_RECORD_TEMP:-false}" == "true" && "$KEEP_EPHEMERAL" != "true" && "$PRUNE" != "true" ]]; then
             print_ephemeral_notice_once "DRY-RUN: No changes were made; temporary record file will be removed."
             if [[ -f "$COPIED_RECORD" ]]; then
@@ -1451,8 +1429,7 @@ main() {
                 fi
                 print_info "DRY-RUN: Using ephemeral record $record for prune preview"
 
-                # If the ephemeral record was created by a dry-run and is empty, generate
-                # simulated target directories so prune preview can exercise the flow.
+                # If the ephemeral record was created by a dry-run and is empty, generate simulated target directories so prune preview can exercise the flow.
                 if [[ "${COPIED_RECORD_TEMP:-false}" == "true" && $(wc -l < "$record" 2>/dev/null || echo 0) -eq 0 ]]; then
                     print_info "DRY-RUN: Ephemeral record is empty; generating simulated targets for prune preview"
                     SIM_TARGET_BASE=$(mktemp -d)
@@ -1468,9 +1445,7 @@ main() {
                     fi
 
                     while IFS= read -r -d '' tempdir; do
-                        # Include matched candidates even when they contain common excluded
-                        # components; prune preview should show them so the user can
-                        # review and decide.
+                        # Include matched candidates even when they contain common excluded components; prune preview should show them so the user can review and decide.
                         parent_name=$(basename "$(dirname "$tempdir")")
                         target="$SIM_TARGET_BASE/$parent_name"
                         mkdir -p "$target"

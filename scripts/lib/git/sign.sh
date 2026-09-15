@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 #
-# Dev-Control Shared Library: Sign — re-sign commits across a range, with
-# auto-detection of unsigned commits and topology-preserving rebase strategy.
+# Dev-Control Shared Library: Sign — re-sign commits across a range, with auto-detection of unsigned commits and topology-preserving rebase strategy.
 #
 # Required from the caller:
 #   - print.sh / colours.sh sourced (print_info/print_success/print_warning/

@@ -10,11 +10,7 @@
 #
 # ============================================================================
 #
-# One-click rotation of the bot GPG signing key. Generates a new key pair in
-# an ephemeral runner keyring, immediately pushes the private key and passphrase
-# as org (or repo) secrets, then registers the public key to the bot account
-# using the user token. Private key material is piped directly and never stored
-# in any log, output, or intermediate file.
+# One-click rotation of the bot GPG signing key. Generates a new key pair in an ephemeral runner keyring, immediately pushes the private key and passphrase as org (or repo) secrets, then registers the public key to the bot account using the user token. Private key material is piped directly and never stored in any log, output, or intermediate file.
 #
 # PREREQUISITES:
 #   - GitHub App must have "Organisation permissions → Secrets → Read and write" in its App settings

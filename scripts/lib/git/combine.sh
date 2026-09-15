@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 #
-# Dev-Control Shared Library: Combine — fuse two subsequent (adjacent) commits
-# into one and surgically rebuild the rest of history.
+# Dev-Control Shared Library: Combine — fuse two subsequent (adjacent) commits into one and surgically rebuild the rest of history.
 #
 # Workflow (deterministic, conflict-free via `git commit-tree`):
 #   1. Resolve the two given commits and determine their order (the ancestor is
@@ -18,9 +17,7 @@
 #          metadata preserved exactly).
 #   4. Move the branch to the rebuilt tip and offer to push.
 #
-# Honours: --dry-run (preview only), --sign (commit-tree -S, re-signs the
-# combined commit and all rebuilt commits), --no-cleanup, and the shared
-# confirm/push/backup conventions. Linear (single-parent) commits only.
+# Honours: --dry-run (preview only), --sign (commit-tree -S, re-signs the combined commit and all rebuilt commits), --no-cleanup, and the shared confirm/push/backup conventions. Linear (single-parent) commits only.
 #
 # Required from the caller:
 #   - print.sh / colours.sh sourced (print_info/print_success/print_warning/

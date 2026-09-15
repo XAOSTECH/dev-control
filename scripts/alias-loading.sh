@@ -3,8 +3,7 @@
 # Dev-Control Alias Loading Script
 # Interactive alias installer with dynamic path resolution
 # 
-# Generates shell-specific alias files (.bash_aliases, .zsh_aliases, or fish conf.d)
-# and wires them into the appropriate shell RC file.
+# Generates shell-specific alias files (.bash_aliases, .zsh_aliases, or fish conf.d) and wires them into the appropriate shell RC file.
 #
 # SPDX-Licence-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025-2026 xaoscience

@@ -9,8 +9,7 @@
 # ============================================================================
 #
 # Generates an interactive HTML visualisation of the repository's git tree.
-# Produces a fractal-style tree with waving leaves, showing commits, branches,
-# merges, and tags in an animated, scrollable canvas.
+# Produces a fractal-style tree with waving leaves, showing commits, branches, merges, and tags in an animated, scrollable canvas.
 #
 # TRIGGERS:
 #   - Manual dispatch (workflow_dispatch)
