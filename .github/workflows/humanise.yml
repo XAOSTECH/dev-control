@@ -84,10 +84,7 @@ jobs:
           #!/usr/bin/env perl
           # Reflow hard-wrapped paragraphs (comments and prose) onto single logical lines.
           # Editors/AI wrap comment and prose text at a fixed column (~70) mid-sentence;
-          # we rejoin each wrapped paragraph. A wrapped continuation is long, ends
-          # mid-sentence (no terminal punctuation) and continues in lower case; deliberate
-          # short lines and all structure (bullets, headings, tables, code, SPDX, shebangs)
-          # are emitted verbatim.
+          # we rejoin each wrapped paragraph. A wrapped continuation is long, ends mid-sentence (no terminal punctuation) and continues in lower case; deliberate short lines and all structure (bullets, headings, tables, code, SPDX, shebangs) are emitted verbatim.
           use strict;
           use warnings;
 
