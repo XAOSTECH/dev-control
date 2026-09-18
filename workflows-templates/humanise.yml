@@ -235,7 +235,6 @@ jobs:
             case "$f" in
               .git/*|node_modules/*|*/node_modules/*|vendor/*|*/vendor/*) continue ;;
               test-repo/*|licence-templates/*|licences-templates/*|.github/static/*) continue ;;
-              .github/workflows/humanise.yml|workflows-templates/humanise.yml) continue ;;
               LICENCE|LICENSE|*/LICENCE|*/LICENSE) continue ;;
             esac
             ext="${f##*.}"
