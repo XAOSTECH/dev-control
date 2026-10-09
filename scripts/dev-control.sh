@@ -173,6 +173,7 @@ COMMANDS:
   pr                 Create pull request (dc-pr)
   modules, nest      Manage submodules (dc-modules)
   fix, history       Fix commit history (dc-fix)
+  full-fix, ff       Dedup + GPG-sign recent commits, then optionally refresh templates (dc-full-fix)
   licences, lic      Audit licences (dc-licences)
   package, pkg       Build multi-platform packages (dc-package)
   mcp                Setup MCP servers (dc-mcp)
@@ -188,6 +189,8 @@ EXAMPLES:
   ./dev-control.sh init                 # Initialise templates
   ./dev-control.sh repo                 # Create repository
   ./dev-control.sh cluster              # Init, Containerise, MCP-setup (also add to aliases as dc-cluster and nothing else)
+  ./dev-control.sh full-fix             # Dedup + sign recent commits, offer template refresh
+  ./dev-control.sh full-fix 30 -y       # Same for 30 commits, non-interactive
   ./dev-control.sh pr                   # Create pull request
   ./dev-control.sh fix --range HEAD=5   # Fix last 5 commits
   ./dev-control.sh licences --deep      # Audit licences recursively
@@ -206,6 +209,7 @@ ALIASES:
     dc-licences - Licence auditing
     dc-package  - Package builder
     dc-mcp      - MCP setup
+    dc-full-fix - Full-fix (dedup + GPG-sign + optional template refresh)
 
 For detailed help on each tool, run the script directly:
   ./scripts/alias-loading.sh --help
@@ -239,6 +243,7 @@ display_menu() {
     print_menu_item "7" "History Fixer (dc-fix)           - Fix commit history"
     print_menu_item "8" "Licence Auditor (dc-licences)    - Audit licences"
     print_menu_item "9" "Package Builder (dc-package)     - Build release packages"
+    print_menu_item "f" "Full Fix (dc-full-fix)           - Dedup + sign commits + template refresh"
     echo ""
     
     echo -e "${BOLD}Environment${NC}"
@@ -300,6 +305,16 @@ run_tool() {
             ;;
         l|L|cluster)
             run_cluster_setup
+            ;;
+        f|F|full-fix|ff)
+            check_script_exists "fix-history.sh" || return 1
+            bash "$SCRIPT_DIR/fix-history.sh" --full-fix "$@"
+            echo ""
+            read -rp "Update workflow and action templates now? [Y/n]: " _upd
+            if [[ ! "${_upd:-y}" =~ ^[Nn] ]]; then
+                check_script_exists "template-loading.sh" && \
+                    bash "$SCRIPT_DIR/template-loading.sh" --batch --update --defaults <<< "2,3"
+            fi
             ;;
         0|exit|q|quit)
             print_info "Goodbye!"
