@@ -266,7 +266,7 @@ sign_mode() {
             else
                 print_error "Failed to sign commits while preserving topology."
                 git rebase --abort || true
-                exit 1
+                return 1
             fi
             return 0
         else
@@ -341,7 +341,7 @@ sign_mode() {
                 else
                     print_error "Rebase failed during re-sign. Please inspect and resolve conflicts."
                     git rebase --abort || true
-                    exit 1
+                    return 1
                 fi
             else
                 # PRESERVE_TOPOLOGY=true: Sign commits while preserving ORIGINAL dates and merge topology
@@ -354,7 +354,7 @@ sign_mode() {
                 else
                     print_error "Rebase with signature and date preservation failed."
                     git rebase --abort || true
-                    exit 1
+                    return 1
                 fi
             fi
         else
@@ -365,7 +365,7 @@ sign_mode() {
                 else
                     print_error "Rebase failed during re-sign. Please inspect and resolve conflicts."
                     git rebase --abort || true
-                    exit 1
+                    return 1
                 fi
             else
                 # PRESERVE_TOPOLOGY=true: Sign commits while preserving ORIGINAL dates (non-root)
@@ -378,7 +378,7 @@ sign_mode() {
                 else
                     print_error "Rebase with signature and date preservation failed."
                     git rebase --abort || true
-                    exit 1
+                    return 1
                 fi
             fi
         fi
