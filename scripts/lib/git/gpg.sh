@@ -122,8 +122,7 @@ EOF
     
     echo "$gpg_output"
     
-    # Extract the fingerprint from revocation certificate message
-    # gpg outputs: "revocation certificate stored as '/path/to/FINGERPRINT.rev'"
+    # Extract the fingerprint from revocation certificate message gpg outputs: "revocation certificate stored as '/path/to/FINGERPRINT.rev'"
     local key_id
     key_id=$(echo "$gpg_output" | grep -oP 'openpgp-revocs\.d/\K[0-9A-F]{40}(?=\.rev)')
     

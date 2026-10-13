@@ -231,8 +231,7 @@ harness_run() {
                 return 1
             fi
             RANGE="$OLD_RANGE"; NO_CLEANUP="$OLD_NO_CLEANUP"
-            # Content-preservation check ("changes between periods"): a real
-            # dedup run must leave the net working tree byte-identical.
+            # Content-preservation check ("changes between periods"): a real dedup run must leave the net working tree byte-identical.
             if [[ "$PREV_DRY_RUN" != "true" ]]; then
                 POST_TREE=$(git rev-parse "HEAD^{tree}" 2>/dev/null || echo "")
                 if [[ -n "$PRE_TREE" && "$PRE_TREE" != "$POST_TREE" ]]; then

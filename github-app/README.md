@@ -6,15 +6,10 @@ SPDX-FileCopyrightText: 2025-2026 xaoscience
 # Dev-Control GitHub App
 
 A GitHub App that surfaces dev-control's history tooling directly inside
-GitHub. It listens for slash commands in pull-request / issue comments and
-runs the existing [`scripts/fix-history.sh`](../scripts/fix-history.sh) logic in
-a sandboxed worker clone, then reports a clear before/after state with a
-one-click revert.
+GitHub. It listens for slash commands in pull-request / issue comments and runs the existing [`scripts/fix-history.sh`](../scripts/fix-history.sh) logic in a sandboxed worker clone, then reports a clear before/after state with a one-click revert.
 
-It deliberately **reuses the dev-control bash scripts** rather than
-re-implementing history rewriting in JS — history rewrites need a real clone +
-`git`, which only the scripts do safely. That is the whole reason this app lives
-inside the dev-control monorepo (so the worker can call `../scripts/...`).
+It deliberately **reuses the dev-control bash scripts** rather than re-implementing history rewriting in JS — history rewrites need a real clone +
+`git`, which only the scripts do safely. That is the whole reason this app lives inside the dev-control monorepo (so the worker can call `../scripts/...`).
 
 ## Commands
 
@@ -54,8 +49,7 @@ github-app/
       revert.ts           clone → reset to backup tag → force-push
 ```
 
-The worker authenticates the clone with a short-lived **installation access
-token** (`https://x-access-token:<token>@github.com/...`), so no SSH keys are
+The worker authenticates the clone with a short-lived **installation access token** (`https://x-access-token:<token>@github.com/...`), so no SSH keys are
 needed. `fix-history.sh` itself performs the `git push --force-with-lease`.
 
 ## Local development

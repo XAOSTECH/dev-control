@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 #
-# Dev-Control Shared Library: Reconstruct — date-restoration via rebase-exec
-# helper, with cherry-pick reconstruction fallback for commits that fail to
-# rebase (used by --amend, --drop and --sign flows).
+# Dev-Control Shared Library: Reconstruct — date-restoration via rebase-exec helper, with cherry-pick reconstruction fallback for commits that fail to rebase (used by --amend, --drop and --sign flows).
 #
 # Public functions:
 #   recreate_history_with_dates()         — main entry point (preferred:
@@ -103,8 +101,7 @@ recreate_history_with_dates() {
 date="\$(echo \"\${line}\" | cut -d'|' -f2-)"
 # (removed) Inline date-apply log - date application delegated to helper script
 # (removed) Inline commit amend - helper will perform amend/sign/verification per commit
-# The helper script is responsible for removing applied lines from the dates file
-# helper file ready (either repo helper or generated helper)
+# The helper script is responsible for removing applied lines from the dates file helper file ready (either repo helper or generated helper)
 
         local rebase_base
         if [[ -z "$parent" ]]; then
@@ -287,9 +284,7 @@ prompt_override_same_branch() {
     print_info "Commits: $src_branch is +${ahead}/-${behind} relative to $dest_branch"
     git --no-pager log --left-right --oneline "${dest_branch}...${src_branch}" | sed -n '1,40p'
 
-    # Quick pre-push verification: if we have a preserve map for the source branch,
-    # verify that the signed commits there have the expected dates. If dates are
-    # mismatched, require an explicit override confirmation (or ALLOW_OVERRIDE_SAME_BRANCH=true).
+    # Quick pre-push verification: if we have a preserve map for the source branch, verify that the signed commits there have the expected dates. If dates are mismatched, require an explicit override confirmation (or ALLOW_OVERRIDE_SAME_BRANCH=true).
     if [[ -n "${LAST_PRESERVE_MAP:-}" && -f "${LAST_PRESERVE_MAP}" && "${src_branch}" == tmp/preserve* ]]; then
         local total_dates=0 matched_dates=0 missing_dates=0
         while IFS='|' read -r orig signed date; do
@@ -322,8 +317,7 @@ prompt_override_same_branch() {
         fi
     fi
 
-    # If we previously applied a reconstruction to the remote branch, detect
-    # whether origin/$dest_branch already points at the reconstruction result.
+    # If we previously applied a reconstruction to the remote branch, detect whether origin/$dest_branch already points at the reconstruction result.
     if [[ -n "${LAST_RECONSTRUCT_BRANCH:-}" && $(git rev-parse --verify --quiet "$LAST_RECONSTRUCT_BRANCH" >/dev/null; echo $?) -eq 0 ]]; then
         remote_sha=$(git ls-remote origin "refs/heads/$dest_branch" | cut -f1 || true)
         recon_sha=$(git rev-parse --verify "$LAST_RECONSTRUCT_BRANCH" 2>/dev/null || true)
@@ -357,10 +351,7 @@ prompt_override_same_branch() {
 
     local _ans
 
-    # If we previously ran a reconstruction fallback that applied dates (and the
-    # preserve branch still has remaining captured dates), prefer the reconstructed
-    # branch and let the user choose explicitly to avoid accidentally overwriting
-    # the reconstruction with an incomplete preserved branch.
+    # If we previously ran a reconstruction fallback that applied dates (and the preserve branch still has remaining captured dates), prefer the reconstructed branch and let the user choose explicitly to avoid accidentally overwriting the reconstruction with an incomplete preserved branch.
     if [[ -n "${LAST_RECONSTRUCT_BRANCH:-}" && -n "$TEMP_ALL_DATES" && -s "$TEMP_ALL_DATES" ]]; then
         # Ensure the reconstruct branch actually exists
         if git rev-parse --verify --quiet "$LAST_RECONSTRUCT_BRANCH" >/dev/null; then
@@ -423,8 +414,7 @@ prompt_override_same_branch() {
         if git push origin +refs/heads/"$src_branch":refs/heads/"$dest_branch" --force-with-lease; then
             print_success "Successfully replaced origin/$dest_branch with $src_branch"
 
-            # If any worktrees have this branch checked out, either update them (if allowed)
-            # or warn the user and skip updating local refs to avoid "used by worktree" errors.
+            # If any worktrees have this branch checked out, either update them (if allowed) or warn the user and skip updating local refs to avoid "used by worktree" errors.
             local worktree_paths
             worktree_paths=$(find_worktree_paths_for_branch "$dest_branch")
             if [[ -n "$worktree_paths" ]]; then

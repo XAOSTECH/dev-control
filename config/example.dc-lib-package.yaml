@@ -1,11 +1,8 @@
 # Dev-Control Library-Only Packaging Configuration
 # 
-# This configuration is for building a lightweight standalone library package
-# that includes only the shared Bash utilities (tui, print, colours, validation, etc.)
-# without the full dev-control CLI, git integration, or plugins.
+# This configuration is for building a lightweight standalone library package that includes only the shared Bash utilities (tui, print, colours, validation, etc.) without the full dev-control CLI, git integration, or plugins.
 #
-# Use Case: Projects that want to use dev-control's TUI/print/colour libraries
-# for consistent terminal output without pulling in the entire toolkit.
+# Use Case: Projects that want to use dev-control's TUI/print/colour libraries for consistent terminal output without pulling in the entire toolkit.
 #
 # Installation (library users):
 #   curl -fsSL https://github.com/xaoscience/dev-control/releases/download/lib-v0.2.0/dev-control-lib-0.2.0.tar.gz | tar xz

@@ -3,8 +3,7 @@
 # Dev-Control TUI Library
 # Glamorous terminal UI using Charmbracelet Gum with theming support
 #
-# This library wraps Gum commands with fallback to basic prompts when Gum
-# is not available. Supports 3 built-in themes: matrix, hacker, cyber.
+# This library wraps Gum commands with fallback to basic prompts when Gum is not available. Supports 3 built-in themes: matrix, hacker, cyber.
 #
 # Usage:
 #   source "$SCRIPT_DIR/lib/tui.sh"

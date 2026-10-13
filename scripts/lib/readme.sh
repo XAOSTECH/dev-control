@@ -3,10 +3,7 @@
 # Dev-Control README generation library
 # Sourced by template-loading.sh to populate README/docs templates.
 #
-# Placeholders are discovered dynamically from the template ({{TOKEN}}), so a
-# user can extend a template with new tokens and they are picked up without any
-# code change. Each token resolves, in order, from a same-named variable already
-# collected upstream, a git-config cache, an interactive prompt (skipped with
+# Placeholders are discovered dynamically from the template ({{TOKEN}}), so a user can extend a template with new tokens and they are picked up without any code change. Each token resolves, in order, from a same-named variable already collected upstream, a git-config cache, an interactive prompt (skipped with
 # --defaults), or empty. The result carries no leftover literal placeholders.
 #
 # SPDX-Licence-Identifier: GPL-3.0-or-later
@@ -32,9 +29,7 @@ _readme_label() {
 }
 
 # Resolve one placeholder into the variable named by $2.
-# A token whose same-named variable is already declared (e.g. set by
-# collect_project_info) is used as-is and never re-prompted; only genuinely new
-# tokens fall through to cache, prompt or empty.
+# A token whose same-named variable is already declared (e.g. set by collect_project_info) is used as-is and never re-prompted; only genuinely new tokens fall through to cache, prompt or empty.
 readme_resolve_placeholder() {
     local token="$1" __outvar="$2"
     if declare -p "$token" &>/dev/null; then

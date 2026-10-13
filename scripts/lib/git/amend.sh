@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 #
-# Dev-Control Shared Library: Amend — capture-all-dates, amend one commit,
-# recreate history.
+# Dev-Control Shared Library: Amend — capture-all-dates, amend one commit, recreate history.
 #
 # Workflow ("secret amend"):
 #   1. Snapshot every author/committer date in the current branch.

@@ -2,10 +2,7 @@
 #
 # Dev-Control Shared Library: Blossom — surgical non-tip commit amend
 #
-# Drives `git rebase -i <target>^` paused on the target commit and exposes
-# interactive sub-actions (sed/regex replace, message edit, arbitrary shell)
-# before amending and continuing the rebase.  Cleans stale CHERRY_PICK_HEAD
-# leftovers, offers `git rebase --abort` on failure, and prompts for
+# Drives `git rebase -i <target>^` paused on the target commit and exposes interactive sub-actions (sed/regex replace, message edit, arbitrary shell) before amending and continuing the rebase.  Cleans stale CHERRY_PICK_HEAD leftovers, offers `git rebase --abort` on failure, and prompts for
 # `git push --force-with-lease`.
 #
 # Required from the caller:
@@ -49,8 +46,7 @@ fi
 #   6. Prompt for `git push --force-with-lease`
 #   7. On any error, offer `git rebase --abort` to return to pre-rebase HEAD
 #
-# All git operations are automated; all *values* (commit, message, sed pattern,
-# file path, shell command, push confirmation) are prompted for.
+# All git operations are automated; all *values* (commit, message, sed pattern, file path, shell command, push confirmation) are prompted for.
 
 # Clean up stale rebase/cherry-pick state markers that can block `commit --amend`.
 # Returns 0 if cleanup happened, 1 otherwise.
@@ -88,8 +84,7 @@ blossom_offer_abort() {
 }
 
 # Apply a sed-style substitution to a single file, prompting for path and pattern.
-# Pattern is a full sed script (e.g. 's/foo/bar/g').  Always uses an in-place edit
-# with a backup and shows a unified diff for confirmation before staging.
+# Pattern is a full sed script (e.g. 's/foo/bar/g').  Always uses an in-place edit with a backup and shows a unified diff for confirmation before staging.
 blossom_sed_replace() {
     local file pattern reply
     if read -u 3 -rp "File to edit (relative path): " file; then :; else

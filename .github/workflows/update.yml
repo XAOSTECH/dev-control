@@ -318,8 +318,7 @@ jobs:
           echo "## 📦 Submodule Check" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
-          # For manual (workflow_dispatch) runs, override threshold to 0 so all
-          # behind submodules are flagged regardless of how far behind they are.
+          # For manual (workflow_dispatch) runs, override threshold to 0 so all behind submodules are flagged regardless of how far behind they are.
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             EFFECTIVE_THRESHOLD=0
           else

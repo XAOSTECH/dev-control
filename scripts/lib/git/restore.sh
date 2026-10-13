@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 #
-# Dev-Control Shared Library: Restore — list and restore from backup bundles
-# and tags created by previous fix-history runs.
+# Dev-Control Shared Library: Restore — list and restore from backup bundles and tags created by previous fix-history runs.
 #
 # Required from the caller:
 #   - print.sh / colours.sh sourced (print_info/print_success/print_warning/

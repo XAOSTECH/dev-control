@@ -116,8 +116,7 @@ print_info "Calculating fractal tree positions..."
 POSITIONS_FILE=$(calculate_tree_positions "$DATA_FILE" "$OUTPUT_DIR/git-tree-positions.json")
 print_success "Positions calculated: $POSITIONS_FILE"
 
-# Collapsed variant for the static SVG/mini so a long linear history stays within a
-# reasonable frame. Small repos are left untouched; the HTML keeps full detail.
+# Collapsed variant for the static SVG/mini so a long linear history stays within a reasonable frame. Small repos are left untouched; the HTML keeps full detail.
 COMMIT_TOTAL=$(jq '.commits | length' "$DATA_FILE" 2>/dev/null || echo 0)
 COLLAPSE_MIN=0
 if [[ "$COMMIT_TOTAL" -gt 250 ]]; then
