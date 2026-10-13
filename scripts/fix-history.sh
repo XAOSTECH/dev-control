@@ -603,6 +603,11 @@ check_git_repo() {
     fi
     
     if [[ -n "$(git status --porcelain)" ]]; then
+        if [[ "${ASSUME_YES:-false}" == "true" ]]; then
+            git stash push -m "Pre-fix-history stash" --quiet
+            print_info "Auto-stashed uncommitted changes"
+            return 0
+        fi
         print_warning "Working tree has uncommitted changes."
         echo ""
         echo "Options:"
