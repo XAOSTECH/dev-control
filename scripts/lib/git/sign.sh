@@ -252,16 +252,18 @@ sign_mode() {
             if git rebase "$rebase_base" --rebase-merges --gpg-sign --committer-date-is-author-date; then
                 print_success "Unsigned commits signed; $leading_signed_count leading signed commits remain untouched"
                 
-                # Auto-push if AUTO_FIX_REBASE is set
-                if [[ "${AUTO_FIX_REBASE:-}" == "true" ]]; then
-                    print_info "AUTO_FIX_REBASE: Force-pushing signed commits to origin/$(git rev-parse --abbrev-ref HEAD)"
-                    if git push --force-with-lease; then
-                        print_success "Successfully pushed signed commits"
+                # Auto-push in this path — the normal end-of-function push is bypassed by return 0.
+                local _pb="${ORIGINAL_BRANCH:-}"
+                [[ -z "$_pb" || "$_pb" == "HEAD" ]] && \
+                    _pb=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+                if [[ -n "$_pb" && "$_pb" != "HEAD" ]]; then
+                    print_info "Auto-pushing signed commits to origin/${_pb}"
+                    if git push --force-with-lease origin "$_pb"; then
+                        print_success "Successfully pushed signed commits to origin/${_pb}"
                     else
                         print_warning "Force-push failed; you may need to push manually with: git push --force-with-lease"
                     fi
                 fi
-                # Skip the normal Phase 2 rebase since we just did it above
                 SIGNATURES_ALREADY_APPLIED="true"
             else
                 print_error "Failed to sign commits while preserving topology."
