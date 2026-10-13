@@ -1081,10 +1081,8 @@ full_fix_mode() {
             fi
             local _ok=false
             if [[ -n "$_members_list" ]]; then
-                local IFS=','
-                for _m in $_members_list; do
-                    [[ "${_m// /}" == "$_rowner" ]] && { _ok=true; break; }
-                done
+                # Match without touching IFS — local IFS=',' leaks into every called function.
+                [[ ",${_members_list//[[:space:]]/}," == *",${_rowner},"* ]] && _ok=true
             elif [[ -n "$_gh_user" && "$_rowner" == "$_gh_user" ]]; then
                 _ok=true
             fi
