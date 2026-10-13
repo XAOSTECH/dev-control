@@ -1142,17 +1142,15 @@ _full_fix_single() {
 
     # Pre-stash once here so neither dedup nor sign double-stash.
     # If stash fails (e.g. symlink-path issue like .bak/) skip the repo cleanly.
-    local _ff_stashed=false
+    # Use `if !` to prevent set -e from firing on stash failure.
+    local _ff_stashed=false _stash_err
     if [[ -n "$(git status --porcelain 2>/dev/null)" ]]; then
-        local _serr
-        _serr=$(git stash push -m "Pre-fix-history stash" 2>&1)
-        if [[ $? -eq 0 ]]; then
-            _ff_stashed=true
-            print_info "Stashed uncommitted changes"
-        else
-            print_warning "$(basename "$PWD"): stash failed (⁠${_serr##*error: }) — skipping repo"
+        if ! _stash_err=$(git stash push -m "Pre-fix-history stash" 2>&1); then
+            print_warning "$(basename "$PWD"): stash failed (${_stash_err##*error: }) — skipping repo"
             return 0
         fi
+        _ff_stashed=true
+        print_info "Stashed uncommitted changes"
     fi
 
     # Clamp depth: HEAD~N fails when N >= first-parent chain length.
