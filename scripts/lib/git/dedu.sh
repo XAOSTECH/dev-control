@@ -108,7 +108,15 @@ dedup_build_plan() {
         local -a run_first=() run_count=() run_subj=()
         for ((i = 0; i < PLAN_TOTAL; i++)); do
             entry="${commits[$i]}"; h="${entry%%$'\x1f'*}"; subj="${entry#*$'\x1f'}"
+            # Conservative mode: only group chore: / chore( subjects for squashing.
+            local _grp=false
             if (( idx >= 0 )) && [[ "$subj" == "$prev" ]]; then
+                if [[ "${DEDUP_CONSERVATIVE:-false}" == "false" ]] \
+                    || [[ "$subj" == chore:* || "$subj" == chore\(* ]]; then
+                    _grp=true
+                fi
+            fi
+            if [[ "$_grp" == "true" ]]; then
                 run_count[$idx]=$(( run_count[idx] + 1 ))
             else
                 idx=$((idx + 1)); run_first[$idx]="$h"; run_count[$idx]=1; run_subj[$idx]="$subj"
