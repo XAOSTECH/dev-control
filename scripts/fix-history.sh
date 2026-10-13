@@ -1046,7 +1046,8 @@ full_fix_mode() {
             repos+=("$(dirname "$gitdir")")
         done < <(find . -name .git -not -path './.git' \
             -not -path '*/node_modules/*' -not -path '*/.bak/*' \
-            -not -path '*/vendor/*' | sort)
+            -not -path '*/vendor/*' \
+            -not -path '*/test-repo/*' | sort)
         if [[ ${#repos[@]} -eq 0 ]]; then
             print_warning "--batch: no sub-repos found under $(pwd)"
             return 0
