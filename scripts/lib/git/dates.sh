@@ -154,9 +154,9 @@ if [[ -z "$line" ]]; then
 fi
 
 if [[ "$line" != *"|"* ]]; then
-  echo "[WARN] Malformed date line (no '|'): $line" >&2
+  echo "[WARN] Malformed date line (no '|') — skipping: $line" >&2
   sed -i '1d' "$DATES_FILE" || true
-  exit 1
+  exit 0
 fi
 
 commit_part="${line%%|*}"

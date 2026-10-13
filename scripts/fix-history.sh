@@ -1105,7 +1105,6 @@ full_fix_mode() {
         fi
         local _orig_dir="$PWD"
         for _repo in "${repos[@]}"; do
-            print_header
             print_info "Repo: $_repo"
             pushd "$_repo" > /dev/null || { print_warning "Cannot enter $_repo"; continue; }
             _full_fix_single "$depth"
