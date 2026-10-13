@@ -389,6 +389,8 @@ prompt_override_same_branch() {
         if [[ "${ALLOW_OVERRIDE_SAME_BRANCH:-}" == "true" ]]; then
             print_info "ALLOW_OVERRIDE_SAME_BRANCH=true: auto-confirming override"
             _ans=y
+        elif [[ "${ASSUME_YES:-false}" == "true" ]]; then
+            _ans=y
         elif [[ "$HARNESS_MODE" == "true" ]]; then
             print_info "Harness mode: skipping destructive override prompt"
             return 0
