@@ -1088,6 +1088,14 @@ full_fix_mode() {
                 _ok=true
             fi
             if [[ "$_ok" == "true" ]]; then
+                # Skip archived repos — they're read-only; signing can't be pushed.
+                if command -v gh &>/dev/null && [[ -n "$_rowner" ]]; then
+                    local _rslug="${_rurl##*/}"; _rslug="${_rslug%.git}"
+                    if [[ "$(gh repo view "${_rowner}/${_rslug}" --json isArchived --jq '.isArchived' 2>/dev/null)" == "true" ]]; then
+                        print_info "Skip (archived): $_r"
+                        continue
+                    fi
+                fi
                 owned+=("$_r")
             else
                 print_info "Skip (owner '$_rowner' not authorised): $_r"
