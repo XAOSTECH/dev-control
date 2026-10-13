@@ -604,8 +604,14 @@ check_git_repo() {
     
     if [[ -n "$(git status --porcelain)" ]]; then
         if [[ "${ASSUME_YES:-false}" == "true" ]]; then
-            git stash push -m "Pre-fix-history stash" --quiet
-            print_info "Auto-stashed uncommitted changes"
+            # If a pre-stash from _full_fix_single is already in place, don't double-stash.
+            if git stash list 2>/dev/null | grep -q 'Pre-fix-history stash'; then
+                return 0
+            fi
+            local _stash_err
+            _stash_err=$(git stash push -m "Pre-fix-history stash" --quiet 2>&1) && \
+                print_info "Auto-stashed uncommitted changes" || \
+                print_warning "Stash skipped: ${_stash_err##*error: }"
             return 0
         fi
         print_warning "Working tree has uncommitted changes."
@@ -1096,9 +1102,12 @@ full_fix_mode() {
         fi
 
         print_info "Batch full-fix: ${#repos[@]} repo(s), depth ${depth}"
-        # Single warning before any destructive work; -y skips it.
-        if [[ "$ASSUME_YES" != "true" ]]; then
-            echo -e "${BOLD}${YELLOW}⚠️  Batch full-fix rewrites history (dedup + GPG-sign) in ${#repos[@]} repositories.${NC}"
+        # Always show this prompt — even with -y, so the user knows all confirmations are suppressed.
+        echo -e "${BOLD}${YELLOW}⚠️  Batch full-fix will dedup + GPG-sign in ${#repos[@]} repositories.${NC}"
+        if [[ "$ASSUME_YES" == "true" ]]; then
+            echo -e "   ${BOLD}-y is active: every confirmation in every repo will be auto-confirmed.${NC}"
+            read -rp "   Press Enter to proceed or Ctrl+C to abort: " _
+        else
             read -rp "Proceed with all repos? [Y/n]: " _batchok
             [[ ! "${_batchok:-y}" =~ ^[Nn] ]] || { print_info "Batch cancelled"; return 0; }
             ASSUME_YES=true
@@ -1131,15 +1140,34 @@ _full_fix_single() {
         return 0
     fi
 
-    # Clamp depth: HEAD~N fails when N >= commit count; max safe depth is count-1.
+    # Pre-stash once here so neither dedup nor sign double-stash.
+    # If stash fails (e.g. symlink-path issue like .bak/) skip the repo cleanly.
+    local _ff_stashed=false
+    if [[ -n "$(git status --porcelain 2>/dev/null)" ]]; then
+        local _serr
+        _serr=$(git stash push -m "Pre-fix-history stash" 2>&1)
+        if [[ $? -eq 0 ]]; then
+            _ff_stashed=true
+            print_info "Stashed uncommitted changes"
+        else
+            print_warning "$(basename "$PWD"): stash failed (⁠${_serr##*error: }) — skipping repo"
+            return 0
+        fi
+    fi
+
+    # Clamp depth: HEAD~N fails when N >= first-parent chain length.
     local _total
-    _total=$(git rev-list --count HEAD 2>/dev/null || echo 0)
+    _total=$(git rev-list --count --first-parent HEAD 2>/dev/null || echo 0)
     local _max_depth=$(( _total > 0 ? _total - 1 : 0 ))
     [[ "$_max_depth" -lt "$depth" ]] && depth="$_max_depth"
     if [[ "$depth" -eq 0 ]]; then
         print_info "Repo has 0 or 1 commit — skipping"
+        [[ "$_ff_stashed" == "true" ]] && git stash pop --quiet 2>/dev/null || true
         return 0
     fi
+
+    # Clear shared dates file so stale data from a previous repo can't bleed in.
+    > "$TEMP_ALL_DATES" 2>/dev/null || true
 
     if [[ "$ASSUME_YES" != "true" ]] && [[ -t 0 ]]; then
         if read -u 3 -rp "Commits from HEAD to process [${depth}]: " _d 2>/dev/null; then :; else read -rp "Commits from HEAD to process [${depth}]: " _d; fi
@@ -1175,6 +1203,13 @@ _full_fix_single() {
         SIGN_MODE=true
         sign_mode || true
         SIGN_MODE=false
+    fi
+
+    # Pop pre-stash (do this after all operations, even on skip paths above).
+    if [[ "$_ff_stashed" == "true" ]]; then
+        if ! git stash pop --quiet 2>/dev/null; then
+            print_warning "Stash pop failed in $(basename "$PWD") — run: git stash pop"
+        fi
     fi
 }
 
