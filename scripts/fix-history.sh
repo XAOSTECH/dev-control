@@ -61,6 +61,7 @@ FULL_FIX_MODE=false
 FULL_FIX_DEPTH=20
 ASSUME_YES=false
 BATCH_MODE=false
+BATCH_ONLINE=true
 STASH_NUM=""
 STASH_MODE=false
 AMEND_MODE=false
@@ -365,6 +366,14 @@ parse_args() {
             --batch|-b)
                 BATCH_MODE=true
                 ASSUME_YES=true
+                shift
+                ;;
+            --offline)
+                BATCH_ONLINE=false
+                shift
+                ;;
+            --online)
+                BATCH_ONLINE=true
                 shift
                 ;;
             --reauthor)
@@ -1077,7 +1086,11 @@ full_fix_mode() {
             _rowner=""
             [[ "$_rurl" =~ github\.com[:/]([^/]+)/ ]] && _rowner="${BASH_REMATCH[1]}"
             if [[ -z "$_rowner" ]]; then
-                owned+=("$_r")  # no remote — local repo, include
+                if [[ "$BATCH_ONLINE" == "true" ]]; then
+                    print_info "Skip (no remote — local backup, use --offline to include): $_r"
+                else
+                    owned+=("$_r")
+                fi
                 continue
             fi
             local _ok=false
@@ -1093,6 +1106,13 @@ full_fix_mode() {
                     local _rslug="${_rurl##*/}"; _rslug="${_rslug%.git}"
                     if [[ "$(gh repo view "${_rowner}/${_rslug}" --json isArchived --jq '.isArchived' 2>/dev/null)" == "true" ]]; then
                         print_info "Skip (archived): $_r"
+                        continue
+                    fi
+                fi
+                # Online mode: skip repos where origin doesn't exist or is inaccessible.
+                if [[ "$BATCH_ONLINE" == "true" ]]; then
+                    if ! git -C "$_r" ls-remote --exit-code origin HEAD &>/dev/null; then
+                        print_info "Skip (remote not accessible): $_r"
                         continue
                     fi
                 fi
@@ -1191,10 +1211,13 @@ _full_fix_single() {
     fi
 
     # Step 1: dedup — subshell so its exit calls do not abort full_fix.
+    # Conservative: only squash chore:/chore( subjects, never user commits.
     print_step "1/2 Deduplicating..."
     DEDUP_MODE=true
+    DEDUP_CONSERVATIVE=true
     ( deduplicate_mode ) || true
     DEDUP_MODE=false
+    DEDUP_CONSERVATIVE=false
 
     RANGE="HEAD~${depth}..HEAD"
 
