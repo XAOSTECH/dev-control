@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.5.12] - 2026-09-21
+
+### Fixed
+- include self
+- adapt + revalidate licence
+
+### Changed
+- chore: humanise hard-wrapped comments and prose
+- chore: convert American spellings to British English
+
 ## [0.5.11] - 2026-08-03
 
 ### Fixed
