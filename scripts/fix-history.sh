@@ -1028,6 +1028,10 @@ cleanup_tmp_and_backup_refs() {
 # Dedup then sign N commits from HEAD in one shot.
 full_fix_mode() {
     local depth="$FULL_FIX_DEPTH"
+    # Honour --range HEAD=N / HEAD~N when used alongside --full-fix.
+    if [[ "$RANGE" =~ ^HEAD~([0-9]+)(\.\. HEAD)?$ || "$RANGE" =~ ^HEAD~([0-9]+)$ ]]; then
+        depth="${BASH_REMATCH[1]}"
+    fi
 
     if [[ "$BATCH_MODE" == "true" ]]; then
         # Discover all git repos under cwd, excluding common noise dirs.
@@ -1041,6 +1045,56 @@ full_fix_mode() {
             print_warning "--batch: no sub-repos found under $(pwd)"
             return 0
         fi
+
+        # Load authorised owners from repoVars.env (MEMBERS) or fall back to gh whoami.
+        local _members_list="" _gh_user=""
+        local _vars_file="${DEV_CONTROL_DIR}/config/profiles/repoVars.env"
+        if [[ -f "$_vars_file" ]]; then
+            _members_list=$(grep -E '^MEMBERS=' "$_vars_file" | head -1 | sed 's/^MEMBERS=//' | tr -d '"' || true)
+        fi
+        if [[ -z "$_members_list" ]] && command -v gh &>/dev/null; then
+            _gh_user=$(gh api user --jq .login 2>/dev/null || true)
+        fi
+
+        # Filter repos: keep only those whose remote owner is in MEMBERS / gh user.
+        # Also skip detached-HEAD checkouts (build deps).
+        local -a owned=()
+        for _r in "${repos[@]}"; do
+            local _branch _rurl _rowner
+            _branch=$(git -C "$_r" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+            if [[ "$_branch" == "HEAD" ]]; then
+                print_info "Skip (detached HEAD): $_r"
+                continue
+            fi
+            _rurl=$(git -C "$_r" config --get remote.origin.url 2>/dev/null || true)
+            _rowner=""
+            [[ "$_rurl" =~ github\.com[:/]([^/]+)/ ]] && _rowner="${BASH_REMATCH[1]}"
+            if [[ -z "$_rowner" ]]; then
+                owned+=("$_r")  # no remote — local repo, include
+                continue
+            fi
+            local _ok=false
+            if [[ -n "$_members_list" ]]; then
+                local IFS=','
+                for _m in $_members_list; do
+                    [[ "${_m// /}" == "$_rowner" ]] && { _ok=true; break; }
+                done
+            elif [[ -n "$_gh_user" && "$_rowner" == "$_gh_user" ]]; then
+                _ok=true
+            fi
+            if [[ "$_ok" == "true" ]]; then
+                owned+=("$_r")
+            else
+                print_info "Skip (owner '$_rowner' not authorised): $_r"
+            fi
+        done
+        repos=("${owned[@]}")
+
+        if [[ ${#repos[@]} -eq 0 ]]; then
+            print_warning "No authorised repos found — check MEMBERS in repoVars.env"
+            return 0
+        fi
+
         print_info "Batch full-fix: ${#repos[@]} repo(s), depth ${depth}"
         # Single warning before any destructive work; -y skips it.
         if [[ "$ASSUME_YES" != "true" ]]; then
@@ -1070,12 +1124,21 @@ full_fix_mode() {
 _full_fix_single() {
     local depth="${1:-$FULL_FIX_DEPTH}"
 
-    # Clamp depth to actual commit count so shallow repos don't error on HEAD~N.
+    # Skip detached-HEAD checkouts (build deps checked out by CMake etc.).
+    local _cur_branch
+    _cur_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+    if [[ "$_cur_branch" == "HEAD" ]]; then
+        print_info "Detached HEAD — skipping"
+        return 0
+    fi
+
+    # Clamp depth: HEAD~N fails when N >= commit count; max safe depth is count-1.
     local _total
     _total=$(git rev-list --count HEAD 2>/dev/null || echo 0)
-    [[ "$_total" -lt "$depth" ]] && depth="$_total"
+    local _max_depth=$(( _total > 0 ? _total - 1 : 0 ))
+    [[ "$_max_depth" -lt "$depth" ]] && depth="$_max_depth"
     if [[ "$depth" -eq 0 ]]; then
-        print_info "Repo has no commits — skipping"
+        print_info "Repo has 0 or 1 commit — skipping"
         return 0
     fi
 
