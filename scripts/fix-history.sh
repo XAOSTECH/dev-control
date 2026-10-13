@@ -955,7 +955,9 @@ rollback_on_cancel() {
     if [[ -f "$TEMP_BACKUP" ]]; then
         print_info "Restoring from backup: $TEMP_BACKUP"
         git bundle unbundle "$TEMP_BACKUP" || true
-        git reset --hard origin/Main || git reset --hard HEAD || true
+        local _cur_branch
+        _cur_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
+        git reset --hard "origin/${_cur_branch}" 2>/dev/null || git reset --hard HEAD || true
         git clean -fd
         print_success "Rolled back to pre-operation state"
     fi
@@ -1080,11 +1082,17 @@ _full_fix_single() {
 
     RANGE="HEAD~${depth}..HEAD"
 
-    # Step 2: sign
-    print_step "2/2 Signing..."
-    SIGN_MODE=true
-    sign_mode || true
-    SIGN_MODE=false
+    # Step 2: sign — only when unsigned commits exist (idempotent)
+    local _unsigned
+    _unsigned=$(git log --format="%G?" "$RANGE" 2>/dev/null | grep -c '^[NE]$' || echo 0)
+    if [[ "$_unsigned" -eq 0 ]]; then
+        print_info "2/2 All commits already signed — skipping sign step"
+    else
+        print_step "2/2 Signing ${_unsigned} unsigned commit(s)..."
+        SIGN_MODE=true
+        sign_mode || true
+        SIGN_MODE=false
+    fi
 }
 
 main() {
