@@ -171,8 +171,8 @@ jobs:
           if [[ "$SCOPE" == "org" ]]; then
             GNUPGHOME="$_HOME" gpg --batch --pinentry-mode loopback --passphrase "$_PASS" \
               --armor --export-secret-keys "$_FPR" \
-              | GH_TOKEN="$_SEC_TOK" gh secret set "XB_GK" --org "$ORG"
-            printf '%s' "$_PASS" | GH_TOKEN="$_SEC_TOK" gh secret set "XB_GP" --org "$ORG"
+              | GH_TOKEN="$_SEC_TOK" gh secret set "XB_GK" --org "$ORG" --visibility all
+            printf '%s' "$_PASS" | GH_TOKEN="$_SEC_TOK" gh secret set "XB_GP" --org "$ORG" --visibility all
           else
             GNUPGHOME="$_HOME" gpg --batch --pinentry-mode loopback --passphrase "$_PASS" \
               --armor --export-secret-keys "$_FPR" \
