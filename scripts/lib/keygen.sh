@@ -55,7 +55,7 @@ fi
 EXP_DATE=$(date -d "+1 year" +"%Y-%m-%d")
 KEY_COMMENT="GitHub Modern Signing Key ($USERNAME) [Exp: $EXP_DATE]"
 
-echo "=== GPG Key Generation and GitHub Enrollment (DBUS FIXED) ==="
+echo "=== GPG Key Generation and GitHub Enrolment (DBUS FIXED) ==="
 
 # 1. Dependency Validation (Strictly Core OS Utilities)
 for cmd in gpg gh awk tr cut mktemp date gdbus printf; do
