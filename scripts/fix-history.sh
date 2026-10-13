@@ -1215,9 +1215,13 @@ _full_fix_single() {
     print_step "1/2 Deduplicating..."
     DEDUP_MODE=true
     DEDUP_CONSERVATIVE=true
+    # Nest mode collapses non-adjacent chore duplicates too; conservative filter keeps user commits safe.
+    local _save_times="$DEDUP_TIMES"
+    DEDUP_TIMES=5
     ( deduplicate_mode ) || true
     DEDUP_MODE=false
     DEDUP_CONSERVATIVE=false
+    DEDUP_TIMES="$_save_times"
 
     RANGE="HEAD~${depth}..HEAD"
 

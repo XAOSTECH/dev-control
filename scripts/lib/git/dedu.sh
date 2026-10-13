@@ -84,22 +84,38 @@ dedup_build_plan() {
         done
         for ((i = 0; i < PLAN_TOTAL; i++)); do
             entry="${commits[$i]}"; h="${entry%%$'\x1f'*}"; subj="${entry#*$'\x1f'}"
+            # Conservative: non-chore subjects always emitted, never dropped in nest mode.
+            local _sq=true
+            if [[ "${DEDUP_CONSERVATIVE:-false}" == "true" ]]; then
+                [[ "$subj" == chore:* || "$subj" == chore\(* ]] || _sq=false
+            fi
             if [[ "${last_idx["$subj"]}" == "$i" ]]; then
                 PLAN_EMIT_HASH+=("$h"); PLAN_EMIT_CDATE+=("")
-                if (( ${count["$subj"]} > 1 )); then
-                    PLAN_ROWS+=("nest ${count["$subj"]}×|$h|$subj")
+                if (( ${count["$subj"]} > 1 )) && [[ "$_sq" == "true" ]]; then
+                    PLAN_ROWS+=("nest ${count["$subj"]}\u00d7|$h|$subj")
                 else
                     PLAN_ROWS+=("keep|$h|$subj")
                 fi
             else
-                PLAN_ROWS+=("drop|$h|$subj")
+                if [[ "$_sq" == "false" ]]; then
+                    PLAN_EMIT_HASH+=("$h"); PLAN_EMIT_CDATE+=("")
+                    PLAN_ROWS+=("keep|$h|$subj")
+                else
+                    PLAN_ROWS+=("drop|$h|$subj")
+                fi
             fi
         done
         local s
         for s in "${!count[@]}"; do
             if (( ${count["$s"]} > 1 )); then
-                PLAN_DUP_GROUPS=$((PLAN_DUP_GROUPS + 1))
-                PLAN_DUP_COMMITS=$((PLAN_DUP_COMMITS + ${count["$s"]} - 1))
+                local _ssq=true
+                if [[ "${DEDUP_CONSERVATIVE:-false}" == "true" ]]; then
+                    [[ "$s" == chore:* || "$s" == chore\(* ]] || _ssq=false
+                fi
+                if [[ "$_ssq" == "true" ]]; then
+                    PLAN_DUP_GROUPS=$((PLAN_DUP_GROUPS + 1))
+                    PLAN_DUP_COMMITS=$((PLAN_DUP_COMMITS + ${count["$s"]} - 1))
+                fi
             fi
         done
     else
