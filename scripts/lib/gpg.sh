@@ -182,6 +182,22 @@ gpg_status() {
             fi
         fi
         rm -f /tmp/_dckey_secrets
+
+        # Show the last few keygen.yml workflow runs so the user can track rotations without leaving this menu.
+        local _wf_repo="${REPO_NWO:-}"
+        [[ -z "$_wf_repo" && -n "${REPO_OWNER:-}" ]] && _wf_repo="$REPO_OWNER"
+        if [[ -n "$_wf_repo" ]] && gh workflow view keygen.yml --repo "$_wf_repo" &>/dev/null 2>&1; then
+            local _runs
+            _runs=$(gh run list --workflow keygen.yml --repo "$_wf_repo" --limit 4 \
+                --json status,conclusion,createdAt,databaseId \
+                --jq '.[] | "    \(.createdAt[:16] | gsub("T";" "))  #\(.databaseId)  \(.status)\(if .conclusion != null and .conclusion != "" then "/\(.conclusion)" else "" end)"' \
+                2>/dev/null || true)
+            if [[ -n "$_runs" ]]; then
+                echo ""
+                echo "  Recent keygen.yml runs on $_wf_repo:"
+                echo "$_runs"
+            fi
+        fi
     fi
 }
 
