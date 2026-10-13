@@ -459,15 +459,20 @@ sign_mode() {
     # Only push if we're still on the original branch (not a tmp branch that needs to be merged back)
     # AND signatures weren't already pushed during PRESERVE_TOPOLOGY rebase
     if [[ "${RANGE}" != tmp/* && "${SIGNATURES_ALREADY_APPLIED:-}" != "true" ]]; then
-        local current_branch
-        current_branch=$(git rev-parse --abbrev-ref HEAD)
-        
-        print_info "Auto-pushing signed commits to origin/${current_branch}"
-        if git push --force-with-lease origin "$current_branch"; then
-            print_success "Successfully pushed signed commits to origin/${current_branch}"
+        # Prefer ORIGINAL_BRANCH — after reconstruction the re-detected branch may be "HEAD" (detached).
+        local current_branch="${ORIGINAL_BRANCH:-}"
+        [[ -z "$current_branch" || "$current_branch" == "HEAD" ]] && \
+            current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+        if [[ -z "$current_branch" || "$current_branch" == "HEAD" ]]; then
+            print_warning "Detached HEAD after signing — push manually: git checkout <branch> && git push --force-with-lease"
         else
-            print_warning "Force-push failed; you may need to push manually with: git push --force-with-lease"
-            print_warning "This is normal if the remote has been updated since you started signing"
+            print_info "Auto-pushing signed commits to origin/${current_branch}"
+            if git push --force-with-lease origin "$current_branch"; then
+                print_success "Successfully pushed signed commits to origin/${current_branch}"
+            else
+                print_warning "Force-push failed; you may need to push manually with: git push --force-with-lease"
+                print_warning "This is normal if the remote has been updated since you started signing"
+            fi
         fi
     fi
 
