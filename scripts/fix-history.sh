@@ -57,6 +57,9 @@ source "$SCRIPT_DIR/lib/git/combine.sh"
 RANGE="HEAD=10"
 INTERACTIVE=true
 DRY_RUN=false
+FULL_FIX_MODE=false
+FULL_FIX_DEPTH=20
+ASSUME_YES=false
 STASH_NUM=""
 STASH_MODE=false
 AMEND_MODE=false
@@ -197,6 +200,9 @@ Options:
                                Prompts for confirmation before proceeding
     --reauthor <commit|range>  Reset author to current git user for a commit or range
                                                          If a single commit is provided, rewrites from that commit to HEAD
+  --full-fix, -ff [N]        Dedup then GPG-sign the last N commits (default 20). Prompts for N
+                             unless supplied on the command line. Use -y to skip all prompts.
+  -y, --yes                  Auto-confirm all rewrite prompts (non-interactive / batch-safe).
   --atomic-preserve          Deterministic preserve: recreate commits (including merges) with
                              `git commit-tree`, immediately sign and set author/committer dates (atomic)
   --drop COMMIT [COMMIT…]   Drop (remove) one or more non-root commits from history.
@@ -264,6 +270,8 @@ Examples:
   ./scripts/fix-history.sh --blossom abc1234         # Surgical amend of non-tip commit (preserves later commits)
   ./scripts/fix-history.sh --blossom                 # Same, but prompts for the target commit
   ./scripts/fix-history.sh --range main..HEAD        # Fix commits between main and HEAD
+  ./scripts/fix-history.sh --full-fix                # Dedup + GPG-sign last 20 commits
+  ./scripts/fix-history.sh --full-fix 30 -y          # Same for 30 commits, no prompts (batch-safe)
 
 EOF
 }
@@ -301,6 +309,10 @@ parse_args() {
                 DRY_RUN=true
                 shift
                 ;;
+            -y|--yes)
+                ASSUME_YES=true
+                shift
+                ;;
             -s|--stash)
                 STASH_NUM="$2"
                 STASH_MODE=true
@@ -335,6 +347,15 @@ parse_args() {
                 RESIGN_MODE=true
                 SIGN_MODE=true
                 shift
+                ;;
+            --full-fix|-ff)
+                FULL_FIX_MODE=true
+                if [[ -n "${2:-}" && "${2:-}" =~ ^[0-9]+$ ]]; then
+                    FULL_FIX_DEPTH="$2"
+                    shift 2
+                else
+                    shift
+                fi
                 ;;
             --reauthor)
                 REAUTHOR_MODE=true
@@ -839,6 +860,7 @@ show_changes_preview() {
 }
 
 confirm_changes() {
+    [[ "${ASSUME_YES:-false}" == "true" ]] && return 0
     echo -e "${BOLD}${YELLOW}⚠️  WARNING: This operation will rewrite commit history!${NC}"
     echo ""
     echo -e "  This will modify:"
@@ -984,6 +1006,44 @@ cleanup_tmp_and_backup_refs() {
     if [[ "$CLEANUP_MERGED" == "true" ]]; then
         cleanup_merged_branches_interactive 3
     fi
+}
+
+# Dedup then sign N commits from HEAD in one shot.
+full_fix_mode() {
+    print_header "Dev-Control Full Fix"
+    check_git_repo
+
+    local depth="$FULL_FIX_DEPTH"
+    if [[ "$ASSUME_YES" != "true" ]] && [[ -t 0 ]]; then
+        if read -u 3 -rp "Commits from HEAD to process [${depth}]: " _d 2>/dev/null; then :; else read -rp "Commits from HEAD to process [${depth}]: " _d; fi
+        [[ -n "$_d" && "$_d" =~ ^[0-9]+$ ]] && depth="$_d"
+    fi
+
+    RANGE="HEAD~${depth}..HEAD"
+    print_info "Range: last ${depth} commits"
+
+    # Single up-front confirmation; ASSUME_YES=true prevents sub-mode re-prompts.
+    if [[ "$ASSUME_YES" != "true" ]]; then
+        echo -e "${BOLD}${YELLOW}⚠️  Full-fix will dedup then GPG-sign the last ${depth} commits.${NC}"
+        if read -u 3 -rp "Continue? [y/N]: " _fc 2>/dev/null; then :; else read -rp "Continue? [y/N]: " _fc; fi
+        [[ "$_fc" =~ ^[Yy] ]] || { print_info "Cancelled"; exit 0; }
+        ASSUME_YES=true
+    fi
+
+    # Step 1: dedup — subshell so its exit calls do not abort full_fix.
+    # Git operations inside persist in the actual repository.
+    print_step "1/2 Deduplicating..."
+    DEDUP_MODE=true
+    ( deduplicate_mode ) || true
+    DEDUP_MODE=false
+
+    # Re-anchor range relative to current HEAD after dedup may have rewritten history.
+    RANGE="HEAD~${depth}..HEAD"
+
+    # Step 2: sign
+    print_step "2/2 Signing..."
+    SIGN_MODE=true
+    sign_mode
 }
 
 main() {
@@ -1142,6 +1202,12 @@ main() {
             list_backups_and_restore
             exit 0
         fi
+    fi
+
+    # Handle full-fix mode (dedup + sign in one shot)
+    if [[ "$FULL_FIX_MODE" == "true" ]]; then
+        full_fix_mode
+        exit 0
     fi
 
     # Handle auto-sign mode (detect unsigned commits and auto-configure)

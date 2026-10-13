@@ -1223,6 +1223,13 @@ dc_init_commit_and_push() {
     local current_branch
     current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
 
+    # Only push when the remote tracking ref already exists — avoids pushing on a
+    # fresh repo where templates are loaded before the first git push.
+    local _remote_branch_exists=false
+    if git remote get-url origin &>/dev/null; then
+        git rev-parse --verify "refs/remotes/origin/$current_branch" &>/dev/null && _remote_branch_exists=true
+    fi
+
     local last_msg
     last_msg=$(git log -1 --format=%s 2>/dev/null || echo "")
     if [[ "$last_msg" == chore\(dc-init\):* ]]; then
@@ -1230,7 +1237,7 @@ dc_init_commit_and_push() {
         author_date=$(git show -s --format=%aD HEAD)
         GIT_COMMITTER_DATE="$author_date" git commit --amend --no-edit --date="$author_date" --quiet
         print_success "Amended dc-init commit for $dir_label"
-        if git remote get-url origin &>/dev/null; then
+        if [[ "$_remote_branch_exists" == "true" ]]; then
             if ! git push --force-with-lease origin "$current_branch" --quiet 2>/dev/null; then
                 print_warning "Force-push failed for $dir_label (amended locally)"
             fi
@@ -1238,9 +1245,9 @@ dc_init_commit_and_push() {
     else
         git commit -m "chore(dc-init): ${verb} ${description}" --quiet
         print_success "Committed template ${verb} for $dir_label"
-        if git remote get-url origin &>/dev/null; then
+        if [[ "$_remote_branch_exists" == "true" ]]; then
             if ! git push origin "$current_branch" --quiet 2>/dev/null; then
-                print_warning "Push failed for $dir_label (changes committed locally)"
+                print_warning "Push failed for $dir_label (committed locally)"
             fi
         fi
     fi
