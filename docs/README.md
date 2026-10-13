@@ -8,7 +8,7 @@
   <a href="https://github.com/xaostech/dev-control/releases">
     <img alt="GitHub release" src="https://img.shields.io/github/v/release/xaostech/dev-control?style=for-the-badge&logo=semantic-release&color=blue">
   </a>
-  <a href="https://github.com/xaostech/dev-control/blob/main/LICENCE">
+  <a href="https://github.com/xaostech/dev-control/blob/main/LICENSE">
     <img alt="Licence" src="https://img.shields.io/github/licence/xaostech/dev-control?style=for-the-badge&color=green">
   </a>
 </p>
