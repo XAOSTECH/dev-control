@@ -1070,6 +1070,15 @@ full_fix_mode() {
 _full_fix_single() {
     local depth="${1:-$FULL_FIX_DEPTH}"
 
+    # Clamp depth to actual commit count so shallow repos don't error on HEAD~N.
+    local _total
+    _total=$(git rev-list --count HEAD 2>/dev/null || echo 0)
+    [[ "$_total" -lt "$depth" ]] && depth="$_total"
+    if [[ "$depth" -eq 0 ]]; then
+        print_info "Repo has no commits — skipping"
+        return 0
+    fi
+
     if [[ "$ASSUME_YES" != "true" ]] && [[ -t 0 ]]; then
         if read -u 3 -rp "Commits from HEAD to process [${depth}]: " _d 2>/dev/null; then :; else read -rp "Commits from HEAD to process [${depth}]: " _d; fi
         [[ -n "$_d" && "$_d" =~ ^[0-9]+$ ]] && depth="$_d"
@@ -1096,8 +1105,8 @@ _full_fix_single() {
 
     # Step 2: sign — only when unsigned commits exist (idempotent)
     local _unsigned
-    _unsigned=$(git log --format="%G?" "$RANGE" 2>/dev/null | grep -c '^[NE]$' || echo 0)
-    if [[ "$_unsigned" -eq 0 ]]; then
+    _unsigned=$(git log --format="%G?" "$RANGE" 2>/dev/null | grep -c '^[NE]$' 2>/dev/null || true)
+    if [[ "${_unsigned:-0}" -eq 0 ]]; then
         print_info "2/2 All commits already signed — skipping sign step"
     else
         print_step "2/2 Signing ${_unsigned} unsigned commit(s)..."
