@@ -29,10 +29,11 @@ print_header() {
     local total_padding=$(( width - title_len))
     local left_padding=$(( total_padding / 2 ))
     local right_padding=$(( total_padding - left_padding ))
-    
-    echo -e "\n${BOLD}${BLUE}╔$(printf '═%.0s' $(seq 1 "$width"))╗${NC}"
+    # Build bar with a bash loop — seq-based printf fails in non-TTY subshells.
+    local bar=''; for (( _bhi=0; _bhi<width; _bhi++ )); do bar+='═'; done
+    echo -e "\n${BOLD}${BLUE}╔${bar}╗${NC}"
     echo -e "${BOLD}${BLUE}║$(printf '%*s' $left_padding '')${CYAN}${title}${NC}$(printf '%*s' $right_padding '')${BOLD}${BLUE}║${NC}"
-    echo -e "${BOLD}${BLUE}╚$(printf '═%.0s' $(seq 1 "$width"))╝${NC}\n"
+    echo -e "${BOLD}${BLUE}╚${bar}╝${NC}\n"
 }
 
 # Print a success header box (green theme)
@@ -44,10 +45,10 @@ print_header_success() {
     local total_padding=$(( width - title_len))
     local left_padding=$(( total_padding / 2 ))
     local right_padding=$(( total_padding - left_padding ))
-    
-    echo -e "\n${BOLD}${GREEN}╔$(printf '═%.0s' $(seq 1 "$width"))╗${NC}"
+    local bar=''; for (( _bhi=0; _bhi<width; _bhi++ )); do bar+='═'; done
+    echo -e "\n${BOLD}${GREEN}╔${bar}╗${NC}"
     echo -e "${BOLD}${GREEN}║$(printf '%*s' $left_padding '')${CYAN}${title}${NC}$(printf '%*s' $right_padding '')${BOLD}${GREEN}║${NC}"
-    echo -e "${BOLD}${GREEN}╚$(printf '═%.0s' $(seq 1 "$width"))╝${NC}\n"
+    echo -e "${BOLD}${GREEN}╚${bar}╝${NC}\n"
 }
 
 # Print a warning header box (yellow theme)
