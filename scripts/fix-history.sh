@@ -60,6 +60,7 @@ DRY_RUN=false
 FULL_FIX_MODE=false
 FULL_FIX_DEPTH=20
 ASSUME_YES=false
+BATCH_MODE=false
 STASH_NUM=""
 STASH_MODE=false
 AMEND_MODE=false
@@ -203,6 +204,8 @@ Options:
   --full-fix, -ff [N]        Dedup then GPG-sign the last N commits (default 20). Prompts for N
                              unless supplied on the command line. Use -y to skip all prompts.
   -y, --yes                  Auto-confirm all rewrite prompts (non-interactive / batch-safe).
+  -b, --batch                Run --full-fix on every git repo found under the current directory.
+                             Implies -y. Combines with --full-fix [N].
   --atomic-preserve          Deterministic preserve: recreate commits (including merges) with
                              `git commit-tree`, immediately sign and set author/committer dates (atomic)
   --drop COMMIT [COMMIT…]   Drop (remove) one or more non-root commits from history.
@@ -272,6 +275,8 @@ Examples:
   ./scripts/fix-history.sh --range main..HEAD        # Fix commits between main and HEAD
   ./scripts/fix-history.sh --full-fix                # Dedup + GPG-sign last 20 commits
   ./scripts/fix-history.sh --full-fix 30 -y          # Same for 30 commits, no prompts (batch-safe)
+  ./scripts/fix-history.sh -ff --batch               # Dedup + sign last 20 commits in every sub-repo
+  ./scripts/fix-history.sh -ff 10 --batch            # Same, 10 commits per repo
 
 EOF
 }
@@ -356,6 +361,11 @@ parse_args() {
                 else
                     shift
                 fi
+                ;;
+            --batch|-b)
+                BATCH_MODE=true
+                ASSUME_YES=true
+                shift
                 ;;
             --reauthor)
                 REAUTHOR_MODE=true
@@ -1010,10 +1020,42 @@ cleanup_tmp_and_backup_refs() {
 
 # Dedup then sign N commits from HEAD in one shot.
 full_fix_mode() {
+    local depth="$FULL_FIX_DEPTH"
+
+    if [[ "$BATCH_MODE" == "true" ]]; then
+        # Discover all git repos under cwd, excluding common noise dirs.
+        local -a repos=()
+        while IFS= read -r gitdir; do
+            repos+=("$(dirname "$gitdir")")
+        done < <(find . -name .git -not -path './.git' \
+            -not -path '*/node_modules/*' -not -path '*/.bak/*' \
+            -not -path '*/vendor/*' | sort)
+        if [[ ${#repos[@]} -eq 0 ]]; then
+            print_warning "--batch: no sub-repos found under $(pwd)"
+            return 0
+        fi
+        print_info "Batch full-fix: ${#repos[@]} repo(s), depth ${depth}"
+        local _orig_dir="$PWD"
+        for _repo in "${repos[@]}"; do
+            print_header
+            print_info "Repo: $_repo"
+            pushd "$_repo" > /dev/null || { print_warning "Cannot enter $_repo"; continue; }
+            _full_fix_single "$depth"
+            popd > /dev/null || true
+        done
+        cd "$_orig_dir" || true
+        return 0
+    fi
+
     print_header "Dev-Control Full Fix"
     check_git_repo
+    _full_fix_single "$depth"
+}
 
-    local depth="$FULL_FIX_DEPTH"
+# Run one dedup+sign cycle in the current repo (called from full_fix_mode).
+_full_fix_single() {
+    local depth="${1:-$FULL_FIX_DEPTH}"
+
     if [[ "$ASSUME_YES" != "true" ]] && [[ -t 0 ]]; then
         if read -u 3 -rp "Commits from HEAD to process [${depth}]: " _d 2>/dev/null; then :; else read -rp "Commits from HEAD to process [${depth}]: " _d; fi
         [[ -n "$_d" && "$_d" =~ ^[0-9]+$ ]] && depth="$_d"
@@ -1026,24 +1068,23 @@ full_fix_mode() {
     if [[ "$ASSUME_YES" != "true" ]]; then
         echo -e "${BOLD}${YELLOW}⚠️  Full-fix will dedup then GPG-sign the last ${depth} commits.${NC}"
         if read -u 3 -rp "Continue? [y/N]: " _fc 2>/dev/null; then :; else read -rp "Continue? [y/N]: " _fc; fi
-        [[ "$_fc" =~ ^[Yy] ]] || { print_info "Cancelled"; exit 0; }
+        [[ "$_fc" =~ ^[Yy] ]] || { print_info "Cancelled"; return 0; }
         ASSUME_YES=true
     fi
 
     # Step 1: dedup — subshell so its exit calls do not abort full_fix.
-    # Git operations inside persist in the actual repository.
     print_step "1/2 Deduplicating..."
     DEDUP_MODE=true
     ( deduplicate_mode ) || true
     DEDUP_MODE=false
 
-    # Re-anchor range relative to current HEAD after dedup may have rewritten history.
     RANGE="HEAD~${depth}..HEAD"
 
     # Step 2: sign
     print_step "2/2 Signing..."
     SIGN_MODE=true
-    sign_mode
+    sign_mode || true
+    SIGN_MODE=false
 }
 
 main() {
