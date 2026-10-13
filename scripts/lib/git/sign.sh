@@ -275,7 +275,11 @@ sign_mode() {
             echo "  1) Linearise the range (merge topology will be flattened)."
             echo "  2) Retain merge topology (experimental - preserves merges)."
             echo "  3) Abort."
-            if read -u 3 -rp "Choose [1/2/3]: " _choice; then
+            local _choice
+            if [[ "${ASSUME_YES:-false}" == "true" ]]; then
+                _choice="2"
+                print_info "Auto-selecting option 2 (retain topology) in batch/yes mode"
+            elif read -u 3 -rp "Choose [1/2/3]: " _choice; then
                 :
             else
                 read -rp "Choose [1/2/3]: " _choice
