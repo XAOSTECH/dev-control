@@ -2,10 +2,7 @@
 #
 # Dev-Control Test-Repo Recycler
 #
-# Build / wipe / refresh the disposable git repos under test-repo/ that
-# the dc-fix smoke tests run against.  test-repo/ is gitignored, so the
-# fixtures are never committed; this script lets a developer rebuild
-# them deterministically on demand.
+# Build / wipe / refresh the disposable git repos under test-repo/ that the dc-fix smoke tests run against.  test-repo/ is gitignored, so the fixtures are never committed; this script lets a developer rebuild them deterministically on demand.
 #
 # Fixtures created:
 #   test-repo/linear/        5 commits, deterministic dates 2024-01-01..05
@@ -102,9 +99,7 @@ parse_args() {
 # ---------------------------------------------------------------------------
 
 # Generate (or reuse) a passphrase-less RSA key inside an isolated
-# GNUPGHOME so signing tests don't pollute the developer's real keyring
-# and require no manual key import.  Idempotent: a second call with an
-# existing key just re-discovers the fingerprint.
+# GNUPGHOME so signing tests don't pollute the developer's real keyring and require no manual key import.  Idempotent: a second call with an existing key just re-discovers the fingerprint.
 ensure_gpg_key() {
     if [[ "$NO_GPG" == "true" ]]; then
         TEST_GPG_KEY_ID=""
@@ -154,11 +149,8 @@ ensure_gpg_key() {
     print_success "Test GPG key: $TEST_GPG_KEY_ID"
 }
 
-# Bind the ephemeral key to a fixture's local git config.  The repo will
-# look up GNUPGHOME from the environment (recycle-test-repo.sh exports
-# it for the build phase; for ad-hoc dc-fix runs the developer should
-# `export GNUPGHOME=$DC_ROOT/test-repo/.gnupg` or run via this script's
-# helpers).
+# Bind the ephemeral key to a fixture's local git config.  The repo will look up GNUPGHOME from the environment (recycle-test-repo.sh exports it for the build phase; for ad-hoc dc-fix runs the developer should
+# `export GNUPGHOME=$DC_ROOT/test-repo/.gnupg` or run via this script's helpers).
 _bind_gpg_to_repo() {
     local dir="$1" sign_default="$2"   # sign_default: true|false
     if [[ "$NO_GPG" == "true" || -z "$TEST_GPG_KEY_ID" ]]; then
@@ -187,10 +179,7 @@ EOF
 # FIXTURES
 # ---------------------------------------------------------------------------
 
-# Common per-repo bootstrap: init, set test identity, bind ephemeral GPG
-# key.  sign_default controls whether commit.gpgsign is on (so the build
-# phase below produces signed history) or off (build unsigned, then let
-# dc-fix --auto-sign sign it later).
+# Common per-repo bootstrap: init, set test identity, bind ephemeral GPG key.  sign_default controls whether commit.gpgsign is on (so the build phase below produces signed history) or off (build unsigned, then let dc-fix --auto-sign sign it later).
 _init_repo() {
     local dir="$1" sign_default="${2:-false}"
     rm -rf "$dir"
@@ -202,8 +191,7 @@ _init_repo() {
 }
 
 # Make a commit with deterministic author + committer date.  Inherits
-# GNUPGHOME from the caller (set by do_cycle/do_init when GPG is enabled)
-# so commit.gpgsign=true repos actually find the test key.
+# GNUPGHOME from the caller (set by do_cycle/do_init when GPG is enabled) so commit.gpgsign=true repos actually find the test key.
 _commit() {
     local dir="$1" date="$2" msg="$3"
     GIT_AUTHOR_DATE="$date" \
@@ -227,8 +215,7 @@ build_linear() {
 build_with_merges() {
     local dir="$TEST_REPO_DIR/with-merges"
     print_info "Building with-merges fixture: $dir"
-    # Sign during build so we have a signed-history-with-merges fixture
-    # ready for dc-fix --sign --preserve-topology / rebase-merges tests.
+    # Sign during build so we have a signed-history-with-merges fixture ready for dc-fix --sign --preserve-topology / rebase-merges tests.
     _init_repo "$dir" true
 
     echo "main 1" > "$dir/main.txt"
@@ -305,8 +292,7 @@ _count_signed() {
 build_all() {
     mkdir -p "$TEST_REPO_DIR"
     ensure_gpg_key
-    # Export so child git invocations during the build phase find the
-    # ephemeral key when commit.gpgsign=true.
+    # Export so child git invocations during the build phase find the ephemeral key when commit.gpgsign=true.
     if [[ "$NO_GPG" != "true" ]]; then
         export GNUPGHOME="$TEST_GNUPGHOME"
     fi
@@ -362,8 +348,7 @@ do_list() {
     local d
     for d in "$TEST_REPO_DIR"/*/; do
         [[ -d "$d" ]] || continue
-        # Skip the ephemeral keyring; it lives under test-repo/ but is
-        # not a fixture.
+        # Skip the ephemeral keyring; it lives under test-repo/ but is not a fixture.
         [[ "$(basename "$d")" == ".gnupg" ]] && continue
         found=1
         local name count head signed

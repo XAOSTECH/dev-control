@@ -1,12 +1,8 @@
 #!/usr/bin/env bash
 #
-# Dev-Control Shared Library: Drop — surgically remove a non-root commit
-# from history (rebase -i with sed swapping pick→drop), with conflict
-# auto-resolution, stale-rebase recovery, and reconstruction fallback.
+# Dev-Control Shared Library: Drop — surgically remove a non-root commit from history (rebase -i with sed swapping pick→drop), with conflict auto-resolution, stale-rebase recovery, and reconstruction fallback.
 #
-# Also exposes prompt_and_push_branch — the shared interactive helper for
-# offering a `git push --force-with-lease` after a destructive rewrite,
-# with backup-tag creation and detached-HEAD handling.
+# Also exposes prompt_and_push_branch — the shared interactive helper for offering a `git push --force-with-lease` after a destructive rewrite, with backup-tag creation and detached-HEAD handling.
 #
 # Required from the caller:
 #   - print.sh / colours.sh sourced (print_info/print_success/print_warning/
@@ -129,9 +125,7 @@ prompt_and_push_branch() {
 
 # ============================================================================
 # DROP MULTIPLE — drop two or more commits in a single interactive rebase.
-# All targets are flipped to `drop` in one todo edit, so there is exactly one
-# rewrite and one push (no per-commit reconstruction/push). Dates of the
-# surviving rewritten commits are restored afterwards.
+# All targets are flipped to `drop` in one todo edit, so there is exactly one rewrite and one push (no per-commit reconstruction/push). Dates of the surviving rewritten commits are restored afterwards.
 # ============================================================================
 
 drop_multiple_commits() {
@@ -152,8 +146,7 @@ drop_multiple_commits() {
         full+=("$sha")
     done
 
-    # Order newest-first from the HEAD walk; the last entry is the oldest target,
-    # whose parent becomes the rebase base.
+    # Order newest-first from the HEAD walk; the last entry is the oldest target, whose parent becomes the rebase base.
     local -a ordered=()
     local c
     while IFS= read -r c; do
@@ -184,9 +177,7 @@ drop_multiple_commits() {
         return 0
     fi
 
-    # Author dates are preserved by rebase; --committer-date-is-author-date keeps
-    # the committer timeline aligned too, so no fragile post-rebase reconstruction
-    # is needed (that logic assumes single-drop topology and corrupts multi-drop).
+    # Author dates are preserved by rebase; --committer-date-is-author-date keeps the committer timeline aligned too, so no fragile post-rebase reconstruction is needed (that logic assumes single-drop topology and corrupts multi-drop).
     export GIT_SEQUENCE_EDITOR="$seq_editor"
     if GIT_EDITOR=':' git rebase -i --rebase-merges --committer-date-is-author-date "$parent"; then
         :

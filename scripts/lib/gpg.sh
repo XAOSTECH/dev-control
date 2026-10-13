@@ -217,8 +217,7 @@ gpg_register_bot_pubkey() {
 
     local _tok="${BOT_TOKEN:-}"
 
-    # If BOT_TOKEN is a secret name (all-caps pattern) rather than an actual PAT value, it cannot be used
-    # locally — the workflow path above would have used it. Auto-skip without prompting.
+    # If BOT_TOKEN is a secret name (all-caps pattern) rather than an actual PAT value, it cannot be used locally — the workflow path above would have used it. Auto-skip without prompting.
     if [[ -n "$_tok" && "$_tok" =~ ^[A-Z][A-Z0-9_]+$ ]]; then
         print_info "Pubkey registration deferred to the identity action (keygen.yml was unavailable; BOT_TOKEN is a secret name, not a local PAT)."
         return 0
@@ -266,11 +265,9 @@ gpg_refresh_bot_secrets() {
     command -v gh &>/dev/null || { print_error "gh CLI is not installed"; return 1; }
     if ! gh auth status &>/dev/null; then print_error "gh is not authenticated (run: gh auth login)"; return 1; fi
 
-    # Priority: trigger keygen.yml on GitHub where all secrets (including the user token for pubkey registration)
-    # are injected automatically — no local key generation, no prompts, full rotation on the edge.
+    # Priority: trigger keygen.yml on GitHub where all secrets (including the user token for pubkey registration) are injected automatically — no local key generation, no prompts, full rotation on the edge.
     local _wf_repo _wf_ref
-    # Look for keygen.yml: prefer the current repo, then fall back to dev-control's own remote so
-    # dc key --bot works from any directory (SCRIPT_DIR and DEV_CONTROL_DIR are always defined).
+    # Look for keygen.yml: prefer the current repo, then fall back to dev-control's own remote so dc key --bot works from any directory (SCRIPT_DIR and DEV_CONTROL_DIR are always defined).
     local _wf_repo _wf_ref
     _wf_repo=$(gh repo view --json nameWithOwner --jq .nameWithOwner 2>/dev/null || true)
     if [[ -z "$_wf_repo" ]] || ! gh workflow view keygen.yml --repo "$_wf_repo" &>/dev/null 2>&1; then

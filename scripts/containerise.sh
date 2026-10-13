@@ -1754,8 +1754,7 @@ run_nest_mode() {
             
             if confirm "Delete these containers?"; then
                 echo ""
-                # Volumes belonging to kept (excluded) containers must be preserved even
-                # if a soon-to-be-deleted container happens to share them.
+                # Volumes belonging to kept (excluded) containers must be preserved even if a soon-to-be-deleted container happens to share them.
                 local -a keep_vol_names=()
                 for container_id in "${kept_container_ids[@]}"; do
                     mapfile -t -O "${#keep_vol_names[@]}" keep_vol_names < <(
@@ -2068,10 +2067,7 @@ main() {
     fi
     
     # Suppress "Emulate Docker CLI using podman" advisory on the host.
-    # The VS Code Dev Containers extension probes the Docker socket (docker version,
-    # docker buildx version) on the host machine, which triggers this message when
-    # podman is emulating the Docker CLI.  The presence of either the system-wide or
-    # user-level sentinel file is the documented opt-out mechanism.
+    # The VS Code Dev Containers extension probes the Docker socket (docker version, docker buildx version) on the host machine, which triggers this message when podman is emulating the Docker CLI.  The presence of either the system-wide or user-level sentinel file is the documented opt-out mechanism.
     # Only run on the host (not inside a devcontainer) to avoid redundant work.
     if [[ -z "${REMOTE_CONTAINERS:-}" && -z "${CODESPACES:-}" && ! -f /.dockerenv ]]; then
         local _nodocker_sys=/etc/containers/nodocker

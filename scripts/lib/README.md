@@ -1,8 +1,6 @@
 # Dev-Control Shared Libraries
 
-This directory contains shared Bash libraries that provide common functionality
-across all Dev-Control scripts. Using these libraries ensures consistency,
-reduces code duplication, and makes maintenance easier.
+This directory contains shared Bash libraries that provide common functionality across all Dev-Control scripts. Using these libraries ensures consistency, reduces code duplication, and makes maintenance easier.
 
 ## Libraries
 

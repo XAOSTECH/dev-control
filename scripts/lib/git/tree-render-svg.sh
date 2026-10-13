@@ -191,9 +191,7 @@ SVGFOOTER
 # ============================================================================
 
 # Renders a compact, bounded horizontal "railway" banner for README embedding.
-# History flows left (old) to right (new); lanes are clamped and the height is fixed
-# so the frame stays reasonable regardless of history length. Collapsed runs appear as
-# grey diamonds; tags, merges and forks are colour-coded.
+# History flows left (old) to right (new); lanes are clamped and the height is fixed so the frame stays reasonable regardless of history length. Collapsed runs appear as grey diamonds; tags, merges and forks are colour-coded.
 render_mini_svg_tree() {
     local input_json="$1"
     local output_file="${2:-git-tree-mini.svg}"

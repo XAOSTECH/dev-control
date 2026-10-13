@@ -209,8 +209,7 @@ build_template_folders() {
     done
 }
 
-# Translate template selection string to human-readable names
-# e.g. "2,3" → "workflows, actions" | "A" → "all templates"
+# Translate template selection string to human-readable names e.g. "2,3" → "workflows, actions" | "A" → "all templates"
 describe_template_choices() {
     local selection="$1"
     if [[ "$selection" =~ [Aa] ]]; then
@@ -441,8 +440,7 @@ get_repo_info() {
         fi
     fi
 
-    # Load global defaults from repoVars.env (if it exists)
-    # repoVars.env OVERRIDES git config — it represents the org-wide standard
+    # Load global defaults from repoVars.env (if it exists) repoVars.env OVERRIDES git config — it represents the org-wide standard
     local global_vars_file="$DEV_CONTROL_DIR/config/profiles/repoVars.env"
     if [[ -f "$global_vars_file" ]]; then
         # shellcheck source=/dev/null
@@ -1214,9 +1212,7 @@ stage_template_paths() {
     done
 }
 
-# Commit staged template changes and push (gcda-style amend when prior dc-init
-# commit exists).  Callers must stage changes and verify there is something to
-# commit before calling this function.
+# Commit staged template changes and push (gcda-style amend when prior dc-init commit exists).  Callers must stage changes and verify there is something to commit before calling this function.
 #
 # Usage: dc_init_commit_and_push <verb> <description> <dir_label>
 #   verb        – action word for the commit message (e.g. "update", "load")
@@ -1642,8 +1638,7 @@ run_batch_init() {
     fi
     fi  # end of --defaults/--yes vs interactive
 
-    # When --defaults is set, read template selection from stdin before the loop
-    # so that e.g. <<< 2,3 reaches template selection instead of being consumed by prompts
+    # When --defaults is set, read template selection from stdin before the loop so that e.g. <<< 2,3 reaches template selection instead of being consumed by prompts
     if [[ "$DEFAULTS_ONLY" == "true" && "$BATCH_REUSE_TEMPLATES" == "true" && -z "$BATCH_SELECTED_CHOICES" ]]; then
         build_template_folders
         if [[ ! -t 0 ]]; then
