@@ -385,9 +385,9 @@ generate_git_config_postcreate() {
         config+=" && git config --global user.email $email && git config --global user.name $user"
     fi
 
-    # Emit GPG signing config unconditionally; resolves $GPG_KEY_ID from containerEnv at runtime
-    # so it works even when the key wasn't known at generation time.
-    config+=" && { _k=\"\${GPG_KEY_ID:-${gpg_key:-}}\"; [[ -n \"\$_k\" ]] && git config --global commit.gpgsign true && git config --global user.signingkey \"\$_k\" && git config --global gpg.program gpg || true; }"
+    # Emit GPG signing config; resolves $GPG_KEY_ID from containerEnv at runtime.
+    # Use POSIX [ ] — devcontainer postCreateCommand runs under /bin/sh.
+    config+=" && { _k=\"\${GPG_KEY_ID:-${gpg_key:-}}\"; [ -n \"\$_k\" ] && git config --global commit.gpgsign true && git config --global user.signingkey \"\$_k\" && git config --global gpg.program gpg || true; }"
 
     echo "$config"
 }
