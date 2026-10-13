@@ -623,7 +623,12 @@ reconstruct_history_without_commit() {
 
         # Prompt whether to replace the original branch with this reconstructed branch (destructive)
         local confirm_replace
-        read -u 3 -rp "Replace branch '$ORIGINAL_BRANCH' with reconstructed branch '$tmp_branch' and force-push to origin? [y/N]: " confirm_replace
+        if [[ "${ASSUME_YES:-false}" == "true" ]]; then
+            confirm_replace="y"
+            print_info "Auto-confirming branch replacement (--yes / --batch mode)"
+        else
+            read -u 3 -rp "Replace branch '$ORIGINAL_BRANCH' with reconstructed branch '$tmp_branch' and force-push to origin? [y/N]: " confirm_replace
+        fi
         if [[ "$confirm_replace" =~ ^[Yy] ]]; then
             echo "Creating backup tag for $ORIGINAL_BRANCH and force-updating it to $tmp_branch" | tee -a "$report_file"
             TAG=backup/${ORIGINAL_BRANCH}-pre-drop-$(date -u +%Y%m%dT%H%M%SZ)

@@ -1037,6 +1037,13 @@ full_fix_mode() {
             return 0
         fi
         print_info "Batch full-fix: ${#repos[@]} repo(s), depth ${depth}"
+        # Single warning before any destructive work; -y skips it.
+        if [[ "$ASSUME_YES" != "true" ]]; then
+            echo -e "${BOLD}${YELLOW}⚠️  Batch full-fix rewrites history (dedup + GPG-sign) in ${#repos[@]} repositories.${NC}"
+            read -rp "Proceed with all repos? [Y/n]: " _batchok
+            [[ ! "${_batchok:-y}" =~ ^[Nn] ]] || { print_info "Batch cancelled"; return 0; }
+            ASSUME_YES=true
+        fi
         local _orig_dir="$PWD"
         for _repo in "${repos[@]}"; do
             print_header

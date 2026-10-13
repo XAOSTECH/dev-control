@@ -56,7 +56,11 @@ prompt_and_push_branch() {
         return 0
     fi
 
-    read -u 3 -rp "Push ${branch} to origin with force and create backup tag? [y/N]: " CONFIRM_PUSH_OR_ALT
+    if [[ "${ASSUME_YES:-false}" == "true" ]]; then
+        CONFIRM_PUSH_OR_ALT="y"
+    else
+        read -u 3 -rp "Push ${branch} to origin with force and create backup tag? [y/N]: " CONFIRM_PUSH_OR_ALT
+    fi
 
     # If user typed a non-yes string without spaces, treat it as alternate branch name
     if [[ ! "$CONFIRM_PUSH_OR_ALT" =~ ^[Yy] ]]; then
