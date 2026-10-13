@@ -308,7 +308,8 @@ sign_mode() {
     fi
 
     # Prepare sequence editor to insert an exec to re-sign after each pick and merge
-    local amend_cmd="git commit --amend --no-edit -n"
+    # --allow-empty is required so merge commits that become empty in rebase don't abort.
+    local amend_cmd="git commit --amend --no-edit -n --allow-empty"
     if [[ "$REAUTHOR_MODE" == "true" ]]; then
         amend_cmd+=" --reset-author"
     fi
