@@ -175,6 +175,11 @@ delete_remote_branches() {
 #   fd: File descriptor for input (default: 3, use 0 for stdin)
 cleanup_tmp_backup_refs() {
     local input_fd="${1:-3}"
+
+    # In batch/auto-yes mode skip interactive cleanup; backups remain for later manual pruning.
+    if [[ "${ASSUME_YES:-false}" == "true" ]]; then
+        return 0
+    fi
     
     # Ensure print functions exist
     if ! declare -f print_info &>/dev/null; then
