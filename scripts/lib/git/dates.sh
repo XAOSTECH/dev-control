@@ -174,9 +174,9 @@ if ! date -d "$date_part" >/dev/null 2>&1; then
   exit 1
 fi
 
-# Amend and sign commit; fail loudly if anything goes wrong
+# Amend and sign commit; --allow-empty handles merge commits that become empty after rebase.
 GIT_AUTHOR_DATE="$date_part" GIT_COMMITTER_DATE="$date_part" \
-  git commit --amend --no-edit -S >/dev/null 2>&1 || { echo "[ERROR] git commit --amend -S failed" >&2; exit 1; }
+  git commit --amend --no-edit --allow-empty -S >/dev/null 2>&1 || { echo "[ERROR] git commit --amend -S failed" >&2; exit 1; }
 
 sig_status=$(git log -1 --format='%G?' HEAD 2>/dev/null || true)
 if [[ "$sig_status" != "G" ]]; then
