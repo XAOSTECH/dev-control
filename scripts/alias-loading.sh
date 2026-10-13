@@ -166,6 +166,7 @@ declare -a DIR_ALIASES=(
 declare -a NET_ALIASES=(
     "# Network utilities"
     "alias upd='sudo apt update && sudo apt dist-upgrade -y && sudo apt autoremove -y && sudo apt autoclean && sudo snap refresh'"
+    "alias fupd='sudo apt update && sudo apt -o Dpkg::Options:=\"--force-confold\" -o APT::Get::Always-Include-Phased-Updates=true dist-upgrade -y && sudo apt autoremove -y && sudo apt autoclean && sudo snap refresh'"
     "alias lpp='sudo pro disable livepatch && sudo pro enable livepatch && upd'"
     "alias myip='curl -s ifconfig.me && echo'"
     "alias myip6='curl -s ifconfig.me/ip6 && echo'"
