@@ -201,6 +201,36 @@ find_equivalent_commit() {
     done < <(git -C "$repo" log --format="%H %at %ae" HEAD 2>/dev/null)
 }
 
+# Re-anchor v*/latest tags orphaned by a history rewrite (signing or dedup).
+# Called automatically by full_fix_mode after each repo's dedup+sign cycle.
+# Usage: reanchor_release_tags [repo_path]
+reanchor_release_tags() {
+    local repo="${1:-.}"
+    local -a rel_tags
+    mapfile -t rel_tags < <(git -C "$repo" tag -l 'v*' 'latest' 2>/dev/null | sort -V)
+    local anchored=0
+    for tag in "${rel_tags[@]}"; do
+        local tc; tc=$(git -C "$repo" rev-parse "${tag}^{}" 2>/dev/null || echo "")
+        [[ -z "$tc" ]] && continue
+        git -C "$repo" merge-base --is-ancestor "$tc" HEAD 2>/dev/null && continue
+        local equiv; equiv=$(find_equivalent_commit "$tc" "$repo")
+        if [[ -z "$equiv" ]]; then
+            print_warning "  Tag $tag has no equivalent in rewritten history — skipped"
+            continue
+        fi
+        local em; em=$(git -C "$repo" log -1 --format="%s" "$equiv" 2>/dev/null)
+        print_info "  Re-anchoring $tag \u2192 ${equiv:0:8} ($em)"
+        git -C "$repo" tag -d "$tag" 2>/dev/null || true
+        git -C "$repo" -c gpg.program=gpg tag -s "$tag" \
+            -m "Re-anchored to rewritten history" "$equiv" 2>/dev/null || \
+            git -C "$repo" tag -f "$tag" "$equiv"
+        git -C "$repo" push --force origin "refs/tags/$tag" 2>/dev/null || \
+            print_warning "  Push failed for $tag — run: git push --force origin refs/tags/$tag"
+        ((anchored++)) || true
+    done
+    [[ $anchored -gt 0 ]] && print_info "  Re-anchored $anchored release tag(s)"
+}
+
 # Diagnose a single repo: detect orphaned release/latest tags and other issues.
 # Usage: diagnose_repo [repo_path] [--fix] [--dry-run]
 # Returns: number of issues found (0 = clean).

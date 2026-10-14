@@ -1223,6 +1223,9 @@ _full_fix_single() {
         SIGN_MODE=false
     fi
 
+    # Step 3: re-anchor any release/latest tags orphaned by the rewrite
+    reanchor_release_tags "."
+
     # Pop pre-stash (do this after all operations, even on skip paths above).
     if [[ "$_ff_stashed" == "true" ]]; then
         if ! git stash pop --quiet 2>/dev/null; then
