@@ -322,6 +322,37 @@ fix_orphaned_tags() {
     [[ $fixed -gt 0 ]] && print_success "  $fixed tag(s) re-anchored"
 }
 
+# Shared repo filter — returns 0 (include) or 1 (skip with reason printed).
+# Used by both diagnose_batch and full_fix_mode to apply the same ownership rules.
+# Usage: _repo_filter <repo_path> <members_csv> <gh_user> <online:true|false>
+_repo_filter() {
+    local repo="$1" members="${2:-}" gh_user="${3:-}" online="${4:-true}"
+    local branch rurl rowner
+    branch=$(git -C "$repo" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+    [[ "$branch" == "HEAD" ]] && { print_info "Skip (detached HEAD): $repo"; return 1; }
+    rurl=$(git -C "$repo" config --get remote.origin.url 2>/dev/null || true)
+    [[ "$rurl" =~ github\.com[:/]([^/]+)/ ]] && rowner="${BASH_REMATCH[1]}" || rowner=""
+    if [[ -z "$rowner" ]]; then
+        [[ "$online" == "true" ]] && { print_info "Skip (no remote — local backup, use --offline to include): $repo"; return 1; }
+        return 0
+    fi
+    local ok=false
+    if [[ -n "$members" ]]; then
+        [[ ",${members//[[:space:]]/}," == *",${rowner},"* ]] && ok=true
+    elif [[ -n "$gh_user" && "$rowner" == "$gh_user" ]]; then
+        ok=true
+    fi
+    [[ "$ok" == "false" ]] && { print_info "Skip (owner '$rowner' not authorised): $repo"; return 1; }
+    if command -v gh &>/dev/null; then
+        local rslug="${rurl##*/}"; rslug="${rslug%.git}"
+        [[ "$(gh repo view "${rowner}/${rslug}" --json isArchived --jq '.isArchived' 2>/dev/null)" == "true" ]] \
+            && { print_info "Skip (archived): $repo"; return 1; }
+    fi
+    [[ "$online" == "true" ]] && ! git -C "$repo" ls-remote --exit-code origin HEAD &>/dev/null \
+        && { print_info "Skip (remote not accessible): $repo"; return 1; }
+    return 0
+}
+
 # Diagnose repos — from a tracker file if available, otherwise by scanning
 # repos under the current directory and using their remote backup/* tags directly.
 # Usage: diagnose_batch [tracker_file] [--fix] [--dry-run]

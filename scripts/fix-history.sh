@@ -1098,50 +1098,8 @@ full_fix_mode() {
         # Also skip detached-HEAD checkouts (build deps).
         local -a owned=()
         for _r in "${repos[@]}"; do
-            local _branch _rurl _rowner
-            _branch=$(git -C "$_r" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
-            if [[ "$_branch" == "HEAD" ]]; then
-                print_info "Skip (detached HEAD): $_r"
-                continue
-            fi
-            _rurl=$(git -C "$_r" config --get remote.origin.url 2>/dev/null || true)
-            _rowner=""
-            [[ "$_rurl" =~ github\.com[:/]([^/]+)/ ]] && _rowner="${BASH_REMATCH[1]}"
-            if [[ -z "$_rowner" ]]; then
-                if [[ "$BATCH_ONLINE" == "true" ]]; then
-                    print_info "Skip (no remote — local backup, use --offline to include): $_r"
-                else
-                    owned+=("$_r")
-                fi
-                continue
-            fi
-            local _ok=false
-            if [[ -n "$_members_list" ]]; then
-                # Match without touching IFS — local IFS=',' leaks into every called function.
-                [[ ",${_members_list//[[:space:]]/}," == *",${_rowner},"* ]] && _ok=true
-            elif [[ -n "$_gh_user" && "$_rowner" == "$_gh_user" ]]; then
-                _ok=true
-            fi
-            if [[ "$_ok" == "true" ]]; then
-                # Skip archived repos — they're read-only; signing can't be pushed.
-                if command -v gh &>/dev/null && [[ -n "$_rowner" ]]; then
-                    local _rslug="${_rurl##*/}"; _rslug="${_rslug%.git}"
-                    if [[ "$(gh repo view "${_rowner}/${_rslug}" --json isArchived --jq '.isArchived' 2>/dev/null)" == "true" ]]; then
-                        print_info "Skip (archived): $_r"
-                        continue
-                    fi
-                fi
-                # Online mode: skip repos where origin doesn't exist or is inaccessible.
-                if [[ "$BATCH_ONLINE" == "true" ]]; then
-                    if ! git -C "$_r" ls-remote --exit-code origin HEAD &>/dev/null; then
-                        print_info "Skip (remote not accessible): $_r"
-                        continue
-                    fi
-                fi
-                owned+=("$_r")
-            else
-                print_info "Skip (owner '$_rowner' not authorised): $_r"
-            fi
+            _repo_filter "$_r" "$_members_list" "$_gh_user" "$BATCH_ONLINE" || continue
+            owned+=("$_r")
         done
         repos=("${owned[@]}")
 
