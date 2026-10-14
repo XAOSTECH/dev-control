@@ -212,14 +212,17 @@ reanchor_release_tags() {
     for tag in "${rel_tags[@]}"; do
         local tc; tc=$(git -C "$repo" rev-parse "${tag}^{}" 2>/dev/null || echo "")
         [[ -z "$tc" ]] && continue
-        git -C "$repo" merge-base --is-ancestor "$tc" HEAD 2>/dev/null && continue
+        # if/then is set-e-safe; &&/|| chains on standalone lines are not
+        if git -C "$repo" merge-base --is-ancestor "$tc" HEAD 2>/dev/null; then
+            continue
+        fi
         local equiv; equiv=$(find_equivalent_commit "$tc" "$repo")
         if [[ -z "$equiv" ]]; then
             print_warning "  Tag $tag has no equivalent in rewritten history — skipped"
             continue
         fi
         local em; em=$(git -C "$repo" log -1 --format="%s" "$equiv" 2>/dev/null)
-        print_info "  Re-anchoring $tag \u2192 ${equiv:0:8} ($em)"
+        print_info "  Re-anchoring $tag → ${equiv:0:8} ($em)"
         git -C "$repo" tag -d "$tag" 2>/dev/null || true
         git -C "$repo" -c gpg.program=gpg tag -s "$tag" \
             -m "Re-anchored to rewritten history" "$equiv" 2>/dev/null || \
@@ -228,7 +231,7 @@ reanchor_release_tags() {
             print_warning "  Push failed for $tag — run: git push --force origin refs/tags/$tag"
         ((anchored++)) || true
     done
-    [[ $anchored -gt 0 ]] && print_info "  Re-anchored $anchored release tag(s)"
+    (( anchored > 0 )) && print_info "  Re-anchored $anchored release tag(s)" || true
 }
 
 # Diagnose a single repo: detect orphaned release/latest tags and other issues.
