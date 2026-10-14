@@ -1145,6 +1145,11 @@ full_fix_mode() {
 _full_fix_single() {
     local depth="${1:-$FULL_FIX_DEPTH}"
 
+    # Reset per-repo globals that sign.sh sets — prevent bleed-through between batch iterations.
+    PRESERVE_TOPOLOGY=false
+    SIGNATURES_ALREADY_APPLIED=""
+    ORIGINAL_BRANCH=""
+
     # Skip detached-HEAD checkouts (build deps checked out by CMake etc.).
     local _cur_branch
     _cur_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
