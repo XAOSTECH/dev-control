@@ -85,9 +85,14 @@ dedup_build_plan() {
         for ((i = 0; i < PLAN_TOTAL; i++)); do
             entry="${commits[$i]}"; h="${entry%%$'\x1f'*}"; subj="${entry#*$'\x1f'}"
             # Conservative: non-chore subjects always emitted, never dropped in nest mode.
+            # CHANGELOG commits anchor release tags and are always kept.
             local _sq=true
             if [[ "${DEDUP_CONSERVATIVE:-false}" == "true" ]]; then
-                [[ "$subj" == chore:* || "$subj" == chore\(* ]] || _sq=false
+                if [[ "$subj" == chore:* || "$subj" == chore\(* ]]; then
+                    [[ "$subj" == "chore: update CHANGELOG"* || "$subj" == chore\(changelog\)* ]] && _sq=false
+                else
+                    _sq=false
+                fi
             fi
             if [[ "${last_idx["$subj"]}" == "$i" ]]; then
                 PLAN_EMIT_HASH+=("$h"); PLAN_EMIT_CDATE+=("")
@@ -110,7 +115,11 @@ dedup_build_plan() {
             if (( ${count["$s"]} > 1 )); then
                 local _ssq=true
                 if [[ "${DEDUP_CONSERVATIVE:-false}" == "true" ]]; then
-                    [[ "$s" == chore:* || "$s" == chore\(* ]] || _ssq=false
+                    if [[ "$s" == chore:* || "$s" == chore\(* ]]; then
+                        [[ "$s" == "chore: update CHANGELOG"* || "$s" == chore\(changelog\)* ]] && _ssq=false
+                    else
+                        _ssq=false
+                    fi
                 fi
                 if [[ "$_ssq" == "true" ]]; then
                     PLAN_DUP_GROUPS=$((PLAN_DUP_GROUPS + 1))
@@ -125,10 +134,13 @@ dedup_build_plan() {
         for ((i = 0; i < PLAN_TOTAL; i++)); do
             entry="${commits[$i]}"; h="${entry%%$'\x1f'*}"; subj="${entry#*$'\x1f'}"
             # Conservative mode: only group chore: / chore( subjects for squashing.
+            # CHANGELOG commits anchor release tags and must never be grouped.
             local _grp=false
             if (( idx >= 0 )) && [[ "$subj" == "$prev" ]]; then
                 if [[ "${DEDUP_CONSERVATIVE:-false}" == "false" ]] \
-                    || [[ "$subj" == chore:* || "$subj" == chore\(* ]]; then
+                    || { [[ "$subj" == chore:* || "$subj" == chore\(* ]] \
+                         && [[ "$subj" != "chore: update CHANGELOG"* ]] \
+                         && [[ "$subj" != chore\(changelog\)* ]]; }; then
                     _grp=true
                 fi
             fi
