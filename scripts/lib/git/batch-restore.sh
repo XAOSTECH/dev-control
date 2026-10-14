@@ -414,10 +414,7 @@ diagnose_batch() {
 
     local total=0 issues=0
     for repo in "${repos[@]}"; do
-        local branch
-        branch=$(git -C "$repo" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
-        [[ "$branch" == "HEAD" ]] && continue   # skip detached (build deps)
-        git -C "$repo" remote get-url origin &>/dev/null || continue  # skip no-remote
+        _repo_filter "$repo" "$_members" "$_gh_user" "true" || continue
         ((total++)) || true
         diagnose_repo "$repo" "${fix_arg[@]}" || ((issues++)) || true
     done
