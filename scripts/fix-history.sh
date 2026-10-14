@@ -63,6 +63,7 @@ FULL_FIX_DEPTH=20
 ASSUME_YES=false
 BATCH_MODE=false
 BATCH_ONLINE=true
+BATCH_REFRESH_CACHE=false
 DIAGNOSE_MODE=false
 DIAGNOSE_FIX=false
 STASH_NUM=""
@@ -369,6 +370,10 @@ parse_args() {
             --batch|-b)
                 BATCH_MODE=true
                 ASSUME_YES=true
+                shift
+                ;;
+            --refresh-cache)
+                BATCH_REFRESH_CACHE=true
                 shift
                 ;;
             --batch-restore)
@@ -1071,33 +1076,35 @@ full_fix_mode() {
     fi
 
     if [[ "$BATCH_MODE" == "true" ]]; then
-        # Discover all git repos under cwd, excluding common noise dirs.
+        # Cache the filtered repo list so repeated test runs skip the slow find+filter pass.
+        local _cache_file; _cache_file="$(_batch_tracker_dir)/repo-cache-$(printf '%s' "$(pwd)" | md5sum | cut -c1-8).txt"
+        local _today; _today=$(date +%Y%m%d)
         local -a repos=()
-        while IFS= read -r gitdir; do
-            repos+=("$(dirname "$gitdir")")
-        done < <(find . -name .git -not -path './.git' \
-            -not -path '*/node_modules/*' -not -path '*/.bak/*' \
-            -not -path '*/vendor/*' \
-            -not -path '*/test-repo/*' | sort)
-        if [[ ${#repos[@]} -eq 0 ]]; then
-            print_warning "--batch: no sub-repos found under $(pwd)"
-            return 0
+        if [[ "$BATCH_REFRESH_CACHE" != "true" && -f "$_cache_file" ]] && \
+           grep -q "^# scan-date ${_today}" "$_cache_file" 2>/dev/null; then
+            print_info "Using cached repo list (--refresh-cache to rescan)"
+            while IFS= read -r _line; do
+                [[ "$_line" == \#* || -z "$_line" ]] && continue
+                repos+=("$_line")
+            done < "$_cache_file"
+        else
+            local -a _all=()
+            while IFS= read -r gitdir; do
+                _all+=("$(dirname "$gitdir")")
+            done < <(find . -name .git -not -path './.git' \
+                -not -path '*/node_modules/*' -not -path '*/.bak/*' \
+                -not -path '*/vendor/*' \
+                -not -path '*/test-repo/*' | sort)
+            _ensure_filter_config
+            for _r in "${_all[@]}"; do
+                _repo_filter "$_r" "$BATCH_ONLINE" || continue
+                repos+=("$_r")
+            done
+            { echo "# scan-date ${_today} dir=$(pwd)"; printf '%s\n' "${repos[@]}"; } > "$_cache_file"
         fi
 
-        # Load authorised owners from repoVars.env (MEMBERS) or fall back to gh whoami.
-        _ensure_filter_config
-
-        # Filter repos: keep only those whose remote owner is in MEMBERS / gh user.
-        # Also skip detached-HEAD checkouts (build deps).
-        local -a owned=()
-        for _r in "${repos[@]}"; do
-            _repo_filter "$_r" "$BATCH_ONLINE" || continue
-            owned+=("$_r")
-        done
-        repos=("${owned[@]}")
-
         if [[ ${#repos[@]} -eq 0 ]]; then
-            print_warning "No authorised repos found — check MEMBERS in repoVars.env"
+            print_warning "--batch: no sub-repos found under $(pwd)"
             return 0
         fi
 
@@ -1227,9 +1234,6 @@ _full_fix_single() {
         sign_mode || true
         SIGN_MODE=false
     fi
-
-    # Step 3: re-anchor any release/latest tags orphaned by the rewrite
-    reanchor_release_tags "."
 
     # Pop pre-stash (do this after all operations, even on skip paths above).
     if [[ "$_ff_stashed" == "true" ]]; then
