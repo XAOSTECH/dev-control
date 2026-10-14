@@ -1085,20 +1085,13 @@ full_fix_mode() {
         fi
 
         # Load authorised owners from repoVars.env (MEMBERS) or fall back to gh whoami.
-        local _members_list="" _gh_user=""
-        local _vars_file="${DEV_CONTROL_DIR}/config/profiles/repoVars.env"
-        if [[ -f "$_vars_file" ]]; then
-            _members_list=$(grep -E '^MEMBERS=' "$_vars_file" | head -1 | sed 's/^MEMBERS=//' | tr -d '"' || true)
-        fi
-        if [[ -z "$_members_list" ]] && command -v gh &>/dev/null; then
-            _gh_user=$(gh api user --jq .login 2>/dev/null || true)
-        fi
+        _ensure_filter_config
 
         # Filter repos: keep only those whose remote owner is in MEMBERS / gh user.
         # Also skip detached-HEAD checkouts (build deps).
         local -a owned=()
         for _r in "${repos[@]}"; do
-            _repo_filter "$_r" "$_members_list" "$_gh_user" "$BATCH_ONLINE" || continue
+            _repo_filter "$_r" "$BATCH_ONLINE" || continue
             owned+=("$_r")
         done
         repos=("${owned[@]}")
@@ -1272,6 +1265,7 @@ main() {
         local _fix_args=()
         [[ "$DIAGNOSE_FIX" == "true" ]] && _fix_args+=(--fix)
         [[ "$DRY_RUN" == "true" ]]     && _fix_args+=(--dry-run)
+        [[ "$BATCH_ONLINE" == "false" ]] && _fix_args+=(--offline)
         if [[ "$BATCH_MODE" == "true" ]]; then
             diagnose_batch "${RESTORE_ARG:-}" "${_fix_args[@]}"
         else

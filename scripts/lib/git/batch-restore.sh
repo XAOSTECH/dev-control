@@ -30,6 +30,23 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     source "$SCRIPT_DIR/lib/print.sh"
 fi
 
+# Module-level globals — populated once by _ensure_filter_config().
+FILTER_MEMBERS=""
+FILTER_GH_USER=""
+
+# Load MEMBERS from repoVars.env (idempotent — skips if already loaded).
+# Falls back to querying the authenticated gh user when MEMBERS is absent.
+_ensure_filter_config() {
+    [[ -n "$FILTER_MEMBERS" || -n "$FILTER_GH_USER" ]] && return 0
+    local _vars_file="${DEV_CONTROL_DIR}/config/profiles/repoVars.env"
+    if [[ -f "$_vars_file" ]]; then
+        FILTER_MEMBERS=$(grep -E '^MEMBERS=' "$_vars_file" | head -1 | sed 's/^MEMBERS=//' | tr -d '"' || true)
+    fi
+    if [[ -z "$FILTER_MEMBERS" ]] && command -v gh &>/dev/null; then
+        FILTER_GH_USER=$(gh api user --jq .login 2>/dev/null || true)
+    fi
+}
+
 # Persistent tracker directory — beside the dev-control installation, not in /tmp.
 _batch_tracker_dir() {
     local dc="${DEV_CONTROL_DIR:-/opt/dev-control}"
@@ -324,9 +341,11 @@ fix_orphaned_tags() {
 
 # Shared repo filter — returns 0 (include) or 1 (skip with reason printed).
 # Used by both diagnose_batch and full_fix_mode to apply the same ownership rules.
-# Usage: _repo_filter <repo_path> <members_csv> <gh_user> <online:true|false>
+# Reads FILTER_MEMBERS / FILTER_GH_USER globals (set by _ensure_filter_config).
+# Usage: _repo_filter <repo_path> <online:true|false>
 _repo_filter() {
-    local repo="$1" members="${2:-}" gh_user="${3:-}" online="${4:-true}"
+    local repo="$1" online="${2:-true}"
+    _ensure_filter_config
     local branch rurl rowner
     branch=$(git -C "$repo" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
     [[ "$branch" == "HEAD" ]] && { print_info "Skip (detached HEAD): $repo"; return 1; }
@@ -337,9 +356,9 @@ _repo_filter() {
         return 0
     fi
     local ok=false
-    if [[ -n "$members" ]]; then
-        [[ ",${members//[[:space:]]/}," == *",${rowner},"* ]] && ok=true
-    elif [[ -n "$gh_user" && "$rowner" == "$gh_user" ]]; then
+    if [[ -n "$FILTER_MEMBERS" ]]; then
+        [[ ",${FILTER_MEMBERS//[[:space:]]/}," == *",${rowner},"* ]] && ok=true
+    elif [[ -n "$FILTER_GH_USER" && "$rowner" == "$FILTER_GH_USER" ]]; then
         ok=true
     fi
     [[ "$ok" == "false" ]] && { print_info "Skip (owner '$rowner' not authorised): $repo"; return 1; }
@@ -355,13 +374,15 @@ _repo_filter() {
 
 # Diagnose repos — from a tracker file if available, otherwise by scanning
 # repos under the current directory and using their remote backup/* tags directly.
-# Usage: diagnose_batch [tracker_file] [--fix] [--dry-run]
+# Usage: diagnose_batch [tracker_file] [--fix] [--dry-run] [--offline|--online]
 diagnose_batch() {
-    local tracker="" fix=false dry=false
+    local tracker="" fix=false dry=false online=true
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --fix)     fix=true; shift ;;
             --dry-run) dry=true; shift ;;
+            --offline) online=false; shift ;;
+            --online)  online=true; shift ;;
             *)         tracker="$1"; shift ;;
         esac
     done
@@ -369,6 +390,7 @@ diagnose_batch() {
     local fix_arg=()
     [[ "$fix" == "true" ]] && fix_arg+=(--fix)
     [[ "$dry" == "true" ]]  && fix_arg+=(--dry-run)
+    local fix_note=""; [[ "$fix" == "true" ]] && fix_note=" (fixes applied)"
 
     # ── Try to load repos from a tracker file first ──
     local use_tracker=false
@@ -396,7 +418,7 @@ diagnose_batch() {
         echo ""
         if (( total > 0 )); then
             (( issues == 0 )) && print_success "All $total repos clean" \
-                              || print_warning "$issues of $total repos have issues${fix:+ (fixes applied)}"
+                              || print_warning "$issues of $total repos have issues${fix_note}"
             return 0
         fi
         print_info "Tracker had no repo entries — falling back to direct repo scan"
@@ -414,7 +436,7 @@ diagnose_batch() {
 
     local total=0 issues=0
     for repo in "${repos[@]}"; do
-        _repo_filter "$repo" "$_members" "$_gh_user" "true" || continue
+        _repo_filter "$repo" "$online" || continue
         ((total++)) || true
         diagnose_repo "$repo" "${fix_arg[@]}" || ((issues++)) || true
     done
@@ -424,5 +446,5 @@ diagnose_batch() {
         return 0
     fi
     (( issues == 0 )) && print_success "All $total repos clean" \
-                      || print_warning "$issues of $total repos have issues${fix:+ (fixes applied)}"
+                      || print_warning "$issues of $total repos have issues${fix_note}"
 }
