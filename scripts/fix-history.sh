@@ -1148,6 +1148,39 @@ full_fix_mode() {
     _full_fix_single "$depth"
 }
 
+# Re-anchor release/latest tags orphaned by a sign run.
+# Safe discriminator: sign preserves author dates; a squash-dropped commit's
+# subject match in the new history will have a different date (>60s off), so
+# we skip those and only re-anchor genuine sign-orphaned tags.
+_reanchor_after_sign() {
+    local repo="${1:-.}"
+    local -a rel_tags
+    mapfile -t rel_tags < <(git -C "$repo" tag -l 'v*' 'latest' 2>/dev/null | sort -V)
+    local anchored=0
+    for _tag in "${rel_tags[@]}"; do
+        local _tc; _tc=$(git -C "$repo" rev-parse "${_tag}^{}" 2>/dev/null || echo "")
+        [[ -z "$_tc" ]] && continue
+        if git -C "$repo" merge-base --is-ancestor "$_tc" HEAD 2>/dev/null; then continue; fi
+        local _eq; _eq=$(find_equivalent_commit "$_tc" "$repo")
+        [[ -z "$_eq" ]] && continue
+        local _ot _nt _d
+        _ot=$(git -C "$repo" log -1 --format="%at" "$_tc" 2>/dev/null || echo "0")
+        _nt=$(git -C "$repo" log -1 --format="%at" "$_eq"  2>/dev/null || echo "1")
+        _d=$(( _ot - _nt )); (( _d < 0 )) && _d=$(( -_d ))
+        (( _d > 60 )) && continue
+        local _em; _em=$(git -C "$repo" log -1 --format="%s" "$_eq" 2>/dev/null)
+        print_info "  Re-anchoring $_tag \u2192 ${_eq:0:8} ($_em)"
+        git -C "$repo" tag -d "$_tag" 2>/dev/null || true
+        git -C "$repo" -c gpg.program=gpg tag -s "$_tag" \
+            -m "Re-anchored to rewritten history" "$_eq" 2>/dev/null || \
+            git -C "$repo" tag -f "$_tag" "$_eq"
+        git -C "$repo" push --force origin "refs/tags/$_tag" 2>/dev/null || \
+            print_warning "  Push failed for $_tag"
+        ((anchored++)) || true
+    done
+    (( anchored > 0 )) && print_info "  Re-anchored $anchored release tag(s)" || true
+}
+
 # Run one dedup+sign cycle in the current repo (called from full_fix_mode).
 _full_fix_single() {
     local depth="${1:-$FULL_FIX_DEPTH}"
@@ -1234,6 +1267,9 @@ _full_fix_single() {
         sign_mode || true
         SIGN_MODE=false
     fi
+
+    # Step 3: re-anchor release tags orphaned by signing (skips squash-dropped tags via date check)
+    _reanchor_after_sign "."
 
     # Pop pre-stash (do this after all operations, even on skip paths above).
     if [[ "$_ff_stashed" == "true" ]]; then
