@@ -63,8 +63,6 @@ FULL_FIX_DEPTH=20
 ASSUME_YES=false
 BATCH_MODE=false
 BATCH_ONLINE=true
-BATCH_RESTORE_MODE=false
-BATCH_RESTORE_FILE=""
 STASH_NUM=""
 STASH_MODE=false
 AMEND_MODE=false
@@ -372,9 +370,11 @@ parse_args() {
                 shift
                 ;;
             --batch-restore)
-                BATCH_RESTORE_MODE=true
+                # Alias for --restore --batch; optionally takes a tracker file path.
+                RESTORE_MODE=true
+                BATCH_MODE=true
                 if [[ -n "${2:-}" && "${2:-}" != -* ]]; then
-                    BATCH_RESTORE_FILE="$2"
+                    RESTORE_ARG="$2"
                     shift 2
                 else
                     shift
@@ -1299,6 +1299,11 @@ main() {
 
     # Handle restore mode
     if [[ "$RESTORE_MODE" == "true" ]]; then
+        # Batch restore: iterate over all repos recorded in today's (or specified) tracker.
+        if [[ "$BATCH_MODE" == "true" ]]; then
+            batch_restore_all "${RESTORE_ARG:-$(batch_restore_tracker_path)}"
+            exit 0
+        fi
         if [[ -n "$RESTORE_ARG" ]]; then
             print_info "RESTORE_ARG provided: $RESTORE_ARG"
             # If it's a bundle file path
@@ -1424,12 +1429,6 @@ main() {
             list_backups_and_restore
             exit 0
         fi
-    fi
-
-    # Handle batch restore mode
-    if [[ "$BATCH_RESTORE_MODE" == "true" ]]; then
-        batch_restore_all "${BATCH_RESTORE_FILE:-$(batch_restore_tracker_path)}"
-        exit 0
     fi
 
     # Handle full-fix mode (dedup + sign in one shot)
