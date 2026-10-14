@@ -322,7 +322,8 @@ fix_orphaned_tags() {
     [[ $fixed -gt 0 ]] && print_success "  $fixed tag(s) re-anchored"
 }
 
-# Diagnose all repos from a tracker file (or today's if none given).
+# Diagnose repos — from a tracker file if available, otherwise by scanning
+# repos under the current directory and using their remote backup/* tags directly.
 # Usage: diagnose_batch [tracker_file] [--fix] [--dry-run]
 diagnose_batch() {
     local tracker="" fix=false dry=false
@@ -333,37 +334,67 @@ diagnose_batch() {
             *)         tracker="$1"; shift ;;
         esac
     done
-    # Default: most recent tracker file, not just today's (today may be empty).
-    [[ -z "$tracker" ]] && tracker=$(batch_restore_tracker_latest)
-    if [[ ! -f "$tracker" ]]; then
-        print_error "Tracker file not found: $tracker"
-        return 1
+
+    local fix_arg=()
+    [[ "$fix" == "true" ]] && fix_arg+=(--fix)
+    [[ "$dry" == "true" ]]  && fix_arg+=(--dry-run)
+
+    # ── Try to load repos from a tracker file first ──
+    local use_tracker=false
+    if [[ -z "$tracker" ]]; then
+        local candidate; candidate=$(batch_restore_tracker_latest)
+        # Only use tracker if it has actual repo entries (non-comment lines)
+        grep -qv '^#' "$candidate" 2>/dev/null && { tracker="$candidate"; use_tracker=true; }
+    elif [[ -f "$tracker" ]]; then
+        use_tracker=true
     fi
-    print_info "Batch diagnosis from: $tracker"
-    # Resolve relative repo paths from the directory where the batch was originally run.
-    local batch_dir orig_dir="$PWD"
-    batch_dir=$(grep -m1 '^# BATCH_DIR=' "$tracker" 2>/dev/null | cut -d= -f2-)
-    [[ -n "$batch_dir" && -d "$batch_dir" ]] && cd "$batch_dir"
+
+    if [[ "$use_tracker" == "true" ]]; then
+        print_info "Batch diagnosis from tracker: $tracker"
+        local batch_dir orig_dir="$PWD"
+        batch_dir=$(grep -m1 '^# BATCH_DIR=' "$tracker" 2>/dev/null | cut -d= -f2-)
+        [[ -n "$batch_dir" && -d "$batch_dir" ]] && cd "$batch_dir"
+        local total=0 issues=0
+        while IFS='|' read -r repo branch commit btag; do
+            [[ "$repo" == \#* || -z "$repo" ]] && continue
+            [[ ! -d "$repo" ]] && { print_warning "Repo not found: $repo (base: ${batch_dir:-$PWD})"; continue; }
+            ((total++)) || true
+            diagnose_repo "$repo" "${fix_arg[@]}" || ((issues++)) || true
+        done < "$tracker"
+        cd "$orig_dir" || true
+        echo ""
+        if (( total > 0 )); then
+            (( issues == 0 )) && print_success "All $total repos clean" \
+                              || print_warning "$issues of $total repos have issues${fix:+ (fixes applied)}"
+            return 0
+        fi
+        print_info "Tracker had no repo entries — falling back to direct repo scan"
+    fi
+
+    # ── Fallback: scan all repos under cwd using remote backup/* tags ──
+    print_info "Scanning repos under $(pwd) via remote backup tags..."
+    local -a repos=()
+    while IFS= read -r gitdir; do
+        repos+=("$(dirname "$gitdir")")
+    done < <(find . -name .git -not -path './.git' \
+        -not -path '*/node_modules/*' -not -path '*/.bak/*' \
+        -not -path '*/vendor/*' -not -path '*/test-repo/*' \
+        -not -path '*/build/_deps/*' | sort)
+
     local total=0 issues=0
-    while IFS='|' read -r repo branch commit btag; do
-        [[ "$repo" == \#* || -z "$repo" ]] && continue
-        [[ ! -d "$repo" ]] && { print_warning "Repo not found: $repo (base: ${batch_dir:-$PWD})"; continue; }
+    for repo in "${repos[@]}"; do
+        local branch
+        branch=$(git -C "$repo" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+        [[ "$branch" == "HEAD" ]] && continue   # skip detached (build deps)
+        git -C "$repo" remote get-url origin &>/dev/null || continue  # skip no-remote
         ((total++)) || true
-        local fix_arg=(); [[ "$fix" == "true" ]] && fix_arg=(--fix)
-        [[ "$dry" == "true" ]]  && fix_arg+=(--dry-run)
         diagnose_repo "$repo" "${fix_arg[@]}" || ((issues++)) || true
-    done < "$tracker"
-    cd "$orig_dir" || true
+    done
     echo ""
     if (( total == 0 )); then
-        print_warning "Tracker has no repo entries: $tracker"
-        print_info "Run 'dc-fix -ff --batch' first, or specify a tracker: dc-fix --diagnose --batch /path/to/tracker"
+        print_warning "No eligible repos found under $(pwd)"
         return 0
     fi
-    if (( issues == 0 )); then
-        print_success "All $total repos clean"
-    else
-        print_warning "$issues of $total repos have issues${fix:+ (fixes applied)}"
-    fi
+    (( issues == 0 )) && print_success "All $total repos clean" \
+                      || print_warning "$issues of $total repos have issues${fix:+ (fixes applied)}"
 }
-
