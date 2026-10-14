@@ -24,22 +24,41 @@
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     set -euo pipefail
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+    DEV_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
+    export DEV_CONTROL_DIR
     source "$SCRIPT_DIR/lib/colours.sh"
     source "$SCRIPT_DIR/lib/print.sh"
 fi
 
+# Persistent tracker directory — beside the dev-control installation, not in /tmp.
+_batch_tracker_dir() {
+    local dc="${DEV_CONTROL_DIR:-/opt/dev-control}"
+    local d="${dc}/var/batch-restore"
+    if mkdir -p "$d" 2>/dev/null; then echo "$d"; return; fi
+    d="${HOME}/.dc-fix"
+    mkdir -p "$d" 2>/dev/null && echo "$d" || echo "${TMPDIR:-/tmp}"
+}
+
 # Return (echo) the path to today's tracker file, creating the header if new.
 batch_restore_tracker_path() {
     local today; today=$(date +%Y%m%d)
-    local base="${TMPDIR:-/tmp}"
-    local path="${base}/dc-fix-batch-${today}.tracker"
+    local d; d=$(_batch_tracker_dir)
+    local path="${d}/dc-fix-batch-${today}.tracker"
     if [[ ! -f "$path" ]]; then
         {
             echo "# dc-fix batch tracker — $(date -Iseconds)"
-            echo "# Restore with: dc-fix --batch-restore $path"
+            echo "# Restore with: dc-fix --restore --batch $path"
         } > "$path"
     fi
     echo "$path"
+}
+
+# Return (echo) the path to the most recent tracker (any day), or today's if none exist.
+batch_restore_tracker_latest() {
+    local d; d=$(_batch_tracker_dir)
+    local latest
+    latest=$(find "$d" -name 'dc-fix-batch-*.tracker' -type f 2>/dev/null | sort -r | head -1)
+    if [[ -n "$latest" ]]; then echo "$latest"; else batch_restore_tracker_path; fi
 }
 
 # Record one repo's pre-run state.  Skips if already recorded (preserves first backup of day).
@@ -177,17 +196,23 @@ diagnose_repo() {
 
     local issues=0
 
-    # ── 1. Find backup baseline (prefer remote backup tag, then local, then tracker)
+    # ── 1. Find backup baseline: local tags first, then fetch from remote.
     local backup_ref=""
     local -a btags
     mapfile -t btags < <(git -C "$repo" tag -l 'backup/*' --sort=-creatordate 2>/dev/null)
     for t in "${btags[@]}"; do
-        if git -C "$repo" cat-file -e "refs/tags/$t" 2>/dev/null; then
-            backup_ref="refs/tags/$t"; break
-        fi
+        git -C "$repo" cat-file -e "refs/tags/$t" 2>/dev/null && { backup_ref="refs/tags/$t"; break; }
     done
     if [[ -z "$backup_ref" ]]; then
-        print_info "  No backup tag found — limited diagnosis only"
+        print_info "  No local backup tags — fetching from remote..."
+        git -C "$repo" fetch origin 'refs/tags/backup/*:refs/tags/backup/*' 2>/dev/null || true
+        mapfile -t btags < <(git -C "$repo" tag -l 'backup/*' --sort=-creatordate 2>/dev/null)
+        for t in "${btags[@]}"; do
+            git -C "$repo" cat-file -e "refs/tags/$t" 2>/dev/null && { backup_ref="refs/tags/$t"; break; }
+        done
+    fi
+    if [[ -z "$backup_ref" ]]; then
+        print_warning "  No backup tags found locally or on remote — diagnosis limited to orphaned tags"
     else
         print_info "  Backup baseline: $backup_ref"
     fi
@@ -300,7 +325,8 @@ diagnose_batch() {
             *)         tracker="$1"; shift ;;
         esac
     done
-    [[ -z "$tracker" ]] && tracker=$(batch_restore_tracker_path)
+    # Default: most recent tracker file, not just today's (today may be empty).
+    [[ -z "$tracker" ]] && tracker=$(batch_restore_tracker_latest)
     if [[ ! -f "$tracker" ]]; then
         print_error "Tracker file not found: $tracker"
         return 1
