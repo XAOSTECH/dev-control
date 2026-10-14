@@ -9,9 +9,8 @@
 # Key capabilities:
 #   - tracker_path / tracker_record : track original state before any rewrite
 #   - diagnose_repo                 : compare backup vs current, detect orphaned tags,
-#                                     lost commits, missing releases
+#                                     lost commits; restores from backup when --fix given
 #   - find_equivalent_commit        : map an old commit to its closest match in new history
-#   - fix_orphaned_tags             : re-anchor release/latest tags after history rewrite
 #   - batch_restore_all             : restore every repo in a tracker file
 #
 # Tracker format (pipe-delimited, one repo per line):
@@ -245,7 +244,6 @@ diagnose_repo() {
     # ── 2. Detect orphaned release/latest tags
     local -a rel_tags
     mapfile -t rel_tags < <(git -C "$repo" tag -l 'v*' 'latest' 2>/dev/null | sort -V)
-    local -a orphaned_tags=()
     for tag in "${rel_tags[@]}"; do
         local tc; tc=$(git -C "$repo" rev-parse "${tag}^{}" 2>/dev/null || echo "")
         [[ -z "$tc" ]] && continue
@@ -261,7 +259,6 @@ diagnose_repo() {
             else
                 print_warning "    → no equivalent found in current history"
             fi
-            orphaned_tags+=("$tag:$tc:$equiv")
             ((issues++)) || true
         fi
     done
@@ -281,62 +278,27 @@ diagnose_repo() {
 
     [[ $issues -eq 0 ]] && print_success "  Clean — no orphaned tags or lost commits"
 
-    # ── 4. Apply fixes if requested
-    if [[ "$fix" == "true" && ${#orphaned_tags[@]} -gt 0 ]]; then
-        fix_orphaned_tags "$repo" "$dry" "${orphaned_tags[@]}"
+    # ── 4. Restore from backup if requested and issues were found
+    if [[ "$fix" == "true" && $issues -gt 0 ]]; then
+        if [[ -z "$backup_ref" ]]; then
+            print_warning "  Cannot restore — no backup tag available for $label"
+        else
+            local branch; branch=$(git -C "$repo" rev-parse --abbrev-ref HEAD 2>/dev/null)
+            if [[ "$dry" == "true" ]]; then
+                print_info "  [dry-run] would restore $branch to $backup_ref"
+            else
+                print_info "  Restoring $branch → $backup_ref..."
+                git -C "$repo" reset --hard "$backup_ref"
+                if git -C "$repo" push --force-with-lease origin "$branch" 2>/dev/null; then
+                    print_success "  Restored and pushed"
+                else
+                    print_warning "  Restored locally; push failed — run: git push --force-with-lease origin $branch"
+                fi
+            fi
+        fi
     fi
 
     return $issues
-}
-
-# Re-anchor orphaned tags to their equivalents in the current history.
-# Usage: fix_orphaned_tags <repo> <dry_run:true|false> [tag:oldcommit:equiv ...]
-fix_orphaned_tags() {
-    local repo="$1" dry="$2"; shift 2
-    local fixed=0
-    for entry in "$@"; do
-        local tag oldtc equiv
-        tag="${entry%%:*}"; rest="${entry#*:}"; oldtc="${rest%%:*}"; equiv="${rest#*:}"
-        if [[ -z "$equiv" ]]; then
-            print_warning "  Skipping $tag — no equivalent commit found"
-            continue
-        fi
-        local em; em=$(git -C "$repo" log -1 --format="%s" "$equiv" 2>/dev/null)
-        if [[ "$dry" == "true" ]]; then
-            print_info "  [dry-run] would re-anchor $tag → ${equiv:0:8} ($em)"
-            continue
-        fi
-        print_info "  Re-anchoring $tag → ${equiv:0:8} ($em)"
-        git -C "$repo" tag -d "$tag" 2>/dev/null || true
-        # Sign if GPG available, otherwise annotated
-        if git -C "$repo" -c gpg.program=gpg tag -s "$tag" \
-               -m "Re-anchored after history rewrite (was ${oldtc:0:8})" "$equiv" 2>/dev/null; then
-            print_success "  Signed tag $tag created"
-        else
-            git -C "$repo" tag -a "$tag" \
-                -m "Re-anchored after history rewrite (was ${oldtc:0:8})" "$equiv"
-            print_info "  Unsigned tag $tag created"
-        fi
-        if git -C "$repo" remote get-url origin &>/dev/null; then
-            git -C "$repo" push --force origin "refs/tags/$tag" 2>/dev/null && \
-                print_success "  Pushed $tag to origin" || \
-                print_warning "  Push failed — run: git push --force origin refs/tags/$tag"
-        fi
-        # Update GitHub release to point to new tag if gh available
-        if command -v gh &>/dev/null; then
-            local repo_slug
-            repo_slug=$(git -C "$repo" remote get-url origin 2>/dev/null \
-                | sed 's|.*github\.com[:/]||;s|\.git$||')
-            if [[ -n "$repo_slug" ]]; then
-                gh api -X PATCH "repos/${repo_slug}/releases/tags/${tag}" \
-                    -f tag_name="$tag" 2>/dev/null && \
-                    print_success "  GitHub release updated for $tag" || \
-                    print_info "  Note: update GitHub release manually if needed"
-            fi
-        fi
-        ((fixed++)) || true
-    done
-    [[ $fixed -gt 0 ]] && print_success "  $fixed tag(s) re-anchored"
 }
 
 # Shared repo filter — returns 0 (include) or 1 (skip with reason printed).
