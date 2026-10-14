@@ -63,6 +63,8 @@ FULL_FIX_DEPTH=20
 ASSUME_YES=false
 BATCH_MODE=false
 BATCH_ONLINE=true
+DIAGNOSE_MODE=false
+DIAGNOSE_FIX=false
 STASH_NUM=""
 STASH_MODE=false
 AMEND_MODE=false
@@ -379,6 +381,14 @@ parse_args() {
                 else
                     shift
                 fi
+                ;;
+            --diagnose)
+                DIAGNOSE_MODE=true
+                shift
+                ;;
+            --fix)
+                DIAGNOSE_FIX=true
+                shift
                 ;;
             --offline)
                 BATCH_ONLINE=false
@@ -1295,6 +1305,19 @@ main() {
                 RANGE="HEAD~${BASH_REMATCH[1]}"
             fi
         fi
+    fi
+
+    # Handle diagnose mode — detect orphaned tags, lost commits after history rewrite
+    if [[ "$DIAGNOSE_MODE" == "true" ]]; then
+        local _fix_args=()
+        [[ "$DIAGNOSE_FIX" == "true" ]] && _fix_args+=(--fix)
+        [[ "$DRY_RUN" == "true" ]]     && _fix_args+=(--dry-run)
+        if [[ "$BATCH_MODE" == "true" ]]; then
+            diagnose_batch "${RESTORE_ARG:-}" "${_fix_args[@]}"
+        else
+            diagnose_repo "." "${_fix_args[@]}"
+        fi
+        exit 0
     fi
 
     # Handle restore mode
