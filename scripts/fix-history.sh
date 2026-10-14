@@ -52,6 +52,7 @@ source "$SCRIPT_DIR/lib/git/restore.sh"
 source "$SCRIPT_DIR/lib/git/blossom.sh"
 source "$SCRIPT_DIR/lib/git/dedu.sh"
 source "$SCRIPT_DIR/lib/git/combine.sh"
+source "$SCRIPT_DIR/lib/git/batch-restore.sh"
 
 # Configuration
 RANGE="HEAD=10"
@@ -62,6 +63,8 @@ FULL_FIX_DEPTH=20
 ASSUME_YES=false
 BATCH_MODE=false
 BATCH_ONLINE=true
+BATCH_RESTORE_MODE=false
+BATCH_RESTORE_FILE=""
 STASH_NUM=""
 STASH_MODE=false
 AMEND_MODE=false
@@ -367,6 +370,15 @@ parse_args() {
                 BATCH_MODE=true
                 ASSUME_YES=true
                 shift
+                ;;
+            --batch-restore)
+                BATCH_RESTORE_MODE=true
+                if [[ -n "${2:-}" && "${2:-}" != -* ]]; then
+                    BATCH_RESTORE_FILE="$2"
+                    shift 2
+                else
+                    shift
+                fi
                 ;;
             --offline)
                 BATCH_ONLINE=false
@@ -1139,14 +1151,25 @@ full_fix_mode() {
             [[ ! "${_batchok:-y}" =~ ^[Nn] ]] || { print_info "Batch cancelled"; return 0; }
             ASSUME_YES=true
         fi
+        # Initialise batch tracker; first run of the day creates it, later runs only append new repos.
+        local _tracker
+        _tracker=$(batch_restore_tracker_path)
+        print_info "Batch tracker (restore with: dc-fix --batch-restore '$_tracker')"
         local _orig_dir="$PWD"
         for _repo in "${repos[@]}"; do
+            local _orig_branch _orig_commit
+            _orig_branch=$(git -C "$_repo" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+            _orig_commit=$(git -C "$_repo" rev-parse HEAD 2>/dev/null || echo "")
             print_info "Repo: $_repo"
             pushd "$_repo" > /dev/null || { print_warning "Cannot enter $_repo"; continue; }
             _full_fix_single "$depth"
             popd > /dev/null || true
+            local _btag
+            _btag=$(git -C "$_repo" tag -l 'backup/*' --sort=-creatordate 2>/dev/null | head -1 || echo "")
+            batch_restore_record "$_tracker" "$_repo" "$_orig_branch" "$_orig_commit" "$_btag"
         done
         cd "$_orig_dir" || true
+        echo -e "\n${BOLD}Batch restore: ${CYAN}dc-fix --batch-restore '$_tracker'${NC}"
         return 0
     fi
 
@@ -1401,6 +1424,12 @@ main() {
             list_backups_and_restore
             exit 0
         fi
+    fi
+
+    # Handle batch restore mode
+    if [[ "$BATCH_RESTORE_MODE" == "true" ]]; then
+        batch_restore_all "${BATCH_RESTORE_FILE:-$(batch_restore_tracker_path)}"
+        exit 0
     fi
 
     # Handle full-fix mode (dedup + sign in one shot)
