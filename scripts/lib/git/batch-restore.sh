@@ -272,7 +272,6 @@ diagnose_repo() {
         if (( gained > 0 )); then
             print_warning "  $gained commit(s) in backup not reachable from current HEAD:"
             git -C "$repo" log --oneline "HEAD..${backup_ref}" 2>/dev/null | head -10 | sed 's/^/    /'
-            ((issues++)) || true
         fi
     fi
 
