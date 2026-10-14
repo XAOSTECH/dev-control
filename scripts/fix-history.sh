@@ -1164,6 +1164,8 @@ full_fix_mode() {
         # Initialise batch tracker; first run of the day creates it, later runs only append new repos.
         local _tracker
         _tracker=$(batch_restore_tracker_path)
+        # Stamp the batch root directory once so diagnose/restore can resolve relative paths.
+        grep -q '^# BATCH_DIR=' "$_tracker" 2>/dev/null || echo "# BATCH_DIR=$(pwd)" >> "$_tracker"
         print_info "Batch tracker (restore with: dc-fix --batch-restore '$_tracker')"
         local _orig_dir="$PWD"
         for _repo in "${repos[@]}"; do

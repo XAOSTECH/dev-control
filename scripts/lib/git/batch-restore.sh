@@ -53,12 +53,17 @@ batch_restore_tracker_path() {
     echo "$path"
 }
 
-# Return (echo) the path to the most recent tracker (any day), or today's if none exist.
+# Return (echo) the path to the most recent tracker WITH at least one repo entry.
+# Skips empty (header-only) trackers so today's freshly-created file doesn't
+# shadow yesterday's populated one.
 batch_restore_tracker_latest() {
     local d; d=$(_batch_tracker_dir)
-    local latest
-    latest=$(find "$d" -name 'dc-fix-batch-*.tracker' -type f 2>/dev/null | sort -r | head -1)
-    if [[ -n "$latest" ]]; then echo "$latest"; else batch_restore_tracker_path; fi
+    local f
+    while IFS= read -r f; do
+        grep -qv '^#' "$f" 2>/dev/null && { echo "$f"; return; }
+    done < <(find "$d" -name 'dc-fix-batch-*.tracker' -type f 2>/dev/null | sort -r)
+    # No populated tracker found — return today’s (creates it if missing, may be empty).
+    batch_restore_tracker_path
 }
 
 # Record one repo's pre-run state.  Skips if already recorded (preserves first backup of day).
@@ -83,8 +88,11 @@ batch_restore_all() {
     fi
 
     print_info "Restoring batch from: $tracker"
-    local orig_dir="$PWD"
-    local restored=0 skipped=0
+    local orig_dir="$PWD" restored=0 skipped=0
+    # Resolve relative repo paths from the original batch root directory.
+    local batch_dir
+    batch_dir=$(grep -m1 '^# BATCH_DIR=' "$tracker" 2>/dev/null | cut -d= -f2-)
+    [[ -n "$batch_dir" && -d "$batch_dir" ]] && cd "$batch_dir"
 
     while IFS='|' read -r repo branch commit btag; do
         [[ "$repo" == \#* || -z "$repo" ]] && continue
@@ -332,10 +340,14 @@ diagnose_batch() {
         return 1
     fi
     print_info "Batch diagnosis from: $tracker"
-    local orig_dir="$PWD" total=0 issues=0
+    # Resolve relative repo paths from the directory where the batch was originally run.
+    local batch_dir orig_dir="$PWD"
+    batch_dir=$(grep -m1 '^# BATCH_DIR=' "$tracker" 2>/dev/null | cut -d= -f2-)
+    [[ -n "$batch_dir" && -d "$batch_dir" ]] && cd "$batch_dir"
+    local total=0 issues=0
     while IFS='|' read -r repo branch commit btag; do
         [[ "$repo" == \#* || -z "$repo" ]] && continue
-        [[ ! -d "$repo" ]] && { print_warning "Repo not found: $repo"; continue; }
+        [[ ! -d "$repo" ]] && { print_warning "Repo not found: $repo (base: ${batch_dir:-$PWD})"; continue; }
         ((total++)) || true
         local fix_arg=(); [[ "$fix" == "true" ]] && fix_arg=(--fix)
         [[ "$dry" == "true" ]]  && fix_arg+=(--dry-run)
@@ -343,6 +355,11 @@ diagnose_batch() {
     done < "$tracker"
     cd "$orig_dir" || true
     echo ""
+    if (( total == 0 )); then
+        print_warning "Tracker has no repo entries: $tracker"
+        print_info "Run 'dc-fix -ff --batch' first, or specify a tracker: dc-fix --diagnose --batch /path/to/tracker"
+        return 0
+    fi
     if (( issues == 0 )); then
         print_success "All $total repos clean"
     else
