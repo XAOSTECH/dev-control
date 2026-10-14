@@ -114,7 +114,7 @@ prompt_and_push_branch() {
             git push origin "refs/tags/$TAG" || true
 
             git checkout "$branch" || git checkout -b "$branch"
-            if git push --force-with-lease origin "$branch"; then
+            if git push --force origin "$branch"; then
                 print_success "$branch pushed to origin (force)"
                 return 0
             else

@@ -275,7 +275,8 @@ diagnose_repo() {
     fi
 
     # ── 2. Detect orphaned release/latest tags
-    local -a rel_tags
+    local -a rel_tags _orphan_tags=() _orphan_equivs=()
+    local _has_unresolvable=false
     mapfile -t rel_tags < <(git -C "$repo" tag -l 'v*' 'latest' 2>/dev/null | sort -V)
     for tag in "${rel_tags[@]}"; do
         local tc; tc=$(git -C "$repo" rev-parse "${tag}^{}" 2>/dev/null || echo "")
@@ -289,8 +290,11 @@ diagnose_repo() {
             if [[ -n "$equiv" ]]; then
                 local em; em=$(git -C "$repo" log -1 --format="%s" "$equiv" 2>/dev/null)
                 print_info "    → equivalent in current history: ${equiv:0:8}  ($em)"
+                _orphan_tags+=("$tag")
+                _orphan_equivs+=("$equiv")
             else
                 print_warning "    → no equivalent found in current history"
+                _has_unresolvable=true
             fi
             ((issues++)) || true
         fi
@@ -310,9 +314,27 @@ diagnose_repo() {
 
     [[ $issues -eq 0 ]] && print_success "  Clean — no orphaned tags or lost commits"
 
-    # ── 4. Restore from backup if requested and issues were found
+    # ── 4. Fix: re-anchor if all orphaned tags are resolvable; restore from backup otherwise
     if [[ "$fix" == "true" && $issues -gt 0 ]]; then
-        if [[ -z "$backup_ref" ]]; then
+        if [[ "$_has_unresolvable" == "false" && ${#_orphan_tags[@]} -gt 0 ]]; then
+            # All orphaned tags have equivalents — re-anchor without touching branch history
+            local _i
+            for _i in "${!_orphan_tags[@]}"; do
+                local _tag="${_orphan_tags[$_i]}" _eq="${_orphan_equivs[$_i]}"
+                local _em; _em=$(git -C "$repo" log -1 --format="%s" "$_eq" 2>/dev/null)
+                if [[ "$dry" == "true" ]]; then
+                    print_info "  [dry-run] would re-anchor $_tag → ${_eq:0:8} ($_em)"
+                else
+                    print_info "  Re-anchoring $_tag → ${_eq:0:8} ($_em)"
+                    git -C "$repo" tag -d "$_tag" 2>/dev/null || true
+                    git -C "$repo" -c gpg.program=gpg tag -s "$_tag" \
+                        -m "Re-anchored to rewritten history" "$_eq" 2>/dev/null || \
+                        git -C "$repo" tag -f "$_tag" "$_eq"
+                    git -C "$repo" push --force origin "refs/tags/$_tag" 2>/dev/null || \
+                        print_warning "  Push failed for $_tag — run: git push --force origin refs/tags/$_tag"
+                fi
+            done
+        elif [[ -z "$backup_ref" ]]; then
             print_warning "  Cannot restore — no backup tag available for $label"
         else
             local branch; branch=$(git -C "$repo" rev-parse --abbrev-ref HEAD 2>/dev/null)
@@ -321,10 +343,10 @@ diagnose_repo() {
             else
                 print_info "  Restoring $branch → $backup_ref..."
                 git -C "$repo" reset --hard "$backup_ref"
-                if git -C "$repo" push --force-with-lease origin "$branch" 2>/dev/null; then
+                if git -C "$repo" push --force origin "$branch" 2>/dev/null; then
                     print_success "  Restored and pushed"
                 else
-                    print_warning "  Restored locally; push failed — run: git push --force-with-lease origin $branch"
+                    print_warning "  Restored locally; push failed — run: git push --force origin $branch"
                 fi
             fi
         fi
