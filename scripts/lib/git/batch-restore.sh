@@ -390,7 +390,8 @@ diagnose_batch() {
     local fix_arg=()
     [[ "$fix" == "true" ]] && fix_arg+=(--fix)
     [[ "$dry" == "true" ]]  && fix_arg+=(--dry-run)
-    local fix_note=""; [[ "$fix" == "true" ]] && fix_note=" (fixes applied)"
+    local fix_note=""
+    [[ "$fix" == "true" && "$dry" == "false" ]] && fix_note=" (fixes applied)"
 
     # ── Try to load repos from a tracker file first ──
     local use_tracker=false
