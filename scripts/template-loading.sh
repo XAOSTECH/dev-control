@@ -1223,8 +1223,7 @@ dc_init_commit_and_push() {
     local current_branch
     current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
 
-    # Only push when the remote tracking ref already exists — avoids pushing on a
-    # fresh repo where templates are loaded before the first git push.
+    # Only push when the remote tracking ref already exists — avoids pushing on a fresh repo where templates are loaded before the first git push.
     local _remote_branch_exists=false
     if git remote get-url origin &>/dev/null; then
         git rev-parse --verify "refs/remotes/origin/$current_branch" &>/dev/null && _remote_branch_exists=true
