@@ -1149,9 +1149,7 @@ full_fix_mode() {
 }
 
 # Re-anchor release/latest tags orphaned by a sign run.
-# Safe discriminator: sign preserves author dates; a squash-dropped commit's
-# subject match in the new history will have a different date (>60s off), so
-# we skip those and only re-anchor genuine sign-orphaned tags.
+# Safe discriminator: sign preserves author dates; a squash-dropped commit's subject match in the new history will have a different date (>60s off), so we skip those and only re-anchor genuine sign-orphaned tags.
 _reanchor_after_sign() {
     local repo="${1:-.}"
     local -a rel_tags

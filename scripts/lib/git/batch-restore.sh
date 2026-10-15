@@ -70,8 +70,7 @@ batch_restore_tracker_path() {
 }
 
 # Return (echo) the path to the most recent tracker WITH at least one repo entry.
-# Skips empty (header-only) trackers so today's freshly-created file doesn't
-# shadow yesterday's populated one.
+# Skips empty (header-only) trackers so today's freshly-created file doesn't shadow yesterday's populated one.
 batch_restore_tracker_latest() {
     local d; d=$(_batch_tracker_dir)
     local f
@@ -388,8 +387,7 @@ _repo_filter() {
     return 0
 }
 
-# Diagnose repos — from a tracker file if available, otherwise by scanning
-# repos under the current directory and using their remote backup/* tags directly.
+# Diagnose repos — from a tracker file if available, otherwise by scanning repos under the current directory and using their remote backup/* tags directly.
 # Usage: diagnose_batch [tracker_file] [--fix] [--dry-run] [--offline|--online]
 diagnose_batch() {
     local tracker="" fix=false dry=false online=true
