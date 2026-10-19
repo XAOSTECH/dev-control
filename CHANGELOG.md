@@ -1,5 +1,52 @@
 # Changelog
 
+## [0.5.13] - 2026-10-19
+
+### Added
+- _reanchor_after_sign with date-check — skips squash-dropped tags, re-anchors sign-only orphans
+- re-anchor release tags after full-fix rewrite
+- restore diagnostics — orphaned tag detection, fix_orphaned_tags, --diagnose [--fix] [--batch]
+- batch restore tracker — dc-fix --batch-restore <tracker>
+- --offline/--online (default), conservative dedup in full-fix (chore only)
+
+### Fixed
+- re-anchor when all orphans resolvable, restore only when not; fix stale lease push
+- remove reanchor from full-fix, add repo scan cache with --refresh-cache
+- reanchor_release_tags set -e traps — use if/then and || true
+- reset PRESERVE_TOPOLOGY and SIGNATURES_ALREADY_APPLIED between batch repos
+- lost commits are informational only, only orphaned tags are issues
+- replace tag re-anchoring with backup restore in diagnose --fix
+- suppress '(fixes applied)' note on --dry-run
+- correct $(fix:+ ...) expansion, add --offline/--online to diagnose_batch
+- diagnose_batch fallback loop was missing _repo_filter call
+- diagnose_batch falls back to remote backup tag scan when no tracker
+- tracker_latest skips empty files, BATCH_DIR stamped, diagnose_batch cds to batch root
+- persistent tracker in DEV_CONTROL_DIR/var, fetch remote backup tags for diagnosis
+- exclude CHANGELOG commits from conservative squash — they anchor release tags
+- push after direct-rebase sign, nest-mode dedup with conservative guard, DEDUP_TIMES=5 in full-fix
+- skip archived repos in batch — read-only, signing cannot be pushed
+- auto-confirm branch override prompt when ASSUME_YES
+- rebase failures return 1 not exit 1, exclude test-repo from batch
+- IFS corruption fix, auto-select topology option 2 in batch
+- prevent set -e exit on stash failure — use if ! pattern
+- pre-stash with failure-skip, pop after ops, double-stash guard, first-parent depth, -y warning prompt
+- box rendering, origin/HEAD push, malformed date skip, batch noise
+- owner guard from MEMBERS, --range respected, correct depth clamp, skip detached HEAD
+- arithmetic 0
+0 bug, depth clamping for shallow repos, --allow-empty in date restore
+- ASSUME_YES unblocks cleanup in batch - auto-stash and skip interactive cleanup
+- ASSUME_YES propagates to push/replace prompts; single batch warning before loop
+- --allow-empty on rebase amend, skip sign when already signed, fix rollback branch name
+- add --batch to --full-fix — iterates every sub-repo under cwd
+
+### Changed
+- chore: humanise hard-wrapped comments and prose
+- refactor(dc-fix): _repo_filter shared function, diagnose_batch applies same owner/skip rules
+- chore(gitignore): add var + improve dist
+- refactor(dc-fix): unify --batch-restore with --restore --batch, remove BATCH_RESTORE_MODE
+- chore(README): americanise
+- chore: file mods
+
 ## [0.5.12] - 2026-09-21
 
 ### Fixed
