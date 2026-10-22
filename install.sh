@@ -3,10 +3,14 @@
 # Dev-Control Installer
 # Single-file installer for easy distribution
 #
-# Usage:
+# Usage (fresh install via curl):
 #   curl -sSL https://raw.githubusercontent.com/xaoscience/dev-control/Main/install.sh | bash
 #   curl -sSL ... | bash -s -- --prefix=/custom/path
-#   curl -sSL ... | bash -s -- --uninstall
+#
+# Usage (from an already-unpacked or cloned dev-control folder):
+#   ./install.sh             # installs from current folder to /opt/dev-control
+#   ./install.sh --upgrade   # refresh an existing /opt/dev-control install
+#   ./install.sh --uninstall
 #
 # SPDX-Licence-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025-2026 xaoscience
@@ -16,8 +20,17 @@ set -e
 # Configuration
 DC_REPO="xaoscience/dev-control"
 DC_BRANCH="main"
-DEFAULT_PREFIX="$HOME/.local/share/dev-control"
-DEFAULT_BIN="$HOME/.local/bin"
+DEFAULT_PREFIX="/opt/dev-control"
+DEFAULT_BIN="/usr/local/bin"
+
+# Detect whether this script lives inside an unpacked dev-control folder
+# (i.e. scripts/ and dc exist next to install.sh — tarball or git clone).
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || pwd)"
+if [[ -f "$SCRIPT_DIR/dc" && -d "$SCRIPT_DIR/scripts" ]]; then
+    DC_SOURCE_DIR="$SCRIPT_DIR"
+else
+    DC_SOURCE_DIR=""
+fi
 
 # Colours
 RED='\033[0;31m'
@@ -40,6 +53,7 @@ UNINSTALL=false
 UPGRADE=false
 NO_ALIASES=false
 QUIET=false
+NO_CLEANUP_PROMPT=false
 
 # ============================================================================
 # ARGUMENT PARSING
@@ -50,7 +64,10 @@ show_help() {
 Dev-Control Installer
 
 USAGE:
+  # Fresh install
   curl -sSL https://raw.githubusercontent.com/$DC_REPO/$DC_BRANCH/install.sh | bash
+
+  # From an unpacked tarball or cloned folder
   ./install.sh [OPTIONS]
 
 OPTIONS:
@@ -59,21 +76,22 @@ OPTIONS:
   --uninstall       Remove Dev-Control
   --upgrade         Update existing installation
   --no-aliases      Skip bash aliases installation
+  --no-cleanup      Skip post-install source cleanup prompt
   --quiet           Minimal output
   -h, --help        Show this help
 
 EXAMPLES:
-  # Install to default location
-  curl -sSL https://raw.githubusercontent.com/$DC_REPO/$DC_BRANCH/install.sh | bash
+  # Install from release tarball
+  tar xzf dev-control-*.tar.gz && cd dev-control-* && sudo ./install.sh
 
   # Install to custom location
-  ./install.sh --prefix=/opt/dev-control --bin=/usr/local/bin
+  ./install.sh --prefix=/home/user/.local/share/dev-control --bin=/home/user/.local/bin
 
   # Update existing installation
-  ./install.sh --upgrade
+  sudo ./install.sh --upgrade
 
   # Uninstall
-  ./install.sh --uninstall
+  sudo ./install.sh --uninstall
 
 EOF
 }
@@ -82,11 +100,12 @@ parse_args() {
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --prefix=*) PREFIX="${1#*=}"; shift ;;
-            --bin=*) BIN_DIR="${1#*=}"; shift ;;
-            --uninstall) UNINSTALL=true; shift ;;
-            --upgrade) UPGRADE=true; shift ;;
-            --no-aliases) NO_ALIASES=true; shift ;;
-            --quiet|-q) QUIET=true; shift ;;
+            --bin=*)    BIN_DIR="${1#*=}"; shift ;;
+            --uninstall)    UNINSTALL=true; shift ;;
+            --upgrade)      UPGRADE=true; shift ;;
+            --no-aliases)   NO_ALIASES=true; shift ;;
+            --no-cleanup)   NO_CLEANUP_PROMPT=true; shift ;;
+            --quiet|-q)     QUIET=true; shift ;;
             -h|--help) show_help; exit 0 ;;
             *) print_error "Unknown option: $1"; exit 1 ;;
         esac
@@ -123,34 +142,51 @@ check_prerequisites() {
 
 install_dev_control() {
     print_info "Installing Dev-Control to $PREFIX"
-    
-    # Create directories
-    mkdir -p "$PREFIX"
-    mkdir -p "$BIN_DIR"
-    
-    # Clone repository
-    if [[ -d "$PREFIX/.git" ]]; then
-        if [[ "$UPGRADE" == "true" ]]; then
-            print_info "Updating existing installation..."
-            git -C "$PREFIX" fetch origin
-            git -C "$PREFIX" reset --hard "origin/$DC_BRANCH"
-        else
-            print_error "Dev-Control already installed at $PREFIX"
-            print_info "Use --upgrade to update, or --uninstall first"
+
+    if [[ -n "$DC_SOURCE_DIR" ]]; then
+        # ── Unpacked-folder mode: copy from current directory ─────────────────
+        print_info "Source: $DC_SOURCE_DIR (local copy)"
+        if [[ -d "$PREFIX" && "$UPGRADE" != "true" && "$(realpath "$DC_SOURCE_DIR")" != "$(realpath "$PREFIX")" ]]; then
+            print_error "$PREFIX already exists — use --upgrade to overwrite"
             exit 1
         fi
+        if [[ "$(realpath "$DC_SOURCE_DIR")" != "$(realpath "$PREFIX")" ]]; then
+            mkdir -p "$(dirname "$PREFIX")"
+            # rsync preferred (content-aware, skips unchanged files); fall back to cp
+            if command -v rsync &>/dev/null; then
+                rsync -a --delete "$DC_SOURCE_DIR/" "$PREFIX/"
+            else
+                rm -rf "$PREFIX"
+                cp -r "$DC_SOURCE_DIR" "$PREFIX"
+            fi
+        fi
     else
-        print_info "Cloning repository..."
-        git clone --depth 1 -b "$DC_BRANCH" "https://github.com/$DC_REPO.git" "$PREFIX"
+        # ── Remote mode: clone from GitHub ────────────────────────────────────
+        mkdir -p "$PREFIX"
+        if [[ -d "$PREFIX/.git" ]]; then
+            if [[ "$UPGRADE" == "true" ]]; then
+                print_info "Updating existing installation..."
+                git -C "$PREFIX" fetch origin
+                git -C "$PREFIX" reset --hard "origin/$DC_BRANCH"
+            else
+                print_error "Dev-Control already installed at $PREFIX"
+                print_info "Use --upgrade to update, or --uninstall first"
+                exit 1
+            fi
+        else
+            print_info "Cloning repository..."
+            git clone --depth 1 -b "$DC_BRANCH" "https://github.com/$DC_REPO.git" "$PREFIX"
+        fi
     fi
-    
+
     # Make scripts executable
     print_info "Setting permissions..."
     chmod +x "$PREFIX/dc"
     chmod +x "$PREFIX/scripts/"*.sh
     chmod +x "$PREFIX/commands/"*.sh 2>/dev/null || true
-    
-    # Create symlink
+
+    # Create symlink in BIN_DIR
+    mkdir -p "$BIN_DIR"
     print_info "Creating symlink: $BIN_DIR/dc -> $PREFIX/dc"
     ln -sf "$PREFIX/dc" "$BIN_DIR/dc"
     
@@ -184,8 +220,28 @@ install_dev_control() {
     if [[ "$NO_ALIASES" != "true" ]]; then
         install_aliases
     fi
-    
+
     print_success "Dev-Control installed successfully!"
+
+    # ── Offer to clean up the unpacked source ────────────────────────────────
+    if [[ -n "$DC_SOURCE_DIR" && "$NO_CLEANUP_PROMPT" != "true" && "$QUIET" != "true" ]] && \
+       [[ "$(realpath "$DC_SOURCE_DIR")" != "$(realpath "$PREFIX")" ]]; then
+        echo ""
+        echo -e "${BOLD}Source folder:${NC} $DC_SOURCE_DIR"
+        read -rp "Remove the source folder now that it is installed? [y/N]: " _rm_src
+        if [[ "${_rm_src:-n}" =~ ^[Yy] ]]; then
+            rm -rf "$DC_SOURCE_DIR"
+            print_info "Removed: $DC_SOURCE_DIR"
+            # If a tarball sits one level above with a matching name, offer to remove it too
+            local _parent; _parent="$(dirname "$DC_SOURCE_DIR")"
+            local _slug; _slug="$(basename "$DC_SOURCE_DIR")"
+            local _tarball="${_parent}/${_slug}.tar.gz"
+            if [[ -f "$_tarball" ]]; then
+                read -rp "Also remove ${_tarball}? [y/N]: " _rm_tar
+                [[ "${_rm_tar:-n}" =~ ^[Yy] ]] && rm -f "$_tarball" && print_info "Removed: $_tarball"
+            fi
+        fi
+    fi
 }
 
 install_aliases() {
