@@ -974,6 +974,8 @@ jobs:
           ### Quick Install (tarball)
           \`\`\`bash
           curl -fsSL https://github.com/$GITHUB_REPOSITORY/releases/download/${TAG_NAME}/${tarball_name} | tar xz
+          cd ${tarball_name%.tar.gz}
+          chmod +x install.sh && sudo ./install.sh
           \`\`\`
           
           ## Checksums
@@ -1010,6 +1012,8 @@ jobs:
           ### Download Release Archive
           \`\`\`bash
           curl -fsSL https://github.com/$GITHUB_REPOSITORY/archive/refs/tags/${TAG_NAME}.tar.gz | tar xz
+          cd $(basename $GITHUB_REPOSITORY)-${TAG_NAME#v}
+          chmod +x install.sh && sudo ./install.sh
           \`\`\`
           EOF
           fi
