@@ -10,8 +10,8 @@ on:
       - master
       - develop
   schedule:
-    # Run daily at 2 AM UTC (avoids rate limits on high-commit days)
-    - cron: '0 2 * * *'
+    # Mon/Wed/Fri at 02:00 UTC — frequent enough for dashboard freshness, not every day
+    - cron: '0 2 * * 1,3,5'
   workflow_dispatch:
 
 permissions:
@@ -29,8 +29,8 @@ env:
 jobs:
   analyze:
     name: CodeQL Analysis
-    runs-on: ubuntu-latest
-    
+    runs-on: ubuntu-26.04
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -61,7 +61,7 @@ jobs:
   # Security summary and reporting
   security-summary:
     name: Security Report
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     needs: [analyze]
     if: always()
     
@@ -76,9 +76,11 @@ jobs:
           echo "### Analysis Coverage:" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Auto-detected languages**: JavaScript, Python, Go, Java, C++, C#, Ruby, Swift" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Query suite**: Extended (security-and-quality)" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Schedule**: Push, PR, daily at 2 AM UTC" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Schedule**: Mon/Wed/Fri 02:00 UTC + every push to main" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Concurrency**: Cancels older scans on new push" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >>
+          echo "- **Runner**: ubuntu-26.04" >> "$GITHUB_STEP_SUMMARY"
+          "$GITHUB_STEP_SUMMARY"
           echo "### Complementary Security:" >> "$GITHUB_STEP_SUMMARY"
           echo "- Shell scripts: bash-lint-advanced workflow (ShellCheck)" >> "$GITHUB_STEP_SUMMARY"
           echo "- Dockerfile: GitHub Advanced Security scanning" >> "$GITHUB_STEP_SUMMARY"
