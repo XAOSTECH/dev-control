@@ -745,6 +745,7 @@ process_template() {
         -e "s|{{USER_TOKEN_SECRET}}|${USER_TOKEN_SECRET:-}|g" \
         -e "s|{{SECURITY_APP_ID_SECRET}}|${SECURITY_APP_ID_SECRET:-}|g" \
         -e "s|{{SECURITY_PRIVATE_KEY_SECRET}}|${SECURITY_PRIVATE_KEY_SECRET:-}|g" \
+        -e "s|{{LICENSE_TYPE_BADGE}}|${LICENSE_TYPE//-/--}|g" \
         "$src" > "$dest"
     
     print_success "Created: $dest"
