@@ -28,7 +28,7 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  analyze:
+  analyse:
     name: CodeQL Analysis
     runs-on: ubuntu-26.04
 
@@ -65,7 +65,7 @@ jobs:
   security-summary:
     name: Security Report
     runs-on: ubuntu-26.04
-    needs: [analyze]
+    needs: [analyse]
     if: always()
     
     steps:
