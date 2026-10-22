@@ -316,6 +316,15 @@ uninstall_dev_control() {
     
     print_success "Dev-Control uninstalled"
     print_info "Note: Configuration in ~/.config/dev-control was preserved"
+
+    # Remove systemd updater timer if installed
+    local _timer_dir="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
+    for _unit in dc-update.service dc-update.timer; do
+        [[ -f "$_timer_dir/$_unit" ]] || continue
+        systemctl --user disable --now "$_unit" 2>/dev/null || true
+        rm -f "$_timer_dir/$_unit"
+        print_info "Removed systemd unit: $_unit"
+    done
 }
 
 # ============================================================================
@@ -351,6 +360,60 @@ show_post_install() {
 }
 
 # ============================================================================
+# AUTO-UPDATER — systemd user timer
+# ============================================================================
+
+install_updater() {
+    # Requires systemd user session; silently skip on systems without it.
+    if ! command -v systemctl &>/dev/null || ! systemctl --user status &>/dev/null 2>&1; then
+        print_info "systemd user session not available — skipping auto-updater setup"
+        return 0
+    fi
+
+    local _timer_dir="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
+    mkdir -p "$_timer_dir"
+
+    # One-shot service: fetch latest release tarball, unpack over PREFIX, run install.
+    cat > "$_timer_dir/dc-update.service" << EOF
+[Unit]
+Description=Dev-Control auto-update
+After=network-online.target
+
+[Service]
+Type=oneshot
+# Fetch latest tarball and reinstall in-place; --no-cleanup skips interactive prompts.
+ExecStart=/bin/bash -c '\
+  set -e; \
+  _ver=\$(curl -fsSL https://api.github.com/repos/$DC_REPO/releases/latest | grep -o '"'"'"tag_name":"[^"]*'"'"'" | cut -d\\" -f4 | tr -d v); \
+  _cur=\$("$PREFIX/dc" --version 2>/dev/null | grep -o "[0-9]*\\.[0-9]*\\.[0-9]*" | head -1 || echo 0.0.0); \
+  [ "\$_ver" = "\$_cur" ] && exit 0; \
+  echo "Updating Dev-Control \$_cur → \$_ver"; \
+  _tmp=\$(mktemp -d); \
+  curl -fsSL "https://github.com/$DC_REPO/releases/download/v\$_ver/dev-control-\$_ver.tar.gz" | tar xz -C "\$_tmp" --strip-components=1; \
+  bash "\$_tmp/install.sh" --prefix=$PREFIX --bin=$BIN_DIR --upgrade --no-aliases --no-cleanup --quiet; \
+  rm -rf "\$_tmp"'
+EOF
+
+    # Weekly timer (Sunday 03:00 local time)
+    cat > "$_timer_dir/dc-update.timer" << 'EOF'
+[Unit]
+Description=Dev-Control weekly auto-update
+
+[Timer]
+OnCalendar=Sun 03:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+EOF
+
+    systemctl --user daemon-reload
+    systemctl --user enable --now dc-update.timer 2>/dev/null \
+        && print_success "Auto-updater timer installed (weekly, Sun 03:00)" \
+        || print_warning "Could not enable timer — run: systemctl --user enable --now dc-update.timer"
+}
+
+# ============================================================================
 # MAIN
 # ============================================================================
 
@@ -370,7 +433,8 @@ main() {
     
     check_prerequisites
     install_dev_control
-    
+    install_updater
+
     if [[ "$QUIET" != "true" ]]; then
         show_post_install
     fi
