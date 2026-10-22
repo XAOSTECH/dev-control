@@ -1,4 +1,4 @@
-name: CodeQL Advanced Security
+name: CodeQL
 
 on:
   push:

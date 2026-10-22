@@ -1,7 +1,7 @@
 # Template created by https://github.com/XAOSTECH/dev-control
 # See templates folder documentation for details.
 
-name: CodeQL Advanced Security
+name: CodeQL
 
 on:
   pull_request:
