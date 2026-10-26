@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.5.14] - 2026-10-26
+
+### Added
+- add systemd user timer for weekly auto-updates; uninstall cleans up timer units
+- add chmod+install.sh to release notes install snippets — tarball unpack alone was incomplete
+- default to /opt/dev-control, detect unpacked-folder mode, offer source/tarball cleanup after install
+
+### Fixed
+- anglicise analyse - not a reserved actions keyword
+- rename to 'CodeQL' - dashboard correlates results by exact workflow name, 'CodeQL Advanced Security' created a phantom stale entry
+- add push trigger for dashboard visibility, ubuntu-26.04, explicit TypeScript scan of github-app/, Mon/Wed/Fri schedule
+- static licence badge - shields.io github/license endpoint 404s when GitHub API doesn't detect licence; use badge/ with double-dash encoding instead
+
 ## [0.5.13] - 2026-10-19
 
 ### Added
