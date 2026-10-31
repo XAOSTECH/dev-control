@@ -88,3 +88,44 @@ teardown() {
     # The two non-adjacent "alpha" commits both survive
     assert_equal "$(git log --format='%s' "${BASE}..HEAD" | grep -c '^alpha$')" "2"
 }
+
+@test "dedu x2 combines chore families whose subjects differ and aggregates messages" {
+    local fam_base before_tree
+    fam_base=$(git rev-parse HEAD)
+    _commit "chore: update 1 submodule(s) to latest" s1.txt
+    _commit "chore: update git tree visualisation"   t1.txt
+    _commit "chore: update 2 submodule(s) to latest" s2.txt   # same family, different subject
+    _commit "chore: update git tree visualisation"   t2.txt
+    _commit "feat: real work"                         w1.txt   # untouched tip
+    before_tree=$(git rev-parse "HEAD^{tree}")
+
+    run bash -c "printf 'y\nn\n' | bash '$FIX' --dedu x2 --no-cleanup --range ${fam_base}..HEAD"
+    assert_success
+    assert_output --partial "Nest check: working tree identical to original"
+
+    # Both submodule-bump commits collapse to one despite differing counts; so do the tree-viz refreshes.
+    assert_equal "$(git log --format='%s' "${fam_base}..HEAD" | grep -c 'submodule')" "1"
+    assert_equal "$(git log --format='%s' "${fam_base}..HEAD" | grep -c 'tree visualisation')" "1"
+    # Net content is unchanged.
+    assert_equal "$(git rev-parse "HEAD^{tree}")" "$before_tree"
+
+    # The combined submodule commit lists every squashed subject in its body.
+    run git log --format='%B' "${fam_base}..HEAD"
+    assert_output --partial "Consolidated 2 commits:"
+    assert_output --partial "- chore: update 1 submodule(s) to latest"
+    assert_output --partial "- chore: update 2 submodule(s) to latest"
+}
+
+@test "dedu x2 never combines CHANGELOG commits (release anchors are pinned)" {
+    local cl_base
+    cl_base=$(git rev-parse HEAD)
+    _commit "chore: update CHANGELOG for v1.0.0" c1.txt
+    _commit "feat: work"                          cw.txt
+    _commit "chore: update CHANGELOG for v1.0.0" c2.txt   # identical subject, must NOT be squashed
+
+    run bash -c "printf 'y\nn\n' | bash '$FIX' --dedu x2 --no-cleanup --range ${cl_base}..HEAD"
+    assert_success
+    # Both CHANGELOG commits survive even though their subjects match.
+    assert_equal "$(git log --format='%s' "${cl_base}..HEAD" | grep -c 'CHANGELOG')" "2"
+}
+
