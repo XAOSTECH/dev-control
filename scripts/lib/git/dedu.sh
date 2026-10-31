@@ -5,7 +5,14 @@
 # Workflow:
 #   1. Snapshot the commit list for the selected range (oldest first),
 #      capturing hash, author/committer dates, author name/email and subject.
-#   2. Group runs of consecutive commits whose subject is byte-for-byte equal.
+#   2. Group commits that share a grouping key — a byte-for-byte identical
+#      subject, or a known housekeeping "family" (tree-viz refreshes, submodule
+#      bumps, dc-init syncs, anglicise/humanise passes and the merge commits of
+#      their chore branches) whose subjects differ only in counts or PR numbers.
+#      When a group of >1 is combined the resulting commit message aggregates
+#      every combined subject so nothing is silently discarded. CHANGELOG
+#      commits and any commit a v*/latest tag points at are pinned (never
+#      dropped).
 #   3. Reconstruct history with `git commit-tree` from the parent of the
 #      oldest in-range commit:
 #        - Duplicate groups collapse to a single commit using the FIRST
@@ -45,22 +52,145 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     source "$SCRIPT_DIR/lib/print.sh"
 fi
 
+# Pinned tag commit SHAs (release/latest tags). Populated by _dedup_collect_pins; always defined so classification can run standalone.
+declare -gA DEDUP_PIN_SHAS=()
+
+# ============================================================================
+# FAMILY CLASSIFICATION — group housekeeping/bot chores that are logically the
+# same maintenance task even when their subject lines differ (submodule counts,
+# merge-PR numbers, dc-init verbs, …). Each family maps to the workflow /
+# template that emits it so the mapping stays auditable.
+# ============================================================================
+
+# Map a commit subject to a canonical family key, or "" when it is not a known
+# housekeeping chore. Families (origin in brackets):
+#   fam:tree-viz        chore: update git tree visualisation      [tree-viz.yml]
+#   fam:submodules      chore: update N submodule(s) to latest     [update.yml]
+#   fam:deps-update     chore: update N dependencies to latest     [update.yml]
+#   fam:dc-init         chore(dc-init): <verb> workflows/actions … [template-loading.sh]
+#   fam:anglicise       chore: convert American spellings …        [anglicise.yml]
+#   fam:humanise        chore: humanise hard-wrapped comments …    [humanise.yml]
+#   fam:merge-*         Merge pull request … from …/<chore-branch> [PR merges]
+_dedup_family_of() {
+    local s="$1"
+    case "$s" in
+        "chore: update git tree visualisation"|"chore(tree-viz):"*)   echo "fam:tree-viz" ;;
+        "chore: update "[0-9]*" submodule(s) to latest")              echo "fam:submodules" ;;
+        "chore: update "[0-9]*" dependencies to latest")              echo "fam:deps-update" ;;
+        "chore(dc-init):"*CHANGELOG*|"chore(dc-init):"*changelog*)     echo "" ;;
+        "chore(dc-init):"*)                                           echo "fam:dc-init" ;;
+        "chore: convert American spellings to British English")       echo "fam:anglicise" ;;
+        "chore: humanise hard-wrapped comments and prose")            echo "fam:humanise" ;;
+        "Merge pull request #"*"chore/update-submodules-"*)           echo "fam:merge-submodules" ;;
+        "Merge pull request #"*"anglicise/"*)                         echo "fam:merge-anglicise" ;;
+        "Merge pull request #"*"humanise/"*)                          echo "fam:merge-humanise" ;;
+        *)                                                           echo "" ;;
+    esac
+}
+
+# A clean one-line headline used when a family group of >1 commits is combined.
+# Falls back to "" for exact-subject (non-family) groups, where the first
+# member's own subject is used verbatim instead.
+_dedup_family_label() {
+    case "$1" in
+        fam:tree-viz)         echo "chore: update git tree visualisation" ;;
+        fam:submodules)       echo "chore: update submodules to latest" ;;
+        fam:deps-update)      echo "chore: update dependencies to latest" ;;
+        fam:dc-init)          echo "chore(dc-init): sync workflows and actions" ;;
+        fam:anglicise)        echo "chore: convert American spellings to British English" ;;
+        fam:humanise)         echo "chore: humanise hard-wrapped comments and prose" ;;
+        fam:merge-submodules) echo "chore: consolidate submodule update merges" ;;
+        fam:merge-anglicise)  echo "chore: consolidate anglicise merges" ;;
+        fam:merge-humanise)   echo "chore: consolidate humanise merges" ;;
+        *)                    echo "" ;;
+    esac
+}
+
+# True when a subject/SHA must never be dropped: CHANGELOG commits anchor
+# release tags, and any commit a v*/latest tag points at is release scaffolding.
+_dedup_is_pinned() {
+    local subj="$1" h="$2"
+    case "$subj" in
+        "chore: update CHANGELOG"*|"chore(changelog)"*) return 0 ;;
+    esac
+    [[ -n "${DEDUP_PIN_SHAS[$h]:-}" ]] && return 0
+    return 1
+}
+
+# Classify one commit into (_CLS_KEY, _CLS_COMBINABLE). Combinable commits may
+# collapse onto a representative of the same key; non-combinable commits get a
+# unique key so they are always kept in place.
+_dedup_classify() {
+    local subj="$1" h="$2" fam
+    if _dedup_is_pinned "$subj" "$h"; then
+        _CLS_KEY=""; _CLS_COMBINABLE="false"; return 0
+    fi
+    fam=$(_dedup_family_of "$subj")
+    if [[ -n "$fam" ]]; then
+        _CLS_KEY="$fam"; _CLS_COMBINABLE="true"; return 0
+    fi
+    if [[ "${DEDUP_CONSERVATIVE:-false}" == "true" ]]; then
+        # Conservative: user commits are never squashed, only known chores.
+        _CLS_KEY=""; _CLS_COMBINABLE="false"
+    else
+        # Liberal: fall back to exact-subject grouping (legacy behaviour).
+        _CLS_KEY="exact:$subj"; _CLS_COMBINABLE="true"
+    fi
+    return 0
+}
+
+# Build the aggregated commit message for a combined group of >1 commits.
+#   $1 key, $2 count, $3 newline-joined ordered-unique member subjects.
+# Headline = family label (or first subject); the body lists every combined
+# subject so nothing is silently discarded.
+_dedup_group_message() {
+    local key="$1" count="$2" subs="$3" label headline body s
+    label=$(_dedup_family_label "$key")
+    if [[ -n "$label" ]]; then
+        headline="$label"
+    else
+        headline="${subs%%$'\n'*}"
+    fi
+    body="Consolidated ${count} commits:"
+    while IFS= read -r s; do
+        [[ -z "$s" ]] && continue
+        body+=$'\n'"- $s"
+    done <<< "$subs"
+    printf '%s\n\n%s\n' "$headline" "$body"
+}
+
+# Collect the commit SHAs that release/latest tags point at, so they are pinned
+# against removal. Safe to call once per run; stale entries are harmless.
+_dedup_collect_pins() {
+    DEDUP_PIN_SHAS=()
+    local t sha
+    while IFS= read -r t; do
+        [[ -z "$t" ]] && continue
+        sha=$(git rev-parse --verify --quiet "${t}^{commit}" 2>/dev/null) || continue
+        DEDUP_PIN_SHAS["$sha"]=1
+    done < <(git tag -l 'v*' 'latest' 2>/dev/null)
+}
+
 # ============================================================================
 # DEDUP MODE — squash consecutive identical-subject commits into the first
 # ============================================================================
 
 # Build the squash plan for one round over $RANGE into shared PLAN_* globals.
-#   $1 nest — "true" collapses every occurrence of a subject onto its LAST
+#   $1 nest — "true" collapses every occurrence of a key onto its LAST
 #             occurrence (non-adjacent, tip-safe); "false" collapses only
 #             consecutive runs onto their FIRST occurrence (legacy behaviour).
+# Grouping key comes from _dedup_classify: a known housekeeping family, an
+# exact subject (liberal mode), or a unique keep:<i> for pinned/user commits.
 # Populates: PLAN_TOTAL, PLAN_BASE, PLAN_EMIT_HASH[], PLAN_EMIT_CDATE[]
 #            ("NOW" => refresh committer date, "" => keep original),
+#            PLAN_EMIT_MSG[] (aggregated message for combined groups, "" to
+#            keep the representative's own message verbatim),
 #            PLAN_ROWS[] ("action|hash|subject" for preview),
 #            PLAN_DUP_GROUPS, PLAN_DUP_COMMITS.
 dedup_build_plan() {
     local nest="$1"
 
-    PLAN_EMIT_HASH=(); PLAN_EMIT_CDATE=(); PLAN_ROWS=()
+    PLAN_EMIT_HASH=(); PLAN_EMIT_CDATE=(); PLAN_EMIT_MSG=(); PLAN_ROWS=()
     PLAN_DUP_GROUPS=0; PLAN_DUP_COMMITS=0; PLAN_BASE=""
 
     # Extract commits oldest-first using the unit separator (0x1f) so subjects containing pipes or spaces survive intact.
@@ -69,98 +199,87 @@ dedup_build_plan() {
     PLAN_TOTAL=${#commits[@]}
     (( PLAN_TOTAL == 0 )) && return 0
 
-    # Base = parent of the oldest in-range commit (empty if range starts at root)
+    # Base = parent of the oldest in-range commit (empty if range starts at root).
+    # --verify --quiet prints nothing (not the unresolved ref) when there is no parent.
     local oldest_hash="${commits[0]%%$'\x1f'*}"
-    PLAN_BASE=$(git rev-parse "${oldest_hash}~1" 2>/dev/null || true)
+    PLAN_BASE=$(git rev-parse --verify --quiet "${oldest_hash}~1" 2>/dev/null || true)
 
-    local i entry h subj
+    # Pass 1: classify every commit into a grouping key. Combinable commits share
+    # a family / exact-subject key; the rest get a unique "keep:<i>" key so they
+    # are always emitted in place.
+    local -a K=() SUB=() HASH=()
+    local i entry h subj key
+    for ((i = 0; i < PLAN_TOTAL; i++)); do
+        entry="${commits[$i]}"; h="${entry%%$'\x1f'*}"; subj="${entry#*$'\x1f'}"
+        HASH[$i]="$h"; SUB[$i]="$subj"
+        _dedup_classify "$subj" "$h"
+        if [[ "$_CLS_COMBINABLE" == "true" ]]; then
+            K[$i]="$_CLS_KEY"
+        else
+            K[$i]="keep:$i"
+        fi
+    done
+
     if [[ "$nest" == "true" ]]; then
-        # Nest: group by subject across the whole range, keep the LAST occurrence.
-        local -A last_idx=() count=()
+        # Nest: group by key across the whole range, keep the LAST occurrence.
+        local -A last_idx=() cnt=() subs_join=()
         for ((i = 0; i < PLAN_TOTAL; i++)); do
-            entry="${commits[$i]}"; h="${entry%%$'\x1f'*}"; subj="${entry#*$'\x1f'}"
-            last_idx["$subj"]="$i"
-            count["$subj"]=$(( ${count["$subj"]:-0} + 1 ))
+            key="${K[$i]}"
+            last_idx["$key"]="$i"
+            cnt["$key"]=$(( ${cnt["$key"]:-0} + 1 ))
+            # Accumulate ordered-unique member subjects for the aggregated message.
+            case $'\n'"${subs_join["$key"]:-}"$'\n' in
+                *$'\n'"${SUB[$i]}"$'\n'*) : ;;
+                *) subs_join["$key"]="${subs_join["$key"]:+${subs_join["$key"]}$'\n'}${SUB[$i]}" ;;
+            esac
         done
         for ((i = 0; i < PLAN_TOTAL; i++)); do
-            entry="${commits[$i]}"; h="${entry%%$'\x1f'*}"; subj="${entry#*$'\x1f'}"
-            # Conservative: non-chore subjects always emitted, never dropped in nest mode.
-            # CHANGELOG commits anchor release tags and are always kept.
-            local _sq=true
-            if [[ "${DEDUP_CONSERVATIVE:-false}" == "true" ]]; then
-                if [[ "$subj" == chore:* || "$subj" == chore\(* ]]; then
-                    [[ "$subj" == "chore: update CHANGELOG"* || "$subj" == chore\(changelog\)* ]] && _sq=false
-                else
-                    _sq=false
-                fi
-            fi
-            if [[ "${last_idx["$subj"]}" == "$i" ]]; then
+            key="${K[$i]}"; h="${HASH[$i]}"; subj="${SUB[$i]}"
+            if [[ "${last_idx["$key"]}" == "$i" ]]; then
                 PLAN_EMIT_HASH+=("$h"); PLAN_EMIT_CDATE+=("")
-                if (( ${count["$subj"]} > 1 )) && [[ "$_sq" == "true" ]]; then
-                    PLAN_ROWS+=("nest ${count["$subj"]}\u00d7|$h|$subj")
+                if (( ${cnt["$key"]} > 1 )); then
+                    PLAN_EMIT_MSG+=("$(_dedup_group_message "$key" "${cnt["$key"]}" "${subs_join["$key"]}")")
+                    PLAN_ROWS+=("nest ${cnt["$key"]}×|$h|$subj")
+                    PLAN_DUP_GROUPS=$((PLAN_DUP_GROUPS + 1))
+                    PLAN_DUP_COMMITS=$((PLAN_DUP_COMMITS + ${cnt["$key"]} - 1))
                 else
+                    PLAN_EMIT_MSG+=("")
                     PLAN_ROWS+=("keep|$h|$subj")
                 fi
             else
-                if [[ "$_sq" == "false" ]]; then
-                    PLAN_EMIT_HASH+=("$h"); PLAN_EMIT_CDATE+=("")
-                    PLAN_ROWS+=("keep|$h|$subj")
-                else
-                    PLAN_ROWS+=("drop|$h|$subj")
-                fi
-            fi
-        done
-        local s
-        for s in "${!count[@]}"; do
-            if (( ${count["$s"]} > 1 )); then
-                local _ssq=true
-                if [[ "${DEDUP_CONSERVATIVE:-false}" == "true" ]]; then
-                    if [[ "$s" == chore:* || "$s" == chore\(* ]]; then
-                        [[ "$s" == "chore: update CHANGELOG"* || "$s" == chore\(changelog\)* ]] && _ssq=false
-                    else
-                        _ssq=false
-                    fi
-                fi
-                if [[ "$_ssq" == "true" ]]; then
-                    PLAN_DUP_GROUPS=$((PLAN_DUP_GROUPS + 1))
-                    PLAN_DUP_COMMITS=$((PLAN_DUP_COMMITS + ${count["$s"]} - 1))
-                fi
+                PLAN_ROWS+=("drop|$h|$subj")
             fi
         done
     else
-        # Consecutive: collapse adjacent identical-subject runs onto the first.
-        local prev="" idx=-1
-        local -a run_first=() run_count=() run_subj=()
+        # Consecutive: collapse adjacent same-key runs onto the FIRST occurrence.
+        local prev_key="" idx=-1
+        local -a run_first=() run_count=() run_subj=() run_subs=()
         for ((i = 0; i < PLAN_TOTAL; i++)); do
-            entry="${commits[$i]}"; h="${entry%%$'\x1f'*}"; subj="${entry#*$'\x1f'}"
-            # Conservative mode: only group chore: / chore( subjects for squashing.
-            # CHANGELOG commits anchor release tags and must never be grouped.
-            local _grp=false
-            if (( idx >= 0 )) && [[ "$subj" == "$prev" ]]; then
-                if [[ "${DEDUP_CONSERVATIVE:-false}" == "false" ]] \
-                    || { [[ "$subj" == chore:* || "$subj" == chore\(* ]] \
-                         && [[ "$subj" != "chore: update CHANGELOG"* ]] \
-                         && [[ "$subj" != chore\(changelog\)* ]]; }; then
-                    _grp=true
-                fi
-            fi
-            if [[ "$_grp" == "true" ]]; then
+            key="${K[$i]}"; h="${HASH[$i]}"; subj="${SUB[$i]}"
+            if (( idx >= 0 )) && [[ "$key" == "$prev_key" && "$key" != keep:* ]]; then
                 run_count[$idx]=$(( run_count[idx] + 1 ))
+                case $'\n'"${run_subs[$idx]}"$'\n' in
+                    *$'\n'"$subj"$'\n'*) : ;;
+                    *) run_subs[$idx]="${run_subs[$idx]}"$'\n'"$subj" ;;
+                esac
             else
-                idx=$((idx + 1)); run_first[$idx]="$h"; run_count[$idx]=1; run_subj[$idx]="$subj"
+                idx=$((idx + 1)); run_first[$idx]="$h"; run_count[$idx]=1; run_subj[$idx]="$subj"; run_subs[$idx]="$subj"
             fi
-            prev="$subj"
+            prev_key="$key"
         done
         local j
         for ((j = 0; j <= idx; j++)); do
             PLAN_EMIT_HASH+=("${run_first[$j]}")
             if (( run_count[$j] > 1 )); then
                 PLAN_EMIT_CDATE+=("NOW")
+                _dedup_classify "${run_subj[$j]}" "${run_first[$j]}"
+                PLAN_EMIT_MSG+=("$(_dedup_group_message "$_CLS_KEY" "${run_count[$j]}" "${run_subs[$j]}")")
                 PLAN_ROWS+=("squash ${run_count[$j]}×|${run_first[$j]}|${run_subj[$j]}")
                 PLAN_DUP_GROUPS=$((PLAN_DUP_GROUPS + 1))
                 PLAN_DUP_COMMITS=$((PLAN_DUP_COMMITS + run_count[$j] - 1))
             else
                 PLAN_EMIT_CDATE+=("")
+                PLAN_EMIT_MSG+=("")
                 PLAN_ROWS+=("keep|${run_first[$j]}|${run_subj[$j]}")
             fi
         done
@@ -187,7 +306,11 @@ dedup_run_round() {
     for ((k = 0; k < ${#PLAN_EMIT_HASH[@]}; k++)); do
         rep="${PLAN_EMIT_HASH[$k]}"
         tree=$(git rev-parse "${rep}^{tree}")
-        msg=$(git log -1 --format=%B "$rep")
+        if [[ -n "${PLAN_EMIT_MSG[$k]:-}" ]]; then
+            msg="${PLAN_EMIT_MSG[$k]}"
+        else
+            msg=$(git log -1 --format=%B "$rep")
+        fi
         an=$(git log -1 --format=%an "$rep"); ae=$(git log -1 --format=%ae "$rep"); ad=$(git log -1 --format=%aI "$rep")
         cn=$(git log -1 --format=%cn "$rep"); ce=$(git log -1 --format=%ce "$rep")
         if [[ "${PLAN_EMIT_CDATE[$k]}" == "NOW" ]]; then
@@ -244,6 +367,9 @@ deduplicate_mode() {
     else
         echo -e "Mode:  ${CYAN}consecutive${NC}"
     fi
+
+    # Pin release-tag commits so they survive deduplication, then preview round one.
+    _dedup_collect_pins
 
     # Preview the first round's plan
     dedup_build_plan "$nest"
