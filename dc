@@ -43,6 +43,8 @@ LIB_DIR="$SCRIPTS_DIR/lib"
 # Source core libraries
 source "$LIB_DIR/colours.sh"
 source "$LIB_DIR/print.sh"
+# TUI helpers (gum-powered, with graceful fallbacks) — optional.
+[[ -f "$LIB_DIR/tui.sh" ]] && source "$LIB_DIR/tui.sh"
 
 # Global options
 DC_QUIET=false
@@ -118,6 +120,8 @@ EOF
 }
 
 show_help() {
+    # Real ESC sequences so the heredoc renders styled (the globals are literal \033 strings).
+    local BOLD=$'\e[1m' CYAN=$'\e[0;36m' NC=$'\e[0m'
     cat << EOF
 ${BOLD}Dev-Control${NC} - Comprehensive Git workflow automation toolkit
 
@@ -260,6 +264,72 @@ run_command() {
     fi
 }
 
+# Dispatch a command WITHOUT exec so control returns to the interactive menu.
+_dc_run_nonexec() {
+    local cmd="$1"; shift
+    local script
+    if script=$(find_command "$cmd"); then
+        export DC_QUIET DC_VERBOSE DC_JSON DC_DEBUG DC_ROOT
+        bash "$script" "$@"
+        return $?
+    fi
+    print_error "Unknown command: $cmd"
+    return 1
+}
+
+# Themed interactive launcher (gum via tui.sh, graceful numbered fallback).
+dc_interactive_menu() {
+    declare -f tui_set_theme &>/dev/null && tui_set_theme "${DC_THEME:-matrix}"
+
+    # User-facing commands, ordered by how often newcomers reach for them.
+    local -a menu_keys=(init repo pr fix modules licences mcp container aliases key)
+
+    [[ "${GUM_AVAILABLE:-false}" != "true" ]] && \
+        print_info "Tip: install 'gum' (e.g. brew/snap install gum) for a richer, scrollable menu."
+
+    while true; do
+        echo ""
+        if declare -f tui_banner &>/dev/null; then
+            tui_banner "Dev-Control" "v${DC_VERSION} - unified git workflow toolkit"
+        else
+            print_header "Dev-Control v${DC_VERSION}"
+        fi
+
+        local -a labels=() k
+        for k in "${menu_keys[@]}"; do
+            labels+=("$(printf '%-10s %s' "$k" "${COMMAND_DESC[$k]:-}")")
+        done
+        labels+=("$(printf '%-10s %s' menu 'Advanced menu - all tools, git submenu, cluster setup')")
+        labels+=("$(printf '%-10s %s' quit 'Exit')")
+
+        local choice=""
+        if declare -f tui_choose &>/dev/null; then
+            choice=$(tui_choose "What would you like to do?" "${labels[@]}" || true)
+        else
+            local i=1 l
+            for l in "${labels[@]}"; do printf '  %2d) %s\n' "$i" "$l"; i=$((i + 1)); done
+            read -rp "Select: " i
+            [[ "$i" =~ ^[0-9]+$ ]] && choice="${labels[$((i - 1))]:-}"
+        fi
+
+        [[ -z "$choice" ]] && break
+        local cmd="${choice%%[[:space:]]*}"
+        [[ "$cmd" == "quit" || "$cmd" == "exit" ]] && break
+
+        echo ""
+        _dc_run_nonexec "$cmd" || true
+
+        echo ""
+        if declare -f tui_confirm &>/dev/null; then
+            tui_confirm "Return to the Dev-Control menu?" "yes" || break
+        else
+            local _r; read -rp "Return to menu? [Y/n]: " _r; [[ "${_r:-y}" =~ ^[Nn] ]] && break
+        fi
+    done
+
+    declare -f tui_echo &>/dev/null && tui_echo "Goodbye!" "success" || print_info "Goodbye!"
+}
+
 # ============================================================================
 # MAIN
 # ============================================================================
@@ -315,9 +385,13 @@ main() {
         esac
     done
     
-    # No command specified - run interactive menu
+    # No command specified - launch the interactive menu (or help when non-interactive)
     if [[ ${#args[@]} -eq 0 ]]; then
-        run_command "menu"
+        if [[ -t 0 && -t 1 ]]; then
+            dc_interactive_menu
+        else
+            show_help
+        fi
         exit 0
     fi
     
