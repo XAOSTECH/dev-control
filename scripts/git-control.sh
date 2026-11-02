@@ -35,6 +35,8 @@ export DEV_CONTROL_DIR  # Used by sourced libraries
 # Source shared libraries
 source "$SCRIPT_DIR/lib/colours.sh"
 source "$SCRIPT_DIR/lib/print.sh"
+# Gum-powered TUI helpers (graceful numbered fallback when gum is absent) — optional.
+[[ -f "$SCRIPT_DIR/lib/tui.sh" ]] && source "$SCRIPT_DIR/lib/tui.sh"
 
 # ============================================================================
 # SCRIPT AVAILABILITY CHECKS
@@ -231,6 +233,29 @@ show_quick_tips() {
     echo ""
 }
 
+# Gum-powered traversable picker for git-control; echoes the run_subcommand token (or empty).
+_gc_menu_choose() {
+    local -a labels=(
+        "Initialise Templates - copy docs, workflows, licences"
+        "Create Repository    - create a GitHub repository"
+        "Create Pull Request  - open a PR from the current branch"
+        "Fix History          - rewrite, sign and dedup commits"
+        "Licence Auditor      - audit and manage licences"
+        "Rename Branches      - batch rename the default branch"
+        "Setup GPG Bot        - configure GPG for Actions"
+        "Help"
+        "Back / Exit"
+    )
+    local -a tokens=(1 2 3 4 5 6 7 h 0)
+    local choice i
+    choice=$(tui_choose "Git Control — select a tool" "${labels[@]}" || true)
+    [[ -z "$choice" ]] && { echo ""; return; }
+    for i in "${!labels[@]}"; do
+        [[ "${labels[$i]}" == "$choice" ]] && { echo "${tokens[$i]}"; return; }
+    done
+    echo ""
+}
+
 # ============================================================================
 # MAIN
 # ============================================================================
@@ -241,30 +266,43 @@ main() {
         run_subcommand "$@"
         exit $?
     fi
-    
-    # Interactive mode
+
+    # Interactive mode — gum-powered when tui.sh is available, numbered fallback otherwise.
+    declare -f tui_set_theme &>/dev/null && tui_set_theme "${DC_THEME:-matrix}"
+    local _tui=false
+    declare -f tui_choose &>/dev/null && _tui=true
+
     while true; do
-        display_menu
-        read -rp "Select option: " choice
+        local choice
+        if [[ "$_tui" == "true" ]]; then
+            choice=$(_gc_menu_choose)
+        else
+            display_menu
+            read -rp "Select option: " choice
+        fi
         echo ""
-        
-        if [[ "$choice" == "0" || "$choice" == "q" || "$choice" == "quit" ]]; then
+
+        if [[ -z "$choice" || "$choice" == "0" || "$choice" == "q" || "$choice" == "quit" ]]; then
             print_info "Returning to main menu..."
             show_quick_tips
             exit 0
         fi
-        
+
         run_subcommand "$choice"
         local status=$?
-        
+
         if [[ $status -eq 1 ]]; then
             # Exit requested
             show_quick_tips
             exit 0
         fi
-        
+
         echo ""
-        read -rp "Press Enter to continue..."
+        if [[ "$_tui" == "true" ]]; then
+            declare -f tui_confirm &>/dev/null && { tui_confirm "Return to the Git Control menu?" "yes" || { show_quick_tips; exit 0; }; }
+        else
+            read -rp "Press Enter to continue..."
+        fi
     done
 }
 

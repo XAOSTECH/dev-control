@@ -33,6 +33,8 @@ export DEV_CONTROL_DIR  # Used by sourced libraries
 # Source shared libraries
 source "$SCRIPT_DIR/lib/colours.sh"
 source "$SCRIPT_DIR/lib/print.sh"
+# Gum-powered TUI helpers (graceful numbered fallback when gum is absent) — optional.
+[[ -f "$SCRIPT_DIR/lib/tui.sh" ]] && source "$SCRIPT_DIR/lib/tui.sh"
 
 # ============================================================================
 # SCRIPT AVAILABILITY CHECKS
@@ -331,6 +333,34 @@ run_tool() {
     esac
 }
 
+# Gum-powered traversable tool picker; echoes the run_tool token (or empty to exit).
+_dc_menu_choose() {
+    local -a labels=(
+        "Alias Loading        - install shell aliases"
+        "Git Services         - unified git workflow submenu"
+        "Template Loading     - initialise repo templates (dc-init)"
+        "Repository Creator   - create a GitHub repository"
+        "PR Creator           - open a pull request"
+        "Module Nesting       - manage submodules"
+        "History Fixer        - fix, sign and dedup commit history"
+        "Licence Auditor      - audit and apply licences"
+        "Package Builder      - build release packages"
+        "Full Fix             - dedup + sign + template refresh"
+        "MCP Setup            - configure MCP servers"
+        "Containerise         - set up a devcontainer"
+        "Cluster Setup        - templates + container + MCP"
+        "Exit"
+    )
+    local -a tokens=(1 2 3 4 5 6 7 8 9 f m c l 0)
+    local choice i
+    choice=$(tui_choose "Dev-Control — select a tool" "${labels[@]}" || true)
+    [[ -z "$choice" ]] && { echo ""; return; }
+    for i in "${!labels[@]}"; do
+        [[ "${labels[$i]}" == "$choice" ]] && { echo "${tokens[$i]}"; return; }
+    done
+    echo ""
+}
+
 # ============================================================================
 # MAIN
 # ============================================================================
@@ -341,21 +371,36 @@ main() {
         run_tool "$@"
         exit $?
     fi
-    
-    # Interactive mode
+
+    # Interactive mode — gum-powered when tui.sh is available, numbered fallback otherwise.
+    declare -f tui_set_theme &>/dev/null && tui_set_theme "${DC_THEME:-matrix}"
+    local _tui=false
+    declare -f tui_choose &>/dev/null && _tui=true
+
     while true; do
-        display_menu
-        read -rp "Select option: " choice
+        local choice
+        if [[ "$_tui" == "true" ]]; then
+            choice=$(_dc_menu_choose)
+        else
+            display_menu
+            read -rp "Select option: " choice
+        fi
         echo ""
-        
-        if [[ "$choice" == "0" ]]; then
+
+        if [[ -z "$choice" || "$choice" == "0" ]]; then
             print_info "Goodbye!"
             exit 0
         fi
-        
-        run_tool "$choice"
+
+        run_tool "$choice" || true
         echo ""
-        read -rp "Press Enter to continue..."
+        if [[ "$_tui" == "true" ]]; then
+            if declare -f tui_confirm &>/dev/null; then
+                tui_confirm "Return to the Dev-Control menu?" "yes" || { print_info "Goodbye!"; exit 0; }
+            fi
+        else
+            read -rp "Press Enter to continue..."
+        fi
     done
 }
 
