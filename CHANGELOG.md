@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.5.14] - 2026-11-02 (re-release)
+
+### Added
+- add themed tui.sh launcher menu and render --help with real escapes
+- group chore families, aggregate squashed messages, pin release tags
+- add systemd user timer for weekly auto-updates; uninstall cleans up timer units
+- add chmod+install.sh to release notes install snippets — tarball unpack alone was incomplete
+- default to /opt/dev-control, detect unpacked-folder mode, offer source/tarball cleanup after install
+
+### Fixed
+- re-clamp depth after dedup so the sign step is not skipped
+- pass findings to summary job via artifact
+- anglicise analyse - not a reserved actions keyword
+- rename to 'CodeQL' - dashboard correlates results by exact workflow name, 'CodeQL Advanced Security' created a phantom stale entry
+- add push trigger for dashboard visibility, ubuntu-26.04, explicit TypeScript scan of github-app/, Mon/Wed/Fri schedule
+- static licence badge - shields.io github/license endpoint 404s when GitHub API doesn't detect licence; use badge/ with double-dash encoding instead
+
+### Changed
+- test(dedup): cover chore-family combine and CHANGELOG pinning
+
 ## [0.5.14] - 2026-10-26
 
 ### Added
