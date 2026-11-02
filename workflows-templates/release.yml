@@ -703,6 +703,7 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.app_token.outputs.token }}
         run: |
+          set -euo pipefail
           mkdir -p dist
           STAGING=$(mktemp -d)
 
@@ -714,11 +715,45 @@ jobs:
             }
           done
 
-          # Flatten artifact directories into dist/
+          # Treat downloaded artifacts as untrusted:
+          # - only allow safe basenames
+          # - only copy expected artifact file types
+          # - validate SHA256SUMS.txt line format before using it
+          : > dist/SHA256SUMS.txt
           find "$STAGING" -type f | while IFS= read -r f; do
             BASENAME=$(basename "$f")
-            cp "$f" "dist/${BASENAME}"
-            echo "  → dist/${BASENAME}"
+
+            # Reject suspicious names
+            if [[ "$BASENAME" == *"/"* || "$BASENAME" == *"\\"* || "$BASENAME" == *".."* ]]; then
+              echo "⚠️ Skipping suspicious artifact name: $BASENAME"
+              continue
+            fi
+            if [[ ! "$BASENAME" =~ ^[A-Za-z0-9._+-]+$ ]]; then
+              echo "⚠️ Skipping artifact with unsupported characters: $BASENAME"
+              continue
+            fi
+
+            case "$BASENAME" in
+              SHA256SUMS.txt)
+                while IFS= read -r line; do
+                  line="${line//$'\r'/}"
+                  [[ -z "$line" ]] && continue
+                  if [[ "$line" =~ ^[a-fA-F0-9]{64}[[:space:]]+[*]?[A-Za-z0-9._+-]+$ ]]; then
+                    echo "$line" >> dist/SHA256SUMS.txt
+                  else
+                    echo "⚠️ Ignoring invalid checksum line in $f: $line"
+                  fi
+                done < "$f"
+                echo "  → merged validated checksums into dist/SHA256SUMS.txt"
+                ;;
+              *.tar.gz|*.zip|*.tgz|*.exe|*.msi|*.deb|*.rpm|*.pkg)
+                cp "$f" "dist/${BASENAME}"
+                echo "  → dist/${BASENAME}"
+                ;;
+              *)
+                echo "⚠️ Skipping unexpected artifact file: $BASENAME"
+                ;;
+            esac
           done
 
           rm -rf "$STAGING"
