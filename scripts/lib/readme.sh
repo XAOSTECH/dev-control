@@ -60,8 +60,7 @@ readme_apply() {
     fi
     mkdir -p "$(dirname "$dest")"
 
-    # Derive the licence badge token so {{LICENSE_TYPE_BADGE}} resolves to a static
-    # shields badge (a literal '-' must be doubled, e.g. GPL-3.0 -> GPL--3.0).
+    # Derive the licence badge token so {{LICENSE_TYPE_BADGE}} resolves to a static shields badge (a literal '-' must be doubled, e.g. GPL-3.0 -> GPL--3.0).
     LICENSE_TYPE_BADGE="${LICENSE_TYPE:-unknown}"
     LICENSE_TYPE_BADGE="${LICENSE_TYPE_BADGE//-/--}"
 
