@@ -1253,8 +1253,7 @@ _full_fix_single() {
     DEDUP_TIMES="$_save_times"
 
     # Dedup may have shrunk history; re-clamp depth so the sign range stays valid.
-    # Otherwise HEAD~${depth}..HEAD can fall off the root, git log errors, the
-    # unsigned count reads 0 and the sign step is silently skipped.
+    # Otherwise HEAD~${depth}..HEAD can fall off the root, git log errors, the unsigned count reads 0 and the sign step is silently skipped.
     _total=$(git rev-list --count --first-parent HEAD 2>/dev/null || echo 0)
     _max_depth=$(( _total > 0 ? _total - 1 : 0 ))
     [[ "$depth" -gt "$_max_depth" ]] && depth="$_max_depth"

@@ -56,14 +56,10 @@ fi
 declare -gA DEDUP_PIN_SHAS=()
 
 # ============================================================================
-# FAMILY CLASSIFICATION — group housekeeping/bot chores that are logically the
-# same maintenance task even when their subject lines differ (submodule counts,
-# merge-PR numbers, dc-init verbs, …). Each family maps to the workflow /
-# template that emits it so the mapping stays auditable.
+# FAMILY CLASSIFICATION — group housekeeping/bot chores that are logically the same maintenance task even when their subject lines differ (submodule counts, merge-PR numbers, dc-init verbs, …). Each family maps to the workflow / template that emits it so the mapping stays auditable.
 # ============================================================================
 
-# Map a commit subject to a canonical family key, or "" when it is not a known
-# housekeeping chore. Families (origin in brackets):
+# Map a commit subject to a canonical family key, or "" when it is not a known housekeeping chore. Families (origin in brackets):
 #   fam:tree-viz        chore: update git tree visualisation      [tree-viz.yml]
 #   fam:submodules      chore: update N submodule(s) to latest     [update.yml]
 #   fam:deps-update     chore: update N dependencies to latest     [update.yml]
@@ -89,8 +85,7 @@ _dedup_family_of() {
 }
 
 # A clean one-line headline used when a family group of >1 commits is combined.
-# Falls back to "" for exact-subject (non-family) groups, where the first
-# member's own subject is used verbatim instead.
+# Falls back to "" for exact-subject (non-family) groups, where the first member's own subject is used verbatim instead.
 _dedup_family_label() {
     case "$1" in
         fam:tree-viz)         echo "chore: update git tree visualisation" ;;
@@ -106,8 +101,7 @@ _dedup_family_label() {
     esac
 }
 
-# True when a subject/SHA must never be dropped: CHANGELOG commits anchor
-# release tags, and any commit a v*/latest tag points at is release scaffolding.
+# True when a subject/SHA must never be dropped: CHANGELOG commits anchor release tags, and any commit a v*/latest tag points at is release scaffolding.
 _dedup_is_pinned() {
     local subj="$1" h="$2"
     case "$subj" in
@@ -117,9 +111,7 @@ _dedup_is_pinned() {
     return 1
 }
 
-# Classify one commit into (_CLS_KEY, _CLS_COMBINABLE). Combinable commits may
-# collapse onto a representative of the same key; non-combinable commits get a
-# unique key so they are always kept in place.
+# Classify one commit into (_CLS_KEY, _CLS_COMBINABLE). Combinable commits may collapse onto a representative of the same key; non-combinable commits get a unique key so they are always kept in place.
 _dedup_classify() {
     local subj="$1" h="$2" fam
     if _dedup_is_pinned "$subj" "$h"; then
@@ -141,8 +133,7 @@ _dedup_classify() {
 
 # Build the aggregated commit message for a combined group of >1 commits.
 #   $1 key, $2 count, $3 newline-joined ordered-unique member subjects.
-# Headline = family label (or first subject); the body lists every combined
-# subject so nothing is silently discarded.
+# Headline = family label (or first subject); the body lists every combined subject so nothing is silently discarded.
 _dedup_group_message() {
     local key="$1" count="$2" subs="$3" label headline body s
     label=$(_dedup_family_label "$key")
@@ -159,8 +150,7 @@ _dedup_group_message() {
     printf '%s\n\n%s\n' "$headline" "$body"
 }
 
-# Collect the commit SHAs that release/latest tags point at, so they are pinned
-# against removal. Safe to call once per run; stale entries are harmless.
+# Collect the commit SHAs that release/latest tags point at, so they are pinned against removal. Safe to call once per run; stale entries are harmless.
 _dedup_collect_pins() {
     DEDUP_PIN_SHAS=()
     local t sha
@@ -179,8 +169,7 @@ _dedup_collect_pins() {
 #   $1 nest — "true" collapses every occurrence of a key onto its LAST
 #             occurrence (non-adjacent, tip-safe); "false" collapses only
 #             consecutive runs onto their FIRST occurrence (legacy behaviour).
-# Grouping key comes from _dedup_classify: a known housekeeping family, an
-# exact subject (liberal mode), or a unique keep:<i> for pinned/user commits.
+# Grouping key comes from _dedup_classify: a known housekeeping family, an exact subject (liberal mode), or a unique keep:<i> for pinned/user commits.
 # Populates: PLAN_TOTAL, PLAN_BASE, PLAN_EMIT_HASH[], PLAN_EMIT_CDATE[]
 #            ("NOW" => refresh committer date, "" => keep original),
 #            PLAN_EMIT_MSG[] (aggregated message for combined groups, "" to
@@ -204,9 +193,7 @@ dedup_build_plan() {
     local oldest_hash="${commits[0]%%$'\x1f'*}"
     PLAN_BASE=$(git rev-parse --verify --quiet "${oldest_hash}~1" 2>/dev/null || true)
 
-    # Pass 1: classify every commit into a grouping key. Combinable commits share
-    # a family / exact-subject key; the rest get a unique "keep:<i>" key so they
-    # are always emitted in place.
+    # Pass 1: classify every commit into a grouping key. Combinable commits share a family / exact-subject key; the rest get a unique "keep:<i>" key so they are always emitted in place.
     local -a K=() SUB=() HASH=()
     local i entry h subj key
     for ((i = 0; i < PLAN_TOTAL; i++)); do
