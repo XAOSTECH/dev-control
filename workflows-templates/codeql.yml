@@ -63,9 +63,7 @@ jobs:
           if want '\.rs$|(^|/)Cargo\.toml$';                                         then langs+=(rust); fi
           if want '\.swift$|(^|/)Package\.swift$';                                   then langs+=(swift); fi
 
-          # build-mode none needs no build toolchain (actions, js/ts, python, ruby,
-          # java-kotlin, csharp, rust); compiled languages (c-cpp, go, swift) use
-          # autobuild, and swift additionally requires a macOS runner.
+          # build-mode none needs no build toolchain (actions, js/ts, python, ruby, java-kotlin, csharp, rust); compiled languages (c-cpp, go, swift) use autobuild, and swift additionally requires a macOS runner.
           json='['; sep=''
           for l in ${langs[@]+"${langs[@]}"}; do
             case "$l" in c-cpp|go|swift) mode=autobuild ;; *) mode=none ;; esac
