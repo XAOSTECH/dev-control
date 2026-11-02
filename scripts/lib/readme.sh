@@ -60,6 +60,11 @@ readme_apply() {
     fi
     mkdir -p "$(dirname "$dest")"
 
+    # Derive the licence badge token so {{LICENSE_TYPE_BADGE}} resolves to a static
+    # shields badge (a literal '-' must be doubled, e.g. GPL-3.0 -> GPL--3.0).
+    LICENSE_TYPE_BADGE="${LICENSE_TYPE:-unknown}"
+    LICENSE_TYPE_BADGE="${LICENSE_TYPE_BADGE//-/--}"
+
     local sed_args=() token value esc
     while IFS= read -r token; do
         [[ -z "$token" ]] && continue
@@ -97,19 +102,18 @@ readme_insert_badges() {
     local tmp
     tmp=$(mktemp)
 
+    # Static known-licence shield (shields' github/license name-search 404s when the
+    # API cannot detect the licence); a literal '-' is doubled, e.g. GPL-3.0 -> GPL--3.0.
+    local _lic_badge="${LICENSE_TYPE:-unknown}"
+    _lic_badge="${_lic_badge//-/--}"
+
     local badges
     badges=$(cat <<'EOF'
 
 <p align="center">
-  <a href="{{REPO_URL}}">
-    <img alt="GitHub repo" src="https://img.shields.io/badge/GitHub-{{ORG_NAME}}%2F{{REPO_SLUG}}-181717?style=for-the-badge&logo=github">
-  </a>
-  <a href="{{REPO_URL}}/releases">
-    <img alt="GitHub release" src="https://img.shields.io/github/v/release/{{ORG_NAME}}/{{REPO_SLUG}}?style=for-the-badge&logo=semantic-release&color=blue">
-  </a>
-  <a href="{{REPO_URL}}/blob/main/LICENCE">
-    <img alt="Licence" src="https://img.shields.io/github/license/{{ORG_NAME}}/{{REPO_SLUG}}?style=for-the-badge&color=green">
-  </a>
+  <a href="{{REPO_URL}}"><img alt="GitHub repo" src="https://img.shields.io/badge/GitHub-{{ORG_NAME}}%2F{{REPO_SLUG}}-181717?style=for-the-badge&logo=github"></a>
+  <a href="{{REPO_URL}}/releases"><img alt="GitHub release" src="https://img.shields.io/github/v/release/{{ORG_NAME}}/{{REPO_SLUG}}?style=for-the-badge&logo=semantic-release&color=blue"></a>
+  <a href="{{REPO_URL}}/blob/main/LICENCE"><img alt="Licence" src="https://img.shields.io/badge/licence-{{LICENSE_TYPE_BADGE}}-green?style=for-the-badge"></a>
 </p>
 
 EOF
@@ -117,6 +121,7 @@ EOF
     badges="${badges//\{\{REPO_URL\}\}/$REPO_URL}"
     badges="${badges//\{\{ORG_NAME\}\}/$ORG_NAME}"
     badges="${badges//\{\{REPO_SLUG\}\}/$REPO_SLUG}"
+    badges="${badges//\{\{LICENSE_TYPE_BADGE\}\}/$_lic_badge}"
 
     if [[ ! -f "$readme_path" ]]; then
         mkdir -p "$(dirname "$readme_path")"

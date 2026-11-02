@@ -2,30 +2,16 @@
 
 <!-- Project Shields/Badges -->
 <p align="center">
-  <a href="https://github.com/xaostech/dev-control">
-    <img alt="GitHub repo" src="https://img.shields.io/badge/GitHub-xaostech%2Fdev--control-181717?style=for-the-badge&logo=github">
-  </a>
-  <a href="https://github.com/xaostech/dev-control/releases">
-    <img alt="GitHub release" src="https://img.shields.io/github/v/release/xaostech/dev-control?style=for-the-badge&logo=semantic-release&color=blue">
-  </a>
-  <a href="https://github.com/xaostech/dev-control/blob/main/LICENSE">
-    <img alt="Licence" src="https://img.shields.io/badge/licence-GPL--3.0-green?style=for-the-badge">
-  </a>
+  <a href="https://github.com/xaostech/dev-control"><img alt="GitHub repo" src="https://img.shields.io/badge/GitHub-xaostech%2Fdev--control-181717?style=for-the-badge&logo=github"></a>
+  <a href="https://github.com/xaostech/dev-control/releases"><img alt="GitHub release" src="https://img.shields.io/github/v/release/xaostech/dev-control?style=for-the-badge&logo=semantic-release&color=blue"></a>
+  <a href="https://github.com/xaostech/dev-control/blob/main/LICENSE"><img alt="Licence" src="https://img.shields.io/badge/licence-GPL--3.0-green?style=for-the-badge"></a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/xaostech/dev-control/actions/workflows/bash-lint.yml">
-    <img alt="CI Status" src="https://github.com/xaostech/dev-control/actions/workflows/bash-lint.yml/badge.svg?branch=Main">
-  </a>
-  <a href="https://github.com/xaostech/dev-control/issues">
-    <img alt="Issues" src="https://img.shields.io/github/issues/xaostech/dev-control?style=flat-square&logo=github&color=yellow">
-  </a>
-  <a href="https://github.com/xaostech/dev-control/pulls">
-    <img alt="Pull Requests" src="https://img.shields.io/github/issues-pr/xaostech/dev-control?style=flat-square&logo=github&color=purple">
-  </a>
-  <a href="https://github.com/xaostech/dev-control/stargazers">
-    <img alt="Stars" src="https://img.shields.io/github/stars/xaostech/dev-control?style=flat-square&logo=github&color=gold">
-  </a>
+  <a href="https://github.com/xaostech/dev-control/actions/workflows/bash-lint.yml"><img alt="CI Status" src="https://github.com/xaostech/dev-control/actions/workflows/bash-lint.yml/badge.svg?branch=Main"></a>
+  <a href="https://github.com/xaostech/dev-control/issues"><img alt="Issues" src="https://img.shields.io/github/issues/xaostech/dev-control?style=flat-square&logo=github&color=yellow"></a>
+  <a href="https://github.com/xaostech/dev-control/pulls"><img alt="Pull Requests" src="https://img.shields.io/github/issues-pr/xaostech/dev-control?style=flat-square&logo=github&color=purple"></a>
+  <a href="https://github.com/xaostech/dev-control/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/xaostech/dev-control?style=flat-square&logo=github&color=gold"></a>
 </p>
 
 <p align="center">
