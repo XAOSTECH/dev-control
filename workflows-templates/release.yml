@@ -699,7 +699,7 @@ jobs:
           fi
 
       - name: Download build artifacts
-        if: steps.build_workflows.outputs.has_builds == 'true' && steps.check_release.outputs.exists != 'true'
+        if: github.event_name == 'push' && steps.build_workflows.outputs.has_builds == 'true' && steps.check_release.outputs.exists != 'true'
         env:
           GH_TOKEN: ${{ steps.app_token.outputs.token }}
         run: |
