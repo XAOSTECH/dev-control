@@ -994,7 +994,7 @@ jobs:
 
       - name: Generate release notes
         id: release_notes
-        if: steps.check_release.outputs.exists != 'true'
+        if: github.event_name == 'push' && steps.check_release.outputs.exists != 'true'
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           TAG_NAME="${{ steps.version.outputs.tag_name }}"
