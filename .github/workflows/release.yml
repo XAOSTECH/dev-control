@@ -995,6 +995,8 @@ jobs:
       - name: Generate release notes
         id: release_notes
         if: github.event_name == 'push' && steps.check_release.outputs.exists != 'true'
+        env:
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           TAG_NAME="${{ steps.version.outputs.tag_name }}"
@@ -1041,7 +1043,7 @@ jobs:
           EOF
 
             # Append build artifact checksums from SHA256SUMS.txt files
-            if [[ -f "dist/SHA256SUMS.txt" ]]; then
+            if [[ "$EVENT_NAME" == "push" && -f "dist/SHA256SUMS.txt" ]]; then
               while IFS= read -r line; do
                 line="${line//$'\r'/}"
                 [[ -z "$line" ]] && continue
@@ -1078,7 +1080,7 @@ jobs:
           fi
 
           # If build artifacts exist but no tarball, still show checksums
-          if [[ -z "${tarball_name:-}" && -f "dist/SHA256SUMS.txt" ]]; then
+          if [[ "$EVENT_NAME" == "push" && -z "${tarball_name:-}" && -f "dist/SHA256SUMS.txt" ]]; then
             echo "" >> "$NOTES_FILE"
             echo "## Checksums" >> "$NOTES_FILE"
             echo "" >> "$NOTES_FILE"
