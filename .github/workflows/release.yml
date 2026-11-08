@@ -1045,8 +1045,12 @@ jobs:
               while IFS= read -r line; do
                 line="${line//$'\r'/}"
                 [[ -z "$line" ]] && continue
-                HASH=$(echo "$line" | awk '{print $1}')
-                FILE=$(echo "$line" | sed 's/^[a-fA-F0-9]*[ *]*//')
+                if [[ "$line" =~ ^([a-fA-F0-9]{64})[[:space:]]+[*]?([A-Za-z0-9._+-]+)$ ]]; then
+                  HASH="${BASH_REMATCH[1]}"
+                  FILE="${BASH_REMATCH[2]}"
+                else
+                  continue
+                fi
                 [[ -z "$FILE" || "$FILE" == "SHA256SUMS.txt" ]] && continue
                 echo "| ${FILE} | \`${HASH}\` |" >> "$NOTES_FILE"
               done < dist/SHA256SUMS.txt
@@ -1083,8 +1087,12 @@ jobs:
             while IFS= read -r line; do
               line="${line//$'\r'/}"
               [[ -z "$line" ]] && continue
-              HASH=$(echo "$line" | awk '{print $1}')
-              FILE=$(echo "$line" | sed 's/^[a-fA-F0-9]*[ *]*//')
+              if [[ "$line" =~ ^([a-fA-F0-9]{64})[[:space:]]+[*]?([A-Za-z0-9._+-]+)$ ]]; then
+                HASH="${BASH_REMATCH[1]}"
+                FILE="${BASH_REMATCH[2]}"
+              else
+                continue
+              fi
               [[ -z "$FILE" || "$FILE" == "SHA256SUMS.txt" ]] && continue
               echo "| ${FILE} | \`${HASH}\` |" >> "$NOTES_FILE"
             done < dist/SHA256SUMS.txt
