@@ -708,7 +708,27 @@ jobs:
           STAGING=$(mktemp -d)
 
           for RUN_ID in ${{ steps.build_workflows.outputs.run_ids }}; do
-            echo "📥 Downloading artifacts from run ${RUN_ID}..."
+                        echo "📥 Inspecting run ${RUN_ID} before download..."
+
+            RUN_REPO=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" --jq '.repository.full_name' 2>/dev/null || echo "")
+            RUN_HEAD_SHA=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" --jq '.head_sha' 2>/dev/null || echo "")
+            RUN_STATUS=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" --jq '.status' 2>/dev/null || echo "")
+            RUN_CONCLUSION=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" --jq '.conclusion' 2>/dev/null || echo "")
+
+            if [[ "$RUN_REPO" != "$GITHUB_REPOSITORY" ]]; then
+              echo "⚠️ Skipping run ${RUN_ID}: repository mismatch (${RUN_REPO})"
+              continue
+            fi
+            if [[ "$RUN_HEAD_SHA" != "$GITHUB_SHA" ]]; then
+              echo "⚠️ Skipping run ${RUN_ID}: head_sha mismatch (${RUN_HEAD_SHA})"
+              continue
+            fi
+            if [[ "$RUN_STATUS" != "completed" || "$RUN_CONCLUSION" != "success" ]]; then
+              echo "⚠️ Skipping run ${RUN_ID}: run not successful (${RUN_STATUS}/${RUN_CONCLUSION})"
+              continue
+            fi
+
+            echo "📥 Downloading artifacts from trusted run ${RUN_ID}..."
             gh run download "$RUN_ID" --dir "$STAGING" 2>/dev/null || {
               echo "⚠️ No downloadable artifacts from run ${RUN_ID}"
               continue
