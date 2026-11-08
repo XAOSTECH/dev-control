@@ -218,8 +218,8 @@ jobs:
         id: app_token
         uses: actions/create-github-app-token@v3
         with:
-          app-id: ${{ secrets.XB_AI }}
-          private-key: ${{ secrets.XB_PK }}
+          client-id: ${{ secrets.BOT_CLIENT_ID_SECRET} }}
+          private-key: ${{ secrets.BOT_PRIVATE_KEY_SECRET }}
       
       - name: Merge PR from workflow_run via API (safe privileged path)
         if: needs.verify.outputs.should_merge == 'true'

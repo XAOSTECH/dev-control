@@ -38,7 +38,7 @@ jobs:
         id: app_token
         uses: actions/create-github-app-token@v3
         with:
-          app-id: ${{ secrets['XB_AI'] }}
+          client-id: ${{ secrets['XB_CI'] }}
           private-key: ${{ secrets['XB_PK'] }}
 
       - name: Setup bot identity

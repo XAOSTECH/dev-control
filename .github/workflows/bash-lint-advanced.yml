@@ -181,7 +181,7 @@ jobs:
         id: app_token
         uses: actions/create-github-app-token@v3
         with:
-          app-id: ${{ secrets['XSS_AI'] }}
+          client-id: ${{ secrets['XSS_CI'] }}
           private-key: ${{ secrets['XSS_PK'] }}
 
       - name: Setup bot identity for signing
