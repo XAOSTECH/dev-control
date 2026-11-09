@@ -96,7 +96,7 @@ readme_install_docs() {
 }
 
 # Replace the first <p align="center">…</p> block after the H1 with the current
-# repo's standard badge row (idempotent — skips write when content is unchanged).
+# repo's standard badge row. Removes duplicate badge blocks (old-format or double-inserted).
 readme_insert_badges() {
     local readme_path="$1"
     local tmp
@@ -129,14 +129,55 @@ EOF
         fi
     fi
 
-    # Replace the first <p align="center">…</p> block; if none exists, insert after the H1.
-    awk -v new_block="$badges" '
-        BEGIN { skip=0; replaced=0 }
-        /^<p align="center">/ && !replaced { skip=1; print new_block; next }
-        skip && /^<\/p>/ { skip=0; replaced=1; next }
-        skip { next }
-        /^# / && !replaced { print; print ""; print new_block; replaced=1; next }
-        { print }
+    # State machine:
+    #   pre_h1       – print everything until H1; on H1 insert badge block then enter after_h1
+    #   after_h1     – skip blanks/comments; on first <p> enter skip_p; on other content → rest
+    #   skip_p       – skip the old first <p>…</p> block (the one we replaced)
+    #   post_first_p – after old block skipped: buffer blanks, check each subsequent <p> for
+    #                  duplicate badge content; non-badge <p> blocks are kept, badge dups removed
+    #   rest         – print everything unchanged
+    # ENVIRON["BADGE"] passes the multi-line badge string safely across the shell→awk boundary.
+    BADGE="$badges" awk '
+    BEGIN {
+        new_b = ENVIRON["BADGE"]
+        phase="pre_h1"; skip_p=0; pending=""; checking_p=0; is_badge_p=0; p_buf=""
+    }
+    skip_p==1 && /^<\/p>/ { skip_p=0; phase="post_first_p"; next }
+    skip_p==1 { next }
+    checking_p==1 {
+        p_buf = p_buf $0 "\n"
+        if (/"GitHub repo"/) is_badge_p=1
+        if (/^<\/p>/) {
+            checking_p=0
+            if (!is_badge_p) { printf "%s", pending; printf "%s", p_buf }
+            pending=""; p_buf=""; is_badge_p=0
+        }
+        next
+    }
+    phase=="pre_h1" {
+        if (/^#[[:space:]]/) { print; print ""; print new_b; print ""; phase="after_h1" }
+        else print
+        next
+    }
+    phase=="after_h1" {
+        if (/^---$/ || /^##[[:space:]]/) { phase="rest"; print; next }
+        if (/^[[:space:]]*$/ || /^<!--/) { next }
+        if (/^<p /) { skip_p=1; next }
+        phase="rest"; print; next
+    }
+    phase=="post_first_p" {
+        if (/^---$/ || /^##[[:space:]]/) {
+            if (pending!="") printf "%s", pending
+            pending=""; phase="rest"; print; next
+        }
+        if (/^[[:space:]]*$/) { pending=pending"\n"; next }
+        if (/^<!--/) { next }
+        if (/^<p /) { p_buf=$0"\n"; is_badge_p=0; checking_p=1; next }
+        if (pending!="") { printf "%s", pending; pending="" }
+        phase="rest"; print; next
+    }
+    phase=="rest" { print; next }
+    { print; next }
     ' "$readme_path" > "$tmp"
 
     # Only write back when something actually changed (idempotent)
