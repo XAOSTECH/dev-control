@@ -227,7 +227,8 @@ build_template_folders() {
 # Translate template selection string to human-readable names e.g. "2,3" → "workflows, actions" | "A" → "all templates"
 describe_template_choices() {
     local selection="$1"
-    if [[ "$selection" =~ [Aa] ]]; then
+    # Match standalone 'A'/'a' token only — not letters embedded in tokens like 1AX
+    if [[ ",${selection// /}," =~ ,[Aa], ]]; then
         echo "all templates"
         return
     fi
@@ -865,8 +866,8 @@ install_templates() {
     # Track if installing all (for auto-licence selection)
     local install_all=false
     
-    # Handle 'A' for all
-    if [[ "$selection" =~ [Aa] ]]; then
+    # Handle 'A' for all — standalone token only; letters inside tokens like 1AX must not match
+    if [[ ",${selection// /}," =~ ,[Aa], ]]; then
         install_all=true
         selection=""
         for key in "${!TEMPLATE_FOLDERS[@]}"; do
@@ -896,13 +897,10 @@ install_templates() {
         folder_type="${TEMPLATE_FOLDERS[$num]}"
         
         if [[ "$folder_type" == "docs" && -n "$suffix" ]]; then
-            # If suffix contains X -> add badges after title
+            # X = patch badges in-place only; never replace the full file
             if [[ "$suffix" =~ [Xx] ]]; then
                 readme_insert_badges "$target_dir/docs/README.md"
-                # if only X present, continue to next selection
-                if [[ ! "$suffix" =~ [AaBbCcDd] ]]; then
-                    continue
-                fi
+                continue
             fi
             # Map letters to specific doc files
             declare -a docs_files=()
