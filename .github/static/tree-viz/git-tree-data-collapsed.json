@@ -3,10 +3,126 @@
     "repository": "dev-control",
     "current_branch": "main",
     "repo_url": "https://github.com/XAOSTECH/dev-control",
-    "generated": "2026-10-19T02:44:22Z",
+    "generated": "2026-11-09T03:59:36Z",
     "max_commits": 500
   },
   "commits": [
+    {
+      "sha": "7a0d88a27f8448e0e6e9fc2d71960524aafca86d",
+      "short": "7a0d88a",
+      "parents": "collapsed:2c6bf8a80c8d34c4cc375a9ed7dd8b86efa3adde:ba76e31cdeb3c75ff06b62989d982fcf35ba75cb",
+      "author": "xaos-bot",
+      "email": "262248812+xaos-bot@users.noreply.github.com",
+      "date": "2026-11-09T03:59:36Z",
+      "timestamp": 1794196776,
+      "subject": "chore: update CHANGELOG for v0.5.14 (re-release)",
+      "refs": "HEAD -> main, tag: v0.5.14, tag: latest, origin/main"
+    },
+    {
+      "sha": "collapsed:2c6bf8a80c8d34c4cc375a9ed7dd8b86efa3adde:ba76e31cdeb3c75ff06b62989d982fcf35ba75cb",
+      "short": "7",
+      "parents": "afcf93f32e38f3c9aa35cf46ecf4ce9221d4c3ed",
+      "author": "",
+      "email": "",
+      "date": "2026-11-08T07:19:21+01:00",
+      "timestamp": 1794118761,
+      "subject": "7 commits",
+      "refs": "",
+      "collapsed": true,
+      "count": 7
+    },
+    {
+      "sha": "afcf93f32e38f3c9aa35cf46ecf4ce9221d4c3ed",
+      "short": "afcf93f",
+      "parents": "71d9d5d7eaa24e172ac4cbe35d7427f751533f28 5e40f7b691194c195f7ff4e6a1eec2c79c11168e",
+      "author": "xaostech[bot]",
+      "email": "260314499+xaostech[bot]@users.noreply.github.com",
+      "date": "2026-11-02T22:32:18Z",
+      "timestamp": 1793658738,
+      "subject": "Merge pull request #107 from XAOSTECH:humanise/20261102-223144",
+      "refs": ""
+    },
+    {
+      "sha": "5e40f7b691194c195f7ff4e6a1eec2c79c11168e",
+      "short": "5e40f7b",
+      "parents": "71d9d5d7eaa24e172ac4cbe35d7427f751533f28",
+      "author": "xaos-bot",
+      "email": "262248812+xaos-bot@users.noreply.github.com",
+      "date": "2026-11-02T22:31:44Z",
+      "timestamp": 1793658704,
+      "subject": "chore: humanise hard-wrapped comments and prose",
+      "refs": ""
+    },
+    {
+      "sha": "71d9d5d7eaa24e172ac4cbe35d7427f751533f28",
+      "short": "71d9d5d",
+      "parents": "collapsed:fadc3557e97f0e06af32c481750967434fc703c8:f57ff21f50a887130c895d172928e10cc3a34537",
+      "author": "xaoscience",
+      "email": "69734795+xaoscience@users.noreply.github.com",
+      "date": "2026-11-02T22:24:12Z",
+      "timestamp": 1793658252,
+      "subject": "fix(release): harden against artifact poisoning (alert no. 54)",
+      "refs": ""
+    },
+    {
+      "sha": "collapsed:fadc3557e97f0e06af32c481750967434fc703c8:f57ff21f50a887130c895d172928e10cc3a34537",
+      "short": "4",
+      "parents": "b0d405ae0dd4b8621e9bc6403c8559e11219414c",
+      "author": "",
+      "email": "",
+      "date": "2026-11-02T17:25:59Z",
+      "timestamp": 1793640359,
+      "subject": "4 commits",
+      "refs": "",
+      "collapsed": true,
+      "count": 4
+    },
+    {
+      "sha": "b0d405ae0dd4b8621e9bc6403c8559e11219414c",
+      "short": "b0d405a",
+      "parents": "6c4a9dd10d6a4e0c3d2837b1b71be43606e6415a 5d05b67fd5338bbdccdaaa28365a1f7d5dd55010",
+      "author": "xaostech[bot]",
+      "email": "260314499+xaostech[bot]@users.noreply.github.com",
+      "date": "2026-11-02T16:06:52Z",
+      "timestamp": 1793635612,
+      "subject": "Merge pull request #105 from XAOSTECH:humanise/20261102-160609",
+      "refs": ""
+    },
+    {
+      "sha": "5d05b67fd5338bbdccdaaa28365a1f7d5dd55010",
+      "short": "5d05b67",
+      "parents": "6c4a9dd10d6a4e0c3d2837b1b71be43606e6415a",
+      "author": "xaos-bot",
+      "email": "262248812+xaos-bot@users.noreply.github.com",
+      "date": "2026-11-02T16:06:09Z",
+      "timestamp": 1793635569,
+      "subject": "chore: humanise hard-wrapped comments and prose",
+      "refs": ""
+    },
+    {
+      "sha": "6c4a9dd10d6a4e0c3d2837b1b71be43606e6415a",
+      "short": "6c4a9dd",
+      "parents": "collapsed:5ae851bfc54d736110d16ecbeeee964add8be2fe:1cc450089c9da4a95c5d6313aa9f517a896124ea",
+      "author": "xaos-bot",
+      "email": "262248812+xaos-bot@users.noreply.github.com",
+      "date": "2026-11-02T15:58:08Z",
+      "timestamp": 1793635088,
+      "subject": "chore: update CHANGELOG for v0.5.14 (re-release)",
+      "refs": ""
+    },
+    {
+      "sha": "collapsed:5ae851bfc54d736110d16ecbeeee964add8be2fe:1cc450089c9da4a95c5d6313aa9f517a896124ea",
+      "short": "14",
+      "parents": "52757301190ac1f9bbfb7f649c3175b5eb0d943a",
+      "author": "",
+      "email": "",
+      "date": "2026-11-01T00:00:12Z",
+      "timestamp": 1793491212,
+      "subject": "14 commits",
+      "refs": "",
+      "collapsed": true,
+      "count": 14
+    },
     {
       "sha": "52757301190ac1f9bbfb7f649c3175b5eb0d943a",
       "short": "5275730",
@@ -16,7 +132,7 @@
       "date": "2026-10-19T02:44:22Z",
       "timestamp": 1792377862,
       "subject": "chore: update CHANGELOG for v0.5.13",
-      "refs": "HEAD -> main, tag: v0.5.13, tag: latest, origin/main"
+      "refs": "tag: v0.5.13"
     },
     {
       "sha": "efb468d45fea6e5fc6c9c52ee8de5dc1c753e483",
@@ -38,7 +154,7 @@
       "date": "2026-10-15T07:48:13Z",
       "timestamp": 1792050493,
       "subject": "chore: humanise hard-wrapped comments and prose",
-      "refs": "origin/humanise/20261015-074813"
+      "refs": ""
     },
     {
       "sha": "206d1b1cbf7510c2ba4a18a7ed025939ede85288",
@@ -1555,7 +1671,7 @@
     {
       "sha": "b919cd8bcf9f3314227395f21d462f1030250dc0",
       "short": "b919cd8",
-      "parents": "collapsed:ff85a3cab21bc19b7314b541eace22cb7be5352d:201e98c672848195a7ba615ac8b966e0351c6703",
+      "parents": "collapsed:ff85a3cab21bc19b7314b541eace22cb7be5352d:012c7069402aacd92f4c5849447cba509cbea776",
       "author": "xaoscience",
       "email": "69734795+xaoscience@users.noreply.github.com",
       "date": "2026-02-20T22:49:06+01:00",
@@ -1564,46 +1680,22 @@
       "refs": ""
     },
     {
-      "sha": "collapsed:ff85a3cab21bc19b7314b541eace22cb7be5352d:201e98c672848195a7ba615ac8b966e0351c6703",
-      "short": "17",
-      "parents": "f82a21d588dc715cbeac81ba4d69fabc8c59555a",
+      "sha": "collapsed:ff85a3cab21bc19b7314b541eace22cb7be5352d:012c7069402aacd92f4c5849447cba509cbea776",
+      "short": "13",
+      "parents": "2a000fc2bfb0d388076cbe404a42253a4b3b872e",
       "author": "",
       "email": "",
       "date": "2026-02-20T21:44:13Z",
       "timestamp": 1771623853,
-      "subject": "17 commits",
+      "subject": "13 commits",
       "refs": "",
       "collapsed": true,
-      "count": 17
-    },
-    {
-      "sha": "f82a21d588dc715cbeac81ba4d69fabc8c59555a",
-      "short": "f82a21d",
-      "parents": "collapsed:1c4d5afcec6bd0f472a39e0f38669135e9472265:c7a069175c7d6ac68dede9e5c71369e159628a22",
-      "author": "xaos-bot",
-      "email": "262248812+xaos-bot@users.noreply.github.com",
-      "date": "2026-02-18T22:21:10Z",
-      "timestamp": 1771453270,
-      "subject": "chore: update CHANGELOG for v0.5.4 (re-release)",
-      "refs": "tag: v0.5.4"
-    },
-    {
-      "sha": "collapsed:1c4d5afcec6bd0f472a39e0f38669135e9472265:c7a069175c7d6ac68dede9e5c71369e159628a22",
-      "short": "27",
-      "parents": "8c486819944070bda126d451e77901ba90719fd5",
-      "author": "",
-      "email": "",
-      "date": "2026-02-18T23:20:34+01:00",
-      "timestamp": 1771453234,
-      "subject": "27 commits",
-      "refs": "",
-      "collapsed": true,
-      "count": 27
+      "count": 13
     }
   ],
   "branches": [
     {
-      "name": "52757301190ac1f9bbfb7f649c3175b5eb0d943a chore: update CHANGELOG for v0.5.13",
+      "name": "7a0d88a27f8448e0e6e9fc2d71960524aafca86d chore: update CHANGELOG for v0.5.14 (re-release)",
       "sha": "*",
       "current": false,
       "merged": false
@@ -1624,7 +1716,7 @@
     },
     {
       "name": "latest",
-      "sha": "b741199fd67b6465dbeed6ed176d165328458235"
+      "sha": "049bf3e230a741ab2754585625baf9de289fedd8"
     },
     {
       "name": "v0.1.0",
@@ -1673,6 +1765,10 @@
     {
       "name": "v0.5.13",
       "sha": "5bcfd21f2442405a6a0dfdc9f2212c36d7466b17"
+    },
+    {
+      "name": "v0.5.14",
+      "sha": "bb303f7898df60d01cdbed381ab7f31113cc8ea3"
     },
     {
       "name": "v0.5.2",
