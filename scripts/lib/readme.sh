@@ -95,26 +95,24 @@ readme_install_docs() {
     done
 }
 
-# Insert the standard badge block after the first H1 of a README (idempotent).
+# Replace the first <p align="center">…</p> block after the H1 with the current
+# repo's standard badge row (idempotent — skips write when content is unchanged).
 readme_insert_badges() {
     local readme_path="$1"
     local tmp
     tmp=$(mktemp)
 
-    # Static known-licence shield (shields' github/license name-search 404s when the
-    # API cannot detect the licence); a literal '-' is doubled, e.g. GPL-3.0 -> GPL--3.0.
+    # Static known-licence shield; '-' must be doubled for shields.io badge/ endpoint.
     local _lic_badge="${LICENSE_TYPE:-unknown}"
     _lic_badge="${_lic_badge//-/--}"
 
     local badges
     badges=$(cat <<'EOF'
-
 <p align="center">
   <a href="{{REPO_URL}}"><img alt="GitHub repo" src="https://img.shields.io/badge/GitHub-{{ORG_NAME}}%2F{{REPO_SLUG}}-181717?style=for-the-badge&logo=github"></a>
   <a href="{{REPO_URL}}/releases"><img alt="GitHub release" src="https://img.shields.io/github/v/release/{{ORG_NAME}}/{{REPO_SLUG}}?style=for-the-badge&logo=semantic-release&color=blue"></a>
   <a href="{{REPO_URL}}/blob/main/LICENCE"><img alt="Licence" src="https://img.shields.io/badge/licence-{{LICENSE_TYPE_BADGE}}-green?style=for-the-badge"></a>
 </p>
-
 EOF
 )
     badges="${badges//\{\{REPO_URL\}\}/$REPO_URL}"
@@ -131,15 +129,22 @@ EOF
         fi
     fi
 
-    if grep -q 'img alt="GitHub repo"' "$readme_path"; then
-        print_info "Badges already present in README, skipping insertion"
-        rm -f "$tmp"
-        return
-    fi
+    # Replace the first <p align="center">…</p> block; if none exists, insert after the H1.
+    awk -v new_block="$badges" '
+        BEGIN { skip=0; replaced=0 }
+        /^<p align="center">/ && !replaced { skip=1; print new_block; next }
+        skip && /^<\/p>/ { skip=0; replaced=1; next }
+        skip { next }
+        /^# / && !replaced { print; print ""; print new_block; replaced=1; next }
+        { print }
+    ' "$readme_path" > "$tmp"
 
-    awk -v badges="$badges" 'BEGIN{inserted=0} /^# / && !inserted{print; print badges; inserted=1; next} {print}' "$readme_path" > "$tmp" || {
-        printf "%s\n%s" "$badges" "$(cat "$readme_path")" > "$tmp"
-    }
-    mv "$tmp" "$readme_path"
-    print_success "Inserted badges into $readme_path"
+    # Only write back when something actually changed (idempotent)
+    if ! diff -q "$readme_path" "$tmp" > /dev/null 2>&1; then
+        mv "$tmp" "$readme_path"
+        print_success "Updated badge block in $readme_path"
+    else
+        rm -f "$tmp"
+        print_info "Badge block unchanged in $readme_path"
+    fi
 }
