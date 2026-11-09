@@ -755,11 +755,13 @@ process_template() {
         -e "s|{{BOT_NAME}}|${BOT_NAME:-}|g" \
         -e "s|{{BOT_EMAIL}}|${BOT_EMAIL:-}|g" \
         -e "s|{{BOT_APP_ID_SECRET}}|${BOT_APP_ID_SECRET:-}|g" \
+        -e "s|{{BOT_CLIENT_ID_SECRET}}|${BOT_CLIENT_ID_SECRET:-}|g" \
         -e "s|{{BOT_PRIVATE_KEY_SECRET}}|${BOT_PRIVATE_KEY_SECRET:-}|g" \
         -e "s|{{GPG_PRIVATE_KEY_SECRET}}|${GPG_PRIVATE_KEY_SECRET:-}|g" \
         -e "s|{{GPG_PASSPHRASE_SECRET}}|${GPG_PASSPHRASE_SECRET:-}|g" \
         -e "s|{{USER_TOKEN_SECRET}}|${USER_TOKEN_SECRET:-}|g" \
         -e "s|{{SECURITY_APP_ID_SECRET}}|${SECURITY_APP_ID_SECRET:-}|g" \
+        -e "s|{{SECURITY_CLIENT_ID_SECRET}}|${SECURITY_CLIENT_ID_SECRET:-}|g" \
         -e "s|{{SECURITY_PRIVATE_KEY_SECRET}}|${SECURITY_PRIVATE_KEY_SECRET:-}|g" \
         -e "s|{{LICENSE_TYPE_BADGE}}|${LICENSE_TYPE//-/--}|g" \
         "$src" > "$dest"
