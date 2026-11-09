@@ -260,6 +260,16 @@ Options:
                              the branch checked out (creates a bundle backup first)
   --restore                  List backup bundles and tags and interactively restore a chosen ref to a branch
                              (Creates a restore branch and optionally resets the target branch) ${CYAN}(Honours global --dry-run flag)${NC}
+  --restore-auto             Non-interactively restore from the most recent backup (no prompt)
+  --restore-n N              Show only the N most recent backup candidates in the restore list
+  --batch-restore [FILE]     Restore all repos recorded in today's tracker file (or FILE if given);
+                             equivalent to --restore --batch. Prints the tracker path after --full-fix --batch.
+  --diagnose [--fix]         Scan for orphaned release tags or lost commits after a history rewrite.
+                             --fix auto-restores from backup when all orphans are resolvable.
+  --offline                  Include local-only repos (no remote) in --batch/--full-fix/--diagnose
+  --online                   (default) Skip local-only repos in batch operations
+  --refresh-cache            Force rescan of sub-repos for --batch (ignores today's cached list)
+  --no-edit                  Skip interactive edit prompts during rebase (non-interactive signing)
 
   -d, --dry-run              Show what would be changed without applying
   -s, --stash NUM            Apply specific files from stash to a commit
@@ -282,6 +292,11 @@ Examples:
   ./scripts/fix-history.sh --full-fix 30 -y          # Same for 30 commits, no prompts (batch-safe)
   ./scripts/fix-history.sh -ff --batch               # Dedup + sign last 20 commits in every sub-repo
   ./scripts/fix-history.sh -ff 10 --batch            # Same, 10 commits per repo
+  ./scripts/fix-history.sh --diagnose --batch        # Scan all sub-repos for orphaned tags
+  ./scripts/fix-history.sh --diagnose --fix          # Scan and auto-restore resolvable orphans
+  ./scripts/fix-history.sh --batch-restore           # Restore all repos from today's tracker
+  ./scripts/fix-history.sh --restore-auto            # Auto-restore from most recent backup
+  ./scripts/fix-history.sh --reauthor HEAD~3..HEAD   # Reset author on last 3 commits to current git user
 
 EOF
 }

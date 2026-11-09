@@ -1359,7 +1359,41 @@ main() {
                 FORCE=true
                 ;;
             -h|--help)
-                echo "Usage: $(basename "$0") [ROOT_DIR] [--copy-temp|--copy-bak] [--prune|--prune-bak] [--aggressive|--aggressive-bak] [--dry-run] [--delete] [-y]"
+                cat <<'HELP'
+Dev-Control Module Nesting - Manage .gitmodules and consolidate project temp/bak folders
+
+Usage: module-nesting.sh [ROOT_DIR] [OPTIONS]
+
+Core (default with no flags): scan ROOT_DIR, build .gitmodules for every nested git repo.
+
+Temp/bak consolidation:
+  --copy-temp          Move .tmp/ dirs project-wide into a shared parent .tmp/ with symlinks back
+  --only-copy-temp     Same, but skip the .gitmodules rebuild
+  --copy-bak           Same consolidation for .bak/ dirs
+  --only-copy-bak      Same, but skip the .gitmodules rebuild
+  --prune              Prune obsolete entries from the consolidation record; remove stale symlinks
+  --only-prune         Same, but skip the .gitmodules rebuild
+  --prune-bak          Same for .bak/ consolidation records
+  --only-prune-bak     Same, but skip the .gitmodules rebuild
+  --aggressive         Aggressive replace: copy-temp then prune in one pass
+  --aggressive-bak     Same for .bak/ dirs
+  --delete             Delete source dirs after consolidation (default: symlink in place)
+
+Options:
+  --dry-run, -n        Preview all changes without writing anything
+  --test               Test mode: validate but do not commit any changes
+  -y, --yes            Assume yes to all confirmations
+  -h, --help           Show this help
+
+Examples:
+  module-nesting.sh                          # Interactive: scan and update .gitmodules
+  module-nesting.sh /path/to/monorepo        # Scan a specific root directory
+  module-nesting.sh --copy-temp --dry-run    # Preview temp-dir consolidation
+  module-nesting.sh --aggressive --delete    # Consolidate + delete originals
+  module-nesting.sh --prune                  # Clean up stale consolidation records
+
+Aliases: dc-modules, dc-nest
+HELP
                 exit 0
                 ;;
             *)
