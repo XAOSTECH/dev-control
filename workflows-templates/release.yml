@@ -681,9 +681,10 @@ jobs:
         if: steps.build_workflows.outputs.has_builds == 'true' && steps.check_release.outputs.exists != 'true'
         env:
           GH_TOKEN: ${{ steps.app_token.outputs.token }}
+          RUN_IDS: ${{ steps.build_workflows.outputs.run_ids }}
         run: |
           FAILED=0
-          for RUN_ID in ${{ steps.build_workflows.outputs.run_ids }}; do
+          for RUN_ID in $RUN_IDS; do
             echo "⏳ Waiting for run ${RUN_ID}..."
             if gh run watch "$RUN_ID" --exit-status; then
               echo "✅ Run ${RUN_ID} completed successfully"
@@ -702,12 +703,13 @@ jobs:
         if: github.event_name == 'push' && steps.build_workflows.outputs.has_builds == 'true' && steps.check_release.outputs.exists != 'true'
         env:
           GH_TOKEN: ${{ steps.app_token.outputs.token }}
+          RUN_IDS: ${{ steps.build_workflows.outputs.run_ids }}
         run: |
           set -euo pipefail
           mkdir -p dist
           STAGING=$(mktemp -d)
 
-          for RUN_ID in ${{ steps.build_workflows.outputs.run_ids }}; do
+          for RUN_ID in $RUN_IDS; do
                         echo "📥 Inspecting run ${RUN_ID} before download..."
 
             RUN_REPO=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" --jq '.repository.full_name' 2>/dev/null || echo "")
@@ -1136,10 +1138,10 @@ jobs:
         if: steps.check_release.outputs.exists != 'true'
         env:
           GH_TOKEN: ${{ steps.app_token.outputs.token }}
+          NOTES_FILE: ${{ steps.release_notes.outputs.notes_file }}
         run: |
           TAG_NAME="${{ steps.version.outputs.tag_name }}"
           VERSION="${{ steps.version.outputs.version }}"
-          NOTES_FILE="${{ steps.release_notes.outputs.notes_file }}"
           
           # Build file list (may be empty if no tarb alls)
           FILES=$(find dist/ -maxdepth 1 -type f ! -name "SHA256SUMS.txt" 2>/dev/null | tr '\n' ' ' || echo "")
