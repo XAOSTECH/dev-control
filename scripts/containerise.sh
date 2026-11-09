@@ -1124,7 +1124,7 @@ generate_config_variants() {
     if [[ "$mode" == "image" ]]; then
         generate_devcontainer_json "$devcontainer_dir" "$image_tag" "$category"
     elif [[ "$mode" == "base" ]]; then
-        generate_devcontainer_json "$devcontainer_dir" "" "$category"
+        generate_devcontainer_json "$devcontainer_dir" "$image_tag" "$category"
     else
         generate_devcontainer_json "$devcontainer_dir"
     fi
@@ -1177,7 +1177,7 @@ _generate_variant() {
     if [[ "$mode" == "image" ]]; then
         generate_devcontainer_json "$devcontainer_dir" "$image_tag" "$category" "$skip_category_extensions"
     elif [[ "$mode" == "base" ]]; then
-        generate_devcontainer_json "$devcontainer_dir" "" "$category" "$skip_category_extensions"
+        generate_devcontainer_json "$devcontainer_dir" "$image_tag" "$category" "$skip_category_extensions"
     else
         generate_devcontainer_json "$devcontainer_dir" "" "" "$skip_category_extensions"
     fi
@@ -1228,14 +1228,14 @@ build_base_image() {
     # Generate .dockerignore
     generate_dockerignore "$devcontainer_dir"
     
-    # Generate devcontainer.json using the standard function
-    PROJECT_PATH="$project_dir" generate_devcontainer_json "$devcontainer_dir" "" "$category"
+    # Generate devcontainer.json referencing the built image so VS Code never re-runs the Dockerfile
+    PROJECT_PATH="$project_dir" generate_devcontainer_json "$devcontainer_dir" "$image_tag" "$category"
     
     # Add personal config to .gitignore
     add_devcontainer_to_gitignore "$project_dir"
 
     # Generate tracked config variants (_example + _minimal)
-    PROJECT_PATH="$project_dir" generate_config_variants "$devcontainer_dir" "base" "$category" ""
+    PROJECT_PATH="$project_dir" generate_config_variants "$devcontainer_dir" "base" "$category" "$image_tag"
     echo ""
     
     print_header_success "Base Image Config Generated!"
