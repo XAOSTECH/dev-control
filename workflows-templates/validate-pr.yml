@@ -28,7 +28,7 @@ jobs:
     steps:
       - name: Validate PR author and labels
         id: check
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const { owner, repo } = context.repo;

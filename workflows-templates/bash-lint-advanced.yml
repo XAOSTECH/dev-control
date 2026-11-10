@@ -194,7 +194,7 @@ jobs:
           gpg-private-key: ${{ secrets['{{GPG_PRIVATE_KEY_SECRET}}'] }}
           gpg-passphrase: ${{ secrets['{{GPG_PASSPHRASE_SECRET}}'] }}
           user-token: ${{ secrets['{{USER_TOKEN_SECRET}}'] }}
-          bot-name: xaos-bot
+          bot-name: ${{ vars.BOT_NAME || '{{BOT_NAME}}' }}
 
       - name: Run ShellCheck to find issues
         id: check
@@ -221,8 +221,8 @@ jobs:
           set -euo pipefail
           
           # Configure git for commits
-          git config user.name "xaos-bot"
-          git config user.email "dev@xaostech.com"
+          git config user.name "${{ vars.BOT_NAME || '{{BOT_NAME}}' }}"
+          git config user.email "{{BOT_EMAIL}}"
           git config user.signingkey "$(git config user.signingkey)"
           
           # Check if there are changes
