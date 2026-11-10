@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "dotenv": "^16.4.5",
-    "octokit": "^4.0.2"
+    "octokit": "^5.0.5"
   },
   "devDependencies": {
     "@types/node": "^22.7.4",
