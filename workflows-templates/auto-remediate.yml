@@ -3,11 +3,9 @@
 
 name: Auto-Remediate
 
-# Tie all security and lint workflows together: collect findings, apply
-# deterministic patches (ShellCheck diff-patch, known CodeQL patterns), use
+# Tie all security and lint workflows together: collect findings, apply deterministic patches (ShellCheck diff-patch, known CodeQL patterns), use
 # GitHub Models to generate suggestions for harder alerts, then open a signed
-# PR via the bot. The PR carries the `automerge` label so the automerge
-# workflow can merge it without manual review when tests pass.
+# PR via the bot. The PR carries the `automerge` label so the automerge workflow can merge it without manual review when tests pass.
 
 on:
   workflow_run:

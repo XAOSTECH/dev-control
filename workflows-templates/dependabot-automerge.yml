@@ -1,7 +1,6 @@
 name: Dependabot Auto-Label
 
-# Runs in base-branch (privileged) context — safe because we gate on
-# github.actor == 'dependabot[bot]' and never execute PR code.
+# Runs in base-branch (privileged) context — safe because we gate on github.actor == 'dependabot[bot]' and never execute PR code.
 on:
   pull_request_target:
     types: [opened, synchronize, reopened]
