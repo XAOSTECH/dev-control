@@ -708,11 +708,14 @@ collect_project_info() {
         fi
     fi
 
-    if [[ -n "$BOT_APP_ID_SECRET" ]]; then
-        read -rp "Bot app-id [$BOT_APP_ID_SECRET]: " input
-        BOT_APP_ID_SECRET="${input:-$BOT_APP_ID_SECRET}"
+    if [[ -n "${BOT_CLIENT_ID_SECRET:-$BOT_APP_ID_SECRET}" ]]; then
+        local _cid_default="${BOT_CLIENT_ID_SECRET:-$BOT_APP_ID_SECRET}"
+        read -rp "Bot client-id [$_cid_default]: " input
+        BOT_CLIENT_ID_SECRET="${input:-$_cid_default}"
+        BOT_APP_ID_SECRET="$BOT_CLIENT_ID_SECRET"
     else
-        read -rp "Bot app-id (secret name, e.g. MY_BOT_APP_ID): " BOT_APP_ID_SECRET
+        read -rp "Bot client-id (secret name, e.g. MY_BOT_CLIENT_ID): " BOT_CLIENT_ID_SECRET
+        BOT_APP_ID_SECRET="$BOT_CLIENT_ID_SECRET"
     fi
 
     if [[ -n "$BOT_PRIVATE_KEY_SECRET" ]]; then
@@ -785,13 +788,13 @@ process_template() {
         -e "s|{{BOT_NAME}}|${BOT_NAME:-}|g" \
         -e "s|{{BOT_EMAIL}}|${BOT_EMAIL:-}|g" \
         -e "s|{{BOT_APP_ID_SECRET}}|${BOT_APP_ID_SECRET:-}|g" \
-        -e "s|{{BOT_CLIENT_ID_SECRET}}|${BOT_CLIENT_ID_SECRET:-}|g" \
+        -e "s|{{BOT_CLIENT_ID_SECRET}}|${BOT_CLIENT_ID_SECRET:-${BOT_APP_ID_SECRET}}|g" \
         -e "s|{{BOT_PRIVATE_KEY_SECRET}}|${BOT_PRIVATE_KEY_SECRET:-}|g" \
         -e "s|{{GPG_PRIVATE_KEY_SECRET}}|${GPG_PRIVATE_KEY_SECRET:-}|g" \
         -e "s|{{GPG_PASSPHRASE_SECRET}}|${GPG_PASSPHRASE_SECRET:-}|g" \
         -e "s|{{USER_TOKEN_SECRET}}|${USER_TOKEN_SECRET:-}|g" \
         -e "s|{{SECURITY_APP_ID_SECRET}}|${SECURITY_APP_ID_SECRET:-}|g" \
-        -e "s|{{SECURITY_CLIENT_ID_SECRET}}|${SECURITY_CLIENT_ID_SECRET:-}|g" \
+        -e "s|{{SECURITY_CLIENT_ID_SECRET}}|${SECURITY_CLIENT_ID_SECRET:-${SECURITY_APP_ID_SECRET}}|g" \
         -e "s|{{SECURITY_PRIVATE_KEY_SECRET}}|${SECURITY_PRIVATE_KEY_SECRET:-}|g" \
         -e "s|{{LICENCE_TYPE_BADGE}}|${LICENCE_TYPE//-/--}|g" \
         "$src" >"$dest"
