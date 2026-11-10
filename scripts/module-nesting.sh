@@ -809,7 +809,7 @@ copy_dirs() {
         fi
 
         found=$((found + 1))
-    done < <(if [[ ${#prune_args[@]} -gt 0 ]]; then find "$root_dir" \( "${prune_args[@]}" \) -prune -o -type d \( $find_pattern \) -print0 2>/dev/null; else find "$root_dir" -type d \( $find_pattern \) -print0 2>/dev/null; fi)
+    done < <(if [[ ${#prune_args[@]} -gt 0 ]]; then find "$root_dir" \( "${prune_args[@]}" \) -prune -o -type d \( "$find_pattern" \) -print0 2>/dev/null; else find "$root_dir" -type d \( "$find_pattern" \) -print0 2>/dev/null; fi)
 
     if [[ $found -eq 0 && $skipped -eq 0 ]]; then
         print_info "No $dest_term dirs found to copy in $root_dir"
@@ -978,7 +978,7 @@ aggressive_replace() {
             else
                 print_info "  $d  (canonical: $dcanon)"
             fi
-        done < <(if [[ ${#prune_args[@]} -gt 0 ]]; then find "$root_dir" \( "${prune_args[@]}" \) -prune -o -type d \( $find_pattern \) -print0 2>/dev/null; else find "$root_dir" -type d \( $find_pattern \) -print0 2>/dev/null; fi)
+        done < <(if [[ ${#prune_args[@]} -gt 0 ]]; then find "$root_dir" \( "${prune_args[@]}" \) -prune -o -type d \( "$find_pattern" \) -print0 2>/dev/null; else find "$root_dir" -type d \( "$find_pattern" \) -print0 2>/dev/null; fi)
     fi
 
     while IFS= read -r -d '' srcdir; do
@@ -1111,7 +1111,7 @@ aggressive_replace() {
         fi
 
         found=$((found + 1))
-    done < <(if [[ ${#prune_args[@]} -gt 0 ]]; then find "$root_dir" \( "${prune_args[@]}" \) -prune -o -type d \( $find_pattern \) -print0 2>/dev/null; else find "$root_dir" -type d \( $find_pattern \) -print0 2>/dev/null; fi)
+    done < <(if [[ ${#prune_args[@]} -gt 0 ]]; then find "$root_dir" \( "${prune_args[@]}" \) -prune -o -type d \( "$find_pattern" \) -print0 2>/dev/null; else find "$root_dir" -type d \( "$find_pattern" \) -print0 2>/dev/null; fi)
 
     if [[ $found -eq 0 && $skipped -eq 0 ]]; then
         print_info "No $dest_term dirs found to aggressively replace in $root_dir"

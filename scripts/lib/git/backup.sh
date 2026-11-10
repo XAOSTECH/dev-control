@@ -95,7 +95,7 @@ create_ref_bundle() {
 # Returns: Newline-separated list of bundle paths
 list_backup_bundles() {
     local pattern="${1:-git-*backup*.bundle}"
-    ls -1 /tmp/${pattern} 2>/dev/null || true
+    ls -1 /tmp/"${pattern}" 2>/dev/null || true
 }
 
 # List bundle contents (refs it contains)

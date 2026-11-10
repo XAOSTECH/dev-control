@@ -110,7 +110,7 @@ prompt_and_push_branch() {
             fi
         else
             TAG=backup/${branch}-pre-drop-$(date -u +%Y%m%dT%H%M%SZ)
-            git tag -f "$TAG" refs/heads/$branch 2>/dev/null || true
+            git tag -f "$TAG" refs/heads/"$branch" 2>/dev/null || true
             git push origin "refs/tags/$TAG" || true
 
             git checkout "$branch" || git checkout -b "$branch"

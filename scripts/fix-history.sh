@@ -1402,7 +1402,7 @@ main() {
                         print_info "DRY-RUN: would run: git push --force-with-lease origin \"$TARGET_BRANCH\""
                         print_success "DRY-RUN: $TARGET_BRANCH would be reset to $local_restore"
                     else
-                        git tag -f "$TAG" refs/heads/$TARGET_BRANCH 2>/dev/null || true
+                        git tag -f "$TAG" refs/heads/"$TARGET_BRANCH" 2>/dev/null || true
                         git push origin "refs/tags/$TAG" || true
                         git checkout "$TARGET_BRANCH" || git checkout -b "$TARGET_BRANCH"
                         git reset --hard "$local_restore"
@@ -1444,7 +1444,7 @@ main() {
                             print_info "DRY-RUN: would run: git push --force-with-lease origin \"$TARGET_BRANCH\""
                             print_success "DRY-RUN: $TARGET_BRANCH would be reset to $local_restore"
                         else
-                            git tag -f "$TAG" refs/heads/$TARGET_BRANCH 2>/dev/null || true
+                            git tag -f "$TAG" refs/heads/"$TARGET_BRANCH" 2>/dev/null || true
                             git push origin "refs/tags/$TAG" || true
 
                             git checkout "$TARGET_BRANCH" || git checkout -b "$TARGET_BRANCH"

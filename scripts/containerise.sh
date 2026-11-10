@@ -1661,7 +1661,7 @@ run_nest_mode() {
         done
         find "$start_dir" \( "${find_prune_args[@]}" \) -prune -o -type d -name ".devcontainer" -print 2>/dev/null | sort | while read -r devcontainer_dir; do
             local project_dir="$(dirname "$devcontainer_dir")"
-            local rel_path="${project_dir#$start_dir/}"
+            local rel_path="${project_dir#"$start_dir"/}"
             [[ "$rel_path" == "$project_dir" ]] && rel_path="."
             
             # Root is handled separately as a dedicated scaffold (see the include_root block after the build loop); never record it as a tracked nest project.
@@ -1823,7 +1823,7 @@ run_nest_mode() {
             local _rd
             for _rd in "${regen_dirs[@]}"; do
                 if nest_path_is_excluded "$(dirname "$_rd")" "$start_dir"; then
-                    print_info "Excluding (kept): ${_rd#$start_dir/}"
+                    print_info "Excluding (kept): ${_rd#"$start_dir"/}"
                 else
                     filtered_regen_dirs+=("$_rd")
                 fi
@@ -1838,7 +1838,7 @@ run_nest_mode() {
             print_info "Found ${#regen_dirs[@]} .devcontainer directories to delete:"
             local dc_dir
             for dc_dir in "${regen_dirs[@]}"; do
-                echo "  - ${dc_dir#$start_dir/}"
+                echo "  - ${dc_dir#"$start_dir"/}"
             done
             echo ""
         fi
@@ -1851,12 +1851,12 @@ run_nest_mode() {
             # Temporarily disable set -e for deletion loop (rm might fail on some dirs)
             set +e
             for dc_dir in "${regen_dirs[@]}"; do
-                print_info "Deleting: ${dc_dir#$start_dir/}"
+                print_info "Deleting: ${dc_dir#"$start_dir"/}"
                 rm -rf "$dc_dir"
                 if [[ $? -eq 0 ]]; then
-                    print_success "Deleted: ${dc_dir#$start_dir/}"
+                    print_success "Deleted: ${dc_dir#"$start_dir"/}"
                 else
-                    print_warning "Failed to delete: ${dc_dir#$start_dir/}"
+                    print_warning "Failed to delete: ${dc_dir#"$start_dir"/}"
                 fi
                 ((count++))
             done

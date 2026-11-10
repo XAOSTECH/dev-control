@@ -249,7 +249,7 @@ get_status_summary() {
 get_relative_path() {
     local parent="$1"
     local child="$2"
-    echo "${child#$parent/}"
+    echo "${child#"$parent"/}"
 }
 
 # List all submodules in a repository

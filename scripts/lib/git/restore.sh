@@ -161,7 +161,7 @@ list_backups_and_restore() {
                     print_info "DRY-RUN: would run: git push --force-with-lease origin \"$target_branch\""
                     print_success "DRY-RUN: Branch $target_branch would be reset to $restore_branch"
                 else
-                    git tag -f "$TAG" refs/heads/$target_branch 2>/dev/null || true
+                    git tag -f "$TAG" refs/heads/"$target_branch" 2>/dev/null || true
                     git push origin "refs/tags/$TAG" || true
                     git checkout "$target_branch" || git checkout -b "$target_branch"
                     git reset --hard "$restore_branch"
@@ -201,7 +201,7 @@ list_backups_and_restore() {
                     print_info "DRY-RUN: would run: git push --force-with-lease origin \"$target_branch\""
                     print_success "DRY-RUN: Branch $target_branch would be reset to $tag_name"
                 else
-                    git tag -f "$TAG" refs/heads/$target_branch 2>/dev/null || true
+                    git tag -f "$TAG" refs/heads/"$target_branch" 2>/dev/null || true
                     git push origin "refs/tags/$TAG" || true
                     git checkout "$target_branch" || git checkout -b "$target_branch"
                     git reset --hard "$tag_name"

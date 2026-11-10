@@ -50,7 +50,7 @@ amend_single_commit() {
     local target_hash="$1"
     local stash_patch="$2"
     
-    print_info "Preparing to amend commit: ${CYAN}$(git rev-parse --short $target_hash)${NC}"
+    print_info "Preparing to amend commit: ${CYAN}$(git rev-parse --short "$target_hash")${NC}"
     
     local parent
     parent=$(git rev-parse "${target_hash}~1")
@@ -58,7 +58,7 @@ amend_single_commit() {
     print_info "Starting interactive rebase..."
     echo ""
     echo -e "${BOLD}${CYAN}════════════════════════════════════════════════════════════${NC}"
-    echo -e "Commit to amend: ${CYAN}$(git log -1 --oneline $target_hash)${NC}"
+    echo -e "Commit to amend: ${CYAN}$(git log -1 --oneline "$target_hash")${NC}"
     echo -e "${BOLD}${CYAN}════════════════════════════════════════════════════════════${NC}"
     echo ""
     
@@ -115,7 +115,7 @@ amend_mode() {
     
     echo ""
     echo -e "${BOLD}Amend Mode${NC}"
-    echo -e "Target commit: ${CYAN}$(git log -1 --oneline $target_hash)${NC}"
+    echo -e "Target commit: ${CYAN}$(git log -1 --oneline "$target_hash")${NC}"
     echo -e "Backup saved: ${CYAN}$TEMP_BACKUP${NC}"
     echo ""
     
