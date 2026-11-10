@@ -131,7 +131,7 @@ run_cluster_setup() {
             containerise_args="--img $CLUSTER_CATEGORY --defaults"
         fi
         check_script_exists "containerise.sh" && \
-           bash "$SCRIPT_DIR/containerise.sh" $containerise_args 2>/dev/null || true
+           bash "$SCRIPT_DIR/containerise.sh" "$containerise_args" 2>/dev/null || true
         echo ""
     else
         print_info "Skipped: container setup (templates-only mode)"
