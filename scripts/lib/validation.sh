@@ -146,7 +146,7 @@ is_iso_datetime() {
 require_var() {
     local name="$1"
     local value="$2"
-    
+
     if is_empty "$value"; then
         print_error "Required variable '$name' is not set or empty."
         exit 1
@@ -157,7 +157,7 @@ require_var() {
 # Usage: require_file "/path/to/file"
 require_file() {
     local path="$1"
-    
+
     if [[ ! -f "$path" ]]; then
         print_error "Required file not found: $path"
         exit 1
@@ -168,7 +168,7 @@ require_file() {
 # Usage: require_directory "/path/to/dir"
 require_directory() {
     local path="$1"
-    
+
     if [[ ! -d "$path" ]]; then
         print_error "Required directory not found: $path"
         exit 1
@@ -179,7 +179,7 @@ require_directory() {
 # Usage: require_command "jq"
 require_command() {
     local cmd="$1"
-    
+
     if ! command -v "$cmd" &>/dev/null; then
         print_error "Required command not found: $cmd"
         exit 1

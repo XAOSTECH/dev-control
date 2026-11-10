@@ -108,7 +108,7 @@ blossom_sed_replace() {
 
     local tmp
     tmp=$(mktemp)
-    if ! sed "$pattern" "$file" > "$tmp"; then
+    if ! sed "$pattern" "$file" >"$tmp"; then
         print_error "sed failed; aborting replacement"
         rm -f "$tmp"
         return 1
@@ -147,12 +147,18 @@ blossom_shell_action() {
     if read -u 3 -rp "Shell command to run (cwd=repo root): " cmd; then :; else
         read -rp "Shell command to run (cwd=repo root): " cmd
     fi
-    [[ -z "$cmd" ]] && { print_warning "No command given; skipping"; return 1; }
+    [[ -z "$cmd" ]] && {
+        print_warning "No command given; skipping"
+        return 1
+    }
 
     if read -u 3 -rp "Run: ${CYAN}${cmd}${NC} ? [y/N]: " reply; then :; else
         read -rp "Run: ${cmd} ? [y/N]: " reply
     fi
-    [[ ! "$reply" =~ ^[Yy] ]] && { print_info "Command not run"; return 1; }
+    [[ ! "$reply" =~ ^[Yy] ]] && {
+        print_info "Command not run"
+        return 1
+    }
 
     if bash -c "$cmd"; then
         print_success "Command finished"
@@ -183,7 +189,10 @@ blossom_mode() {
 
     # Refuse to start if a rebase is already in progress
     local git_dir
-    git_dir=$(git rev-parse --git-dir 2>/dev/null) || { print_error "Not a git repository"; exit 1; }
+    git_dir=$(git rev-parse --git-dir 2>/dev/null) || {
+        print_error "Not a git repository"
+        exit 1
+    }
     if [[ -d "$git_dir/rebase-merge" || -d "$git_dir/rebase-apply" ]]; then
         print_error "A rebase is already in progress; resolve or abort it first"
         echo "  ${CYAN}git rebase --continue${NC}   or   ${CYAN}git rebase --abort${NC}"
@@ -201,7 +210,10 @@ blossom_mode() {
             read -rp "Target commit to amend (hash, HEAD~N, etc.): " target
         fi
     fi
-    [[ -z "$target" ]] && { print_error "No target commit given"; exit 1; }
+    [[ -z "$target" ]] && {
+        print_error "No target commit given"
+        exit 1
+    }
 
     local target_hash
     target_hash=$(git rev-parse --verify "$target^{commit}" 2>/dev/null) || {
@@ -229,7 +241,10 @@ blossom_mode() {
     if read -u 3 -rp "Proceed with interactive rebase at ${target_hash:0:7}? [y/N]: " confirm; then :; else
         read -rp "Proceed with interactive rebase at ${target_hash:0:7}? [y/N]: " confirm
     fi
-    [[ ! "$confirm" =~ ^[Yy] ]] && { print_info "Cancelled"; exit 0; }
+    [[ ! "$confirm" =~ ^[Yy] ]] && {
+        print_info "Cancelled"
+        exit 0
+    }
 
     # Stash any uncommitted work (separate from the rebase machinery)
     local had_stash=false
@@ -280,8 +295,8 @@ blossom_mode() {
             4) git status ;;
             5) git --no-pager diff ;;
             6) git add -A && print_success "All changes staged" ;;
-            c|C) done_editing=true ;;
-            a|A)
+            c | C) done_editing=true ;;
+            a | A)
                 if blossom_offer_abort; then
                     [[ "$had_stash" == "true" ]] && git stash pop --quiet 2>/dev/null || true
                     exit 0

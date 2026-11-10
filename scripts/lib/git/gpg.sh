@@ -44,14 +44,14 @@ fi
 #   GPG_PASSPHRASE environment variable set to the passphrase
 generate_bot_gpg_key() {
     local config_file="${1:-config/profiles/github_actions[bot]_gpg.yml}"
-    
+
     if [[ ! -f "$config_file" ]]; then
         print_error "Config file not found: $config_file"
         return 1
     fi
-    
+
     print_info "Reading GPG configuration from: $config_file"
-    
+
     # Parse YAML config (simple approach - assumes clean YAML)
     local key_type key_length name_real name_email expire_date
     key_type=$(grep "^Key-Type:" "$config_file" | awk '{print $2}')
@@ -59,17 +59,17 @@ generate_bot_gpg_key() {
     name_real=$(grep "^Name-Real:" "$config_file" | sed 's/^Name-Real: //')
     name_email=$(grep "^Name-Email:" "$config_file" | awk '{print $2}')
     expire_date=$(grep "^Expire-Date:" "$config_file" | awk '{print $2}')
-    
+
     # Generate secure passphrase (in memory only, never saved to file)
     local passphrase
     passphrase=$(openssl rand -base64 32)
-    
+
     # Check if GPG is available
     if ! command -v gpg &>/dev/null; then
         print_error "GPG is not installed. Install with: apt install gnupg"
         return 1
     fi
-    
+
     # Check if we're in a container - GPG key generation often fails in containers
     if [[ -f /.dockerenv ]] || grep -q docker /proc/1/cgroup 2>/dev/null; then
         print_warning "Running in a container/devcontainer detected"
@@ -86,18 +86,18 @@ generate_bot_gpg_key() {
             return 0
         fi
     fi
-    
+
     print_info "Generating GPG key..."
     print_info "  Type: $key_type $key_length"
     print_info "  Name: $name_real"
     print_info "  Email: $name_email"
     print_info "  Expires: $expire_date"
-    
+
     # Create temporary batch file (auto-deleted after use)
     local batch_file
     batch_file=$(mktemp)
-    
-    cat > "$batch_file" <<EOF
+
+    cat >"$batch_file" <<EOF
 Key-Type: $key_type
 Key-Length: $key_length
 Name-Real: $name_real
@@ -106,12 +106,12 @@ Expire-Date: $expire_date
 Passphrase: $passphrase
 %commit
 EOF
-    
+
     # Generate key with verbose error output
     print_info "Running GPG key generation (this may take a minute)..."
     local gpg_output
     gpg_output=$(gpg --batch --gen-key "$batch_file" 2>&1)
-    
+
     if [[ $? -ne 0 ]]; then
         print_error "Failed to generate GPG key"
         print_error "GPG output:"
@@ -119,33 +119,33 @@ EOF
         rm -f "$batch_file"
         return 1
     fi
-    
+
     echo "$gpg_output"
-    
+
     # Extract the fingerprint from revocation certificate message gpg outputs: "revocation certificate stored as '/path/to/FINGERPRINT.rev'"
     local key_id
     key_id=$(echo "$gpg_output" | grep -oP 'openpgp-revocs\.d/\K[0-9A-F]{40}(?=\.rev)')
-    
+
     # Fallback: get newest key matching email (sorted by creation time)
     if [[ -z "$key_id" ]]; then
         print_warning "Could not extract fingerprint from GPG output, using fallback method"
         key_id=$(gpg --list-keys --with-colons "$name_email" 2>/dev/null | awk -F: '/^pub:/{getline; if ($1=="fpr") print $10; exit}')
     fi
-    
+
     # Clean up batch file immediately (passphrase was only in memory and this temp file)
     rm -f "$batch_file"
-    
+
     if [[ -z "$key_id" ]]; then
         print_error "Failed to retrieve generated key ID"
         return 1
     fi
-    
+
     print_success "GPG key generated successfully"
-    
+
     # Export to environment for calling script
     export GPG_KEY_ID="$key_id"
     export GPG_PASSPHRASE="$passphrase"
-    
+
     return 0
 }
 
@@ -159,28 +159,28 @@ export_gpg_private_key() {
     local key_id="$1"
     local output_file="${2:-}"
     local passphrase="${3:-}"
-    
+
     if [[ -z "$key_id" ]]; then
         print_error "Key ID required"
         return 1
     fi
-    
+
     # Build GPG command with optional passphrase
     local gpg_cmd=(gpg --armor --export-secret-keys)
     if [[ -n "$passphrase" ]]; then
         gpg_cmd+=(--pinentry-mode loopback --passphrase "$passphrase")
     fi
     gpg_cmd+=("$key_id")
-    
+
     if [[ -n "$output_file" ]]; then
         # Capture both stdout and stderr
         local export_output
         export_output=$("${gpg_cmd[@]}" 2>&1)
         local export_status=$?
-        
+
         # Write to output file
-        echo "$export_output" > "$output_file"
-        
+        echo "$export_output" >"$output_file"
+
         # Verify export succeeded (file should contain PGP PRIVATE KEY BLOCK)
         if [[ $export_status -ne 0 ]] || [[ ! -s "$output_file" ]] || ! grep -q "BEGIN PGP PRIVATE KEY BLOCK" "$output_file"; then
             print_error "Failed to export private key for: $key_id"
@@ -193,7 +193,7 @@ export_gpg_private_key() {
             rm -f "$output_file"
             return 1
         fi
-        
+
         print_info "Private key exported to: $output_file"
     else
         "${gpg_cmd[@]}"
@@ -215,24 +215,24 @@ add_gpg_secrets_to_repo() {
     local key_id="$1"
     local passphrase="$2"
     local repo="${3:-}"
-    
+
     if [[ -z "$key_id" || -z "$passphrase" ]]; then
         print_error "Key ID and passphrase required"
         return 1
     fi
-    
+
     # Check gh CLI is available
     if ! command -v gh &>/dev/null; then
         print_error "gh CLI not found. Install from: https://cli.github.com/"
         return 1
     fi
-    
+
     # Check authentication
     if ! gh auth status &>/dev/null; then
         print_error "gh CLI not authenticated. Run: gh auth login"
         return 1
     fi
-    
+
     # Determine repo
     if [[ -z "$repo" ]]; then
         repo=$(gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null)
@@ -241,9 +241,9 @@ add_gpg_secrets_to_repo() {
             return 1
         fi
     fi
-    
+
     print_info "Adding GPG secrets to repository: $repo"
-    
+
     # Export private key to temp file
     local temp_key
     temp_key=$(mktemp)
@@ -251,36 +251,36 @@ add_gpg_secrets_to_repo() {
         rm -f "$temp_key"
         return 1
     fi
-    
+
     # Add secrets using gh CLI
     print_info "Adding GPG_PRIVATE_KEY secret..."
-    if ! gh secret set GPG_PRIVATE_KEY --repo "$repo" < "$temp_key"; then
+    if ! gh secret set GPG_PRIVATE_KEY --repo "$repo" <"$temp_key"; then
         print_error "Failed to add GPG_PRIVATE_KEY secret"
         rm -f "$temp_key"
         return 1
     fi
-    
+
     print_info "Adding GPG_PASSPHRASE secret..."
     if ! echo "$passphrase" | gh secret set GPG_PASSPHRASE --repo "$repo"; then
         print_error "Failed to add GPG_PASSPHRASE secret"
         rm -f "$temp_key"
         return 1
     fi
-    
+
     # Cleanup
     rm -f "$temp_key"
-    
+
     print_success "GPG secrets added to $repo"
-    
+
     # Get actual secret sizes for verification
     local key_size passphrase_size
     key_size=$(gh secret list --repo "$repo" --json name,updatedAt | jq -r '.[] | select(.name=="GPG_PRIVATE_KEY") | .updatedAt' | wc -c)
     passphrase_size=${#passphrase}
-    
+
     print_info "Secrets added:"
     print_info "  - GPG_PRIVATE_KEY (exported successfully)"
     print_info "  - GPG_PASSPHRASE ($passphrase_size chars)"
-    
+
     return 0
 }
 
@@ -296,41 +296,41 @@ add_gpg_secrets_to_repo() {
 setup_bot_gpg_for_repo() {
     local config_file="${1:-config/profiles/github_actions[bot]_gpg.yml}"
     local repo="${2:-}"
-    
+
     print_info "🔐 Setting up GPG bot key for GitHub Actions"
     echo ""
-    
+
     # Step 1: Generate key
     if ! generate_bot_gpg_key "$config_file"; then
         return 1
     fi
-    
+
     echo ""
     print_info "Generated key ID: $GPG_KEY_ID"
-    
+
     # Step 2: Confirm before adding to repo
     local repo_display="$repo"
     if [[ -z "$repo_display" ]]; then
         repo_display=$(gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null || echo "current repo")
     fi
-    
+
     echo ""
     print_warning "This will add the following secrets to $repo_display:"
     echo "  - GPG_PRIVATE_KEY (private key)"
     echo "  - GPG_PASSPHRASE (passphrase)"
     echo ""
     read -rp "Continue? [y/N]: " confirm
-    
+
     if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
         print_info "Cancelled. GPG key generated but not added to repo."
         return 0
     fi
-    
+
     # Step 3: Add secrets
     if ! add_gpg_secrets_to_repo "$GPG_KEY_ID" "$GPG_PASSPHRASE" "$repo"; then
         return 1
     fi
-    
+
     echo ""
     print_success "✅ GPG bot setup complete!"
     echo ""
@@ -343,7 +343,7 @@ setup_bot_gpg_for_repo() {
     print_info "  Expires: $(grep "^Expire-Date:" "$config_file" | awk '{print $2}')"
     print_info "  Location: ~/.gnupg/"
     echo ""
-    
+
     return 0
 }
 

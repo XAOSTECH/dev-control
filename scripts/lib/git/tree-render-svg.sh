@@ -25,17 +25,17 @@ fi
 render_svg_tree() {
     local input_json="$1"
     local output_file="${2:-git-tree.svg}"
-    
+
     # Get dimensions from actual position data
     local max_y max_x min_x
     max_y=$(jq '[.commits[].position.y // 0] | max' "$input_json" 2>/dev/null || echo 800)
     max_x=$(jq '[.commits[].position.x // 600] | max' "$input_json" 2>/dev/null || echo 600)
     min_x=$(jq '[.commits[].position.x // 600] | min' "$input_json" 2>/dev/null || echo 600)
-    local width=$(( max_x - min_x + 400 ))
+    local width=$((max_x - min_x + 400))
     [[ $width -lt 1200 ]] && width=1200
-    local height=$(( max_y + 120 ))
+    local height=$((max_y + 120))
     [[ $height -lt 800 ]] && height=800
-    
+
     # Validate JSON
     if ! jq empty "$input_json" 2>/dev/null; then
         echo "ERROR: Invalid JSON in $input_json" >&2
@@ -44,9 +44,9 @@ render_svg_tree() {
 
     local repo_name
     repo_name=$(basename "$(git rev-parse --show-toplevel 2>/dev/null)" || echo "repository")
-    
+
     # Start SVG
-    cat > "$output_file" <<-SVGHEADER
+    cat >"$output_file" <<-SVGHEADER
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" 
      xmlns:xlink="http://www.w3.org/1999/xlink"
@@ -114,11 +114,11 @@ SVGHEADER
         else
             "    <line class=\"\($class)\" x1=\"\($pos.x)\" y1=\"\($pos.y)\" x2=\"\($pp.x)\" y2=\"\($pp.y)\"/>"
         end
-    ' "$input_json" 2>/dev/null >> "$output_file"
+    ' "$input_json" 2>/dev/null >>"$output_file"
 
-    echo '  </g>' >> "$output_file"
-    echo '  <!-- Commit nodes -->' >> "$output_file"
-    echo '  <g id="commits">' >> "$output_file"
+    echo '  </g>' >>"$output_file"
+    echo '  <!-- Commit nodes -->' >>"$output_file"
+    echo '  <g id="commits">' >>"$output_file"
 
     # Generate commit circles with XML-escaped titles and correct gradients
     jq -r '
@@ -153,9 +153,9 @@ SVGHEADER
         else
             "    <circle class=\"commit-leaf\" cx=\"\(.position.x)\" cy=\"\(.position.y)\" r=\"\(.position.radius // 6)\" fill=\"url(#\($grad))\" stroke=\"\($stroke)\" stroke-width=\"1.5\"><title>\($short): \($safe_subj)</title></circle>"
         end
-    ' "$input_json" 2>/dev/null >> "$output_file"
+    ' "$input_json" 2>/dev/null >>"$output_file"
 
-    cat >> "$output_file" <<-SVGFOOTER
+    cat >>"$output_file" <<-SVGFOOTER
   </g>
   
   <!-- Legend -->
@@ -205,17 +205,17 @@ render_mini_svg_tree() {
 
     # Fixed-height banner; width bounded by MAXW so it never overflows a README frame.
     local pad=20 lanes=2 lane_gap=20 vpad=26 maxw=1000
-    local h=$(( vpad * 2 + lanes * lane_gap * 2 ))
-    local mid_y=$(( h / 2 ))
-    local denom=$(( max_depth > 0 ? max_depth : 1 ))
-    local step=$(( (maxw - pad * 2) / denom ))
+    local h=$((vpad * 2 + lanes * lane_gap * 2))
+    local mid_y=$((h / 2))
+    local denom=$((max_depth > 0 ? max_depth : 1))
+    local step=$(((maxw - pad * 2) / denom))
     [[ $step -gt 18 ]] && step=18
     [[ $step -lt 4 ]] && step=4
-    local w=$(( pad * 2 + max_depth * step ))
+    local w=$((pad * 2 + max_depth * step))
     [[ $w -gt $maxw ]] && w=$maxw
     [[ $w -lt 240 ]] && w=240
 
-    cat > "$output_file" <<-MINIHEADER
+    cat >"$output_file" <<-MINIHEADER
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="$w" height="$h" viewBox="0 0 $w $h">
   <rect width="100%" height="100%" fill="#0d1117" rx="8"/>
@@ -223,7 +223,7 @@ render_mini_svg_tree() {
 MINIHEADER
 
     jq -r --argjson pad "$pad" --argjson step "$step" --argjson maxd "$max_depth" \
-          --argjson midY "$mid_y" --argjson laneGap "$lane_gap" --argjson lanes "$lanes" '
+        --argjson midY "$mid_y" --argjson laneGap "$lane_gap" --argjson lanes "$lanes" '
         def cl($l): if $l > $lanes then $lanes elif $l < (-$lanes) then (-$lanes) else $l end;
         (.commits | map(select(.position)) | map({(.sha): {
             x: ($pad + ($maxd - .position.depth) * $step),
@@ -238,13 +238,13 @@ MINIHEADER
             (($a.x + $b.x) / 2) as $mx |
             "    <path d=\"M \($a.x) \($a.y) C \($mx) \($a.y), \($mx) \($b.y), \($b.x) \($b.y)\" fill=\"none\" stroke=\"#388bfd\" stroke-width=\"1.4\" opacity=\"0.65\"/>"
         end
-    ' "$input_json" 2>/dev/null >> "$output_file"
+    ' "$input_json" 2>/dev/null >>"$output_file"
 
-    echo '  </g>' >> "$output_file"
-    echo '  <g id="nodes">' >> "$output_file"
+    echo '  </g>' >>"$output_file"
+    echo '  <g id="nodes">' >>"$output_file"
 
     jq -r --argjson pad "$pad" --argjson step "$step" --argjson maxd "$max_depth" \
-          --argjson midY "$mid_y" --argjson laneGap "$lane_gap" --argjson lanes "$lanes" '
+        --argjson midY "$mid_y" --argjson laneGap "$lane_gap" --argjson lanes "$lanes" '
         def cl($l): if $l > $lanes then $lanes elif $l < (-$lanes) then (-$lanes) else $l end;
         .commits[] | select(.position) |
         ($pad + ($maxd - .position.depth) * $step) as $x |
@@ -259,11 +259,11 @@ MINIHEADER
             (if ((.refs // "") | contains("tag:")) or .position.is_merge or .position.is_fork then 4 else 3 end) as $r |
             "    <circle cx=\"\($x)\" cy=\"\($y)\" r=\"\($r)\" fill=\"\($fill)\" opacity=\"0.95\"/>"
         end
-    ' "$input_json" 2>/dev/null >> "$output_file"
+    ' "$input_json" 2>/dev/null >>"$output_file"
 
-    cat >> "$output_file" <<-MINIFOOTER
+    cat >>"$output_file" <<-MINIFOOTER
   </g>
-  <text x="$(( w - 8 ))" y="$(( h - 7 ))" text-anchor="end" font-family="sans-serif" font-size="9" fill="#6e7681">${total} nodes &#183; ${tag_count} tags</text>
+  <text x="$((w - 8))" y="$((h - 7))" text-anchor="end" font-family="sans-serif" font-size="9" fill="#6e7681">${total} nodes &#183; ${tag_count} tags</text>
 </svg>
 MINIFOOTER
 

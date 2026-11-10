@@ -142,7 +142,10 @@ drop_multiple_commits() {
     local -a full=()
     local t sha
     for t in "${targets[@]}"; do
-        sha=$(git rev-parse --verify --quiet "${t}^{commit}") || { print_error "Commit not found: $t"; exit 1; }
+        sha=$(git rev-parse --verify --quiet "${t}^{commit}") || {
+            print_error "Commit not found: $t"
+            exit 1
+        }
         if ! git merge-base --is-ancestor "$sha" HEAD 2>/dev/null; then
             print_error "Commit ${sha:0:7} is not reachable from HEAD; cannot drop."
             exit 1
@@ -252,7 +255,7 @@ drop_single_commit() {
         print_info "Capturing original dates for commits after ${short}"
         capture_dates_for_range "${target_hash}..HEAD"
         local captured_commits_count
-        captured_commits_count=$(wc -l < "$TEMP_ALL_DATES" 2>/dev/null || echo 0)
+        captured_commits_count=$(wc -l <"$TEMP_ALL_DATES" 2>/dev/null || echo 0)
         print_info "Captured $captured_commits_count commits for potential reconstruction"
 
         # Reset possible REBASE_EXIT flag
@@ -263,21 +266,21 @@ drop_single_commit() {
             print_info "NO_EDIT_MODE enabled: running rebase with GIT_EDITOR=':' to skip editor prompts"
             if GIT_EDITOR=':' git rebase -i --rebase-merges "$parent"; then
                 print_success "Dropped commit ${short}"
-                
+
                 # CRITICAL FIX: After rebase, filter TEMP_ALL_DATES to only commits NOT already in HEAD
                 print_info "Filtering out commits already present in rebased branch..."
                 local temp_filtered
                 temp_filtered=$(mktemp)
                 while IFS='|' read -r commit commit_date; do
                     if [[ -n "$commit" ]] && ! git merge-base --is-ancestor "$commit" HEAD 2>/dev/null; then
-                        echo "$commit|$commit_date" >> "$temp_filtered"
+                        echo "$commit|$commit_date" >>"$temp_filtered"
                     fi
-                done < "$TEMP_ALL_DATES"
+                done <"$TEMP_ALL_DATES"
                 mv "$temp_filtered" "$TEMP_ALL_DATES"
                 local remaining
-                remaining=$(wc -l < "$TEMP_ALL_DATES" 2>/dev/null || echo 0)
+                remaining=$(wc -l <"$TEMP_ALL_DATES" 2>/dev/null || echo 0)
                 print_info "After filtering: $remaining commits need reconstruction"
-                
+
                 # Record target for potential reconstruction fallback and restore original commit dates if available
                 RECONSTRUCT_TARGET="$target_hash"
                 recreate_history_with_dates || print_warning "Failed to restore original dates"
@@ -287,21 +290,21 @@ drop_single_commit() {
         else
             if git rebase -i --rebase-merges "$parent"; then
                 print_success "Dropped commit ${short}"
-                
+
                 # CRITICAL FIX: After rebase, filter TEMP_ALL_DATES to only commits NOT already in HEAD
                 print_info "Filtering out commits already present in rebased branch..."
                 local temp_filtered
                 temp_filtered=$(mktemp)
                 while IFS='|' read -r commit commit_date; do
                     if [[ -n "$commit" ]] && ! git merge-base --is-ancestor "$commit" HEAD 2>/dev/null; then
-                        echo "$commit|$commit_date" >> "$temp_filtered"
+                        echo "$commit|$commit_date" >>"$temp_filtered"
                     fi
-                done < "$TEMP_ALL_DATES"
+                done <"$TEMP_ALL_DATES"
                 mv "$temp_filtered" "$TEMP_ALL_DATES"
                 local remaining
-                remaining=$(wc -l < "$TEMP_ALL_DATES" 2>/dev/null || echo 0)
+                remaining=$(wc -l <"$TEMP_ALL_DATES" 2>/dev/null || echo 0)
                 print_info "After filtering: $remaining commits need reconstruction"
-                
+
                 # Record target for potential reconstruction fallback and restore original commit dates if available
                 RECONSTRUCT_TARGET="$target_hash"
                 recreate_history_with_dates || print_warning "Failed to restore original dates"
@@ -342,21 +345,21 @@ drop_single_commit() {
                         exit 1
                     else
                         print_success "Conflicts auto-resolved and commit ${short} dropped from branch"
-                        
+
                         # CRITICAL FIX: After auto-resolution, filter TEMP_ALL_DATES to only commits NOT already in HEAD
                         print_info "Filtering out commits already present in rebased branch..."
                         local temp_filtered
                         temp_filtered=$(mktemp)
                         while IFS='|' read -r commit commit_date; do
                             if [[ -n "$commit" ]] && ! git merge-base --is-ancestor "$commit" HEAD 2>/dev/null; then
-                                echo "$commit|$commit_date" >> "$temp_filtered"
+                                echo "$commit|$commit_date" >>"$temp_filtered"
                             fi
-                        done < "$TEMP_ALL_DATES"
+                        done <"$TEMP_ALL_DATES"
                         mv "$temp_filtered" "$TEMP_ALL_DATES"
                         local remaining
-                        remaining=$(wc -l < "$TEMP_ALL_DATES" 2>/dev/null || echo 0)
+                        remaining=$(wc -l <"$TEMP_ALL_DATES" 2>/dev/null || echo 0)
                         print_info "After filtering: $remaining commits need reconstruction"
-                        
+
                         # Record target for potential reconstruction fallback and restore original commit dates for rewritten commits
                         RECONSTRUCT_TARGET="$target_hash"
                         if recreate_history_with_dates; then
@@ -399,7 +402,7 @@ drop_single_commit() {
 
                 # Retry once after removing stale state
                 if [[ $attempt -lt $max_attempts ]]; then
-                    print_info "Retrying drop operation (attempt $((attempt+1))/$max_attempts)"
+                    print_info "Retrying drop operation (attempt $((attempt + 1))/$max_attempts)"
                     unset REBASE_EXIT
                     continue
                 else

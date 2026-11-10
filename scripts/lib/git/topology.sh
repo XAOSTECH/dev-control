@@ -55,7 +55,7 @@ linearise_range_to_branch() {
         commit_msg=$(git log -1 --format=%B "$c")
 
         GIT_AUTHOR_NAME="$author_name" GIT_AUTHOR_EMAIL="$author_email" GIT_AUTHOR_DATE="$author_date" GIT_COMMITTER_DATE="$author_date" \
-        new_sha=$(echo "$commit_msg" | git commit-tree "$tree" ${last_new:+-p $last_new})
+            new_sha=$(echo "$commit_msg" | git commit-tree "$tree" ${last_new:+-p $last_new})
 
         last_new="$new_sha"
     done
@@ -101,9 +101,9 @@ preserve_and_sign_topology_range_to_branch() {
         parent_args=()
         for p in $(git rev-list --parents -n 1 "$c" | cut -d' ' -f2-); do
             if [[ -n "${sha_map[$p]:-}" ]]; then
-                parent_args+=( -p "${sha_map[$p]}" )
+                parent_args+=(-p "${sha_map[$p]}")
             else
-                parent_args+=( -p "$p" )
+                parent_args+=(-p "$p")
             fi
         done
 
@@ -111,8 +111,8 @@ preserve_and_sign_topology_range_to_branch() {
         # Signing happens in Phase 2 via rebase which properly preserves dates with signatures
         # Research confirmed: commit-tree -S can have root commit issues; rebase is more reliable
         GIT_AUTHOR_NAME="$author_name" GIT_AUTHOR_EMAIL="$author_email" \
-        GIT_AUTHOR_DATE="$author_date" GIT_COMMITTER_DATE="$author_date" \
-        new_sha=$(echo "$commit_msg" | git commit-tree "${parent_args[@]}" "$tree")
+            GIT_AUTHOR_DATE="$author_date" GIT_COMMITTER_DATE="$author_date" \
+            new_sha=$(echo "$commit_msg" | git commit-tree "${parent_args[@]}" "$tree")
 
         if [[ -z "$new_sha" ]]; then
             print_error "Failed to create commit-tree for $c"
@@ -126,7 +126,7 @@ preserve_and_sign_topology_range_to_branch() {
     if [[ -n "$last_new" ]]; then
         git update-ref "refs/heads/$tmp_branch" "$last_new"
         git checkout "$tmp_branch"
-        
+
         print_success "Preserved-topology branch created (unsigned): $tmp_branch"
         print_info "Phase 2 will sign these commits while preserving dates via rebase"
     else
@@ -160,11 +160,11 @@ preserve_topology_range_to_branch() {
         # Check if this is a merge commit (has multiple parents)
         local parent_count
         parent_count=$(git rev-list --parents -n 1 "$c" | wc -w)
-        parent_count=$((parent_count - 1))  # Subtract the commit itself
-        
+        parent_count=$((parent_count - 1)) # Subtract the commit itself
+
         local is_merge="false"
         [[ "$parent_count" -gt 1 ]] && is_merge="true"
-        
+
         # TIMED_SIGN_MODE: After a merge commit, wait for next minute before processing next PR
         if [[ "$TIMED_SIGN_MODE" == "true" && "$last_merge_seen" == "true" && "$is_merge" == "false" ]]; then
             print_info "TIMED_SIGN: Detected new PR after merge. Waiting for next minute boundary..."
@@ -178,13 +178,13 @@ preserve_topology_range_to_branch() {
             print_info "TIMED_SIGN: New timestamp for this PR: $current_pr_timestamp"
             last_merge_seen="false"
         fi
-        
+
         # Initialise timestamp for first commit or after wait
         if [[ -z "$current_pr_timestamp" ]]; then
             current_pr_timestamp=$(date -u +%Y-%m-%dT%H:%M:%S+00:00)
             [[ "$TIMED_SIGN_MODE" == "true" ]] && print_info "TIMED_SIGN: Starting with timestamp: $current_pr_timestamp"
         fi
-        
+
         print_info "Recreating commit: $c"
         local tree
         tree=$(git rev-parse "$c^{tree}")
@@ -202,16 +202,16 @@ preserve_topology_range_to_branch() {
         parent_args=()
         for p in $(git rev-list --parents -n 1 "$c" | cut -d' ' -f2-); do
             if [[ -n "${sha_map[$p]:-}" ]]; then
-                parent_args+=( -p "${sha_map[$p]}" )
+                parent_args+=(-p "${sha_map[$p]}")
             else
-                parent_args+=( -p "$p" )
+                parent_args+=(-p "$p")
             fi
         done
 
         # CRITICAL: Create commits WITHOUT -S flag to preserve dates via environment variables
         # Signing will be applied afterward if needed, which preserves the dates we set here
         GIT_AUTHOR_NAME="$author_name" GIT_AUTHOR_EMAIL="$author_email" GIT_AUTHOR_DATE="$author_date" GIT_COMMITTER_DATE="$author_date" \
-        new_sha=$(echo "$commit_msg" | git commit-tree "$tree" "${parent_args[@]}")
+            new_sha=$(echo "$commit_msg" | git commit-tree "$tree" "${parent_args[@]}")
 
         if [[ -z "$new_sha" ]]; then
             print_error "Failed to create commit-tree for $c"
@@ -220,7 +220,7 @@ preserve_topology_range_to_branch() {
 
         sha_map[$c]="$new_sha"
         last_new="$new_sha"
-        
+
         # Track if this was a merge commit for TIMED_SIGN_MODE
         [[ "$is_merge" == "true" ]] && last_merge_seen="true"
     done
@@ -228,7 +228,7 @@ preserve_topology_range_to_branch() {
     if [[ -n "$last_new" ]]; then
         git update-ref "refs/heads/$tmp_branch" "$last_new"
         git checkout "$tmp_branch"
-        
+
         print_success "Preserved-topology branch created: $tmp_branch"
     else
         print_warning "Failed to create preserved-topology branch for range: $range"
@@ -244,7 +244,7 @@ preserve_topology_range_to_branch() {
 sign_commits_preserving_dates() {
     local branch="$1"
     print_info "Signing commits on branch $branch while preserving original dates"
-    
+
     # Use git filter-branch with a custom commit filter that signs without touching dates
     # The trick: extract date, create new signed commit, preserve the date
     FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch -f --commit-filter '
@@ -328,8 +328,8 @@ atomic_preserve_range_to_branch() {
     local tmp_branch="tmp/atomic-preserve-${ts}"
     local preserve_map="/tmp/git-fix-atomic-preserve-map-${ts}.txt"
     local logf="/tmp/git-fix-atomic-preserve-${ts}.log"
-    : > "$preserve_map"
-    : > "$logf"
+    : >"$preserve_map"
+    : >"$logf"
 
     print_info "Creating atomic-preserve branch: $tmp_branch from range: $range"
 
@@ -338,7 +338,7 @@ atomic_preserve_range_to_branch() {
 
     for c in $(git rev-list --topo-order --reverse "$range"); do
         print_info "[atomic] Recreating commit: $c"
-        echo "[atomic] Recreating commit: $c" >> "$logf"
+        echo "[atomic] Recreating commit: $c" >>"$logf"
 
         local tree author_name author_email author_date commit_msg
         tree=$(git rev-parse "$c^{tree}")
@@ -350,16 +350,16 @@ atomic_preserve_range_to_branch() {
         parent_args=()
         for p in $(git rev-list --parents -n 1 "$c" | cut -d' ' -f2-); do
             if [[ -n "${sha_map[$p]:-}" ]]; then
-                parent_args+=( -p "${sha_map[$p]}" )
+                parent_args+=(-p "${sha_map[$p]}")
             else
-                parent_args+=( -p "$p" )
+                parent_args+=(-p "$p")
             fi
         done
 
         # Create unsigned commit with exact parents/tree and author dates
         GIT_AUTHOR_NAME="$author_name" GIT_AUTHOR_EMAIL="$author_email" GIT_AUTHOR_DATE="$author_date" \
-        GIT_COMMITTER_DATE="$author_date" \
-        new_sha=$(echo "$commit_msg" | git commit-tree "$tree" "${parent_args[@]}")
+            GIT_COMMITTER_DATE="$author_date" \
+            new_sha=$(echo "$commit_msg" | git commit-tree "$tree" "${parent_args[@]}")
 
         if [[ -z "$new_sha" ]]; then
             echo "[atomic] Failed to create commit-tree for $c" | tee -a "$logf"
@@ -393,7 +393,7 @@ atomic_preserve_range_to_branch() {
             echo "[atomic] Commit $signed_sha has non-good signature: $sig_status" | tee -a "$logf"
             if [[ "${ALLOW_UNSIGNED_PRESERVE:-false}" != "true" ]]; then
                 print_error "Commit $signed_sha not signed correctly (status: $sig_status). Aborting atomic preserve."
-                echo "$c|$signed_sha|$author_date|UNSIGNED|$sig_status" >> "/tmp/git-fix-preserve-unsigned-${ts}.txt"
+                echo "$c|$signed_sha|$author_date|UNSIGNED|$sig_status" >>"/tmp/git-fix-preserve-unsigned-${ts}.txt"
                 LAST_PRESERVE_UNSIGNED="/tmp/git-fix-preserve-unsigned-${ts}.txt"
                 return 1
             else
@@ -411,7 +411,7 @@ atomic_preserve_range_to_branch() {
         fi
 
         # Record mapping and update refs
-        echo "$c|$signed_sha|$author_date" >> "$preserve_map"
+        echo "$c|$signed_sha|$author_date" >>"$preserve_map"
         sha_map[$c]="$signed_sha"
         last_new="$signed_sha"
 

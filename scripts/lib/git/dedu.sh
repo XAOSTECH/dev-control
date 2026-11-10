@@ -70,17 +70,17 @@ declare -gA DEDUP_PIN_SHAS=()
 _dedup_family_of() {
     local s="$1"
     case "$s" in
-        "chore: update git tree visualisation"|"chore(tree-viz):"*)   echo "fam:tree-viz" ;;
-        "chore: update "[0-9]*" submodule(s) to latest")              echo "fam:submodules" ;;
-        "chore: update "[0-9]*" dependencies to latest")              echo "fam:deps-update" ;;
-        "chore(dc-init):"*CHANGELOG*|"chore(dc-init):"*changelog*)     echo "" ;;
-        "chore(dc-init):"*)                                           echo "fam:dc-init" ;;
-        "chore: convert American spellings to British English")       echo "fam:anglicise" ;;
-        "chore: humanise hard-wrapped comments and prose")            echo "fam:humanise" ;;
-        "Merge pull request #"*"chore/update-submodules-"*)           echo "fam:merge-submodules" ;;
-        "Merge pull request #"*"anglicise/"*)                         echo "fam:merge-anglicise" ;;
-        "Merge pull request #"*"humanise/"*)                          echo "fam:merge-humanise" ;;
-        *)                                                           echo "" ;;
+        "chore: update git tree visualisation" | "chore(tree-viz):"*) echo "fam:tree-viz" ;;
+        "chore: update "[0-9]*" submodule(s) to latest") echo "fam:submodules" ;;
+        "chore: update "[0-9]*" dependencies to latest") echo "fam:deps-update" ;;
+        "chore(dc-init):"*CHANGELOG* | "chore(dc-init):"*changelog*) echo "" ;;
+        "chore(dc-init):"*) echo "fam:dc-init" ;;
+        "chore: convert American spellings to British English") echo "fam:anglicise" ;;
+        "chore: humanise hard-wrapped comments and prose") echo "fam:humanise" ;;
+        "Merge pull request #"*"chore/update-submodules-"*) echo "fam:merge-submodules" ;;
+        "Merge pull request #"*"anglicise/"*) echo "fam:merge-anglicise" ;;
+        "Merge pull request #"*"humanise/"*) echo "fam:merge-humanise" ;;
+        *) echo "" ;;
     esac
 }
 
@@ -88,16 +88,16 @@ _dedup_family_of() {
 # Falls back to "" for exact-subject (non-family) groups, where the first member's own subject is used verbatim instead.
 _dedup_family_label() {
     case "$1" in
-        fam:tree-viz)         echo "chore: update git tree visualisation" ;;
-        fam:submodules)       echo "chore: update submodules to latest" ;;
-        fam:deps-update)      echo "chore: update dependencies to latest" ;;
-        fam:dc-init)          echo "chore(dc-init): sync workflows and actions" ;;
-        fam:anglicise)        echo "chore: convert American spellings to British English" ;;
-        fam:humanise)         echo "chore: humanise hard-wrapped comments and prose" ;;
+        fam:tree-viz) echo "chore: update git tree visualisation" ;;
+        fam:submodules) echo "chore: update submodules to latest" ;;
+        fam:deps-update) echo "chore: update dependencies to latest" ;;
+        fam:dc-init) echo "chore(dc-init): sync workflows and actions" ;;
+        fam:anglicise) echo "chore: convert American spellings to British English" ;;
+        fam:humanise) echo "chore: humanise hard-wrapped comments and prose" ;;
         fam:merge-submodules) echo "chore: consolidate submodule update merges" ;;
-        fam:merge-anglicise)  echo "chore: consolidate anglicise merges" ;;
-        fam:merge-humanise)   echo "chore: consolidate humanise merges" ;;
-        *)                    echo "" ;;
+        fam:merge-anglicise) echo "chore: consolidate anglicise merges" ;;
+        fam:merge-humanise) echo "chore: consolidate humanise merges" ;;
+        *) echo "" ;;
     esac
 }
 
@@ -105,7 +105,7 @@ _dedup_family_label() {
 _dedup_is_pinned() {
     local subj="$1" h="$2"
     case "$subj" in
-        "chore: update CHANGELOG"*|"chore(changelog)"*) return 0 ;;
+        "chore: update CHANGELOG"* | "chore(changelog)"*) return 0 ;;
     esac
     [[ -n "${DEDUP_PIN_SHAS[$h]:-}" ]] && return 0
     return 1
@@ -115,18 +115,24 @@ _dedup_is_pinned() {
 _dedup_classify() {
     local subj="$1" h="$2" fam
     if _dedup_is_pinned "$subj" "$h"; then
-        _CLS_KEY=""; _CLS_COMBINABLE="false"; return 0
+        _CLS_KEY=""
+        _CLS_COMBINABLE="false"
+        return 0
     fi
     fam=$(_dedup_family_of "$subj")
     if [[ -n "$fam" ]]; then
-        _CLS_KEY="$fam"; _CLS_COMBINABLE="true"; return 0
+        _CLS_KEY="$fam"
+        _CLS_COMBINABLE="true"
+        return 0
     fi
     if [[ "${DEDUP_CONSERVATIVE:-false}" == "true" ]]; then
         # Conservative: user commits are never squashed, only known chores.
-        _CLS_KEY=""; _CLS_COMBINABLE="false"
+        _CLS_KEY=""
+        _CLS_COMBINABLE="false"
     else
         # Liberal: fall back to exact-subject grouping (legacy behaviour).
-        _CLS_KEY="exact:$subj"; _CLS_COMBINABLE="true"
+        _CLS_KEY="exact:$subj"
+        _CLS_COMBINABLE="true"
     fi
     return 0
 }
@@ -146,7 +152,7 @@ _dedup_group_message() {
     while IFS= read -r s; do
         [[ -z "$s" ]] && continue
         body+=$'\n'"- $s"
-    done <<< "$subs"
+    done <<<"$subs"
     printf '%s\n\n%s\n' "$headline" "$body"
 }
 
@@ -179,14 +185,19 @@ _dedup_collect_pins() {
 dedup_build_plan() {
     local nest="$1"
 
-    PLAN_EMIT_HASH=(); PLAN_EMIT_CDATE=(); PLAN_EMIT_MSG=(); PLAN_ROWS=()
-    PLAN_DUP_GROUPS=0; PLAN_DUP_COMMITS=0; PLAN_BASE=""
+    PLAN_EMIT_HASH=()
+    PLAN_EMIT_CDATE=()
+    PLAN_EMIT_MSG=()
+    PLAN_ROWS=()
+    PLAN_DUP_GROUPS=0
+    PLAN_DUP_COMMITS=0
+    PLAN_BASE=""
 
     # Extract commits oldest-first using the unit separator (0x1f) so subjects containing pipes or spaces survive intact.
     local -a commits=()
     mapfile -t commits < <(git log --reverse --format="%H%x1f%s" "$RANGE")
     PLAN_TOTAL=${#commits[@]}
-    (( PLAN_TOTAL == 0 )) && return 0
+    ((PLAN_TOTAL == 0)) && return 0
 
     # Base = parent of the oldest in-range commit (empty if range starts at root).
     # --verify --quiet prints nothing (not the unresolved ref) when there is no parent.
@@ -197,8 +208,11 @@ dedup_build_plan() {
     local -a K=() SUB=() HASH=()
     local i entry h subj key
     for ((i = 0; i < PLAN_TOTAL; i++)); do
-        entry="${commits[$i]}"; h="${entry%%$'\x1f'*}"; subj="${entry#*$'\x1f'}"
-        HASH[$i]="$h"; SUB[$i]="$subj"
+        entry="${commits[$i]}"
+        h="${entry%%$'\x1f'*}"
+        subj="${entry#*$'\x1f'}"
+        HASH[$i]="$h"
+        SUB[$i]="$subj"
         _dedup_classify "$subj" "$h"
         if [[ "$_CLS_COMBINABLE" == "true" ]]; then
             K[$i]="$_CLS_KEY"
@@ -213,7 +227,7 @@ dedup_build_plan() {
         for ((i = 0; i < PLAN_TOTAL; i++)); do
             key="${K[$i]}"
             last_idx["$key"]="$i"
-            cnt["$key"]=$(( ${cnt["$key"]:-0} + 1 ))
+            cnt["$key"]=$((${cnt["$key"]:-0} + 1))
             # Accumulate ordered-unique member subjects for the aggregated message.
             case $'\n'"${subs_join["$key"]:-}"$'\n' in
                 *$'\n'"${SUB[$i]}"$'\n'*) : ;;
@@ -221,10 +235,13 @@ dedup_build_plan() {
             esac
         done
         for ((i = 0; i < PLAN_TOTAL; i++)); do
-            key="${K[$i]}"; h="${HASH[$i]}"; subj="${SUB[$i]}"
+            key="${K[$i]}"
+            h="${HASH[$i]}"
+            subj="${SUB[$i]}"
             if [[ "${last_idx["$key"]}" == "$i" ]]; then
-                PLAN_EMIT_HASH+=("$h"); PLAN_EMIT_CDATE+=("")
-                if (( ${cnt["$key"]} > 1 )); then
+                PLAN_EMIT_HASH+=("$h")
+                PLAN_EMIT_CDATE+=("")
+                if ((${cnt["$key"]} > 1)); then
                     PLAN_EMIT_MSG+=("$(_dedup_group_message "$key" "${cnt["$key"]}" "${subs_join["$key"]}")")
                     PLAN_ROWS+=("nest ${cnt["$key"]}×|$h|$subj")
                     PLAN_DUP_GROUPS=$((PLAN_DUP_GROUPS + 1))
@@ -242,22 +259,28 @@ dedup_build_plan() {
         local prev_key="" idx=-1
         local -a run_first=() run_count=() run_subj=() run_subs=()
         for ((i = 0; i < PLAN_TOTAL; i++)); do
-            key="${K[$i]}"; h="${HASH[$i]}"; subj="${SUB[$i]}"
-            if (( idx >= 0 )) && [[ "$key" == "$prev_key" && "$key" != keep:* ]]; then
-                run_count[$idx]=$(( run_count[idx] + 1 ))
+            key="${K[$i]}"
+            h="${HASH[$i]}"
+            subj="${SUB[$i]}"
+            if ((idx >= 0)) && [[ "$key" == "$prev_key" && "$key" != keep:* ]]; then
+                run_count[$idx]=$((run_count[idx] + 1))
                 case $'\n'"${run_subs[$idx]}"$'\n' in
                     *$'\n'"$subj"$'\n'*) : ;;
                     *) run_subs[$idx]="${run_subs[$idx]}"$'\n'"$subj" ;;
                 esac
             else
-                idx=$((idx + 1)); run_first[$idx]="$h"; run_count[$idx]=1; run_subj[$idx]="$subj"; run_subs[$idx]="$subj"
+                idx=$((idx + 1))
+                run_first[$idx]="$h"
+                run_count[$idx]=1
+                run_subj[$idx]="$subj"
+                run_subs[$idx]="$subj"
             fi
             prev_key="$key"
         done
         local j
         for ((j = 0; j <= idx; j++)); do
             PLAN_EMIT_HASH+=("${run_first[$j]}")
-            if (( run_count[$j] > 1 )); then
+            if ((run_count[$j] > 1)); then
                 PLAN_EMIT_CDATE+=("NOW")
                 _dedup_classify "${run_subj[$j]}" "${run_first[$j]}"
                 PLAN_EMIT_MSG+=("$(_dedup_group_message "$_CLS_KEY" "${run_count[$j]}" "${run_subs[$j]}")")
@@ -280,14 +303,15 @@ dedup_build_plan() {
 dedup_run_round() {
     local nest="$1"
     dedup_build_plan "$nest"
-    (( PLAN_DUP_COMMITS == 0 )) && return 1
+    ((PLAN_DUP_COMMITS == 0)) && return 1
 
     ROUND_DUP_GROUPS=$PLAN_DUP_GROUPS
     ROUND_DUP_COMMITS=$PLAN_DUP_COMMITS
 
     local -a sign_flag=()
     [[ "$SIGN_MODE" == "true" ]] && sign_flag=(-S)
-    local now; now="$(date -uIseconds)"
+    local now
+    now="$(date -uIseconds)"
 
     local new_parent="$PLAN_BASE" k rep tree msg an ae ad cn ce cdate
     for ((k = 0; k < ${#PLAN_EMIT_HASH[@]}; k++)); do
@@ -298,8 +322,11 @@ dedup_run_round() {
         else
             msg=$(git log -1 --format=%B "$rep")
         fi
-        an=$(git log -1 --format=%an "$rep"); ae=$(git log -1 --format=%ae "$rep"); ad=$(git log -1 --format=%aI "$rep")
-        cn=$(git log -1 --format=%cn "$rep"); ce=$(git log -1 --format=%ce "$rep")
+        an=$(git log -1 --format=%an "$rep")
+        ae=$(git log -1 --format=%ae "$rep")
+        ad=$(git log -1 --format=%aI "$rep")
+        cn=$(git log -1 --format=%cn "$rep")
+        ce=$(git log -1 --format=%ce "$rep")
         if [[ "${PLAN_EMIT_CDATE[$k]}" == "NOW" ]]; then
             cdate="$now"
         else
@@ -319,7 +346,10 @@ dedup_run_round() {
         new_parent="$new_sha"
     done
 
-    [[ -z "$new_parent" ]] && { print_error "Reconstruction produced no commits"; return 2; }
+    [[ -z "$new_parent" ]] && {
+        print_error "Reconstruction produced no commits"
+        return 2
+    }
 
     if ! git reset --hard "$new_parent" >/dev/null 2>&1; then
         print_error "Failed to update branch to rebuilt history"
@@ -343,9 +373,9 @@ deduplicate_mode() {
 
     # Repeat/nest multiplier: `--dedu x2` (>=2) turns on nested (non-adjacent) resolution and loops up to N rounds; bare `--dedu` stays consecutive-only.
     local times="${DEDUP_TIMES:-1}"
-    (( times < 1 )) && times=1
+    ((times < 1)) && times=1
     local nest=false
-    (( times >= 2 )) && nest=true
+    ((times >= 2)) && nest=true
 
     echo -e "${BOLD}Deduplicate Mode${NC}"
     echo -e "Range: ${CYAN}$RANGE${NC}"
@@ -360,11 +390,11 @@ deduplicate_mode() {
 
     # Preview the first round's plan
     dedup_build_plan "$nest"
-    if (( PLAN_TOTAL == 0 )); then
+    if ((PLAN_TOTAL == 0)); then
         print_error "No commits found in range: $RANGE"
         exit 1
     fi
-    if (( PLAN_DUP_COMMITS == 0 )); then
+    if ((PLAN_DUP_COMMITS == 0)); then
         if [[ "$nest" == "true" ]]; then
             print_success "No duplicate commit messages (adjacent or nested) found in range: $RANGE"
         else
@@ -378,11 +408,14 @@ deduplicate_mode() {
     echo -e "${BOLD}Deduplication plan:${NC}\n"
     local row rest action hash subj
     for row in "${PLAN_ROWS[@]}"; do
-        action="${row%%|*}"; rest="${row#*|}"; hash="${rest%%|*}"; subj="${rest#*|}"
+        action="${row%%|*}"
+        rest="${row#*|}"
+        hash="${rest%%|*}"
+        subj="${rest#*|}"
         case "$action" in
             keep) echo -e "  ${GREEN}keep     ${NC} ${CYAN}${hash:0:7}${NC}  ${subj:0:50}" ;;
             drop) echo -e "  ${RED}drop     ${NC} ${CYAN}${hash:0:7}${NC}  ${subj:0:50}" ;;
-            *)    echo -e "  ${YELLOW}${action}${NC} ${CYAN}${hash:0:7}${NC}  ${subj:0:50}" ;;
+            *) echo -e "  ${YELLOW}${action}${NC} ${CYAN}${hash:0:7}${NC}  ${subj:0:50}" ;;
         esac
     done
     echo ""
@@ -415,7 +448,7 @@ deduplicate_mode() {
     print_info "Rebuilding history..."
 
     local round=0 total_groups=0 total_commits=0 rc
-    while (( round < times )); do
+    while ((round < times)); do
         round=$((round + 1))
         if dedup_run_round "$nest"; then
             total_groups=$((total_groups + ROUND_DUP_GROUPS))
@@ -423,19 +456,19 @@ deduplicate_mode() {
             print_success "Round ${round}/${times}: squashed ${ROUND_DUP_COMMITS} commit(s) across ${ROUND_DUP_GROUPS} group(s)"
         else
             rc=$?
-            if (( rc == 2 )); then
+            if ((rc == 2)); then
                 print_error "Round ${round} failed; restoring original state"
                 git reset --hard "$original_head_sha" >/dev/null 2>&1 || true
                 exit 1
             fi
-            if (( round > 1 )); then
+            if ((round > 1)); then
                 print_info "Round ${round}: no further duplicates — converged after $((round - 1)) round(s)"
             fi
             break
         fi
     done
 
-    if (( total_commits == 0 )); then
+    if ((total_commits == 0)); then
         print_info "Nothing to deduplicate"
         exit 0
     fi

@@ -16,7 +16,7 @@ source "$DC_ROOT/scripts/lib/print.sh"
 
 # Handle --help
 if [[ "$1" == "--help" || "$1" == "-h" ]]; then
-    cat << 'EOF'
+    cat <<'EOF'
 Hello - Example plugin command
 
 Usage: dc hello [name]

@@ -24,7 +24,7 @@ init_output_mode() {
     OUTPUT_VERBOSE="${DC_VERBOSE:-false}"
     OUTPUT_JSON="${DC_JSON:-false}"
     OUTPUT_DEBUG="${DC_DEBUG:-false}"
-    
+
     # If JSON mode, suppress normal output
     if [[ "$OUTPUT_JSON" == "true" ]]; then
         OUTPUT_QUIET=true
@@ -122,13 +122,13 @@ json_field() {
     local key="$1"
     local value="$2"
     local last="${3:-false}"
-    
+
     # Escape special characters in value
     value="${value//\\/\\\\}"
     value="${value//\"/\\\"}"
     value="${value//$'\n'/\\n}"
     value="${value//$'\t'/\\t}"
-    
+
     if [[ "$last" == "true" ]]; then
         printf '  "%s": "%s"\n' "$key" "$value"
     else
@@ -141,7 +141,7 @@ json_number() {
     local key="$1"
     local value="$2"
     local last="${3:-false}"
-    
+
     if [[ "$last" == "true" ]]; then
         printf '  "%s": %s\n' "$key" "$value"
     else
@@ -154,9 +154,9 @@ json_bool() {
     local key="$1"
     local value="$2"
     local last="${3:-false}"
-    
+
     [[ "$value" == "true" || "$value" == "1" ]] && value="true" || value="false"
-    
+
     if [[ "$last" == "true" ]]; then
         printf '  "%s": %s\n' "$key" "$value"
     else
@@ -171,14 +171,14 @@ json_array() {
     shift
     local values=("$@")
     local last="${values[-1]}"
-    
+
     # Check if last value is "true" (meaning it's the last field marker)
     if [[ "$last" == "true" || "$last" == "false" ]]; then
         unset 'values[-1]'
     else
         last="false"
     fi
-    
+
     printf '  "%s": [' "$key"
     local first=true
     for val in "${values[@]}"; do
@@ -186,7 +186,7 @@ json_array() {
         first=false
         printf '"%s"' "$val"
     done
-    
+
     if [[ "$last" == "true" ]]; then
         printf ']\n'
     else
@@ -200,13 +200,13 @@ json_output() {
     local fields=("$@")
     local count=${#fields[@]}
     local i=0
-    
+
     echo "{"
     for field in "${fields[@]}"; do
         ((i++))
         local key="${field%%=*}"
         local value="${field#*=}"
-        
+
         if [[ $i -eq $count ]]; then
             json_field "$key" "$value" "true"
         else
@@ -224,10 +224,10 @@ json_output() {
 # Usage: parse_output_flags "$@"; set -- "${REMAINING_ARGS[@]}"
 parse_output_flags() {
     REMAINING_ARGS=()
-    
+
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            -q|--quiet)
+            -q | --quiet)
                 OUTPUT_QUIET=true
                 DC_QUIET=true
                 shift

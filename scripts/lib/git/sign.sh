@@ -38,9 +38,9 @@ fi
 auto_sign_detect() {
     print_header
     check_git_repo
-    
+
     print_info "Scanning repository for unverified commits..."
-    
+
     # Normalise RANGE (same as sign_mode does)
     if [[ -n "$RANGE" ]]; then
         if [[ "${RANGE,,}" =~ ^head[=~]all$ ]]; then
@@ -52,32 +52,32 @@ auto_sign_detect() {
             RANGE="HEAD~${BASH_REMATCH[1]}"
         fi
     fi
-    
+
     # Normalise to ..HEAD format
     if [[ "$RANGE" != *".."* ]]; then
         RANGE="$RANGE..HEAD"
     fi
-    
+
     # Check for unsigned commits
     local commit_info
     commit_info=$(git log --reverse --format="%h %G? %s" "$RANGE" 2>/dev/null || true)
-    
+
     if [[ -z "$commit_info" ]]; then
         print_error "No commits found in range: $RANGE"
         exit 1
     fi
-    
+
     local unsigned_commits
     unsigned_commits=$(echo "$commit_info" | grep -E ' [NE] ' || true)
     local unsigned_count
     unsigned_count=$(echo "$unsigned_commits" | grep -c . || echo 0)
-    
+
     if [[ "$unsigned_count" -eq 0 ]]; then
         print_success "All commits in range $RANGE are already signed (verified)"
         echo "No action needed."
         exit 0
     fi
-    
+
     # Show unsigned commits to user
     echo ""
     print_warning "Found $unsigned_count unsigned/unverified commit(s) in range: $RANGE"
@@ -85,7 +85,7 @@ auto_sign_detect() {
     echo "Unsigned commits:"
     echo "$unsigned_commits" | sed 's/^/  /'
     echo ""
-    
+
     # Explain what auto-sign will do
     echo "${BOLD}Auto-sign will:${NC}"
     echo "  • Enable commit signing (GPG required)"
@@ -94,16 +94,16 @@ auto_sign_detect() {
     echo "  • Skip interactive menus (fully automated)"
     echo "  • Sign only unsigned commits (skip already-signed)"
     echo ""
-    
+
     # Confirm with user
     local confirm
     read -rp "Proceed with auto-sign? [y/N]: " confirm
-    
+
     if [[ ! "$confirm" =~ ^[Yy] ]]; then
         print_info "Auto-sign cancelled by user"
         exit 0
     fi
-    
+
     # Auto-configure flags for secure, non-interactive signing
     print_info "Configuring auto-sign flags..."
     SIGN_MODE=true
@@ -111,7 +111,7 @@ auto_sign_detect() {
     AUTO_RESOLVE=ours
     NO_EDIT_MODE=true
     ATOMIC_PRESERVE=true
-    
+
     print_success "Auto-sign configured:"
     echo "  SIGN_MODE=true"
     echo "  PRESERVE_TOPOLOGY=true"
@@ -119,7 +119,7 @@ auto_sign_detect() {
     echo "  NO_EDIT_MODE=true"
     echo "  ATOMIC_PRESERVE=true"
     echo ""
-    
+
     # Now proceed to sign_mode which will do the actual work
     print_info "Proceeding to sign commits..."
 }
@@ -180,7 +180,7 @@ sign_mode() {
     # Capture original dates for commits in the specified range - CRITICAL for Phase 2
     # Store as COMMIT_SHA|AUTHOR_DATE|COMMITTER_DATE in a temp file for reference during signing
     local original_dates_file="/tmp/git-original-dates-$$.txt"
-    git log --format="%H|%aI|%cI" "$RANGE" > "$original_dates_file"
+    git log --format="%H|%aI|%cI" "$RANGE" >"$original_dates_file"
     capture_dates_for_range "$RANGE"
 
     # Determine the oldest commit and its parent so we can rebase from parent (or --root)
@@ -204,12 +204,12 @@ sign_mode() {
         # If PRESERVE_TOPOLOGY is already set, skip the menu
         if [[ "${PRESERVE_TOPOLOGY:-}" == [Tt][Rr][Uu][Ee] && "$REAUTHOR_MODE" != "true" ]]; then
             print_info "PRESERVE_TOPOLOGY=true; retaining merge topology and signing directly via rebase"
-            
+
             # DEFAULT: Skip leading signed commits, rebase from first unsigned onwards
             # This minimises history rewriting by not touching already-signed commits
             local commit_info
             commit_info=$(git log --reverse --format="%h %G?" "$RANGE" 2>/dev/null)
-            
+
             if [[ -n "$commit_info" ]] && ! echo "$commit_info" | grep -q '[NE]' && "$RESIGN_MODE" != "true" ]]; then
                 # All commits in range are already signed
                 local total
@@ -217,7 +217,7 @@ sign_mode() {
                 print_success "All $total commits in range already signed - no rebasing needed"
                 return 0
             fi
-            
+
             # Find first unsigned commit
             local first_unsigned=""
             local leading_signed_count=0
@@ -231,7 +231,7 @@ sign_mode() {
                     leading_signed_count=$(echo "$commit_info" | grep -B999 "^${first_unsigned}" | grep "^[^ ]* G" | wc -l)
                 fi
             fi
-            
+
             # Determine rebase base: skip leading signed commits, start from parent of first unsigned
             local rebase_base="--root"
             if [[ -n "$first_unsigned" ]]; then
@@ -242,20 +242,20 @@ sign_mode() {
                 print_info "No unsigned commits found - all signed already"
                 return 0
             fi
-            
+
             # Clean up any stale rebase-merge directory
             if [[ -d ".git/rebase-merge" ]]; then
                 rm -rf .git/rebase-merge
             fi
-            
+
             # Apply rebase with proven flags
             if git rebase "$rebase_base" --rebase-merges --gpg-sign --committer-date-is-author-date; then
                 print_success "Unsigned commits signed; $leading_signed_count leading signed commits remain untouched"
-                
+
                 # Auto-push in this path — the normal end-of-function push is bypassed by return 0.
                 local _pb="${ORIGINAL_BRANCH:-}"
-                [[ -z "$_pb" || "$_pb" == "HEAD" ]] && \
-                    _pb=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+                [[ -z "$_pb" || "$_pb" == "HEAD" ]] \
+                    && _pb=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
                 if [[ -n "$_pb" && "$_pb" != "HEAD" ]]; then
                     print_info "Auto-pushing signed commits to origin/${_pb}"
                     if git push --force-with-lease origin "$_pb"; then
@@ -331,7 +331,7 @@ sign_mode() {
     fi
 
     print_info "Running interactive rebase to re-sign commits (no user interaction expected)"
-    
+
     # Skip rebase if signatures were already applied during preserved-topology creation
     if [[ "${SIGNATURES_ALREADY_APPLIED:-}" != "true" ]]; then
         # Only run rebase if signatures weren't already applied
@@ -350,7 +350,7 @@ sign_mode() {
                 # Uses proven method: Sebastian Rollén (Apr 2022) --gpg-sign --committer-date-is-author-date
                 print_info "PRESERVE_TOPOLOGY=true: Signing commits while preserving ORIGINAL dates, author, and merge topology"
                 print_info "Using proven rebase method: --gpg-sign --committer-date-is-author-date (signature timestamp = now, commit date = original)"
-                
+
                 if git rebase --root --rebase-merges --gpg-sign --committer-date-is-author-date; then
                     print_success "Rebase/Resign with ORIGINAL date and topology preservation completed"
                 else
@@ -374,7 +374,7 @@ sign_mode() {
                 # Uses proven method: Sebastian Rollén (Apr 2022) --gpg-sign --committer-date-is-author-date
                 print_info "PRESERVE_TOPOLOGY=true: Signing commits while preserving ORIGINAL dates, author, and merge structure"
                 print_info "Using proven rebase method: --gpg-sign --committer-date-is-author-date (signature timestamp = now, commit date = original)"
-                
+
                 if git rebase "$REBASE_BASE" --rebase-merges --gpg-sign --committer-date-is-author-date; then
                     print_success "Rebase/Resign with ORIGINAL date and topology preservation completed"
                 else
@@ -397,7 +397,7 @@ sign_mode() {
         sample_sha=$(git rev-parse HEAD)
         local sample_date
         sample_date=$(git log -1 --format=%aI "$sample_sha" 2>/dev/null || true)
-        
+
         if [[ -n "$sample_date" ]]; then
             print_success "PRESERVE_TOPOLOGY phase complete: Dates and signatures already preserved in Phase 1"
             print_info "Sample commit date: $sample_date"
@@ -412,28 +412,28 @@ sign_mode() {
     # Since Phase 1 creates new SHAs, we verify by checking the CURRENT branch's commit dates
     if [[ "${PRESERVE_TOPOLOGY:-}" == [Tt][Rr][Uu][Ee] ]]; then
         print_info "CRITICAL VERIFICATION: Checking that signed commits have ORIGINAL dates (not current 2025-12-27 timestamp)..."
-        
+
         # Sample the first, middle, and last commits from current branch
         local sample_commits
         mapfile -t sample_commits < <(git rev-list --reverse HEAD | awk 'NR==1 || NR==NF || NR%20==0')
         local sample_count=0
         local date_mismatch_count=0
         local sample_found=0
-        
+
         for commit_sha in "${sample_commits[@]}"; do
             [[ -z "$commit_sha" ]] && continue
             sample_count=$((sample_count + 1))
             sample_found=$((sample_found + 1))
-            
+
             current_date=$(git log -1 --format=%aI "$commit_sha" 2>/dev/null || true)
-            
+
             if [[ -z "$current_date" ]]; then
                 continue
             fi
-            
+
             # Extract date component (YYYY-MM-DD) and check if it's 2025-12-23
             date_component=$(echo "$current_date" | cut -d'T' -f1)
-            
+
             # Expected original date from the session start (2025-12-23)
             # If we see 2025-12-27, it means dates were reset to current signing time
             if [[ "$date_component" == "2025-12-27" ]]; then
@@ -441,7 +441,7 @@ sign_mode() {
                 date_mismatch_count=$((date_mismatch_count + 1))
             fi
         done
-        
+
         if [[ $sample_found -eq 0 ]]; then
             print_warning "Could not sample any commits for verification"
         elif [[ $date_mismatch_count -gt 0 ]]; then
@@ -467,8 +467,8 @@ sign_mode() {
     if [[ "${RANGE}" != tmp/* && "${SIGNATURES_ALREADY_APPLIED:-}" != "true" ]]; then
         # Prefer ORIGINAL_BRANCH — after reconstruction the re-detected branch may be "HEAD" (detached).
         local current_branch="${ORIGINAL_BRANCH:-}"
-        [[ -z "$current_branch" || "$current_branch" == "HEAD" ]] && \
-            current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+        [[ -z "$current_branch" || "$current_branch" == "HEAD" ]] \
+            && current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
         if [[ -z "$current_branch" || "$current_branch" == "HEAD" ]]; then
             print_warning "Detached HEAD after signing — push manually: git checkout <branch> && git push --force-with-lease"
         else
@@ -486,16 +486,16 @@ sign_mode() {
     if [[ -n "${ORIGINAL_BRANCH:-}" && "${RANGE}" == tmp/* ]]; then
         local final_branch
         final_branch=$(git rev-parse --abbrev-ref HEAD)
-        
+
         if [[ "$NO_EDIT_MODE" == "true" || "$AUTO_FIX_REBASE" == "true" ]]; then
             # Auto-confirm: force-push and checkout original branch
             print_info "AUTO_FIX: Force-pushing $final_branch to origin/${ORIGINAL_BRANCH}"
-            git push origin "$final_branch:${ORIGINAL_BRANCH}" --force-with-lease 2>/dev/null || \
-                git push origin "$final_branch:${ORIGINAL_BRANCH}" --force
-            
+            git push origin "$final_branch:${ORIGINAL_BRANCH}" --force-with-lease 2>/dev/null \
+                || git push origin "$final_branch:${ORIGINAL_BRANCH}" --force
+
             print_info "AUTO_FIX: Checking out original branch ${ORIGINAL_BRANCH}"
             git checkout "${ORIGINAL_BRANCH}" 2>/dev/null || true
-            
+
             print_success "Automatically returned to ${ORIGINAL_BRANCH} after signing"
         else
             # Interactive mode: prompt user

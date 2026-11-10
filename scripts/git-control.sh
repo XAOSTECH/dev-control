@@ -30,7 +30,7 @@ set -e
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEV_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
-export DEV_CONTROL_DIR  # Used by sourced libraries
+export DEV_CONTROL_DIR # Used by sourced libraries
 
 # Source shared libraries
 source "$SCRIPT_DIR/lib/colours.sh"
@@ -45,7 +45,7 @@ source "$SCRIPT_DIR/lib/print.sh"
 check_script_exists() {
     local script="$1"
     local path="$SCRIPT_DIR/$script"
-    
+
     if [[ -f "$path" && -x "$path" ]]; then
         return 0
     elif [[ -f "$path" ]]; then
@@ -61,7 +61,7 @@ check_script_exists() {
 # ============================================================================
 
 show_help() {
-    cat << 'EOF'
+    cat <<'EOF'
 Dev-Control Git Services - Unified git workflow automation
 
 USAGE:
@@ -132,23 +132,23 @@ EOF
 
 display_menu() {
     print_header "Git Control"
-    
+
     echo -e "${BOLD}Repository Setup${NC}"
     print_menu_item "1" "Initialise Templates (dc-init)   - Copy docs, workflows, licences"
     print_menu_item "2" "Create Repository (dc-repo)      - Create GitHub repository"
     echo ""
-    
+
     echo -e "${BOLD}Collaboration${NC}"
     print_menu_item "3" "Create Pull Request (dc-pr)      - Create PR from branch"
     echo ""
-    
+
     echo -e "${BOLD}Maintenance${NC}"
     print_menu_item "4" "Fix History (dc-fix)             - Rewrite commit history"
     print_menu_item "5" "Licence Auditor (dc-licences)    - Audit and manage licences"
     print_menu_item "6" "Rename Branches (dc-rename)      - Batch rename Main → main"
     print_menu_item "7" "Setup GPG Bot (dc-gpg-setup)     - Configure GPG for Actions"
     echo ""
-    
+
     print_menu_item "h" "Help"
     print_menu_item "0" "Exit / Back to main menu"
     echo ""
@@ -161,33 +161,33 @@ display_menu() {
 run_subcommand() {
     local cmd="$1"
     shift
-    
+
     case "$cmd" in
-        1|init|template|templates)
-            check_script_exists "template-loading.sh" && \
-                bash "$SCRIPT_DIR/template-loading.sh" "$@"
+        1 | init | template | templates)
+            check_script_exists "template-loading.sh" \
+                && bash "$SCRIPT_DIR/template-loading.sh" "$@"
             ;;
-        2|repo|create)
-            check_script_exists "create-repo.sh" && \
-                bash "$SCRIPT_DIR/create-repo.sh" "$@"
+        2 | repo | create)
+            check_script_exists "create-repo.sh" \
+                && bash "$SCRIPT_DIR/create-repo.sh" "$@"
             ;;
-        3|pr|pull-request)
-            check_script_exists "create-pr.sh" && \
-                bash "$SCRIPT_DIR/create-pr.sh" "$@"
+        3 | pr | pull-request)
+            check_script_exists "create-pr.sh" \
+                && bash "$SCRIPT_DIR/create-pr.sh" "$@"
             ;;
-        4|fix|history)
-            check_script_exists "fix-history.sh" && \
-                bash "$SCRIPT_DIR/fix-history.sh" "$@"
+        4 | fix | history)
+            check_script_exists "fix-history.sh" \
+                && bash "$SCRIPT_DIR/fix-history.sh" "$@"
             ;;
-        5|licences|lic|licence)
-            check_script_exists "licences.sh" && \
-                bash "$SCRIPT_DIR/licences.sh" "$@"
+        5 | licences | lic | licence)
+            check_script_exists "licences.sh" \
+                && bash "$SCRIPT_DIR/licences.sh" "$@"
             ;;
-        6|rename|rename-branches|rename-branch)
-            check_script_exists "lib/git/rename.sh" && \
-                bash "$SCRIPT_DIR/lib/git/rename.sh" "$@"
+        6 | rename | rename-branches | rename-branch)
+            check_script_exists "lib/git/rename.sh" \
+                && bash "$SCRIPT_DIR/lib/git/rename.sh" "$@"
             ;;
-        7|gpg|gpg-setup|setup-gpg)
+        7 | gpg | gpg-setup | setup-gpg)
             check_script_exists "lib/git/gpg.sh" || {
                 print_error "gpg.sh not found"
                 return 1
@@ -195,11 +195,11 @@ run_subcommand() {
             source "$SCRIPT_DIR/lib/git/gpg.sh"
             setup_bot_gpg_for_repo "$@"
             ;;
-        h|help|-h|--help)
+        h | help | -h | --help)
             show_help
             ;;
-        0|exit|q|quit|back)
-            return 1  # Signal to exit/return
+        0 | exit | q | quit | back)
+            return 1 # Signal to exit/return
             ;;
         "")
             # Empty input in interactive mode - just redisplay menu
@@ -211,7 +211,7 @@ run_subcommand() {
             return 2
             ;;
     esac
-    
+
     return 0
 }
 
@@ -249,9 +249,15 @@ _gc_menu_choose() {
     local -a tokens=(1 2 3 4 5 6 7 h 0)
     local choice i
     choice=$(tui_choose "Git Control — select a tool" "${labels[@]}" || true)
-    [[ -z "$choice" ]] && { echo ""; return; }
+    [[ -z "$choice" ]] && {
+        echo ""
+        return
+    }
     for i in "${!labels[@]}"; do
-        [[ "${labels[$i]}" == "$choice" ]] && { echo "${tokens[$i]}"; return; }
+        [[ "${labels[$i]}" == "$choice" ]] && {
+            echo "${tokens[$i]}"
+            return
+        }
     done
     echo ""
 }
@@ -299,7 +305,10 @@ main() {
 
         echo ""
         if [[ "$_tui" == "true" ]]; then
-            declare -f tui_confirm &>/dev/null && { tui_confirm "Return to the Git Control menu?" "yes" || { show_quick_tips; exit 0; }; }
+            declare -f tui_confirm &>/dev/null && { tui_confirm "Return to the Git Control menu?" "yes" || {
+                show_quick_tips
+                exit 0
+            }; }
         else
             read -rp "Press Enter to continue..."
         fi

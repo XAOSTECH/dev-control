@@ -25,10 +25,10 @@ _GPG_LIB_DIR="${_GPG_LIB_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
 
 # Minimal print fallbacks when sourced without the print lib.
 if ! declare -f print_info &>/dev/null; then
-    print_info()    { echo "[INFO] $*"; }
+    print_info() { echo "[INFO] $*"; }
     print_success() { echo "[OK] $*"; }
     print_warning() { echo "[WARN] $*" >&2; }
-    print_error()   { echo "[ERROR] $*" >&2; }
+    print_error() { echo "[ERROR] $*" >&2; }
 fi
 
 # ============================================================================
@@ -39,9 +39,9 @@ fi
 gpg_mask() {
     local s="${1:-}" keep="${2:-4}" n
     n=${#s}
-    if (( n == 0 )); then
+    if ((n == 0)); then
         printf '********'
-    elif (( n <= keep * 2 )); then
+    elif ((n <= keep * 2)); then
         printf '%*s' "$n" '' | tr ' ' '*'
     else
         printf '%s%s%s' "${s:0:keep}" "$(printf '%*s' $((n - keep * 2)) '' | tr ' ' '*')" "${s: -keep}"
@@ -59,7 +59,7 @@ gpg_reveal_once() {
     printf '  %s\n' "$value"
     echo "=================================================================="
     printf 'Copy it now, then press [Enter] to clear the screen...'
-    read -r _ < /dev/tty || true
+    read -r _ </dev/tty || true
     clear 2>/dev/null || printf '\033c'
 }
 
@@ -98,10 +98,10 @@ gpg_resolve_vars() {
     USER_NAME="${USER_NAME:-}"
     USER_EMAIL="${USER_EMAIL:-}"
     if [[ -f "$dc_cfg" ]]; then
-        [[ -z "$USER_NAME" ]]  && USER_NAME=$(sed -n 's/^github-user:[[:space:]]*//p' "$dc_cfg" | head -1 | tr -d "'\"")
+        [[ -z "$USER_NAME" ]] && USER_NAME=$(sed -n 's/^github-user:[[:space:]]*//p' "$dc_cfg" | head -1 | tr -d "'\"")
         [[ -z "$USER_EMAIL" ]] && USER_EMAIL=$(sed -n 's/^github-user-email:[[:space:]]*//p' "$dc_cfg" | head -1 | tr -d "'\"")
     fi
-    [[ -z "$USER_NAME" ]]  && USER_NAME=$(git config --get user.name 2>/dev/null || true)
+    [[ -z "$USER_NAME" ]] && USER_NAME=$(git config --get user.name 2>/dev/null || true)
     [[ -z "$USER_EMAIL" ]] && USER_EMAIL=$(git config --get user.email 2>/dev/null || true)
 
     # Bot identity and secret names come from repoVars (already sourced); leave as-is.
@@ -211,9 +211,12 @@ gpg_register_bot_pubkey() {
 
     local pubkey key_id
     pubkey=$(GNUPGHOME="$gnupg_home" gpg --armor --export "$fpr" 2>/dev/null) || true
-    [[ -n "$pubkey" ]] || { print_warning "Could not export public key — registration skipped"; return 0; }
+    [[ -n "$pubkey" ]] || {
+        print_warning "Could not export public key — registration skipped"
+        return 0
+    }
     key_id=$(GNUPGHOME="$gnupg_home" gpg --list-secret-keys --keyid-format=long "$fpr" 2>/dev/null \
-             | grep -oE '[0-9A-F]{16}' | head -1)
+        | grep -oE '[0-9A-F]{16}' | head -1)
 
     local _tok="${BOT_TOKEN:-}"
 
@@ -229,7 +232,10 @@ gpg_register_bot_pubkey() {
         print_info "To register immediately, set BOT_TOKEN to a PAT (write:gpg_key scope) in the gitignored repoVars.env."
         return 0
     fi
-    [[ -n "$_tok" ]] || { print_info "No token supplied — registration skipped."; return 0; }
+    [[ -n "$_tok" ]] || {
+        print_info "No token supplied — registration skipped."
+        return 0
+    }
 
     # One sandboxed call per the bot's token; the user's gh session state is untouched.
     local existing
@@ -237,7 +243,8 @@ gpg_register_bot_pubkey() {
         --jq ".[] | select(.key_id == \"$key_id\") | .id" 2>/dev/null || true)
     if [[ "$existing" =~ ^[0-9]+$ ]]; then
         print_success "GPG key already registered to bot account (id: $existing)"
-        unset _tok; return 0
+        unset _tok
+        return 0
     fi
     local result
     result=$(GH_TOKEN="$_tok" gh api /user/gpg_keys --method POST \
@@ -262,8 +269,14 @@ gpg_refresh_bot_secrets() {
     local dry_run="${1:-false}"
     gpg_resolve_vars
 
-    command -v gh &>/dev/null || { print_error "gh CLI is not installed"; return 1; }
-    if ! gh auth status &>/dev/null; then print_error "gh is not authenticated (run: gh auth login)"; return 1; fi
+    command -v gh &>/dev/null || {
+        print_error "gh CLI is not installed"
+        return 1
+    }
+    if ! gh auth status &>/dev/null; then
+        print_error "gh is not authenticated (run: gh auth login)"
+        return 1
+    fi
 
     # Priority: trigger keygen.yml on GitHub where all secrets (including the user token for pubkey registration) are injected automatically — no local key generation, no prompts, full rotation on the edge.
     local _wf_repo _wf_ref
@@ -280,7 +293,7 @@ gpg_refresh_bot_secrets() {
         fi
     fi
     _wf_ref=$(git -C "${_wf_repo:+$DEV_CONTROL_DIR}" rev-parse --abbrev-ref HEAD 2>/dev/null \
-              || git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
+        || git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
     if [[ -n "$_wf_repo" ]] && gh workflow view keygen.yml --repo "$_wf_repo" &>/dev/null 2>&1; then
         if [[ "$dry_run" == "true" ]]; then
             print_info "[dry-run] Would trigger keygen.yml on $_wf_repo@$_wf_ref (secrets injected automatically, no local key generation)"
@@ -302,14 +315,26 @@ gpg_refresh_bot_secrets() {
         print_warning "Could not trigger keygen.yml — falling through to local key generation."
     fi
 
-    command -v gpg &>/dev/null     || { print_error "gpg is not installed"; return 1; }
-    command -v openssl &>/dev/null || { print_error "openssl is not installed"; return 1; }
+    command -v gpg &>/dev/null || {
+        print_error "gpg is not installed"
+        return 1
+    }
+    command -v openssl &>/dev/null || {
+        print_error "openssl is not installed"
+        return 1
+    }
     # For org scope, only REPO_OWNER is needed; REPO_NWO is not used for secret writes.
     if [[ "${SECRET_SCOPE:-repo}" == "org" ]]; then
-        [[ -n "${REPO_OWNER:-}" ]] || { print_error "Could not resolve REPO_OWNER — set it in repoVars.env"; return 1; }
+        [[ -n "${REPO_OWNER:-}" ]] || {
+            print_error "Could not resolve REPO_OWNER — set it in repoVars.env"
+            return 1
+        }
         [[ -z "$REPO_NWO" ]] && REPO_NWO="$REPO_OWNER"
     else
-        [[ -n "$REPO_NWO" ]] || { print_error "Could not resolve the repository (owner/name)"; return 1; }
+        [[ -n "$REPO_NWO" ]] || {
+            print_error "Could not resolve the repository (owner/name)"
+            return 1
+        }
     fi
     if [[ -z "$GPG_PRIVATE_KEY_SECRET" || -z "$GPG_PASSPHRASE_SECRET" ]]; then
         print_error "Secret names unresolved — set GPG_PRIVATE_KEY_SECRET / GPG_PASSPHRASE_SECRET in repoVars.env"
@@ -343,16 +368,23 @@ gpg_refresh_bot_secrets() {
     if declare -f tui_confirm &>/dev/null; then
         tui_confirm "Generate a new ${key_type}/${key_length} bot key and overwrite ${GPG_PRIVATE_KEY_SECRET}/${GPG_PASSPHRASE_SECRET} on ${REPO_NWO}?" "no" && ok=true
     else
-        local c; read -rp "Proceed? [y/N]: " c; [[ "$c" =~ ^[Yy] ]] && ok=true
+        local c
+        read -rp "Proceed? [y/N]: " c
+        [[ "$c" =~ ^[Yy] ]] && ok=true
     fi
-    [[ "$ok" == "true" ]] || { print_info "Cancelled — no changes made"; return 0; }
+    [[ "$ok" == "true" ]] || {
+        print_info "Cancelled — no changes made"
+        return 0
+    }
 
     # Isolated ephemeral keyring so the user's own keyring is never touched.
     local gnupg_home batch keyfile passphrase fpr
-    gnupg_home=$(mktemp -d); chmod 700 "$gnupg_home"
+    gnupg_home=$(mktemp -d)
+    chmod 700 "$gnupg_home"
     passphrase=$(openssl rand -base64 32)
-    batch=$(mktemp); chmod 600 "$batch"
-    cat > "$batch" <<EOF
+    batch=$(mktemp)
+    chmod 600 "$batch"
+    cat >"$batch" <<EOF
 Key-Type: $key_type
 Key-Length: $key_length
 Name-Real: $BOT_NAME
@@ -362,7 +394,9 @@ Passphrase: $passphrase
 %commit
 EOF
     if ! GNUPGHOME="$gnupg_home" gpg --batch --pinentry-mode loopback --gen-key "$batch" 2>/dev/null; then
-        rm -f "$batch"; rm -rf "$gnupg_home"; unset passphrase
+        rm -f "$batch"
+        rm -rf "$gnupg_home"
+        unset passphrase
         print_error "Key generation failed (GPG). In a container, try again on the host."
         return 1
     fi
@@ -370,17 +404,19 @@ EOF
 
     fpr=$(GNUPGHOME="$gnupg_home" gpg --batch --with-colons --list-secret-keys 2>/dev/null | awk -F: '/^fpr:/{print $10; exit}')
     if [[ -z "$fpr" ]]; then
-        rm -rf "$gnupg_home"; unset passphrase
+        rm -rf "$gnupg_home"
+        unset passphrase
         print_error "Could not read the generated key fingerprint"
         return 1
     fi
 
-    keyfile=$(mktemp); chmod 600 "$keyfile"
+    keyfile=$(mktemp)
+    chmod 600 "$keyfile"
     GNUPGHOME="$gnupg_home" gpg --batch --pinentry-mode loopback --passphrase "$passphrase" \
-        --armor --export-secret-keys "$fpr" > "$keyfile" 2>/dev/null
+        --armor --export-secret-keys "$fpr" >"$keyfile" 2>/dev/null
 
     local set_ok=true
-    _gpg_secret_set "$GPG_PRIVATE_KEY_SECRET" < "$keyfile"       || set_ok=false
+    _gpg_secret_set "$GPG_PRIVATE_KEY_SECRET" <"$keyfile" || set_ok=false
     printf '%s' "$passphrase" | _gpg_secret_set "$GPG_PASSPHRASE_SECRET" || set_ok=false
 
     # Key file is no longer needed; shred it before any further network calls.
@@ -408,16 +444,31 @@ gpg_set_user_token() {
     local dry_run="${1:-false}"
     gpg_resolve_vars
 
-    command -v gh &>/dev/null || { print_error "gh CLI is not installed"; return 1; }
-    if ! gh auth status &>/dev/null; then print_error "gh is not authenticated (run: gh auth login)"; return 1; fi
+    command -v gh &>/dev/null || {
+        print_error "gh CLI is not installed"
+        return 1
+    }
+    if ! gh auth status &>/dev/null; then
+        print_error "gh is not authenticated (run: gh auth login)"
+        return 1
+    fi
     # For org scope, only REPO_OWNER is needed; REPO_NWO is not used for secret writes.
     if [[ "${SECRET_SCOPE:-repo}" == "org" ]]; then
-        [[ -n "${REPO_OWNER:-}" ]] || { print_error "Could not resolve REPO_OWNER — set it in repoVars.env"; return 1; }
+        [[ -n "${REPO_OWNER:-}" ]] || {
+            print_error "Could not resolve REPO_OWNER — set it in repoVars.env"
+            return 1
+        }
         [[ -z "$REPO_NWO" ]] && REPO_NWO="$REPO_OWNER"
     else
-        [[ -n "$REPO_NWO" ]] || { print_error "Could not resolve the repository (owner/name)"; return 1; }
+        [[ -n "$REPO_NWO" ]] || {
+            print_error "Could not resolve the repository (owner/name)"
+            return 1
+        }
     fi
-    [[ -n "$USER_TOKEN_SECRET" ]] || { print_error "USER_TOKEN_SECRET unresolved — set it in repoVars.env"; return 1; }
+    [[ -n "$USER_TOKEN_SECRET" ]] || {
+        print_error "USER_TOKEN_SECRET unresolved — set it in repoVars.env"
+        return 1
+    }
 
     print_info "Target secret: $USER_TOKEN_SECRET (${SECRET_SCOPE}:${REPO_OWNER:-$REPO_NWO})"
     print_info "Provide a classic PAT for the bot account with 'write:gpg_key' scope (input is masked)."
@@ -431,9 +482,13 @@ gpg_set_user_token() {
     if declare -f tui_password &>/dev/null; then
         token=$(tui_password "Paste PAT (hidden)")
     else
-        read -rsp "Paste PAT (hidden): " token; echo ""
+        read -rsp "Paste PAT (hidden): " token
+        echo ""
     fi
-    [[ -n "$token" ]] || { print_warning "No token entered — aborting"; return 1; }
+    [[ -n "$token" ]] || {
+        print_warning "No token entered — aborting"
+        return 1
+    }
 
     if printf '%s' "$token" | _gpg_secret_set "$USER_TOKEN_SECRET"; then
         unset token

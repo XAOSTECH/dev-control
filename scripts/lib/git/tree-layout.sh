@@ -182,7 +182,7 @@ calculate_tree_positions_bash() {
             ) |
             .result
         )
-    ' "$input_json" > "$output_file" 2>/dev/null || {
+    ' "$input_json" >"$output_file" 2>/dev/null || {
         # Fallback if jq transform fails
         cp "$input_json" "$output_file"
     }
@@ -213,7 +213,7 @@ calculate_tree_positions_simple() {
                 }
             )
         )
-    ' "$input_json" > "$output_file" 2>/dev/null || {
+    ' "$input_json" >"$output_file" 2>/dev/null || {
         cp "$input_json" "$output_file"
     }
 

@@ -50,21 +50,26 @@ _ensure_filter_config() {
 _batch_tracker_dir() {
     local dc="${DEV_CONTROL_DIR:-/opt/dev-control}"
     local d="${dc}/var/batch-restore"
-    if mkdir -p "$d" 2>/dev/null; then echo "$d"; return; fi
+    if mkdir -p "$d" 2>/dev/null; then
+        echo "$d"
+        return
+    fi
     d="${HOME}/.dc-fix"
     mkdir -p "$d" 2>/dev/null && echo "$d" || echo "${TMPDIR:-/tmp}"
 }
 
 # Return (echo) the path to today's tracker file, creating the header if new.
 batch_restore_tracker_path() {
-    local today; today=$(date +%Y%m%d)
-    local d; d=$(_batch_tracker_dir)
+    local today
+    today=$(date +%Y%m%d)
+    local d
+    d=$(_batch_tracker_dir)
     local path="${d}/dc-fix-batch-${today}.tracker"
     if [[ ! -f "$path" ]]; then
         {
             echo "# dc-fix batch tracker — $(date -Iseconds)"
             echo "# Restore with: dc-fix --restore --batch $path"
-        } > "$path"
+        } >"$path"
     fi
     echo "$path"
 }
@@ -72,10 +77,14 @@ batch_restore_tracker_path() {
 # Return (echo) the path to the most recent tracker WITH at least one repo entry.
 # Skips empty (header-only) trackers so today's freshly-created file doesn't shadow yesterday's populated one.
 batch_restore_tracker_latest() {
-    local d; d=$(_batch_tracker_dir)
+    local d
+    d=$(_batch_tracker_dir)
     local f
     while IFS= read -r f; do
-        grep -qv '^#' "$f" 2>/dev/null && { echo "$f"; return; }
+        grep -qv '^#' "$f" 2>/dev/null && {
+            echo "$f"
+            return
+        }
     done < <(find "$d" -name 'dc-fix-batch-*.tracker' -type f 2>/dev/null | sort -r)
     # No populated tracker found — return today’s (creates it if missing, may be empty).
     batch_restore_tracker_path
@@ -90,7 +99,7 @@ batch_restore_record() {
     if grep -q "^${repo}|" "$tracker" 2>/dev/null; then
         return 0
     fi
-    echo "${repo}|${branch}|${commit}|${btag}" >> "$tracker"
+    echo "${repo}|${branch}|${commit}|${btag}" >>"$tracker"
 }
 
 # Restore every repo listed in the tracker to its recorded pre-run state.
@@ -118,7 +127,11 @@ batch_restore_all() {
         fi
 
         print_info "Restoring $repo → $branch @ ${commit:0:8}"
-        pushd "$repo" > /dev/null || { print_warning "Cannot enter $repo"; ((skipped++)) || true; continue; }
+        pushd "$repo" >/dev/null || {
+            print_warning "Cannot enter $repo"
+            ((skipped++)) || true
+            continue
+        }
 
         # Resolve restore ref: original commit → local backup tag → fetched backup tag.
         local restore_ref="$commit"
@@ -132,11 +145,15 @@ batch_restore_all() {
                     print_info "  fetched backup tag from origin: $btag"
                 else
                     print_warning "  cannot resolve restore ref for $repo — skipping"
-                    popd > /dev/null; ((skipped++)) || true; continue
+                    popd >/dev/null
+                    ((skipped++)) || true
+                    continue
                 fi
             else
                 print_warning "  original commit $commit not reachable and no backup tag recorded — skipping"
-                popd > /dev/null; ((skipped++)) || true; continue
+                popd >/dev/null
+                ((skipped++)) || true
+                continue
             fi
         fi
 
@@ -147,8 +164,8 @@ batch_restore_all() {
         fi
 
         if [[ "$ok" == "true" ]]; then
-            if git remote get-url origin &>/dev/null && \
-               git rev-parse --verify "refs/remotes/origin/$branch" &>/dev/null; then
+            if git remote get-url origin &>/dev/null \
+                && git rev-parse --verify "refs/remotes/origin/$branch" &>/dev/null; then
                 if git push --force-with-lease origin "$branch" 2>/dev/null; then
                     print_success "  Restored and pushed"
                 else
@@ -163,8 +180,8 @@ batch_restore_all() {
             ((skipped++)) || true
         fi
 
-        popd > /dev/null || true
-    done < "$tracker"
+        popd >/dev/null || true
+    done <"$tracker"
 
     cd "$orig_dir" || true
     print_success "Batch restore complete: ${restored} restored, ${skipped} skipped"
@@ -188,15 +205,20 @@ find_equivalent_commit() {
     match=$(git -C "$repo" log --format="%H %s" HEAD 2>/dev/null \
         | grep -F " ${old_subj}" | head -1 | awk '{print $1}')
     if [[ -n "$match" ]]; then
-        echo "$match"; return
+        echo "$match"
+        return
     fi
     # Date-proximity fallback (within 60s, same author)
     local old_author
     old_author=$(git -C "$repo" log -1 --format="%ae" "$old_commit" 2>/dev/null || echo "")
     while IFS=' ' read -r h epoch ae; do
         [[ "$ae" != "$old_author" ]] && continue
-        local diff=$(( epoch - old_epoch )); (( diff < 0 )) && diff=$(( -diff ))
-        if (( diff <= 60 )); then echo "$h"; return; fi
+        local diff=$((epoch - old_epoch))
+        ((diff < 0)) && diff=$((-diff))
+        if ((diff <= 60)); then
+            echo "$h"
+            return
+        fi
     done < <(git -C "$repo" log --format="%H %at %ae" HEAD 2>/dev/null)
 }
 
@@ -209,28 +231,31 @@ reanchor_release_tags() {
     mapfile -t rel_tags < <(git -C "$repo" tag -l 'v*' 'latest' 2>/dev/null | sort -V)
     local anchored=0
     for tag in "${rel_tags[@]}"; do
-        local tc; tc=$(git -C "$repo" rev-parse "${tag}^{}" 2>/dev/null || echo "")
+        local tc
+        tc=$(git -C "$repo" rev-parse "${tag}^{}" 2>/dev/null || echo "")
         [[ -z "$tc" ]] && continue
         # if/then is set-e-safe; &&/|| chains on standalone lines are not
         if git -C "$repo" merge-base --is-ancestor "$tc" HEAD 2>/dev/null; then
             continue
         fi
-        local equiv; equiv=$(find_equivalent_commit "$tc" "$repo")
+        local equiv
+        equiv=$(find_equivalent_commit "$tc" "$repo")
         if [[ -z "$equiv" ]]; then
             print_warning "  Tag $tag has no equivalent in rewritten history — skipped"
             continue
         fi
-        local em; em=$(git -C "$repo" log -1 --format="%s" "$equiv" 2>/dev/null)
+        local em
+        em=$(git -C "$repo" log -1 --format="%s" "$equiv" 2>/dev/null)
         print_info "  Re-anchoring $tag → ${equiv:0:8} ($em)"
         git -C "$repo" tag -d "$tag" 2>/dev/null || true
         git -C "$repo" -c gpg.program=gpg tag -s "$tag" \
-            -m "Re-anchored to rewritten history" "$equiv" 2>/dev/null || \
-            git -C "$repo" tag -f "$tag" "$equiv"
-        git -C "$repo" push --force origin "refs/tags/$tag" 2>/dev/null || \
-            print_warning "  Push failed for $tag — run: git push --force origin refs/tags/$tag"
+            -m "Re-anchored to rewritten history" "$equiv" 2>/dev/null \
+            || git -C "$repo" tag -f "$tag" "$equiv"
+        git -C "$repo" push --force origin "refs/tags/$tag" 2>/dev/null \
+            || print_warning "  Push failed for $tag — run: git push --force origin refs/tags/$tag"
         ((anchored++)) || true
     done
-    (( anchored > 0 )) && print_info "  Re-anchored $anchored release tag(s)" || true
+    ((anchored > 0)) && print_info "  Re-anchored $anchored release tag(s)" || true
 }
 
 # Diagnose a single repo: detect orphaned release/latest tags and other issues.
@@ -240,13 +265,23 @@ diagnose_repo() {
     local repo="." fix=false dry=false
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            --fix)     fix=true; shift ;;
-            --dry-run) dry=true; shift ;;
-            *)         repo="$1"; shift ;;
+            --fix)
+                fix=true
+                shift
+                ;;
+            --dry-run)
+                dry=true
+                shift
+                ;;
+            *)
+                repo="$1"
+                shift
+                ;;
         esac
     done
 
-    local label; label=$(git -C "$repo" config --get remote.origin.url 2>/dev/null \
+    local label
+    label=$(git -C "$repo" config --get remote.origin.url 2>/dev/null \
         | sed 's|.*github\.com[:/]||;s|\.git$||' || basename "$repo")
     print_info "Diagnosing: $label"
 
@@ -257,14 +292,20 @@ diagnose_repo() {
     local -a btags
     mapfile -t btags < <(git -C "$repo" tag -l 'backup/*' --sort=-creatordate 2>/dev/null)
     for t in "${btags[@]}"; do
-        git -C "$repo" cat-file -e "refs/tags/$t" 2>/dev/null && { backup_ref="refs/tags/$t"; break; }
+        git -C "$repo" cat-file -e "refs/tags/$t" 2>/dev/null && {
+            backup_ref="refs/tags/$t"
+            break
+        }
     done
     if [[ -z "$backup_ref" ]]; then
         print_info "  No local backup tags — fetching from remote..."
         git -C "$repo" fetch origin 'refs/tags/backup/*:refs/tags/backup/*' 2>/dev/null || true
         mapfile -t btags < <(git -C "$repo" tag -l 'backup/*' --sort=-creatordate 2>/dev/null)
         for t in "${btags[@]}"; do
-            git -C "$repo" cat-file -e "refs/tags/$t" 2>/dev/null && { backup_ref="refs/tags/$t"; break; }
+            git -C "$repo" cat-file -e "refs/tags/$t" 2>/dev/null && {
+                backup_ref="refs/tags/$t"
+                break
+            }
         done
     fi
     if [[ -z "$backup_ref" ]]; then
@@ -278,16 +319,19 @@ diagnose_repo() {
     local _has_unresolvable=false
     mapfile -t rel_tags < <(git -C "$repo" tag -l 'v*' 'latest' 2>/dev/null | sort -V)
     for tag in "${rel_tags[@]}"; do
-        local tc; tc=$(git -C "$repo" rev-parse "${tag}^{}" 2>/dev/null || echo "")
+        local tc
+        tc=$(git -C "$repo" rev-parse "${tag}^{}" 2>/dev/null || echo "")
         [[ -z "$tc" ]] && continue
         if ! git -C "$repo" merge-base --is-ancestor "$tc" HEAD 2>/dev/null; then
             local ts tm
             ts=$(git -C "$repo" log -1 --format="%aI" "$tc" 2>/dev/null || echo "?")
-            tm=$(git -C "$repo" log -1 --format="%s"  "$tc" 2>/dev/null || echo "?")
+            tm=$(git -C "$repo" log -1 --format="%s" "$tc" 2>/dev/null || echo "?")
             print_warning "  ORPHANED TAG: $tag → ${tc:0:8}  ($tm  @  $ts)"
-            local equiv; equiv=$(find_equivalent_commit "$tc" "$repo")
+            local equiv
+            equiv=$(find_equivalent_commit "$tc" "$repo")
             if [[ -n "$equiv" ]]; then
-                local em; em=$(git -C "$repo" log -1 --format="%s" "$equiv" 2>/dev/null)
+                local em
+                em=$(git -C "$repo" log -1 --format="%s" "$equiv" 2>/dev/null)
                 print_info "    → equivalent in current history: ${equiv:0:8}  ($em)"
                 _orphan_tags+=("$tag")
                 _orphan_equivs+=("$equiv")
@@ -305,7 +349,7 @@ diagnose_repo() {
         lost=$(git -C "$repo" log --oneline "${backup_ref}..HEAD" 2>/dev/null | wc -l)
         local gained
         gained=$(git -C "$repo" log --oneline "HEAD..${backup_ref}" 2>/dev/null | wc -l)
-        if (( gained > 0 )); then
+        if ((gained > 0)); then
             print_warning "  $gained commit(s) in backup not reachable from current HEAD:"
             git -C "$repo" log --oneline "HEAD..${backup_ref}" 2>/dev/null | head -10 | sed 's/^/    /'
         fi
@@ -320,23 +364,25 @@ diagnose_repo() {
             local _i
             for _i in "${!_orphan_tags[@]}"; do
                 local _tag="${_orphan_tags[$_i]}" _eq="${_orphan_equivs[$_i]}"
-                local _em; _em=$(git -C "$repo" log -1 --format="%s" "$_eq" 2>/dev/null)
+                local _em
+                _em=$(git -C "$repo" log -1 --format="%s" "$_eq" 2>/dev/null)
                 if [[ "$dry" == "true" ]]; then
                     print_info "  [dry-run] would re-anchor $_tag → ${_eq:0:8} ($_em)"
                 else
                     print_info "  Re-anchoring $_tag → ${_eq:0:8} ($_em)"
                     git -C "$repo" tag -d "$_tag" 2>/dev/null || true
                     git -C "$repo" -c gpg.program=gpg tag -s "$_tag" \
-                        -m "Re-anchored to rewritten history" "$_eq" 2>/dev/null || \
-                        git -C "$repo" tag -f "$_tag" "$_eq"
-                    git -C "$repo" push --force origin "refs/tags/$_tag" 2>/dev/null || \
-                        print_warning "  Push failed for $_tag — run: git push --force origin refs/tags/$_tag"
+                        -m "Re-anchored to rewritten history" "$_eq" 2>/dev/null \
+                        || git -C "$repo" tag -f "$_tag" "$_eq"
+                    git -C "$repo" push --force origin "refs/tags/$_tag" 2>/dev/null \
+                        || print_warning "  Push failed for $_tag — run: git push --force origin refs/tags/$_tag"
                 fi
             done
         elif [[ -z "$backup_ref" ]]; then
             print_warning "  Cannot restore — no backup tag available for $label"
         else
-            local branch; branch=$(git -C "$repo" rev-parse --abbrev-ref HEAD 2>/dev/null)
+            local branch
+            branch=$(git -C "$repo" rev-parse --abbrev-ref HEAD 2>/dev/null)
             if [[ "$dry" == "true" ]]; then
                 print_info "  [dry-run] would restore $branch to $backup_ref"
             else
@@ -363,11 +409,17 @@ _repo_filter() {
     _ensure_filter_config
     local branch rurl rowner
     branch=$(git -C "$repo" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
-    [[ "$branch" == "HEAD" ]] && { print_info "Skip (detached HEAD): $repo"; return 1; }
+    [[ "$branch" == "HEAD" ]] && {
+        print_info "Skip (detached HEAD): $repo"
+        return 1
+    }
     rurl=$(git -C "$repo" config --get remote.origin.url 2>/dev/null || true)
     [[ "$rurl" =~ github\.com[:/]([^/]+)/ ]] && rowner="${BASH_REMATCH[1]}" || rowner=""
     if [[ -z "$rowner" ]]; then
-        [[ "$online" == "true" ]] && { print_info "Skip (no remote — local backup, use --offline to include): $repo"; return 1; }
+        [[ "$online" == "true" ]] && {
+            print_info "Skip (no remote — local backup, use --offline to include): $repo"
+            return 1
+        }
         return 0
     fi
     local ok=false
@@ -376,14 +428,24 @@ _repo_filter() {
     elif [[ -n "$FILTER_GH_USER" && "$rowner" == "$FILTER_GH_USER" ]]; then
         ok=true
     fi
-    [[ "$ok" == "false" ]] && { print_info "Skip (owner '$rowner' not authorised): $repo"; return 1; }
+    [[ "$ok" == "false" ]] && {
+        print_info "Skip (owner '$rowner' not authorised): $repo"
+        return 1
+    }
     if command -v gh &>/dev/null; then
-        local rslug="${rurl##*/}"; rslug="${rslug%.git}"
+        local rslug="${rurl##*/}"
+        rslug="${rslug%.git}"
         [[ "$(gh repo view "${rowner}/${rslug}" --json isArchived --jq '.isArchived' 2>/dev/null)" == "true" ]] \
-            && { print_info "Skip (archived): $repo"; return 1; }
+            && {
+                print_info "Skip (archived): $repo"
+                return 1
+            }
     fi
     [[ "$online" == "true" ]] && ! git -C "$repo" ls-remote --exit-code origin HEAD &>/dev/null \
-        && { print_info "Skip (remote not accessible): $repo"; return 1; }
+        && {
+            print_info "Skip (remote not accessible): $repo"
+            return 1
+        }
     return 0
 }
 
@@ -393,26 +455,45 @@ diagnose_batch() {
     local tracker="" fix=false dry=false online=true
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            --fix)     fix=true; shift ;;
-            --dry-run) dry=true; shift ;;
-            --offline) online=false; shift ;;
-            --online)  online=true; shift ;;
-            *)         tracker="$1"; shift ;;
+            --fix)
+                fix=true
+                shift
+                ;;
+            --dry-run)
+                dry=true
+                shift
+                ;;
+            --offline)
+                online=false
+                shift
+                ;;
+            --online)
+                online=true
+                shift
+                ;;
+            *)
+                tracker="$1"
+                shift
+                ;;
         esac
     done
 
     local fix_arg=()
     [[ "$fix" == "true" ]] && fix_arg+=(--fix)
-    [[ "$dry" == "true" ]]  && fix_arg+=(--dry-run)
+    [[ "$dry" == "true" ]] && fix_arg+=(--dry-run)
     local fix_note=""
     [[ "$fix" == "true" && "$dry" == "false" ]] && fix_note=" (fixes applied)"
 
     # ── Try to load repos from a tracker file first ──
     local use_tracker=false
     if [[ -z "$tracker" ]]; then
-        local candidate; candidate=$(batch_restore_tracker_latest)
+        local candidate
+        candidate=$(batch_restore_tracker_latest)
         # Only use tracker if it has actual repo entries (non-comment lines)
-        grep -qv '^#' "$candidate" 2>/dev/null && { tracker="$candidate"; use_tracker=true; }
+        grep -qv '^#' "$candidate" 2>/dev/null && {
+            tracker="$candidate"
+            use_tracker=true
+        }
     elif [[ -f "$tracker" ]]; then
         use_tracker=true
     fi
@@ -425,15 +506,18 @@ diagnose_batch() {
         local total=0 issues=0
         while IFS='|' read -r repo branch commit btag; do
             [[ "$repo" == \#* || -z "$repo" ]] && continue
-            [[ ! -d "$repo" ]] && { print_warning "Repo not found: $repo (base: ${batch_dir:-$PWD})"; continue; }
+            [[ ! -d "$repo" ]] && {
+                print_warning "Repo not found: $repo (base: ${batch_dir:-$PWD})"
+                continue
+            }
             ((total++)) || true
             diagnose_repo "$repo" "${fix_arg[@]}" || ((issues++)) || true
-        done < "$tracker"
+        done <"$tracker"
         cd "$orig_dir" || true
         echo ""
-        if (( total > 0 )); then
-            (( issues == 0 )) && print_success "All $total repos clean" \
-                              || print_warning "$issues of $total repos have issues${fix_note}"
+        if ((total > 0)); then
+            ((issues == 0)) && print_success "All $total repos clean" \
+                || print_warning "$issues of $total repos have issues${fix_note}"
             return 0
         fi
         print_info "Tracker had no repo entries — falling back to direct repo scan"
@@ -456,10 +540,10 @@ diagnose_batch() {
         diagnose_repo "$repo" "${fix_arg[@]}" || ((issues++)) || true
     done
     echo ""
-    if (( total == 0 )); then
+    if ((total == 0)); then
         print_warning "No eligible repos found under $(pwd)"
         return 0
     fi
-    (( issues == 0 )) && print_success "All $total repos clean" \
-                      || print_warning "$issues of $total repos have issues${fix_note}"
+    ((issues == 0)) && print_success "All $total repos clean" \
+        || print_warning "$issues of $total repos have issues${fix_note}"
 }

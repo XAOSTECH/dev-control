@@ -24,7 +24,6 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     source "$SCRIPT_DIR/lib/print.sh"
 fi
 
-
 # Common licence file patterns
 LICENSE_FILE_PATTERNS=(
     "LICENCE"
@@ -94,14 +93,14 @@ declare -A LICENSE_COMPATIBILITY=(
 # Returns: path to licence file or empty string
 find_licence_file() {
     local dir="${1:-.}"
-    
+
     for pattern in "${LICENSE_FILE_PATTERNS[@]}"; do
         if [[ -f "$dir/$pattern" ]]; then
             echo "$dir/$pattern"
             return 0
         fi
     done
-    
+
     return 1
 }
 
@@ -110,15 +109,15 @@ find_licence_file() {
 # Returns: SPDX ID or "NOASSERTION"
 detect_spdx_from_content() {
     local file="$1"
-    
+
     if [[ ! -f "$file" ]]; then
         echo "NOASSERTION"
         return 1
     fi
-    
+
     local content
     content=$(head -150 "$file" 2>/dev/null)
-    
+
     # First, check for explicit SPDX-Licence-Identifier header
     local spdx_header
     spdx_header=$(grep -oP 'SPDX-Licence-Identifier:\s*\K[^\s]+' "$file" 2>/dev/null | head -1)
@@ -126,7 +125,7 @@ detect_spdx_from_content() {
         echo "$spdx_header"
         return 0
     fi
-    
+
     # Pattern matching for common licences
     # Note: Content is already read as single string, use separate checks for multi-line patterns
     if echo "$content" | grep -qiE "MIT Licence|Permission is hereby granted.*MIT"; then
@@ -165,7 +164,7 @@ detect_spdx_from_content() {
         echo "NOASSERTION"
         return 1
     fi
-    
+
     return 0
 }
 
@@ -175,7 +174,7 @@ detect_spdx_from_content() {
 detect_local_licence() {
     local dir="${1:-.}"
     local licence_file
-    
+
     licence_file=$(find_licence_file "$dir")
     if [[ -n "$licence_file" ]]; then
         detect_spdx_from_content "$licence_file"
@@ -191,20 +190,20 @@ detect_local_licence() {
 detect_github_licence() {
     local owner="$1"
     local repo="$2"
-    
+
     if ! command -v gh &>/dev/null; then
         echo "NOASSERTION"
         return 1
     fi
-    
+
     local licence_info
     licence_info=$(gh repo view "${owner}/${repo}" --json licenceInfo --jq '.licenceInfo.spdxId' 2>/dev/null)
-    
+
     if [[ -n "$licence_info" && "$licence_info" != "null" ]]; then
         echo "$licence_info"
         return 0
     fi
-    
+
     echo "NOASSERTION"
     return 1
 }
@@ -214,7 +213,7 @@ detect_github_licence() {
 # Returns: SPDX ID
 detect_remote_licence() {
     local url="$1"
-    
+
     if [[ "$url" =~ github\.com[:/]([^/]+)/([^/.]+) ]]; then
         local owner="${BASH_REMATCH[1]}"
         local repo="${BASH_REMATCH[2]%.git}"
@@ -233,14 +232,14 @@ detect_licence() {
     local spdx_id="NOASSERTION"
     local source="none"
     local licence_file=""
-    
+
     # Try local file detection first
     licence_file=$(find_licence_file "$dir" 2>/dev/null || echo "")
     if [[ -n "$licence_file" ]]; then
         spdx_id=$(detect_spdx_from_content "$licence_file")
         source="file:$(basename "$licence_file")"
     fi
-    
+
     # If still no assertion, try GitHub API
     if [[ "$spdx_id" == "NOASSERTION" ]]; then
         local remote_url
@@ -252,7 +251,7 @@ detect_licence() {
             fi
         fi
     fi
-    
+
     # Output JSON
     cat <<EOF
 {
@@ -273,40 +272,40 @@ scan_submodule_licences() {
     local recursive="${2:-false}"
     local results="["
     local first=true
-    
+
     # Read .gitmodules if it exists
     if [[ ! -f "$root_dir/.gitmodules" ]]; then
         echo "[]"
         return 0
     fi
-    
+
     # Parse submodule paths
     while IFS= read -r subpath; do
         [[ -z "$subpath" ]] && continue
-        
+
         local full_path="$root_dir/$subpath"
         if [[ -d "$full_path" ]]; then
             local licence_info
             licence_info=$(detect_licence "$full_path")
-            
+
             if [[ "$first" == "true" ]]; then
                 first=false
             else
                 results+=","
             fi
             results+="$licence_info"
-            
+
             # Recursive scan
             if [[ "$recursive" == "true" && -f "$full_path/.gitmodules" ]]; then
                 local nested
                 nested=$(scan_submodule_licences "$full_path" "true")
                 if [[ "$nested" != "[]" ]]; then
-                    results+=",${nested:1:-1}"  # Remove outer brackets
+                    results+=",${nested:1:-1}" # Remove outer brackets
                 fi
             fi
         fi
     done < <(git config --file "$root_dir/.gitmodules" --get-regexp 'submodule\..*\.path' 2>/dev/null | awk '{print $2}')
-    
+
     results+="]"
     echo "$results"
 }
@@ -320,21 +319,21 @@ check_licence_compatibility() {
     local dep_licences=("$@")
     local root_category="${LICENSE_COMPATIBILITY[$root_licence]:-unknown}"
     local issues=()
-    
+
     for dep_licence in "${dep_licences[@]}"; do
         local dep_category="${LICENSE_COMPATIBILITY[$dep_licence]:-unknown}"
-        
+
         # Strong copyleft can't be used in permissive projects
         if [[ "$root_category" == "permissive" && "$dep_category" == "copyleft-strong" ]]; then
             issues+=("$dep_licence (copyleft) incompatible with $root_licence (permissive)")
         fi
     done
-    
+
     if [[ ${#issues[@]} -gt 0 ]]; then
         printf '%s\n' "${issues[@]}"
         return 1
     fi
-    
+
     return 0
 }
 
@@ -357,7 +356,7 @@ get_licence_category() {
 cache_licence() {
     local spdx_id="$1"
     local source="$2"
-    
+
     if [[ -d ".git" ]]; then
         git config --local dc-init.licence-type "$spdx_id"
         git config --local dc-init.licence-source "$source"

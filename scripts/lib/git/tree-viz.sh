@@ -30,19 +30,19 @@ fi
 extract_commits_json() {
     local branch="${1:-HEAD}"
     local max_commits="${2:-0}"
-    
+
     # Build git log args
     local -a log_args=("$branch" "--all" "--date=iso-strict")
     [[ $max_commits -gt 0 ]] && log_args+=("--max-count=$max_commits")
-    
+
     # Get commits with all needed data - use jq to properly escape subject
     git log "${log_args[@]}" \
         --pretty=format:'%H%n%h%n%P%n%an%n%ae%n%ad%n%at%n%s%n%D' \
-        2>/dev/null | \
-        paste -d'|' - - - - - - - - - | \
-        awk -F'|' '{print}' | \
-        jq -R 'split("|") | {sha: .[0], short: .[1], parents: .[2], author: .[3], email: .[4], date: .[5], timestamp: (.[6] | tonumber), subject: .[7], refs: .[8]}' | \
-        jq -s '.' || echo '[]'
+        2>/dev/null \
+        | paste -d'|' - - - - - - - - - \
+        | awk -F'|' '{print}' \
+        | jq -R 'split("|") | {sha: .[0], short: .[1], parents: .[2], author: .[3], email: .[4], date: .[5], timestamp: (.[6] | tonumber), subject: .[7], refs: .[8]}' \
+        | jq -s '.' || echo '[]'
 }
 
 # Extract branch information
@@ -50,28 +50,28 @@ extract_commits_json() {
 extract_branches_json() {
     local current_branch
     current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
-    
+
     local base_branch
     base_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "main")
-    
+
     echo "["
     local first=true
     while IFS= read -r line; do
         local branch_name sha is_merged is_current
         sha=$(echo "$line" | awk '{print $1}')
         branch_name=$(echo "$line" | sed 's/^[* ]*//' | awk '{$1=""; print $0}' | sed 's/^ //')
-        
+
         is_current="false"
         [[ "$branch_name" == "$current_branch" ]] && is_current="true"
-        
+
         is_merged="false"
         if git merge-base --is-ancestor "$sha" "$base_branch" 2>/dev/null; then
             is_merged="true"
         fi
-        
+
         [[ "$first" == "false" ]] && echo ","
         first=false
-        
+
         printf '  {"name":"%s","sha":"%s","current":%s,"merged":%s}' \
             "$branch_name" "$sha" "$is_current" "$is_merged"
     done < <(git branch -v --no-abbrev 2>/dev/null)
@@ -86,14 +86,14 @@ extract_tags_json() {
     local first=true
     while IFS= read -r line; do
         [[ -z "$line" ]] && continue
-        
+
         local tag_name sha
         tag_name=$(echo "$line" | awk '{print $2}' | sed 's/refs\/tags\///')
         sha=$(echo "$line" | awk '{print $1}')
-        
+
         [[ "$first" == "false" ]] && echo ","
         first=false
-        
+
         printf '  {"name":"%s","sha":"%s"}' "$tag_name" "$sha"
     done < <(git show-ref --tags 2>/dev/null)
     echo ""
@@ -105,10 +105,10 @@ extract_tags_json() {
 generate_tree_data_json() {
     local output_file="${1:-/tmp/git-tree-data.json}"
     local max_commits="${2:-0}"
-    
+
     local repo_name
     repo_name=$(basename "$(git rev-parse --show-toplevel 2>/dev/null)" || echo "repository")
-    
+
     local current_branch
     current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
 
@@ -129,7 +129,7 @@ generate_tree_data_json() {
     local generated
     generated=$(TZ=UTC git log -1 --format=%cd --date=format-local:'%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || echo "1970-01-01T00:00:00Z")
 
-    cat > "$output_file" <<-EOF
+    cat >"$output_file" <<-EOF
 {
   "metadata": {
     "repository": "$repo_name",
@@ -143,7 +143,7 @@ generate_tree_data_json() {
   "tags": $(extract_tags_json)
 }
 EOF
-    
+
     echo "$output_file"
 }
 
@@ -157,10 +157,10 @@ EOF
 calculate_tree_positions() {
     local input_json="$1"
     local output_file="${2:-/tmp/git-tree-positions.json}"
-    
+
     # Source the pure bash layout calculator
     source "$(dirname "${BASH_SOURCE[0]}")/tree-layout.sh"
-    
+
     # Use jq-based fractal layout (pure bash/jq, no python)
     if command -v jq &>/dev/null; then
         calculate_tree_positions_bash "$input_json" "$output_file" >/dev/null
@@ -168,7 +168,7 @@ calculate_tree_positions() {
         # Fallback: simple vertical layout without jq
         calculate_tree_positions_simple "$input_json" "$output_file" >/dev/null
     fi
-    
+
     echo "$output_file"
 }
 
@@ -186,7 +186,8 @@ collapse_linear_runs() {
     fi
 
     local jq_prog
-    jq_prog=$(cat <<'COLLAPSE_JQ'
+    jq_prog=$(
+        cat <<'COLLAPSE_JQ'
 def flushrun($run; $by_sha):
   if ($run | length) >= $min_run then
     ($run[0]) as $r0 | ($run[-1]) as $rk
@@ -238,8 +239,8 @@ def flushrun($run; $by_sha):
   )) as $final
 | .commits = $final
 COLLAPSE_JQ
-)
-    jq --argjson min_run "$min_run" "$jq_prog" "$input_json" > "$output_file" 2>/dev/null || cp "$input_json" "$output_file"
+    )
+    jq --argjson min_run "$min_run" "$jq_prog" "$input_json" >"$output_file" 2>/dev/null || cp "$input_json" "$output_file"
     echo "$output_file"
 }
 
@@ -251,13 +252,13 @@ COLLAPSE_JQ
 get_repo_stats() {
     local commit_count
     commit_count=$(git rev-list --count HEAD 2>/dev/null || echo 0)
-    
+
     local branch_count
     branch_count=$(git branch | wc -l || echo 0)
-    
+
     local merge_count
     merge_count=$(git log --merges --oneline | wc -l || echo 0)
-    
+
     cat <<-EOF
 {
   "commits": $commit_count,

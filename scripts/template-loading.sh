@@ -2,7 +2,7 @@
 #
 # Dev-Control Template Loading Script
 # Initialise repositories with standardised templates
-# 
+#
 # This script copies template files from all *-templates folders in Dev-Control:
 #   - docs-templates/      → copied to repo root (with placeholder replacement)
 #   - workflows-templates/ → copied to .github/workflows/
@@ -126,11 +126,11 @@ parse_args() {
     POSITIONAL_ARGS=()
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            -f|--files)
+            -f | --files)
                 CLI_FILES="$2"
                 shift 2
                 ;;
-            -o|--overwrite)
+            -o | --overwrite)
                 CLI_OVERWRITE=true
                 shift
                 ;;
@@ -138,11 +138,11 @@ parse_args() {
                 DEFAULTS_ONLY=true
                 shift
                 ;;
-            -b|--batch)
+            -b | --batch)
                 BATCH_MODE=true
                 shift
                 ;;
-            -u|--update|--update-only)
+            -u | --update | --update-only)
                 UPDATE_ONLY=true
                 BATCH_MODE=true
                 shift
@@ -151,7 +151,7 @@ parse_args() {
                 INCLUDE_LOCAL=true
                 shift
                 ;;
-            --skip|--exclude)
+            --skip | --exclude)
                 shift
                 while [[ $# -gt 0 && ! "$1" =~ ^- ]]; do
                     SKIP_DIRS+=("$1")
@@ -170,11 +170,11 @@ parse_args() {
                 AUTO_PUSH=true
                 shift
                 ;;
-            -y|--yes)
+            -y | --yes)
                 ASSUME_YES=true
                 shift
                 ;;
-            -h|--help)
+            -h | --help)
                 CLI_HELP=true
                 shift
                 ;;
@@ -193,7 +193,7 @@ parse_args() {
                 ;;
         esac
     done
-} 
+}
 
 # ============================================================================
 # HELPER FUNCTIONS
@@ -204,10 +204,22 @@ parse_args() {
 build_template_folders() {
     local idx=1
     declare -gA TEMPLATE_FOLDERS
-    [[ -d "$DEV_CONTROL_DIR/docs-templates" ]]      && { TEMPLATE_FOLDERS[$idx]="docs";      ((idx++)) || true; }
-    [[ -d "$DEV_CONTROL_DIR/workflows-templates" ]]  && { TEMPLATE_FOLDERS[$idx]="workflows";  ((idx++)) || true; }
-    [[ -d "$DEV_CONTROL_DIR/actions-templates" ]]    && { TEMPLATE_FOLDERS[$idx]="actions";    ((idx++)) || true; }
-    [[ -d "$DEV_CONTROL_DIR/github-templates" ]]     && { TEMPLATE_FOLDERS[$idx]="github";     ((idx++)) || true; }
+    [[ -d "$DEV_CONTROL_DIR/docs-templates" ]] && {
+        TEMPLATE_FOLDERS[$idx]="docs"
+        ((idx++)) || true
+    }
+    [[ -d "$DEV_CONTROL_DIR/workflows-templates" ]] && {
+        TEMPLATE_FOLDERS[$idx]="workflows"
+        ((idx++)) || true
+    }
+    [[ -d "$DEV_CONTROL_DIR/actions-templates" ]] && {
+        TEMPLATE_FOLDERS[$idx]="actions"
+        ((idx++)) || true
+    }
+    [[ -d "$DEV_CONTROL_DIR/github-templates" ]] && {
+        TEMPLATE_FOLDERS[$idx]="github"
+        ((idx++)) || true
+    }
     if [[ -d "$DEV_CONTROL_DIR/licence-templates" ]] || [[ -d "$DEV_CONTROL_DIR/licences-templates" ]]; then
         TEMPLATE_FOLDERS[$idx]="licences"
         ((idx++)) || true
@@ -294,7 +306,10 @@ check_git_repo() {
 detect_license_from_file() {
     local license_file=""
     for f in LICENSE LICENCE LICENSE.md LICENCE.md LICENSE.txt LICENCE.txt; do
-        [[ -f "$f" ]] && { license_file="$f"; break; }
+        [[ -f "$f" ]] && {
+            license_file="$f"
+            break
+        }
     done
     [[ -z "$license_file" ]] && return
 
@@ -331,7 +346,7 @@ get_git_user_info() {
 get_repo_info() {
     # Try to get remote URL
     REPO_URL=$(git config --get remote.origin.url 2>/dev/null || echo "")
-    
+
     if [[ -n "$REPO_URL" ]]; then
         # Extract org/repo from URL
         if [[ "$REPO_URL" =~ github\.com[:/]([^/]+)/([^/.]+) ]]; then
@@ -347,7 +362,7 @@ get_repo_info() {
         REPO_SLUG=$(basename "$(pwd)")
         REPO_URL=""
     fi
-    
+
     # Try to prefill GitHub username from gh CLI if not detected from remote
     if [[ -z "$ORG_NAME" ]] && command -v gh &>/dev/null; then
         local gh_user
@@ -369,32 +384,32 @@ get_repo_info() {
             LICENCE_TYPE="$cached_licence"
             print_info "Loaded licence from git config: $LICENCE_TYPE"
         fi
-        
+
         local cached_org
         cached_org=$(git config --local dc-init.org-name 2>/dev/null || echo "")
         if [[ -n "$cached_org" ]]; then
             ORG_NAME="$cached_org"
         fi
-        
+
         local cached_description
         cached_description=$(git config --local dc-init.description 2>/dev/null || echo "")
         if [[ -n "$cached_description" ]]; then
             SHORT_DESCRIPTION="$cached_description"
         fi
-        
+
         local cached_website
         cached_website=$(git config --local dc-init.website-url 2>/dev/null || echo "")
         if [[ -n "$cached_website" ]]; then
             WEBSITE_URL="$cached_website"
             print_info "Loaded website URL from git config: $WEBSITE_URL"
         fi
-        
+
         local cached_bot_name
         cached_bot_name=$(git config --local dc-init.bot-name 2>/dev/null || echo "")
         if [[ -n "$cached_bot_name" ]]; then
             BOT_NAME="$cached_bot_name"
         fi
-        
+
         local cached_bot_email
         cached_bot_email=$(git config --local dc-init.bot-email 2>/dev/null || echo "")
         if [[ -n "$cached_bot_email" ]]; then
@@ -412,43 +427,43 @@ get_repo_info() {
         if [[ -n "$cached_bot_private_key_secret" ]]; then
             BOT_PRIVATE_KEY_SECRET="$cached_bot_private_key_secret"
         fi
-        
+
         local cached_gpg_private_key_secret
         cached_gpg_private_key_secret=$(git config --local dc-init.gpg-private-key-secret 2>/dev/null || echo "")
         if [[ -n "$cached_gpg_private_key_secret" ]]; then
             GPG_PRIVATE_KEY_SECRET="$cached_gpg_private_key_secret"
         fi
-        
+
         local cached_gpg_passphrase_secret
         cached_gpg_passphrase_secret=$(git config --local dc-init.gpg-passphrase-secret 2>/dev/null || echo "")
         if [[ -n "$cached_gpg_passphrase_secret" ]]; then
             GPG_PASSPHRASE_SECRET="$cached_gpg_passphrase_secret"
         fi
-        
+
         local cached_user_token_secret
         cached_user_token_secret=$(git config --local dc-init.user-token-secret 2>/dev/null || echo "")
         if [[ -n "$cached_user_token_secret" ]]; then
             USER_TOKEN_SECRET="$cached_user_token_secret"
         fi
-        
+
         local cached_security_app_id_secret
         cached_security_app_id_secret=$(git config --local dc-init.security-app-id-secret 2>/dev/null || echo "")
         if [[ -n "$cached_security_app_id_secret" ]]; then
             SECURITY_APP_ID_SECRET="$cached_security_app_id_secret"
         fi
-        
+
         local cached_security_private_key_secret
         cached_security_private_key_secret=$(git config --local dc-init.security-private-key-secret 2>/dev/null || echo "")
         if [[ -n "$cached_security_private_key_secret" ]]; then
             SECURITY_PRIVATE_KEY_SECRET="$cached_security_private_key_secret"
         fi
-        
+
         local cached_stability
         cached_stability=$(git config --local dc-init.stability 2>/dev/null || echo "")
         if [[ -n "$cached_stability" ]]; then
             STABILITY="$cached_stability"
         fi
-        
+
         local cached_stability_color
         cached_stability_color=$(git config --local dc-init.stability-colour 2>/dev/null || echo "")
         if [[ -n "$cached_stability_color" ]]; then
@@ -483,15 +498,15 @@ get_repo_info() {
             if [[ -n "$gh_licence" && "$gh_licence" != "null" ]]; then
                 # Map gh key to SPDX identifier
                 case "$gh_licence" in
-                    gpl-3.0)        LICENCE_TYPE="GPL-3.0" ;;
-                    gpl-2.0)        LICENCE_TYPE="GPL-2.0" ;;
-                    apache-2.0)     LICENCE_TYPE="Apache-2.0" ;;
-                    mit)            LICENCE_TYPE="MIT" ;;
-                    bsd-3-clause)   LICENCE_TYPE="BSD-3-Clause" ;;
-                    bsd-2-clause)   LICENCE_TYPE="BSD-2-Clause" ;;
-                    mpl-2.0)        LICENCE_TYPE="MPL-2.0" ;;
-                    isc)            LICENCE_TYPE="ISC" ;;
-                    *)              LICENCE_TYPE="$gh_licence" ;;
+                    gpl-3.0) LICENCE_TYPE="GPL-3.0" ;;
+                    gpl-2.0) LICENCE_TYPE="GPL-2.0" ;;
+                    apache-2.0) LICENCE_TYPE="Apache-2.0" ;;
+                    mit) LICENCE_TYPE="MIT" ;;
+                    bsd-3-clause) LICENCE_TYPE="BSD-3-Clause" ;;
+                    bsd-2-clause) LICENCE_TYPE="BSD-2-Clause" ;;
+                    mpl-2.0) LICENCE_TYPE="MPL-2.0" ;;
+                    isc) LICENCE_TYPE="ISC" ;;
+                    *) LICENCE_TYPE="$gh_licence" ;;
                 esac
                 print_info "Detected GitHub licence: $LICENCE_TYPE"
             fi
@@ -518,17 +533,17 @@ collect_project_info() {
         skip_shared_config=true
         print_info "Skipping shared config (using initialisation config)"
     fi
-    
+
     echo -e "${BOLD}Project Configuration${NC}"
-    
+
     # Project name
     read -rp "Project name [$PROJECT_NAME]: " input
     PROJECT_NAME="${input:-$PROJECT_NAME}"
-    
+
     # Repository slug
     read -rp "Repository slug [$REPO_SLUG]: " input
     REPO_SLUG="${input:-$REPO_SLUG}"
-    
+
     # Repository owner (GitHub username or organisation) — allow overriding detected value
     if [[ "$BATCH_MODE" == "true" && "$REUSE_OWNER" == "true" ]]; then
         # Shared owner was selected for the batch; skip per-repo prompting and use shared value
@@ -561,7 +576,7 @@ collect_project_info() {
     REPO_URL="https://github.com/$REPO_OWNER/$REPO_SLUG"
     read -rp "Repository URL [$REPO_URL]: " input
     REPO_URL="${input:-$REPO_URL}"
-    
+
     # Website URL — auto-detect from domain-like repo slugs
     if [[ -z "$WEBSITE_URL" ]]; then
         # Check if repo slug looks like a domain (contains dots)
@@ -576,7 +591,7 @@ collect_project_info() {
     else
         read -rp "Website URL (optional): " WEBSITE_URL
     fi
-    
+
     # Short description — ALWAYS asked per-repo, never shared in batch mode
     # Prefill from THIS repo's cached config (loaded by get_repo_info)
     if [[ -n "$SHORT_DESCRIPTION" ]]; then
@@ -585,7 +600,7 @@ collect_project_info() {
     else
         read -rp "Short description: " SHORT_DESCRIPTION
     fi
-    
+
     # Long description
     echo "Long description (press Enter twice when done):"
     LONG_DESCRIPTION=""
@@ -594,7 +609,7 @@ collect_project_info() {
         LONG_DESCRIPTION+="$line\n"
     done
     LONG_DESCRIPTION="${LONG_DESCRIPTION:-$SHORT_DESCRIPTION}"
-    
+
     # If not reusing batch config, ask for licence and stability per-repo
     if [[ "$skip_shared_config" != "true" ]]; then
         echo ""
@@ -609,9 +624,9 @@ collect_project_info() {
         if [[ -n "$LICENCE_TYPE" ]]; then
             case "${LICENCE_TYPE,,}" in
                 mit) default_licence_choice=1 ;;
-                apache*|apache-2.0) default_licence_choice=2 ;;
-                gpl*|gpl-3.0) default_licence_choice=3 ;;
-                bsd*|bsd-3-clause) default_licence_choice=4 ;;
+                apache* | apache-2.0) default_licence_choice=2 ;;
+                gpl* | gpl-3.0) default_licence_choice=3 ;;
+                bsd* | bsd-3-clause) default_licence_choice=4 ;;
                 *) default_licence_choice=5 ;;
             esac
             print_info "Detected licence: $LICENCE_TYPE (will be used if you leave blank)"
@@ -622,12 +637,12 @@ collect_project_info() {
             2) LICENCE_TYPE="Apache-2.0" ;;
             3) LICENCE_TYPE="GPL-3.0" ;;
             4) LICENCE_TYPE="BSD-3-Clause" ;;
-            5) 
+            5)
                 read -rp "Enter licence name [${LICENCE_TYPE:-}]: " custom_licence
                 LICENCE_TYPE="${custom_licence:-$LICENCE_TYPE}"
                 ;;
         esac
-        
+
         # Stability — use cached value as default if available
         echo ""
         echo "Select stability level:"
@@ -647,14 +662,29 @@ collect_project_info() {
         fi
         read -rp "Choice [${default_stability_choice}]: " stability_choice
         case "${stability_choice:-$default_stability_choice}" in
-            1) STABILITY="experimental"; STABILITY_COLOR="orange" ;;
-            2) STABILITY="beta"; STABILITY_COLOR="yellow" ;;
-            3) STABILITY="stable"; STABILITY_COLOR="green" ;;
-            4) STABILITY="mature"; STABILITY_COLOR="blue" ;;
-            *) STABILITY="experimental"; STABILITY_COLOR="orange" ;;
+            1)
+                STABILITY="experimental"
+                STABILITY_COLOR="orange"
+                ;;
+            2)
+                STABILITY="beta"
+                STABILITY_COLOR="yellow"
+                ;;
+            3)
+                STABILITY="stable"
+                STABILITY_COLOR="green"
+                ;;
+            4)
+                STABILITY="mature"
+                STABILITY_COLOR="blue"
+                ;;
+            *)
+                STABILITY="experimental"
+                STABILITY_COLOR="orange"
+                ;;
         esac
     fi
-    
+
     # Bot configuration (for actions/workflows that need bot identity)
     echo ""
     echo "Bot configuration (optional - for GitHub Actions identity setup):"
@@ -664,7 +694,7 @@ collect_project_info() {
     else
         read -rp "Bot name (optional, e.g., my-bot): " BOT_NAME
     fi
-    
+
     if [[ -n "$BOT_EMAIL" ]]; then
         read -rp "Bot email [$BOT_EMAIL]: " input
         BOT_EMAIL="${input:-$BOT_EMAIL}"
@@ -691,56 +721,56 @@ collect_project_info() {
     else
         read -rp "Bot private-key (secret name, e.g. MY_BOT_PRIVATE_KEY): " BOT_PRIVATE_KEY_SECRET
     fi
-    
+
     if [[ -n "$GPG_PRIVATE_KEY_SECRET" ]]; then
         read -rp "Bot gpg-private-key [$GPG_PRIVATE_KEY_SECRET]: " input
         GPG_PRIVATE_KEY_SECRET="${input:-$GPG_PRIVATE_KEY_SECRET}"
     else
         read -rp "Bot gpg-private-key (secret name, e.g. MY_GPG_KEY): " GPG_PRIVATE_KEY_SECRET
     fi
-    
+
     if [[ -n "$GPG_PASSPHRASE_SECRET" ]]; then
         read -rp "Bot gpg-passphrase [$GPG_PASSPHRASE_SECRET]: " input
         GPG_PASSPHRASE_SECRET="${input:-$GPG_PASSPHRASE_SECRET}"
     else
         read -rp "Bot gpg-passphrase (secret name, e.g. MY_GPG_PASSPHRASE): " GPG_PASSPHRASE_SECRET
     fi
-    
+
     if [[ -n "$USER_TOKEN_SECRET" ]]; then
         read -rp "Bot user-token [$USER_TOKEN_SECRET]: " input
         USER_TOKEN_SECRET="${input:-$USER_TOKEN_SECRET}"
     else
         read -rp "Bot user-token (secret name, e.g. MY_GITHUB_TOKEN): " USER_TOKEN_SECRET
     fi
-    
+
     if [[ -n "$SECURITY_APP_ID_SECRET" ]]; then
         read -rp "Security app-id [$SECURITY_APP_ID_SECRET]: " input
         SECURITY_APP_ID_SECRET="${input:-$SECURITY_APP_ID_SECRET}"
     else
         read -rp "Security app-id (secret name, e.g. SECURITY_APP_ID): " SECURITY_APP_ID_SECRET
     fi
-    
+
     if [[ -n "$SECURITY_PRIVATE_KEY_SECRET" ]]; then
         read -rp "Security private-key [$SECURITY_PRIVATE_KEY_SECRET]: " input
         SECURITY_PRIVATE_KEY_SECRET="${input:-$SECURITY_PRIVATE_KEY_SECRET}"
     else
         read -rp "Security private-key (secret name, e.g. SECURITY_PRIVATE_KEY): " SECURITY_PRIVATE_KEY_SECRET
     fi
-    
+
     CURRENT_YEAR=$(date +%Y)
 }
 
 process_template() {
     local src="$1"
     local dest="$2"
-    
+
     if [[ ! -f "$src" ]]; then
         print_warning "Template not found: $src"
         return 1
     fi
-    
+
     mkdir -p "$(dirname "$dest")"
-    
+
     # Copy and replace placeholders
     sed -e "s|{{PROJECT_NAME}}|$PROJECT_NAME|g" \
         -e "s|{{REPO_SLUG}}|$REPO_SLUG|g" \
@@ -764,8 +794,8 @@ process_template() {
         -e "s|{{SECURITY_CLIENT_ID_SECRET}}|${SECURITY_CLIENT_ID_SECRET:-}|g" \
         -e "s|{{SECURITY_PRIVATE_KEY_SECRET}}|${SECURITY_PRIVATE_KEY_SECRET:-}|g" \
         -e "s|{{LICENCE_TYPE_BADGE}}|${LICENCE_TYPE//-/--}|g" \
-        "$src" > "$dest"
-    
+        "$src" >"$dest"
+
     print_success "Created: $dest"
 }
 
@@ -797,10 +827,10 @@ get_folder_display_name() {
 select_templates() {
     echo ""
     echo -e "${BOLD}Select templates to install:${NC}\n"
-    
+
     local idx=1
     declare -gA TEMPLATE_FOLDERS
-    
+
     # docs-templates
     if [[ -d "$DEV_CONTROL_DIR/docs-templates" ]]; then
         echo -e "  ${CYAN}$idx)${NC} Documentation       - README, CONTRIBUTING, CODE_OF_CONDUCT, SECURITY  (→ docs/)"
@@ -808,35 +838,35 @@ select_templates() {
         TEMPLATE_FOLDERS[$idx]="docs"
         ((idx++))
     fi
-    
-    # workflows-templates  
+
+    # workflows-templates
     if [[ -d "$DEV_CONTROL_DIR/workflows-templates" ]]; then
         echo -e "  ${CYAN}$idx)${NC} Workflows           - GitHub Actions (→ .github/workflows/)"
         TEMPLATE_FOLDERS[$idx]="workflows"
         ((idx++))
     fi
-    
+
     # actions-templates
     if [[ -d "$DEV_CONTROL_DIR/actions-templates" ]]; then
         echo -e "  ${CYAN}$idx)${NC} Actions             - Composite Actions (→ .github/actions/)"
         TEMPLATE_FOLDERS[$idx]="actions"
         ((idx++))
     fi
-    
+
     # github-templates (issue templates, PR template)
     if [[ -d "$DEV_CONTROL_DIR/github-templates" ]]; then
         echo -e "  ${CYAN}$idx)${NC} GitHub Templates    - Issue & PR templates (→ .github/)"
         TEMPLATE_FOLDERS[$idx]="github"
         ((idx++))
     fi
-    
+
     # licence-templates (or licences-templates)
     if [[ -d "$DEV_CONTROL_DIR/licence-templates" ]] || [[ -d "$DEV_CONTROL_DIR/licences-templates" ]]; then
         echo -e "  ${CYAN}$idx)${NC} Licences            - LICENSE file"
         TEMPLATE_FOLDERS[$idx]="licences"
         ((idx++))
     fi
-    
+
     # Any other *-templates folders
     for dir in "$DEV_CONTROL_DIR"/*-templates; do
         if [[ -d "$dir" ]]; then
@@ -849,12 +879,12 @@ select_templates() {
             fi
         fi
     done
-    
+
     echo ""
     echo -e "  ${GREEN}A)${NC} Install ALL templates"
     echo -e "  ${YELLOW}Q)${NC} Quit"
     echo ""
-    
+
     read -rp "Enter choices (e.g., 1AX, 1C, 1D, 2, 3, 4): " selection
     # Store selection in global variable (avoids subshell issues)
     SELECTED_TEMPLATE_CHOICES="$selection"
@@ -864,10 +894,10 @@ install_templates() {
     local selection="$1"
     local target_dir
     target_dir=$(pwd)
-    
+
     # Track if installing all (for auto-licence selection)
     local install_all=false
-    
+
     # Handle 'A' for all — standalone token only; letters inside tokens like 1AX must not match
     if [[ ",${selection// /}," =~ ,[Aa], ]]; then
         install_all=true
@@ -877,14 +907,14 @@ install_templates() {
         done
         selection="${selection%,}"
     fi
-    
+
     # Handle quit
     if [[ "$selection" =~ [Qq] ]]; then
         print_info "Installation cancelled."
         exit 0
     fi
-    
-    IFS=',' read -ra SELECTED <<< "$selection"
+
+    IFS=',' read -ra SELECTED <<<"$selection"
 
     for rawsel in "${SELECTED[@]}"; do
         sel=$(echo "$rawsel" | tr -d ' ')
@@ -897,7 +927,7 @@ install_templates() {
             suffix=""
         fi
         folder_type="${TEMPLATE_FOLDERS[$num]}"
-        
+
         if [[ "$folder_type" == "docs" && -n "$suffix" ]]; then
             # X = patch badges in-place only; never replace the full file
             if [[ "$suffix" =~ [Xx] ]]; then
@@ -910,7 +940,7 @@ install_templates() {
             [[ "$suffix" =~ [Bb] ]] && docs_files+=("CONTRIBUTING.md")
             [[ "$suffix" =~ [Cc] ]] && docs_files+=("CODE_OF_CONDUCT.md")
             [[ "$suffix" =~ [Dd] ]] && docs_files+=("SECURITY.md")
-            
+
             if [[ "${#docs_files[@]}" -gt 0 ]]; then
                 mkdir -p "$target_dir/docs"
                 for f in "${docs_files[@]}"; do
@@ -924,7 +954,7 @@ install_templates() {
             fi
             continue
         fi
-        
+
         case "$folder_type" in
             docs)
                 install_docs_templates "$target_dir"
@@ -958,20 +988,20 @@ install_docs_templates() {
 install_actions_templates() {
     local target_dir="$1"
     local act_dir="$DEV_CONTROL_DIR/actions-templates"
-    
+
     print_info "Installing composite actions to .github/actions/..."
     mkdir -p "$target_dir/.github/actions"
-    
+
     # Each subdirectory is one action (must contain action.yml)
     for action_dir in "$act_dir"/*/; do
         if [[ -d "$action_dir" && -f "${action_dir}action.yml" ]]; then
             local action_name
             action_name=$(basename "$action_dir")
             mkdir -p "$target_dir/.github/actions/$action_name"
-            
+
             # Process action.yml with placeholder replacement
             process_template "${action_dir}action.yml" "$target_dir/.github/actions/$action_name/action.yml"
-            
+
             # Copy any other files in the action directory (without processing)
             for file in "$action_dir"*; do
                 local filename
@@ -987,10 +1017,10 @@ install_actions_templates() {
 install_workflows_templates() {
     local target_dir="$1"
     local wf_dir="$DEV_CONTROL_DIR/workflows-templates"
-    
+
     print_info "Installing workflow templates to .github/workflows/..."
     mkdir -p "$target_dir/.github/workflows"
-    
+
     for file in "$wf_dir"/*.yml; do
         if [[ -f "$file" ]]; then
             local filename=$(basename "$file")
@@ -1005,16 +1035,16 @@ install_workflows_templates() {
 install_github_templates() {
     local target_dir="$1"
     local gh_dir="$DEV_CONTROL_DIR/github-templates"
-    
+
     if [[ ! -d "$gh_dir" ]]; then
         print_warning "github-templates folder not found"
         return
     fi
-    
+
     print_info "Installing GitHub templates to .github/..."
-    
+
     mkdir -p "$target_dir/.github"
-    
+
     # Copy ISSUE_TEMPLATE folder
     if [[ -d "$gh_dir/ISSUE_TEMPLATE" ]]; then
         mkdir -p "$target_dir/.github/ISSUE_TEMPLATE"
@@ -1025,12 +1055,12 @@ install_github_templates() {
             fi
         done
     fi
-    
+
     # Copy PR template
     if [[ -f "$gh_dir/PULL_REQUEST_TEMPLATE.md" ]]; then
         process_template "$gh_dir/PULL_REQUEST_TEMPLATE.md" "$target_dir/.github/PULL_REQUEST_TEMPLATE.md"
     fi
-    
+
     # Copy any other files in github-templates root
     for file in "$gh_dir"/*.md "$gh_dir"/*.yml; do
         if [[ -f "$file" ]]; then
@@ -1046,7 +1076,7 @@ install_licences_templates() {
     local target_dir="$1"
     local auto_choice="${2:-false}"
     local lic_dir=""
-    
+
     # Check both folder names
     if [[ -d "$DEV_CONTROL_DIR/licence-templates" ]]; then
         lic_dir="$DEV_CONTROL_DIR/licence-templates"
@@ -1056,9 +1086,9 @@ install_licences_templates() {
         print_warning "No licence folder found (licence-templates or licences-templates)"
         return
     fi
-    
+
     print_info "Installing licence templates..."
-    
+
     # Show licence options
     echo ""
     echo "Select licence:"
@@ -1072,7 +1102,7 @@ install_licences_templates() {
             ((idx++))
         fi
     done
-    
+
     # Auto-select licence when installing ALL
     if [[ "$auto_choice" == "true" ]]; then
         local pick=1
@@ -1087,12 +1117,12 @@ install_licences_templates() {
             done
         fi
         lic_choice="$pick"
-        print_info "Auto-selected licence: $(basename "${LICENSE_FILES[$lic_choice]}")" 
+        print_info "Auto-selected licence: $(basename "${LICENSE_FILES[$lic_choice]}")"
     else
         read -rp "Choice [1]: " lic_choice
         lic_choice="${lic_choice:-1}"
     fi
-    
+
     local selected_licence="${LICENSE_FILES[$lic_choice]}"
     if [[ -f "$selected_licence" ]]; then
         process_template "$selected_licence" "$target_dir/LICENSE"
@@ -1105,14 +1135,14 @@ install_generic_templates() {
     local target_dir="$1"
     local folder_type="$2"
     local tpl_dir="$DEV_CONTROL_DIR/${folder_type}-templates"
-    
+
     if [[ ! -d "$tpl_dir" ]]; then
         print_warning "${folder_type}-templates folder not found"
         return
     fi
-    
+
     print_info "Installing ${folder_type} templates..."
-    
+
     for file in "$tpl_dir"/*; do
         if [[ -f "$file" ]]; then
             local filename=$(basename "$file")
@@ -1127,11 +1157,11 @@ install_generic_templates() {
 
 find_template_file() {
     local filename="$1"
-    
+
     # Extract just the basename if a path was provided
     local base_filename
     base_filename=$(basename "$filename")
-    
+
     # Search all *-templates folders for this file
     for dir in "$DEV_CONTROL_DIR"/*-templates; do
         if [[ -d "$dir" ]]; then
@@ -1142,7 +1172,7 @@ find_template_file() {
             fi
         fi
     done
-    
+
     return 1
 }
 
@@ -1151,17 +1181,17 @@ get_target_path() {
     local user_path="$2"
     local target_dir
     target_dir=$(pwd)
-    
+
     # If user provided a path (contains /), use it directly
     if [[ "$user_path" == *"/"* ]]; then
         echo "$target_dir/$user_path"
         return
     fi
-    
+
     # Otherwise, determine destination based on source folder
     local folder_name
     folder_name=$(basename "$(dirname "$template_path")")
-    
+
     case "$folder_name" in
         workflows-templates)
             echo "$target_dir/.github/workflows/$user_path"
@@ -1179,25 +1209,25 @@ get_target_path() {
 process_specific_files() {
     local target_dir
     target_dir=$(pwd)
-    
-    IFS=',' read -ra FILES <<< "$CLI_FILES"
-    
+
+    IFS=',' read -ra FILES <<<"$CLI_FILES"
+
     for user_path in "${FILES[@]}"; do
 
         user_path=$(echo "$user_path" | tr -d ' ')
 
         local filename
         filename=$(basename "$user_path")
-        
+
         local template_path
         if ! template_path=$(find_template_file "$filename"); then
             print_error "Template not found: $filename"
             continue
         fi
-        
+
         local target_path
         target_path=$(get_target_path "$template_path" "$user_path")
-        
+
         # Check if file exists and handle overwrite
         if [[ -f "$target_path" ]] && [[ "$CLI_OVERWRITE" != "true" ]]; then
             echo -e "${YELLOW}File exists:${NC} $target_path"
@@ -1207,9 +1237,9 @@ process_specific_files() {
                 continue
             fi
         fi
-        
+
         mkdir -p "$(dirname "$target_path")"
-        
+
         process_template "$template_path" "$target_path"
     done
 }
@@ -1295,7 +1325,7 @@ run_batch_update() {
             -not -path '*/.archive/*'
         )
         for _skip in "${SKIP_DIRS[@]}"; do
-            _skip="${_skip%/}"  # strip trailing slash
+            _skip="${_skip%/}" # strip trailing slash
             find_excludes+=(-not -path "./${_skip}/*" -not -path "*/${_skip}/*")
         done
         while IFS= read -r gitdir; do
@@ -1334,7 +1364,7 @@ run_batch_update() {
     if [[ "$DEFAULTS_ONLY" == "true" || "$ASSUME_YES" == "true" ]]; then
         if [[ ! -t 0 ]]; then
             # stdin has data (heredoc / herestring)
-            read -r selection < /dev/stdin || true
+            read -r selection </dev/stdin || true
             selection="${selection:-A}"
         fi
     else
@@ -1360,7 +1390,10 @@ run_batch_update() {
         print_header
         print_info "Updating: $d"
 
-        pushd "$d" > /dev/null || { print_error "Failed to enter $d"; continue; }
+        pushd "$d" >/dev/null || {
+            print_error "Failed to enter $d"
+            continue
+        }
 
         # --- Owner guard: skip repos not owned by MEMBERS, and skip dev-control itself ---
         local remote_owner=""
@@ -1372,14 +1405,14 @@ run_batch_update() {
             # Skip dev-control itself — it is the template source, not a target
             if [[ "$remote_slug" == "dev-control" ]]; then
                 print_info "Skipping $d (dev-control is the template source)"
-                popd > /dev/null || true
+                popd >/dev/null || true
                 ((skipped++)) || true
                 continue
             fi
         fi
         if [[ -n "$members_list" && -n "$remote_owner" ]]; then
             local is_member=false
-            IFS=',' read -ra _members <<< "$members_list"
+            IFS=',' read -ra _members <<<"$members_list"
             for m in "${_members[@]}"; do
                 if [[ "$m" == "$remote_owner" ]]; then
                     is_member=true
@@ -1388,7 +1421,7 @@ run_batch_update() {
             done
             if [[ "$is_member" == "false" ]]; then
                 print_info "Skipping $d (owner '$remote_owner' not in MEMBERS)"
-                popd > /dev/null || true
+                popd >/dev/null || true
                 ((skipped++)) || true
                 continue
             fi
@@ -1444,7 +1477,7 @@ run_batch_update() {
                     if [[ "$had_stash" == "true" ]]; then
                         git stash pop --quiet 2>/dev/null || true
                     fi
-                    popd > /dev/null || true
+                    popd >/dev/null || true
                     ((skipped++)) || true
                     continue
                 fi
@@ -1497,7 +1530,7 @@ run_batch_update() {
             fi
         fi
 
-        popd > /dev/null || true
+        popd >/dev/null || true
     done
 
     echo ""
@@ -1524,7 +1557,7 @@ run_batch_init() {
             -not -path '*/.archive/*'
         )
         for _skip in "${SKIP_DIRS[@]}"; do
-            _skip="${_skip%/}"  # strip trailing slash
+            _skip="${_skip%/}" # strip trailing slash
             find_excludes+=(-not -path "./${_skip}/*" -not -path "*/${_skip}/*")
         done
         while IFS= read -r gitdir; do
@@ -1587,8 +1620,8 @@ run_batch_init() {
         # Auto-detect owner from the first directory's git config
         local candidate_owner=""
         if [[ -d "${dirs[0]}" ]]; then
-            pushd "${dirs[0]}" > /dev/null 2>&1 || true
-            if git rev-parse --git-dir > /dev/null 2>&1; then
+            pushd "${dirs[0]}" >/dev/null 2>&1 || true
+            if git rev-parse --git-dir >/dev/null 2>&1; then
                 candidate_owner=$(git config --local dc-init.org-name 2>/dev/null || echo "")
                 # Fallback: detect from remote URL
                 if [[ -z "$candidate_owner" ]]; then
@@ -1599,7 +1632,7 @@ run_batch_init() {
                     fi
                 fi
             fi
-            popd > /dev/null 2>&1 || true
+            popd >/dev/null 2>&1 || true
         fi
         if [[ -n "$candidate_owner" ]]; then
             REPO_OWNER="$candidate_owner"
@@ -1613,58 +1646,58 @@ run_batch_init() {
         BATCH_REUSE_TEMPLATES=true
         print_info "Will reuse initialisation config across the batch"
     else
-    read -rp "Use a single repository owner for all repos? (Y/n): " use_single_owner
-    if [[ -z "${use_single_owner}" || "${use_single_owner}" =~ ^[Yy] ]]; then
-        # For convenience, try to detect an owner from the first directory's local git config
-        local candidate_owner=""
-        if [[ -d "${dirs[0]}" ]]; then
-            pushd "${dirs[0]}" > /dev/null 2>&1 || true
-            # Only check local git config, don't init or fetch from GitHub
-            if git rev-parse --git-dir > /dev/null 2>&1; then
-                candidate_owner=$(git config --local dc-init.org-name 2>/dev/null || echo "")
+        read -rp "Use a single repository owner for all repos? (Y/n): " use_single_owner
+        if [[ -z "${use_single_owner}" || "${use_single_owner}" =~ ^[Yy] ]]; then
+            # For convenience, try to detect an owner from the first directory's local git config
+            local candidate_owner=""
+            if [[ -d "${dirs[0]}" ]]; then
+                pushd "${dirs[0]}" >/dev/null 2>&1 || true
+                # Only check local git config, don't init or fetch from GitHub
+                if git rev-parse --git-dir >/dev/null 2>&1; then
+                    candidate_owner=$(git config --local dc-init.org-name 2>/dev/null || echo "")
+                fi
+                popd >/dev/null 2>&1 || true
             fi
-            popd > /dev/null 2>&1 || true
-        fi
 
-        if [[ -n "$candidate_owner" ]]; then
-            read -rp "Repository owner (user/org) [${candidate_owner}]: " shared_owner
-            REPO_OWNER="${shared_owner:-$candidate_owner}"
+            if [[ -n "$candidate_owner" ]]; then
+                read -rp "Repository owner (user/org) [${candidate_owner}]: " shared_owner
+                REPO_OWNER="${shared_owner:-$candidate_owner}"
+            else
+                read -rp "Repository owner (user/org): " shared_owner
+                REPO_OWNER="${shared_owner:-$REPO_OWNER}"
+            fi
+
+            ORG_NAME="$REPO_OWNER"
+            REUSE_OWNER=true
+            BATCH_SKIP_OWNER=false
+            print_info "Using owner: $REPO_OWNER for all repositories"
         else
-            read -rp "Repository owner (user/org): " shared_owner
-            REPO_OWNER="${shared_owner:-$REPO_OWNER}"
+            # Do not prefill owner prompts from detected remotes; prompt per-repo
+            BATCH_SKIP_OWNER=true
+            print_info "Will prompt for repository owner individually"
         fi
 
-        ORG_NAME="$REPO_OWNER"
-        REUSE_OWNER=true
-        BATCH_SKIP_OWNER=false
-        print_info "Using owner: $REPO_OWNER for all repositories"
-    else
-        # Do not prefill owner prompts from detected remotes; prompt per-repo
-        BATCH_SKIP_OWNER=true
-        print_info "Will prompt for repository owner individually"
-    fi
-
-    # Offer to reuse initialisation config (templates, licence, stability) for all repos
-    read -rp "Reuse initialisation config (templates, licence, stability) for all repositories? (y/N): " reuse_templates
-    if [[ "${reuse_templates}" =~ ^[Yy] ]]; then
-        BATCH_REUSE_TEMPLATES=true
-        print_info "Will reuse initialisation config across the batch"
-        # If --yes was passed, prefill sensible defaults for the batch
-        if [[ "$ASSUME_YES" == "true" ]]; then
-            BATCH_SELECTED_CHOICES="A"
-            BATCH_LICENCE_TYPE="${LICENCE_TYPE:-GPL-3.0}"
-            BATCH_STABILITY="${STABILITY:-stable}"
-            BATCH_STABILITY_COLOR="${STABILITY_COLOR:-green}"
-            print_info "Batch will run non-interactively with defaults"
+        # Offer to reuse initialisation config (templates, licence, stability) for all repos
+        read -rp "Reuse initialisation config (templates, licence, stability) for all repositories? (y/N): " reuse_templates
+        if [[ "${reuse_templates}" =~ ^[Yy] ]]; then
+            BATCH_REUSE_TEMPLATES=true
+            print_info "Will reuse initialisation config across the batch"
+            # If --yes was passed, prefill sensible defaults for the batch
+            if [[ "$ASSUME_YES" == "true" ]]; then
+                BATCH_SELECTED_CHOICES="A"
+                BATCH_LICENCE_TYPE="${LICENCE_TYPE:-GPL-3.0}"
+                BATCH_STABILITY="${STABILITY:-stable}"
+                BATCH_STABILITY_COLOR="${STABILITY_COLOR:-green}"
+                print_info "Batch will run non-interactively with defaults"
+            fi
         fi
-    fi
-    fi  # end of --defaults/--yes vs interactive
+    fi # end of --defaults/--yes vs interactive
 
     # When --defaults is set, read template selection from stdin before the loop so that e.g. <<< 2,3 reaches template selection instead of being consumed by prompts
     if [[ "$DEFAULTS_ONLY" == "true" && "$BATCH_REUSE_TEMPLATES" == "true" && -z "$BATCH_SELECTED_CHOICES" ]]; then
         build_template_folders
         if [[ ! -t 0 ]]; then
-            read -r BATCH_SELECTED_CHOICES < /dev/stdin || true
+            read -r BATCH_SELECTED_CHOICES </dev/stdin || true
         fi
         BATCH_SELECTED_CHOICES="${BATCH_SELECTED_CHOICES:-A}"
         local choice_desc
@@ -1674,7 +1707,10 @@ run_batch_init() {
 
     for d in "${dirs[@]}"; do
 
-        pushd "$d" > /dev/null || { print_error "Failed to enter $d"; continue; }
+        pushd "$d" >/dev/null || {
+            print_error "Failed to enter $d"
+            continue
+        }
 
         # Ensure git repo initialised for this folder FIRST (before any config operations)
         check_git_repo
@@ -1690,7 +1726,7 @@ run_batch_init() {
             # Skip dev-control itself — it is the template source, not a target
             if [[ "$remote_slug" == "dev-control" ]]; then
                 print_info "Skipping $d (dev-control is the template source)"
-                popd > /dev/null || true
+                popd >/dev/null || true
                 continue
             fi
         fi
@@ -1699,7 +1735,7 @@ run_batch_init() {
                 # Explicit shared owner selected — strict match only
                 if [[ "$remote_owner" != "$REPO_OWNER" ]]; then
                     print_info "Skipping $d (owner '$remote_owner' differs from '$REPO_OWNER')"
-                    popd > /dev/null || true
+                    popd >/dev/null || true
                     continue
                 fi
             else
@@ -1711,7 +1747,7 @@ run_batch_init() {
                 fi
                 if [[ -n "$members_list" ]]; then
                     local is_member=false
-                    IFS=',' read -ra _members <<< "$members_list"
+                    IFS=',' read -ra _members <<<"$members_list"
                     for m in "${_members[@]}"; do
                         if [[ "$m" == "$remote_owner" ]]; then
                             is_member=true
@@ -1720,7 +1756,7 @@ run_batch_init() {
                     done
                     if [[ "$is_member" == "false" ]]; then
                         print_info "Skipping $d (owner '$remote_owner' not in MEMBERS)"
-                        popd > /dev/null || true
+                        popd >/dev/null || true
                         continue
                     fi
                 fi
@@ -1845,7 +1881,7 @@ run_batch_init() {
             print_info "Queued for creation: $PWD"
         fi
 
-        popd > /dev/null || true
+        popd >/dev/null || true
     done
 
     # After processing all folders, offer to create queued repos
@@ -1906,7 +1942,7 @@ show_summary() {
     echo -e "  1. Review and customise the generated files"
     echo -e "  2. Replace placeholder sections - if any remain (marked with {{}})"
     echo ""
-    
+
     # Offer to create GitHub repository
     echo -e "${BOLD}Create GitHub Repository?${NC}"
     echo "dc-init can now launch create-repo to set up your GitHub repository"
@@ -1949,14 +1985,14 @@ show_summary() {
 
 main() {
     parse_args "$@"
-    
+
     if [[ "$CLI_HELP" == "true" ]]; then
         show_help
         exit 0
     fi
-    
+
     print_header "Dev-Control Template Loader"
-    
+
     # Initialise git repo if needed and get user info early
     get_git_user_info
 
@@ -1982,24 +2018,24 @@ main() {
     fi
 
     check_git_repo
-    
+
     local template_folders
     template_folders=$(discover_template_folders)
-    
+
     if [[ -z "$template_folders" ]]; then
         print_error "No *-templates folders found in: $DEV_CONTROL_DIR"
         exit 1
     fi
-    
+
     # CLI mode: process specific files
     if [[ -n "$CLI_FILES" ]]; then
         print_info "CLI mode: Processing specific files"
         print_info "Files: $CLI_FILES"
         print_info "Overwrite: $CLI_OVERWRITE"
         echo ""
-        
+
         get_repo_info
-        
+
         # Collect project info (or use defaults for quick mode)
         if [[ "$CLI_OVERWRITE" == "true" || "$DEFAULTS_ONLY" == "true" ]]; then
             # Quick mode - use defaults from git
@@ -2010,7 +2046,7 @@ main() {
             STABILITY="${STABILITY:-experimental}"
             STABILITY_COLOR="${STABILITY_COLOR:-orange}"
             CURRENT_YEAR=$(date +%Y)
-            
+
             print_info "Using detected values:"
             echo "  Project: $PROJECT_NAME"
             echo "  Org: $ORG_NAME"
@@ -2019,9 +2055,9 @@ main() {
         else
             collect_project_info
         fi
-        
+
         process_specific_files
-        
+
         echo ""
         print_success "Done!"
         exit 0
@@ -2044,15 +2080,15 @@ main() {
     for dir in $template_folders; do
         echo "  • $(basename "$dir")"
     done
-    
-    if ! git rev-parse --git-dir > /dev/null 2>&1; then
+
+    if ! git rev-parse --git-dir >/dev/null 2>&1; then
         print_warning "Not a git repository - some features may not work."
         echo ""
     fi
-    
+
     get_repo_info
     if [[ "$DEFAULTS_ONLY" == "true" ]]; then
-        PROJECT_NAME="${PROJECT_NAME:-$(basename "$(pwd)")}" 
+        PROJECT_NAME="${PROJECT_NAME:-$(basename "$(pwd)")}"
         REPO_SLUG="${REPO_SLUG:-$PROJECT_NAME}"
         REPO_OWNER="${REPO_OWNER:-$ORG_NAME}"
         ORG_NAME="${ORG_NAME:-$REPO_OWNER}"
@@ -2069,11 +2105,11 @@ main() {
     else
         collect_project_info
     fi
-    
+
     # Call select_templates directly (avoids subshell)
     select_templates
     local selection="${SELECTED_TEMPLATE_CHOICES:-}"
-    
+
     echo ""
     print_info "Installing templates..."
     install_templates "$selection"
@@ -2083,7 +2119,7 @@ main() {
 
     # Commit and push installed templates when in a tracked git repo.
     # Stash any dirty working-tree changes first so staging is clean, then pop after the commit.
-    if git rev-parse --git-dir > /dev/null 2>&1; then
+    if git rev-parse --git-dir >/dev/null 2>&1; then
         local _stashed=false
         if [[ -n "$(git status --porcelain 2>/dev/null | grep -v '^\?\?')" ]]; then
             print_info "Stashing local changes before template commit (will restore after)..."

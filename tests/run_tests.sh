@@ -27,24 +27,24 @@ ensure_bats_installed() {
         print_info "Using system bats: $(bats --version)"
         return 0
     fi
-    
+
     # Check for local bats
     if [[ -x "$SCRIPT_DIR/test_helper/bats/bin/bats" ]]; then
         export PATH="$SCRIPT_DIR/test_helper/bats/bin:$PATH"
         print_info "Using local bats"
         return 0
     fi
-    
+
     print_info "Installing bats locally..."
     mkdir -p test_helper
     git clone --depth 1 https://github.com/bats-core/bats-core.git test_helper/bats
     git clone --depth 1 https://github.com/bats-core/bats-support.git test_helper/bats-support
     git clone --depth 1 https://github.com/bats-core/bats-assert.git test_helper/bats-assert
-    
+
     rm -rf test_helper/bats/.git
     rm -rf test_helper/bats-support/.git
     rm -rf test_helper/bats-assert/.git
-    
+
     export PATH="$SCRIPT_DIR/test_helper/bats/bin:$PATH"
 }
 
@@ -54,14 +54,14 @@ ensure_bats_installed() {
 
 run_tests() {
     local test_target="${1:-.}"
-    
+
     print_header "Dev-Control Test Suite" 68
-    
+
     ensure_bats_installed
-    
+
     print_info "Running tests: $test_target"
     echo ""
-    
+
     if [[ -d "$test_target" ]]; then
         # Collect only our own .bats files; skip the upstream bats helper test suites.
         local files=()
