@@ -95,8 +95,7 @@ readme_install_docs() {
     done
 }
 
-# Replace the first <p align="center">…</p> block after the H1 with the current
-# repo's standard badge row. Removes duplicate badge blocks (old-format or double-inserted).
+# Replace the first <p align="center">…</p> block after the H1 with the current repo's standard badge row. Removes duplicate badge blocks (old-format or double-inserted).
 readme_insert_badges() {
     local readme_path="$1"
     local tmp
