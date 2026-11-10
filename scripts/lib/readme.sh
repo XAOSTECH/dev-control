@@ -111,7 +111,7 @@ readme_insert_badges() {
 <p align="center">
   <a href="{{REPO_URL}}"><img alt="GitHub repo" src="https://img.shields.io/badge/GitHub-{{ORG_NAME}}%2F{{REPO_SLUG}}-181717?style=for-the-badge&logo=github"></a>
   <a href="{{REPO_URL}}/releases"><img alt="GitHub release" src="https://img.shields.io/github/v/release/{{ORG_NAME}}/{{REPO_SLUG}}?style=for-the-badge&logo=semantic-release&color=blue"></a>
-  <a href="{{REPO_URL}}/blob/main/LICENCE"><img alt="Licence" src="https://img.shields.io/badge/licence-{{LICENSE_TYPE_BADGE}}-green?style=for-the-badge"></a>
+  <a href="{{REPO_URL}}/blob/main/LICENSE"><img alt="Licence" src="https://img.shields.io/badge/licence-{{LICENSE_TYPE_BADGE}}-green?style=for-the-badge"></a>
 </p>
 EOF
 )
