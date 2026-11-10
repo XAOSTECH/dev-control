@@ -1,0 +1,42 @@
+version: 2
+updates:
+  # Keep GitHub Actions pins current; groups minor+patch into a single weekly PR.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "03:00"
+      timezone: "UTC"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "automated"
+    open-pull-requests-limit: 5
+    groups:
+      all-actions:
+        applies-to: version-updates
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  # Uncomment and adapt for each package ecosystem your project uses.
+  # npm:
+  # - package-ecosystem: "npm"
+  #   directory: "/path/to/package.json"
+  #   schedule:
+  #     interval: "weekly"
+  #     day: "monday"
+  #     time: "03:00"
+  #     timezone: "UTC"
+  #   commit-message:
+  #     prefix: "chore(deps)"
+  #   labels:
+  #     - "dependencies"
+  #     - "automated"
+  #   open-pull-requests-limit: 5
+  #   groups:
+  #     npm-minor-patch:
+  #       patterns: ["*"]
+  #       update-types: ["minor", "patch"]
