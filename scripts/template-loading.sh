@@ -59,7 +59,7 @@ BATCH_SKIP_OWNER=false
 # Reuse templates/settings across the batch
 BATCH_REUSE_TEMPLATES=false
 BATCH_SELECTED_CHOICES=""
-BATCH_LICENSE_TYPE=""
+BATCH_LICENCE_TYPE=""
 BATCH_STABILITY=""
 BATCH_STABILITY_COLOR=""
 # Creation queue for batch mode
@@ -302,23 +302,23 @@ detect_license_from_file() {
     head=$(head -5 "$license_file" 2>/dev/null || true)
 
     if [[ "$head" == *"GNU GENERAL PUBLIC LICENSE"* && "$head" == *"Version 3"* ]]; then
-        LICENSE_TYPE="GPL-3.0"
+        LICENCE_TYPE="GPL-3.0"
     elif [[ "$head" == *"Apache"* && "$head" == *"Version 2.0"* ]]; then
-        LICENSE_TYPE="Apache-2.0"
+        LICENCE_TYPE="Apache-2.0"
     elif [[ "$head" == *"MIT"* ]]; then
-        LICENSE_TYPE="MIT"
+        LICENCE_TYPE="MIT"
     elif [[ "$head" == *"BSD 3-Clause"* ]]; then
-        LICENSE_TYPE="BSD-3-Clause"
+        LICENCE_TYPE="BSD-3-Clause"
     elif [[ "$head" == *"GNU GENERAL PUBLIC LICENSE"* && "$head" == *"Version 2"* ]]; then
-        LICENSE_TYPE="GPL-2.0"
+        LICENCE_TYPE="GPL-2.0"
     elif [[ "$head" == *"Mozilla Public License"* && "$head" == *"2.0"* ]]; then
-        LICENSE_TYPE="MPL-2.0"
+        LICENCE_TYPE="MPL-2.0"
     elif [[ "$head" == *"ISC"* ]]; then
-        LICENSE_TYPE="ISC"
+        LICENCE_TYPE="ISC"
     else
         return
     fi
-    print_info "Detected licence from $license_file: $LICENSE_TYPE"
+    print_info "Detected licence from $license_file: $LICENCE_TYPE"
 }
 
 # Try to get git user info from global config
@@ -366,8 +366,8 @@ get_repo_info() {
         local cached_licence
         cached_licence=$(git config --local dc-init.licence-type 2>/dev/null || echo "")
         if [[ -n "$cached_licence" ]]; then
-            LICENSE_TYPE="$cached_licence"
-            print_info "Loaded licence from git config: $LICENSE_TYPE"
+            LICENCE_TYPE="$cached_licence"
+            print_info "Loaded licence from git config: $LICENCE_TYPE"
         fi
         
         local cached_org
@@ -477,29 +477,29 @@ get_repo_info() {
         fi
 
         # Try to detect licence from GitHub (if not already cached)
-        if [[ -z "$LICENSE_TYPE" ]]; then
+        if [[ -z "$LICENCE_TYPE" ]]; then
             local gh_licence
             gh_licence=$(gh repo view "${ORG_NAME}/${REPO_SLUG}" --json licenseInfo --jq '.licenseInfo.key' 2>/dev/null || true)
             if [[ -n "$gh_licence" && "$gh_licence" != "null" ]]; then
                 # Map gh key to SPDX identifier
                 case "$gh_licence" in
-                    gpl-3.0)        LICENSE_TYPE="GPL-3.0" ;;
-                    gpl-2.0)        LICENSE_TYPE="GPL-2.0" ;;
-                    apache-2.0)     LICENSE_TYPE="Apache-2.0" ;;
-                    mit)            LICENSE_TYPE="MIT" ;;
-                    bsd-3-clause)   LICENSE_TYPE="BSD-3-Clause" ;;
-                    bsd-2-clause)   LICENSE_TYPE="BSD-2-Clause" ;;
-                    mpl-2.0)        LICENSE_TYPE="MPL-2.0" ;;
-                    isc)            LICENSE_TYPE="ISC" ;;
-                    *)              LICENSE_TYPE="$gh_licence" ;;
+                    gpl-3.0)        LICENCE_TYPE="GPL-3.0" ;;
+                    gpl-2.0)        LICENCE_TYPE="GPL-2.0" ;;
+                    apache-2.0)     LICENCE_TYPE="Apache-2.0" ;;
+                    mit)            LICENCE_TYPE="MIT" ;;
+                    bsd-3-clause)   LICENCE_TYPE="BSD-3-Clause" ;;
+                    bsd-2-clause)   LICENCE_TYPE="BSD-2-Clause" ;;
+                    mpl-2.0)        LICENCE_TYPE="MPL-2.0" ;;
+                    isc)            LICENCE_TYPE="ISC" ;;
+                    *)              LICENCE_TYPE="$gh_licence" ;;
                 esac
-                print_info "Detected GitHub licence: $LICENSE_TYPE"
+                print_info "Detected GitHub licence: $LICENCE_TYPE"
             fi
         fi
     fi
 
     # Fallback: detect from LICENCE file in current directory
-    if [[ -z "$LICENSE_TYPE" ]]; then
+    if [[ -z "$LICENCE_TYPE" ]]; then
         detect_license_from_file
     fi
 
@@ -604,27 +604,27 @@ collect_project_info() {
         echo "  3) GPL-3.0"
         echo "  4) BSD-3-Clause"
         echo "  5) Other"
-        # Determine default from detected LICENSE_TYPE
+        # Determine default from detected LICENCE_TYPE
         local default_licence_choice=1
-        if [[ -n "$LICENSE_TYPE" ]]; then
-            case "${LICENSE_TYPE,,}" in
+        if [[ -n "$LICENCE_TYPE" ]]; then
+            case "${LICENCE_TYPE,,}" in
                 mit) default_licence_choice=1 ;;
                 apache*|apache-2.0) default_licence_choice=2 ;;
                 gpl*|gpl-3.0) default_licence_choice=3 ;;
                 bsd*|bsd-3-clause) default_licence_choice=4 ;;
                 *) default_licence_choice=5 ;;
             esac
-            print_info "Detected licence: $LICENSE_TYPE (will be used if you leave blank)"
+            print_info "Detected licence: $LICENCE_TYPE (will be used if you leave blank)"
         fi
         read -rp "Choice [${default_licence_choice}]: " licence_choice
         case "${licence_choice:-$default_licence_choice}" in
-            1) LICENSE_TYPE="MIT" ;;
-            2) LICENSE_TYPE="Apache-2.0" ;;
-            3) LICENSE_TYPE="GPL-3.0" ;;
-            4) LICENSE_TYPE="BSD-3-Clause" ;;
+            1) LICENCE_TYPE="MIT" ;;
+            2) LICENCE_TYPE="Apache-2.0" ;;
+            3) LICENCE_TYPE="GPL-3.0" ;;
+            4) LICENCE_TYPE="BSD-3-Clause" ;;
             5) 
-                read -rp "Enter licence name [${LICENSE_TYPE:-}]: " custom_licence
-                LICENSE_TYPE="${custom_licence:-$LICENSE_TYPE}"
+                read -rp "Enter licence name [${LICENCE_TYPE:-}]: " custom_licence
+                LICENCE_TYPE="${custom_licence:-$LICENCE_TYPE}"
                 ;;
         esac
         
@@ -748,7 +748,7 @@ process_template() {
         -e "s|{{REPO_URL}}|$REPO_URL|g" \
         -e "s|{{SHORT_DESCRIPTION}}|$SHORT_DESCRIPTION|g" \
         -e "s|{{LONG_DESCRIPTION}}|$LONG_DESCRIPTION|g" \
-        -e "s|{{LICENSE_TYPE}}|$LICENSE_TYPE|g" \
+        -e "s|{{LICENCE_TYPE}}|$LICENCE_TYPE|g" \
         -e "s|{{STABILITY}}|$STABILITY|g" \
         -e "s|{{STABILITY_COLOR}}|$STABILITY_COLOR|g" \
         -e "s|{{CURRENT_YEAR}}|$CURRENT_YEAR|g" \
@@ -763,7 +763,7 @@ process_template() {
         -e "s|{{SECURITY_APP_ID_SECRET}}|${SECURITY_APP_ID_SECRET:-}|g" \
         -e "s|{{SECURITY_CLIENT_ID_SECRET}}|${SECURITY_CLIENT_ID_SECRET:-}|g" \
         -e "s|{{SECURITY_PRIVATE_KEY_SECRET}}|${SECURITY_PRIVATE_KEY_SECRET:-}|g" \
-        -e "s|{{LICENSE_TYPE_BADGE}}|${LICENSE_TYPE//-/--}|g" \
+        -e "s|{{LICENCE_TYPE_BADGE}}|${LICENCE_TYPE//-/--}|g" \
         "$src" > "$dest"
     
     print_success "Created: $dest"
@@ -1076,11 +1076,11 @@ install_licences_templates() {
     # Auto-select licence when installing ALL
     if [[ "$auto_choice" == "true" ]]; then
         local pick=1
-        if [[ -n "$LICENSE_TYPE" ]]; then
+        if [[ -n "$LICENCE_TYPE" ]]; then
             for k in "${!LICENSE_FILES[@]}"; do
                 local bname
                 bname=$(basename "${LICENSE_FILES[$k]}")
-                if [[ "${bname,,}" == "${LICENSE_TYPE,,}" ]]; then
+                if [[ "${bname,,}" == "${LICENCE_TYPE,,}" ]]; then
                     pick=$k
                     break
                 fi
@@ -1397,7 +1397,7 @@ run_batch_update() {
         # Reset variables for this repo iteration (prevent carryover)
         SHORT_DESCRIPTION=""
         LONG_DESCRIPTION=""
-        LICENSE_TYPE=""
+        LICENCE_TYPE=""
         STABILITY=""
         STABILITY_COLOR=""
         PROJECT_NAME=""
@@ -1462,7 +1462,7 @@ run_batch_update() {
         REPO_URL="https://github.com/${ORG_NAME}/${REPO_SLUG}"
         SHORT_DESCRIPTION="${SHORT_DESCRIPTION:-$(git config --local dc-init.description 2>/dev/null || echo "")}"
         LONG_DESCRIPTION="${LONG_DESCRIPTION:-$SHORT_DESCRIPTION}"
-        LICENSE_TYPE="${LICENSE_TYPE:-$(git config --local dc-init.licence-type 2>/dev/null || echo "")}"
+        LICENCE_TYPE="${LICENCE_TYPE:-$(git config --local dc-init.licence-type 2>/dev/null || echo "")}"
         STABILITY="${STABILITY:-$(git config --local dc-init.stability 2>/dev/null || echo "")}"
         STABILITY_COLOR="${STABILITY_COLOR:-$(git config --local dc-init.stability-colour 2>/dev/null || echo "")}"
         CURRENT_YEAR=$(date +%Y)
@@ -1652,7 +1652,7 @@ run_batch_init() {
         # If --yes was passed, prefill sensible defaults for the batch
         if [[ "$ASSUME_YES" == "true" ]]; then
             BATCH_SELECTED_CHOICES="A"
-            BATCH_LICENSE_TYPE="${LICENSE_TYPE:-GPL-3.0}"
+            BATCH_LICENCE_TYPE="${LICENCE_TYPE:-GPL-3.0}"
             BATCH_STABILITY="${STABILITY:-stable}"
             BATCH_STABILITY_COLOR="${STABILITY_COLOR:-green}"
             print_info "Batch will run non-interactively with defaults"
@@ -1750,7 +1750,7 @@ run_batch_init() {
         # These must be reset AFTER check_git_repo but BEFORE get_repo_info
         SHORT_DESCRIPTION=""
         LONG_DESCRIPTION=""
-        LICENSE_TYPE=""
+        LICENCE_TYPE=""
         STABILITY=""
         STABILITY_COLOR=""
         PROJECT_NAME=""
@@ -1774,7 +1774,7 @@ run_batch_init() {
         if [[ "$ASSUME_YES" == "true" || "$DEFAULTS_ONLY" == "true" ]]; then
             SHORT_DESCRIPTION="${SHORT_DESCRIPTION:-A project by $ORG_NAME}"
             LONG_DESCRIPTION="${LONG_DESCRIPTION:-$SHORT_DESCRIPTION}"
-            LICENSE_TYPE="${LICENSE_TYPE:-MIT}"
+            LICENCE_TYPE="${LICENCE_TYPE:-MIT}"
             STABILITY="${STABILITY:-experimental}"
             STABILITY_COLOR="${STABILITY_COLOR:-orange}"
             CURRENT_YEAR=$(date +%Y)
@@ -1789,14 +1789,14 @@ run_batch_init() {
                 # First repo: allow selection and capture it for reuse
                 select_templates
                 BATCH_SELECTED_CHOICES="${SELECTED_TEMPLATE_CHOICES:-A}"
-                BATCH_LICENSE_TYPE="${LICENSE_TYPE:-$BATCH_LICENSE_TYPE}"
+                BATCH_LICENCE_TYPE="${LICENCE_TYPE:-$BATCH_LICENCE_TYPE}"
                 BATCH_STABILITY="${STABILITY:-$BATCH_STABILITY}"
                 BATCH_STABILITY_COLOR="${STABILITY_COLOR:-$BATCH_STABILITY_COLOR}"
                 print_info "Captured initialisation config for reuse: ${BATCH_SELECTED_CHOICES}"
             else
                 # Reuse previously captured initialisation config
                 SELECTED_TEMPLATE_CHOICES="${BATCH_SELECTED_CHOICES}"
-                LICENSE_TYPE="${BATCH_LICENSE_TYPE}"
+                LICENCE_TYPE="${BATCH_LICENCE_TYPE}"
                 STABILITY="${BATCH_STABILITY}"
                 STABILITY_COLOR="${BATCH_STABILITY_COLOR}"
                 print_info "Using shared initialisation config (templates, licence, stability)"
@@ -1881,7 +1881,7 @@ save_project_metadata() {
         git config --local dc-init.repo-url "$REPO_URL" 2>/dev/null || true
         git config --local dc-init.description "$SHORT_DESCRIPTION" 2>/dev/null || true
         git config --local dc-init.long-description "$LONG_DESCRIPTION" 2>/dev/null || true
-        git config --local dc-init.licence-type "$LICENSE_TYPE" 2>/dev/null || true
+        git config --local dc-init.licence-type "$LICENCE_TYPE" 2>/dev/null || true
         git config --local dc-init.stability "$STABILITY" 2>/dev/null || true
         git config --local dc-init.stability-colour "$STABILITY_COLOR" 2>/dev/null || true
         [[ -n "$WEBSITE_URL" ]] && git config --local dc-init.website-url "$WEBSITE_URL" 2>/dev/null || true
@@ -2006,7 +2006,7 @@ main() {
             PROJECT_NAME="${PROJECT_NAME:-$(basename "$(pwd)")}"
             SHORT_DESCRIPTION="${SHORT_DESCRIPTION:-A project by $ORG_NAME}"
             LONG_DESCRIPTION="${LONG_DESCRIPTION:-$SHORT_DESCRIPTION}"
-            LICENSE_TYPE="${LICENSE_TYPE:-MIT}"
+            LICENCE_TYPE="${LICENCE_TYPE:-MIT}"
             STABILITY="${STABILITY:-experimental}"
             STABILITY_COLOR="${STABILITY_COLOR:-orange}"
             CURRENT_YEAR=$(date +%Y)
@@ -2061,7 +2061,7 @@ main() {
         fi
         SHORT_DESCRIPTION="${SHORT_DESCRIPTION:-A project by $ORG_NAME}"
         LONG_DESCRIPTION="${LONG_DESCRIPTION:-$SHORT_DESCRIPTION}"
-        LICENSE_TYPE="${LICENSE_TYPE:-MIT}"
+        LICENCE_TYPE="${LICENCE_TYPE:-MIT}"
         STABILITY="${STABILITY:-experimental}"
         STABILITY_COLOR="${STABILITY_COLOR:-orange}"
         CURRENT_YEAR=$(date +%Y)
