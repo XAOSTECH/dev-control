@@ -32,10 +32,10 @@ render_html_tree() {
     max_y=$(jq '[.commits[].position.y // 0] | max' "$input_json" 2>/dev/null || echo 800)
     max_x=$(jq '[.commits[].position.x // 600] | max' "$input_json" 2>/dev/null || echo 600)
     min_x=$(jq '[.commits[].position.x // 600] | min' "$input_json" 2>/dev/null || echo 600)
-    local height=$(( max_y + 120 ))
+    local height=$((max_y + 120))
     [[ $height -lt 800 ]] && height=800
     # Width: ensure all lanes fit with padding
-    local width=$(( max_x - min_x + 400 ))
+    local width=$((max_x - min_x + 400))
     [[ $width -lt 1200 ]] && width=1200
 
     # Embed JSON data
@@ -43,7 +43,7 @@ render_html_tree() {
     json_data=$(cat "$input_json")
 
     # Create HTML with embedded Canvas visualisation
-    cat > "$output_file" <<'HTMLEOF'
+    cat >"$output_file" <<'HTMLEOF'
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -228,11 +228,11 @@ render_html_tree() {
 HTMLEOF
 
     # Add canvas with dimensions
-    cat >> "$output_file" <<CANVASHTML
+    cat >>"$output_file" <<CANVASHTML
             <canvas id="treeCanvas" width="$width" height="$height"></canvas>
 CANVASHTML
 
-    cat >> "$output_file" <<'HTMLEOF2'
+    cat >>"$output_file" <<'HTMLEOF2'
         </div>
 
         <div class="controls">
@@ -265,10 +265,10 @@ CANVASHTML
 HTMLEOF2
 
     # Embed JSON data
-    cat "$input_json" >> "$output_file"
+    cat "$input_json" >>"$output_file"
 
     # Add JavaScript visualisation code
-    cat >> "$output_file" <<'JSEOF'
+    cat >>"$output_file" <<'JSEOF'
 ;
 
         const canvas = document.getElementById('treeCanvas');

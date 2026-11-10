@@ -78,13 +78,13 @@ NO_EDIT_MODE=false
 NO_CLEANUP=false
 CLEANUP_ONLY=false
 SIGN_MODE=false
-TIMED_SIGN_MODE=false  # Space out PR signing by minute boundaries
-RESIGN_MODE=false       # Force re-sign even if already signed
-AUTO_SIGN_MODE=false    # Auto-sign: detect unsigned commits, confirm, then auto-configure flags
+TIMED_SIGN_MODE=false # Space out PR signing by minute boundaries
+RESIGN_MODE=false     # Force re-sign even if already signed
+AUTO_SIGN_MODE=false  # Auto-sign: detect unsigned commits, confirm, then auto-configure flags
 REAUTHOR_MODE=false
 REAUTHOR_TARGET=""
 DEDUP_MODE=false
-DEDUP_TIMES="${DEDUP_TIMES:-1}"   # dedup repeat/nest multiplier: >=2 (e.g. --dedu x2) enables nested resolution; env-overridable
+DEDUP_TIMES="${DEDUP_TIMES:-1}" # dedup repeat/nest multiplier: >=2 (e.g. --dedu x2) enables nested resolution; env-overridable
 COMBINE_MODE=false
 COMBINE_A=""
 COMBINE_B=""
@@ -93,13 +93,13 @@ DROP_COMMITS=()
 # Auto-resolve strategy: empty|ours|theirs
 # Can be set via environment (AUTO_RESOLVE=ours|theirs|OURS|THEIRS) or via --auto-resolve <mode|=mode>
 AUTO_RESOLVE="${AUTO_RESOLVE:-}"
-AUTO_RESOLVE="${AUTO_RESOLVE,,}"  # normalise to lowercase
+AUTO_RESOLVE="${AUTO_RESOLVE,,}" # normalise to lowercase
 # Reconstruction options
-RECONSTRUCT_AUTO=false   # if true, try multiple auto-resolve strategies automatically
-ALLOW_OVERRIDE_SAME_BRANCH=${ALLOW_OVERRIDE_SAME_BRANCH:-false}  # if true, auto-confirm destructive override of original branch when safe
-UPDATE_WORKTREES=${UPDATE_WORKTREES:-false}  # if true, attempt to update checked-out worktrees for target branch after pushing
+RECONSTRUCT_AUTO=false                                          # if true, try multiple auto-resolve strategies automatically
+ALLOW_OVERRIDE_SAME_BRANCH=${ALLOW_OVERRIDE_SAME_BRANCH:-false} # if true, auto-confirm destructive override of original branch when safe
+UPDATE_WORKTREES=${UPDATE_WORKTREES:-false}                     # if true, attempt to update checked-out worktrees for target branch after pushing
 # Atomic preserve mode: perform deterministic commit-tree recreation + sign + date set in a single pass
-ATOMIC_PRESERVE=${ATOMIC_PRESERVE:-false}  # set via --atomic-preserve to enable atomic/deterministic preserve
+ATOMIC_PRESERVE=${ATOMIC_PRESERVE:-false} # set via --atomic-preserve to enable atomic/deterministic preserve
 
 # Restore options
 RESTORE_MODE=false
@@ -122,11 +122,11 @@ TEMP_BACKUP="/tmp/git-fix-history-backup-$(date +%s).bundle"
 # Parse a simple --auto-resolve argument early so users can pass it anywhere on the command line
 # Accepts: --auto-resolve <ours|theirs>  OR  --auto-resolve=<ours|theirs>  (case-insensitive)
 ARGS=("$@")
-for ((i=0;i<${#ARGS[@]};i++)); do
+for ((i = 0; i < ${#ARGS[@]}; i++)); do
     _arg="${ARGS[$i]}"
     if [[ "$_arg" == "--auto-resolve" ]]; then
-        if [[ $((i+1)) -lt ${#ARGS[@]} ]]; then
-            AUTO_RESOLVE="${ARGS[$((i+1))],,}"
+        if [[ $((i + 1)) -lt ${#ARGS[@]} ]]; then
+            AUTO_RESOLVE="${ARGS[$((i + 1))],,}"
             if [[ "$AUTO_RESOLVE" != "ours" && "$AUTO_RESOLVE" != "theirs" ]]; then
                 echo "[WARNING] Invalid value for --auto-resolve: $AUTO_RESOLVE (allowed: ours|theirs). Ignoring." >&2
                 AUTO_RESOLVE=""
@@ -178,7 +178,7 @@ fi
 # ============================================================================
 
 show_help() {
-    cat << 'EOF'
+    cat <<'EOF'
 Dev-Control History Fixer - Interactive commit history rewriting
 
 Usage: fix-history.sh [OPTIONS]
@@ -310,11 +310,11 @@ parse_args() {
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            -r|--range)
+            -r | --range)
                 RANGE="$2"
                 shift 2
                 ;;
-            -a|--amend)
+            -a | --amend)
                 AMEND_MODE=true
                 AMEND_COMMIT="$2"
                 shift 2
@@ -330,15 +330,15 @@ parse_args() {
                     shift
                 fi
                 ;;
-            -d|--dry-run)
+            -d | --dry-run)
                 DRY_RUN=true
                 shift
                 ;;
-            -y|--yes)
+            -y | --yes)
                 ASSUME_YES=true
                 shift
                 ;;
-            -s|--stash)
+            -s | --stash)
                 STASH_NUM="$2"
                 STASH_MODE=true
                 shift 2
@@ -373,7 +373,7 @@ parse_args() {
                 SIGN_MODE=true
                 shift
                 ;;
-            --full-fix|-ff)
+            --full-fix | -ff)
                 FULL_FIX_MODE=true
                 if [[ -n "${2:-}" && "${2:-}" =~ ^[0-9]+$ ]]; then
                     FULL_FIX_DEPTH="$2"
@@ -382,7 +382,7 @@ parse_args() {
                     shift
                 fi
                 ;;
-            --batch|-b)
+            --batch | -b)
                 BATCH_MODE=true
                 ASSUME_YES=true
                 shift
@@ -429,7 +429,7 @@ parse_args() {
                 export TIMED_SIGN_MODE
                 shift
                 ;;
-            --dedu|--dedup|--deduplicate)
+            --dedu | --dedup | --deduplicate)
                 DEDUP_MODE=true
                 # Optional nest multiplier: xN / N (e.g. x2) => up to N dedup rounds with non-adjacent (nested) duplicate resolution.
                 # Bare --dedu stays consecutive-only (back-compatible).
@@ -547,11 +547,11 @@ parse_args() {
                 shift
                 ;;
 
-            -v|--verbose)
+            -v | --verbose)
                 DEBUG=true
                 shift
                 ;;
-            -h|--help)
+            -h | --help)
                 show_help
                 exit 0
                 ;;
@@ -571,12 +571,12 @@ parse_args() {
 list_stash_files() {
     local stash_num="$1"
     local stash_ref="stash@{$stash_num}"
-    
+
     if ! git stash list | grep -q "$stash_ref"; then
         print_error "Stash $stash_ref does not exist"
         exit 1
     fi
-    
+
     print_info "Files in $stash_ref:"
     git stash show -p "$stash_ref" | grep -E "^diff --git" | sed 's|diff --git a/||; s| b/.*||' | sort -u
 }
@@ -585,54 +585,54 @@ select_stash_files() {
     local stash_num="$1"
     local stash_ref="stash@{$stash_num}"
     local files_list="/tmp/git-fix-history-stash-files.txt"
-    
+
     print_info "Extracting file list from $stash_ref..."
-    git stash show -p "$stash_ref" | grep -E "^diff --git" | sed 's|diff --git a/||; s| b/.*||' | sort -u > "$files_list"
-    
+    git stash show -p "$stash_ref" | grep -E "^diff --git" | sed 's|diff --git a/||; s| b/.*||' | sort -u >"$files_list"
+
     local file_count
-    file_count=$(wc -l < "$files_list")
-    
+    file_count=$(wc -l <"$files_list")
+
     echo ""
     echo -e "${BOLD}Files in stash:${NC}"
     echo ""
-    
+
     local idx=0
     while IFS= read -r file; do
         idx=$((idx + 1))
         echo -e "  ${CYAN}$idx)${NC} $file"
-    done < "$files_list"
-    
+    done <"$files_list"
+
     echo ""
     echo -e "${BOLD}Select files to apply (comma-separated numbers or 'all'):${NC}"
     echo -e "  Example: ${CYAN}1,3,5${NC} or ${CYAN}all${NC}"
     read -rp "> " file_selection
-    
+
     local selected_files="/tmp/git-fix-history-selected-files.txt"
-    > "$selected_files"
-    
+    >"$selected_files"
+
     if [[ "$file_selection" == "all" ]]; then
         cp "$files_list" "$selected_files"
     else
         # Parse selected indices
         local IFS=','
         for selection in $file_selection; do
-            selection=$(echo "$selection" | xargs)  # trim whitespace
+            selection=$(echo "$selection" | xargs) # trim whitespace
             if [[ "$selection" =~ ^[0-9]+$ ]]; then
-                sed -n "${selection}p" "$files_list" >> "$selected_files"
+                sed -n "${selection}p" "$files_list" >>"$selected_files"
             fi
         done
     fi
-    
+
     print_info "Creating patch with selected files..."
-    
+
     # Create patch with only selected files
-    > "$TEMP_STASH_PATCH"
+    >"$TEMP_STASH_PATCH"
     while IFS= read -r file; do
-        git diff "$stash_ref^..$stash_ref" -- "$file" >> "$TEMP_STASH_PATCH"
-    done < "$selected_files"
-    
+        git diff "$stash_ref^..$stash_ref" -- "$file" >>"$TEMP_STASH_PATCH"
+    done <"$selected_files"
+
     local selected_count
-    selected_count=$(wc -l < "$selected_files")
+    selected_count=$(wc -l <"$selected_files")
     print_success "Selected $selected_count file(s) for patching"
 }
 
@@ -642,17 +642,17 @@ select_stash_files() {
 
 check_git_repo() {
     local skip_uncommitted_check="${1:-false}"
-    
-    if ! git rev-parse --git-dir > /dev/null 2>&1; then
+
+    if ! git rev-parse --git-dir >/dev/null 2>&1; then
         print_error "Not a git repository."
         exit 1
     fi
-    
+
     # Skip uncommitted changes check if requested (e.g., for cleanup-only mode)
     if [[ "$skip_uncommitted_check" == "true" ]]; then
         return 0
     fi
-    
+
     if [[ -n "$(git status --porcelain)" ]]; then
         if [[ "${ASSUME_YES:-false}" == "true" ]]; then
             # If a pre-stash from _full_fix_single is already in place, don't double-stash.
@@ -660,9 +660,9 @@ check_git_repo() {
                 return 0
             fi
             local _stash_err
-            _stash_err=$(git stash push -m "Pre-fix-history stash" --quiet 2>&1) && \
-                print_info "Auto-stashed uncommitted changes" || \
-                print_warning "Stash skipped: ${_stash_err##*error: }"
+            _stash_err=$(git stash push -m "Pre-fix-history stash" --quiet 2>&1) \
+                && print_info "Auto-stashed uncommitted changes" \
+                || print_warning "Stash skipped: ${_stash_err##*error: }"
             return 0
         fi
         print_warning "Working tree has uncommitted changes."
@@ -673,7 +673,7 @@ check_git_repo() {
         echo -e "  ${CYAN}3)${NC} Exit and handle manually"
         echo ""
         read -rp "Choice [1]: " cleanup_choice
-        
+
         case "${cleanup_choice:-1}" in
             1)
                 print_info "Stashing changes..."
@@ -706,16 +706,16 @@ check_git_repo() {
 extract_commits() {
     local range="$1"
     local output_file="$2"
-    
+
     print_info "Extracting commits from range: ${CYAN}$range${NC}"
-    
+
     # Get commits in reverse order (oldest first)
-    git log --format="%h|%ai|%an|%ae|%s" "$range" | tac > "$output_file"
-    
+    git log --format="%h|%ai|%an|%ae|%s" "$range" | tac >"$output_file"
+
     local commit_count
-    commit_count=$(wc -l < "$output_file")
+    commit_count=$(wc -l <"$output_file")
     print_info "Found ${CYAN}$commit_count${NC} commits"
-    
+
     if [[ $commit_count -eq 0 ]]; then
         print_error "No commits found in range: $range"
         exit 1
@@ -724,11 +724,11 @@ extract_commits() {
 
 display_commit_history() {
     local input_file="$1"
-    
+
     echo -e "${BOLD}Current Commit History:${NC}\n"
     echo -e "  ${CYAN}#${NC}  ${CYAN}Hash${NC}      ${CYAN}Author${NC}          ${CYAN}Date${NC}                 ${CYAN}Subject${NC}"
     echo -e "  ${CYAN}──────────────────────────────────────────────────────────────────${NC}"
-    
+
     local idx=0
     while IFS='|' read -r hash datetime author email subject; do
         idx=$((idx + 1))
@@ -737,7 +737,7 @@ display_commit_history() {
         author_short="${author:0:10}"
         subject_short="${subject:0:35}"
         printf "  ${CYAN}%2d${NC}  %7s  %-12s  %19s  %s\n" "$idx" "$hash" "$author_short" "$datetime_short" "$subject_short"
-    done < "$input_file"
+    done <"$input_file"
     echo ""
 }
 
@@ -758,12 +758,12 @@ show_edit_menu() {
 
 edit_commit_message() {
     local current_subject="$1"
-    
+
     echo -e "Current: ${CYAN}$current_subject${NC}"
     echo ""
     echo "New subject (or press Enter to keep):"
     read -rp "> " new_subject
-    
+
     if [[ -n "$new_subject" ]]; then
         echo "$new_subject"
     else
@@ -774,14 +774,14 @@ edit_commit_message() {
 edit_commit_date() {
     local current_date="$1"
     local date_type="$2"
-    
+
     echo -e "Current $date_type: ${CYAN}$current_date${NC}"
     echo -e "Format: ${CYAN}YYYY-MM-DD HH:MM:SS +ZZZZ${NC}"
     echo "Example: 2025-12-17 14:30:00 +0100"
     echo ""
     echo "New $date_type (or press Enter to keep):"
     read -rp "> " new_date
-    
+
     if [[ -n "$new_date" ]]; then
         # Validate date format
         if ! date -d "$new_date" &>/dev/null && ! date -jf "%Y-%m-%d %H:%M:%S %z" "$new_date" &>/dev/null; then
@@ -802,26 +802,26 @@ edit_single_commit() {
     local author="$4"
     local email="$5"
     local subject="$6"
-    
+
     echo ""
     echo -e "${BOLD}${BLUE}╔════════════════════════════════════════════════════════════╗${NC}"
     echo -e "${BOLD}${BLUE}║${NC}  Editing Commit ${CYAN}#$idx${NC}: ${CYAN}${hash:0:7}${NC}                                   ${BOLD}${BLUE}║${NC}"
     echo -e "${BOLD}${BLUE}╚════════════════════════════════════════════════════════════╝${NC}\n"
-    
+
     echo -e "  ${CYAN}Hash:${NC}     $hash"
     echo -e "  ${CYAN}Author:${NC}   $author <$email>"
     echo -e "  ${CYAN}Date:${NC}     $datetime"
     echo -e "  ${CYAN}Subject:${NC}  $subject"
     echo ""
-    
+
     local new_subject="$subject"
     local new_datetime="$datetime"
-    
+
     local continue_editing=true
     while [[ "$continue_editing" == "true" ]]; do
         show_edit_menu
         read -rp "Choice [6]: " edit_choice
-        
+
         case "${edit_choice:-6}" in
             1)
                 new_subject=$(edit_commit_message "$new_subject")
@@ -860,7 +860,7 @@ edit_single_commit() {
                 ;;
         esac
     done
-    
+
     # Return modified values
     echo "$hash|$new_datetime|$author|$email|$new_subject"
 }
@@ -872,13 +872,13 @@ edit_single_commit() {
 interactive_edit_mode() {
     local input_file="$1"
     local output_file="$2"
-    
-    > "$output_file"
-    
+
+    >"$output_file"
+
     local idx=0
     while IFS='|' read -r hash datetime author email subject; do
         idx=$((idx + 1))
-        
+
         display_commit_history "$input_file"
         echo -e "${BOLD}Edit this commit? [y/N]:${NC}"
         # Use /dev/tty (fd 3) for interactive prompts so loop stdin isn't consumed
@@ -888,15 +888,15 @@ interactive_edit_mode() {
             # Fallback to standard input
             read -rp "  Commit #$idx (${hash:0:7}): " should_edit
         fi
-        
+
         if [[ "$should_edit" =~ ^[Yy] ]]; then
             local result
             result=$(edit_single_commit "$idx" "$hash" "$datetime" "$author" "$email" "$subject")
-            echo "$result" >> "$output_file"
+            echo "$result" >>"$output_file"
         else
-            echo "$hash|$datetime|$author|$email|$subject" >> "$output_file"
+            echo "$hash|$datetime|$author|$email|$subject" >>"$output_file"
         fi
-    done < "$input_file"
+    done <"$input_file"
 }
 
 # ============================================================================
@@ -906,29 +906,29 @@ interactive_edit_mode() {
 show_changes_preview() {
     local original_file="$1"
     local modified_file="$2"
-    
+
     echo -e "\n${BOLD}${YELLOW}Changes Summary:${NC}\n"
-    
+
     local idx=0
     while IFS='|' read -r orig_hash orig_datetime orig_author orig_email orig_subject; do
         idx=$((idx + 1))
         read -r new_data < <(sed -n "${idx}p" "$modified_file")
-        IFS='|' read -r new_hash new_datetime new_author new_email new_subject <<< "$new_data"
-        
+        IFS='|' read -r new_hash new_datetime new_author new_email new_subject <<<"$new_data"
+
         if [[ "$orig_datetime" != "$new_datetime" ]] || [[ "$orig_subject" != "$new_subject" ]]; then
             echo -e "  ${CYAN}Commit #$idx${NC} (${orig_hash:0:7}):"
-            
+
             if [[ "$orig_datetime" != "$new_datetime" ]]; then
                 echo -e "    Date: ${RED}$orig_datetime${NC} → ${GREEN}$new_datetime${NC}"
             fi
-            
+
             if [[ "$orig_subject" != "$new_subject" ]]; then
                 echo -e "    Msg:  ${RED}${orig_subject:0:40}...${NC}"
                 echo -e "       → ${GREEN}${new_subject:0:40}...${NC}"
             fi
             echo ""
         fi
-    done < "$original_file"
+    done <"$original_file"
 }
 
 confirm_changes() {
@@ -957,7 +957,7 @@ confirm_changes() {
 
 apply_changes() {
     local modified_file="$1"
-    
+
     if [[ "$DRY_RUN" == "true" ]]; then
         echo ""
         print_info "${YELLOW}${BOLD}DRY RUN${NC} - Preview mode only. No commits will be rewritten."
@@ -965,17 +965,17 @@ apply_changes() {
         echo ""
         return 0
     fi
-    
+
     print_info "Applying changes..."
-    
+
     # Get the base commit (oldest one to be rewritten + 1)
     local base_commit
     base_commit=$(git rev-list --max-parents=0 HEAD)
-    
+
     local idx=0
     while IFS='|' read -r hash datetime author email subject; do
         idx=$((idx + 1))
-        
+
         # Filter for this specific commit and update it
         git filter-branch --env-filter '
             if [ $GIT_COMMIT = '"\"$hash\""' ]; then
@@ -983,10 +983,10 @@ apply_changes() {
                 export GIT_COMMITTER_DATE='"\"$datetime\""'
             fi
         ' --force -- --all 2>/dev/null || true
-        
+
         print_debug "Updated commit $idx/$idx"
-    done < "$modified_file"
-    
+    done <"$modified_file"
+
     print_success "Changes applied!"
     print_info "To push to remote, run: ${CYAN}git push --force-with-lease${NC}"
 }
@@ -1013,7 +1013,7 @@ cleanup() {
 
 rollback_on_cancel() {
     print_error "Script interrupted - rolling back to backup..."
-    
+
     if [[ -f "$TEMP_BACKUP" ]]; then
         print_info "Restoring from backup: $TEMP_BACKUP"
         git bundle unbundle "$TEMP_BACKUP" || true
@@ -1023,7 +1023,7 @@ rollback_on_cancel() {
         git clean -fd
         print_success "Rolled back to pre-operation state"
     fi
-    
+
     exit 1
 }
 
@@ -1058,7 +1058,6 @@ trap rollback_on_cancel INT TERM
 # Drop / push moved to lib/git/drop.sh:
 #   prompt_and_push_branch(), drop_single_commit()
 
-
 # ---------------------------------------------------------------------------
 # Harness functions moved to lib/git/harness.sh:
 #   harness_post_checks(), harness_finish_success(), harness_restore_backup(), harness_run()
@@ -1070,12 +1069,11 @@ trap rollback_on_cancel INT TERM
 # harness_run() moved to lib/git/harness.sh
 # blossom_mode() and helpers moved to lib/git/blossom.sh
 
-
 # Cleanup function: removes tmp and backup branches/tags at end of run
 cleanup_tmp_and_backup_refs() {
     # Delegate to shared library (uses fd 3 for input)
     cleanup_tmp_backup_refs 3
-    
+
     # Cleanup merged branches if flag is set
     if [[ "$CLEANUP_MERGED" == "true" ]]; then
         cleanup_merged_branches_interactive 3
@@ -1092,16 +1090,18 @@ full_fix_mode() {
 
     if [[ "$BATCH_MODE" == "true" ]]; then
         # Cache the filtered repo list so repeated test runs skip the slow find+filter pass.
-        local _cache_file; _cache_file="$(_batch_tracker_dir)/repo-cache-$(printf '%s' "$(pwd)" | md5sum | cut -c1-8).txt"
-        local _today; _today=$(date +%Y%m%d)
+        local _cache_file
+        _cache_file="$(_batch_tracker_dir)/repo-cache-$(printf '%s' "$(pwd)" | md5sum | cut -c1-8).txt"
+        local _today
+        _today=$(date +%Y%m%d)
         local -a repos=()
-        if [[ "$BATCH_REFRESH_CACHE" != "true" && -f "$_cache_file" ]] && \
-           grep -q "^# scan-date ${_today}" "$_cache_file" 2>/dev/null; then
+        if [[ "$BATCH_REFRESH_CACHE" != "true" && -f "$_cache_file" ]] \
+            && grep -q "^# scan-date ${_today}" "$_cache_file" 2>/dev/null; then
             print_info "Using cached repo list (--refresh-cache to rescan)"
             while IFS= read -r _line; do
                 [[ "$_line" == \#* || -z "$_line" ]] && continue
                 repos+=("$_line")
-            done < "$_cache_file"
+            done <"$_cache_file"
         else
             local -a _all=()
             while IFS= read -r gitdir; do
@@ -1115,7 +1115,10 @@ full_fix_mode() {
                 _repo_filter "$_r" "$BATCH_ONLINE" || continue
                 repos+=("$_r")
             done
-            { echo "# scan-date ${_today} dir=$(pwd)"; printf '%s\n' "${repos[@]}"; } > "$_cache_file"
+            {
+                echo "# scan-date ${_today} dir=$(pwd)"
+                printf '%s\n' "${repos[@]}"
+            } >"$_cache_file"
         fi
 
         if [[ ${#repos[@]} -eq 0 ]]; then
@@ -1131,14 +1134,17 @@ full_fix_mode() {
             read -rp "   Press Enter to proceed or Ctrl+C to abort: " _
         else
             read -rp "Proceed with all repos? [Y/n]: " _batchok
-            [[ ! "${_batchok:-y}" =~ ^[Nn] ]] || { print_info "Batch cancelled"; return 0; }
+            [[ ! "${_batchok:-y}" =~ ^[Nn] ]] || {
+                print_info "Batch cancelled"
+                return 0
+            }
             ASSUME_YES=true
         fi
         # Initialise batch tracker; first run of the day creates it, later runs only append new repos.
         local _tracker
         _tracker=$(batch_restore_tracker_path)
         # Stamp the batch root directory once so diagnose/restore can resolve relative paths.
-        grep -q '^# BATCH_DIR=' "$_tracker" 2>/dev/null || echo "# BATCH_DIR=$(pwd)" >> "$_tracker"
+        grep -q '^# BATCH_DIR=' "$_tracker" 2>/dev/null || echo "# BATCH_DIR=$(pwd)" >>"$_tracker"
         print_info "Batch tracker (restore with: dc-fix --batch-restore '$_tracker')"
         local _orig_dir="$PWD"
         for _repo in "${repos[@]}"; do
@@ -1146,9 +1152,12 @@ full_fix_mode() {
             _orig_branch=$(git -C "$_repo" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
             _orig_commit=$(git -C "$_repo" rev-parse HEAD 2>/dev/null || echo "")
             print_info "Repo: $_repo"
-            pushd "$_repo" > /dev/null || { print_warning "Cannot enter $_repo"; continue; }
+            pushd "$_repo" >/dev/null || {
+                print_warning "Cannot enter $_repo"
+                continue
+            }
             _full_fix_single "$depth"
-            popd > /dev/null || true
+            popd >/dev/null || true
             local _btag
             _btag=$(git -C "$_repo" tag -l 'backup/*' --sort=-creatordate 2>/dev/null | head -1 || echo "")
             batch_restore_record "$_tracker" "$_repo" "$_orig_branch" "$_orig_commit" "$_btag"
@@ -1171,27 +1180,31 @@ _reanchor_after_sign() {
     mapfile -t rel_tags < <(git -C "$repo" tag -l 'v*' 'latest' 2>/dev/null | sort -V)
     local anchored=0
     for _tag in "${rel_tags[@]}"; do
-        local _tc; _tc=$(git -C "$repo" rev-parse "${_tag}^{}" 2>/dev/null || echo "")
+        local _tc
+        _tc=$(git -C "$repo" rev-parse "${_tag}^{}" 2>/dev/null || echo "")
         [[ -z "$_tc" ]] && continue
         if git -C "$repo" merge-base --is-ancestor "$_tc" HEAD 2>/dev/null; then continue; fi
-        local _eq; _eq=$(find_equivalent_commit "$_tc" "$repo")
+        local _eq
+        _eq=$(find_equivalent_commit "$_tc" "$repo")
         [[ -z "$_eq" ]] && continue
         local _ot _nt _d
         _ot=$(git -C "$repo" log -1 --format="%at" "$_tc" 2>/dev/null || echo "0")
-        _nt=$(git -C "$repo" log -1 --format="%at" "$_eq"  2>/dev/null || echo "1")
-        _d=$(( _ot - _nt )); (( _d < 0 )) && _d=$(( -_d ))
-        (( _d > 60 )) && continue
-        local _em; _em=$(git -C "$repo" log -1 --format="%s" "$_eq" 2>/dev/null)
+        _nt=$(git -C "$repo" log -1 --format="%at" "$_eq" 2>/dev/null || echo "1")
+        _d=$((_ot - _nt))
+        ((_d < 0)) && _d=$((-_d))
+        ((_d > 60)) && continue
+        local _em
+        _em=$(git -C "$repo" log -1 --format="%s" "$_eq" 2>/dev/null)
         print_info "  Re-anchoring $_tag \u2192 ${_eq:0:8} ($_em)"
         git -C "$repo" tag -d "$_tag" 2>/dev/null || true
         git -C "$repo" -c gpg.program=gpg tag -s "$_tag" \
-            -m "Re-anchored to rewritten history" "$_eq" 2>/dev/null || \
-            git -C "$repo" tag -f "$_tag" "$_eq"
-        git -C "$repo" push --force origin "refs/tags/$_tag" 2>/dev/null || \
-            print_warning "  Push failed for $_tag"
+            -m "Re-anchored to rewritten history" "$_eq" 2>/dev/null \
+            || git -C "$repo" tag -f "$_tag" "$_eq"
+        git -C "$repo" push --force origin "refs/tags/$_tag" 2>/dev/null \
+            || print_warning "  Push failed for $_tag"
         ((anchored++)) || true
     done
-    (( anchored > 0 )) && print_info "  Re-anchored $anchored release tag(s)" || true
+    ((anchored > 0)) && print_info "  Re-anchored $anchored release tag(s)" || true
 }
 
 # Run one dedup+sign cycle in the current repo (called from full_fix_mode).
@@ -1227,7 +1240,7 @@ _full_fix_single() {
     # Clamp depth: HEAD~N fails when N >= first-parent chain length.
     local _total
     _total=$(git rev-list --count --first-parent HEAD 2>/dev/null || echo 0)
-    local _max_depth=$(( _total > 0 ? _total - 1 : 0 ))
+    local _max_depth=$((_total > 0 ? _total - 1 : 0))
     [[ "$_max_depth" -lt "$depth" ]] && depth="$_max_depth"
     if [[ "$depth" -eq 0 ]]; then
         print_info "Repo has 0 or 1 commit — skipping"
@@ -1236,7 +1249,7 @@ _full_fix_single() {
     fi
 
     # Clear shared dates file so stale data from a previous repo can't bleed in.
-    > "$TEMP_ALL_DATES" 2>/dev/null || true
+    >"$TEMP_ALL_DATES" 2>/dev/null || true
 
     if [[ "$ASSUME_YES" != "true" ]] && [[ -t 0 ]]; then
         if read -u 3 -rp "Commits from HEAD to process [${depth}]: " _d 2>/dev/null; then :; else read -rp "Commits from HEAD to process [${depth}]: " _d; fi
@@ -1250,7 +1263,10 @@ _full_fix_single() {
     if [[ "$ASSUME_YES" != "true" ]]; then
         echo -e "${BOLD}${YELLOW}⚠️  Full-fix will dedup then GPG-sign the last ${depth} commits.${NC}"
         if read -u 3 -rp "Continue? [y/N]: " _fc 2>/dev/null; then :; else read -rp "Continue? [y/N]: " _fc; fi
-        [[ "$_fc" =~ ^[Yy] ]] || { print_info "Cancelled"; return 0; }
+        [[ "$_fc" =~ ^[Yy] ]] || {
+            print_info "Cancelled"
+            return 0
+        }
         ASSUME_YES=true
     fi
 
@@ -1262,7 +1278,7 @@ _full_fix_single() {
     # Nest mode collapses non-adjacent chore duplicates too; conservative filter keeps user commits safe.
     local _save_times="$DEDUP_TIMES"
     DEDUP_TIMES=5
-    ( deduplicate_mode ) || true
+    (deduplicate_mode) || true
     DEDUP_MODE=false
     DEDUP_CONSERVATIVE=false
     DEDUP_TIMES="$_save_times"
@@ -1270,7 +1286,7 @@ _full_fix_single() {
     # Dedup may have shrunk history; re-clamp depth so the sign range stays valid.
     # Otherwise HEAD~${depth}..HEAD can fall off the root, git log errors, the unsigned count reads 0 and the sign step is silently skipped.
     _total=$(git rev-list --count --first-parent HEAD 2>/dev/null || echo 0)
-    _max_depth=$(( _total > 0 ? _total - 1 : 0 ))
+    _max_depth=$((_total > 0 ? _total - 1 : 0))
     [[ "$depth" -gt "$_max_depth" ]] && depth="$_max_depth"
     RANGE="HEAD~${depth}..HEAD"
 
@@ -1300,10 +1316,10 @@ _full_fix_single() {
 main() {
     print_header "Dev-Control History Fixer"
     parse_args "$@"
-    
+
     # If cleanup-only mode, run cleanup and exit
     if [[ "$CLEANUP_ONLY" == "true" ]]; then
-        check_git_repo true  # Skip uncommitted changes check - not needed for cleanup
+        check_git_repo true # Skip uncommitted changes check - not needed for cleanup
         cleanup_tmp_and_backup_refs
         exit 0
     fi
@@ -1330,7 +1346,7 @@ main() {
     if [[ "$DIAGNOSE_MODE" == "true" ]]; then
         local _fix_args=()
         [[ "$DIAGNOSE_FIX" == "true" ]] && _fix_args+=(--fix)
-        [[ "$DRY_RUN" == "true" ]]     && _fix_args+=(--dry-run)
+        [[ "$DRY_RUN" == "true" ]] && _fix_args+=(--dry-run)
         [[ "$BATCH_ONLINE" == "false" ]] && _fix_args+=(--offline)
         if [[ "$BATCH_MODE" == "true" ]]; then
             diagnose_batch "${RESTORE_ARG:-}" "${_fix_args[@]}"
@@ -1385,7 +1401,10 @@ main() {
                     echo "Top $RESTORE_LIST_N commits on origin/${RESTORE_ARG}:"
                     git --no-pager ls-remote origin "refs/heads/${RESTORE_ARG}" || true
                 else
-                    git fetch origin "refs/heads/${RESTORE_ARG}:refs/heads/${local_restore}" || { print_error "Failed to fetch origin/${RESTORE_ARG}"; exit 1; }
+                    git fetch origin "refs/heads/${RESTORE_ARG}:refs/heads/${local_restore}" || {
+                        print_error "Failed to fetch origin/${RESTORE_ARG}"
+                        exit 1
+                    }
                     git push -u origin "$local_restore" || print_warning "Failed to push restore branch to origin"
                     print_success "Created restore branch: $local_restore"
                     echo "Top $RESTORE_LIST_N commits on $local_restore:" && git --no-pager log --oneline "$local_restore" -n "$RESTORE_LIST_N"
@@ -1518,26 +1537,26 @@ main() {
     # Handle no-edit mode (restore dates only)
     if [[ "$NO_EDIT_MODE" == "true" ]]; then
         check_git_repo
-        
+
         print_info "Restoring original commit dates..."
         echo ""
-        
+
         local base_commit
         base_commit=$(git rev-list --max-parents=0 HEAD)
         capture_all_dates "$base_commit"
-        
+
         # Display dates and ask if user wants to edit
         display_and_edit_dates "$TEMP_ALL_DATES" ""
-        
+
         # Recreate history with restored dates
         recreate_history_with_dates
-        
+
         echo ""
         print_success "All commit dates have been restored"
         echo ""
         echo -e "${YELLOW}Review the changes:${NC} git log --format='%h %aI %s' -10"
         echo ""
-        
+
         read -rp "Push to remote? [y/N]: " should_push
         if [[ "$should_push" =~ ^[Yy] ]]; then
             print_info "Pushing with force-with-lease..."
@@ -1547,10 +1566,10 @@ main() {
             }
             print_success "Pushed"
         fi
-        
+
         exit 0
     fi
-    
+
     # Handle amend mode
     if [[ "$AMEND_MODE" == "true" ]]; then
         amend_mode
@@ -1562,58 +1581,58 @@ main() {
         blossom_mode
         exit 0
     fi
-    
+
     # Handle stash mode separately
     if [[ "$STASH_MODE" == "true" ]]; then
         check_git_repo
-        
+
         print_info "Stash application mode"
         echo ""
-        
+
         select_stash_files "$STASH_NUM"
-        
+
         echo ""
         echo -e "${BOLD}Files to apply:${NC}"
         cat /tmp/git-fix-history-selected-files.txt | while IFS= read -r file; do
             echo -e "  ${CYAN}•${NC} $file"
         done
-        
+
         echo ""
         echo -e "${BOLD}Select target commit to apply to:${NC}"
         echo -e "  Example: ${CYAN}181cab0${NC} or ${CYAN}HEAD=2${NC}"
         read -rp "> " target_commit
-        
+
         if [[ -z "$target_commit" ]]; then
             print_error "No commit selected"
             exit 1
         fi
-        
+
         # Resolve commit hash
         target_hash=$(git rev-parse "$target_commit")
         target_subject=$(git log -1 --format=%s "$target_hash")
-        
+
         # Get original dates of target commit BEFORE any operations
         original_target_author=$(git log -1 --format=%aI "$target_hash")
         original_target_committer=$(git log -1 --format=%cI "$target_hash")
-        
+
         print_info "Target commit: ${CYAN}${target_hash:0:7}${NC} - $target_subject"
         print_info "Original date: ${CYAN}$original_target_author${NC}"
-        
+
         # Get all commits after target with their original dates
         local commits_after
         mapfile -t commits_after < <(git rev-list --reverse "${target_hash}..HEAD")
-        
+
         declare -A after_dates
         if [[ ${#commits_after[@]} -gt 0 ]]; then
             for commit in "${commits_after[@]}"; do
                 after_dates[$commit]=$(git log -1 --format=%aI "$commit")
             done
         fi
-        
+
         # Reset to before target commit
         print_info "Resetting to parent of target..."
         git reset --hard "${target_hash}^" --quiet
-        
+
         # Apply patch
         print_info "Applying patch..."
         if ! git apply "$TEMP_STASH_PATCH" 2>&1 | grep -v "^warning:" | grep -v "trailing whitespace"; then
@@ -1621,76 +1640,76 @@ main() {
             git reset --hard "$target_hash"
             exit 1
         fi
-        
+
         print_success "Patch applied"
-        
+
         # Stage all changes
         print_info "Staging changes..."
         git add -A
-        
+
         # Amend target commit with its ORIGINAL dates
         print_info "Amending target commit..."
         GIT_AUTHOR_DATE="$original_target_author" \
-        GIT_COMMITTER_DATE="$original_target_committer" \
-        git commit --amend --no-edit --quiet
-        
+            GIT_COMMITTER_DATE="$original_target_committer" \
+            git commit --amend --no-edit --quiet
+
         print_success "Target commit amended (date preserved: $original_target_author)"
-        
+
         # Re-apply each commit after target using git rebase to preserve commit history
         if [[ ${#commits_after[@]} -gt 0 ]]; then
             echo ""
             print_info "Re-applying ${#commits_after[@]} commit(s) after target with rebase..."
-            
+
             # Create a rebase script that will apply each commit with its original date
             local rebase_script="/tmp/git-fix-history-rebase-exec.sh"
-            > "$rebase_script"
+            >"$rebase_script"
             chmod +x "$rebase_script"
-            
+
             # Write exec commands for each commit to update dates
             for commit_hash in "${commits_after[@]}"; do
                 original_date="${after_dates[$commit_hash]}"
-                cat >> "$rebase_script" << REBASE_EOF
+                cat >>"$rebase_script" <<REBASE_EOF
 if [ "\$GIT_COMMIT" = "${commit_hash:0:40}" ]; then
     export GIT_AUTHOR_DATE="$original_date"
     export GIT_COMMITTER_DATE="$original_date"
 fi
 REBASE_EOF
             done
-            
+
             # Use rebase to replay all commits onto the amended target
             print_info "Rebasing commits onto amended target..."
             REBASE_MERGE_DIR=".git/rebase-merge"
-            
+
             # Start rebase of all commits after target
             git rebase --onto HEAD "${commits_after[0]}~1" "${commits_after[-1]}" 2>&1 | grep -v "^First, rewinding head" || true
-            
+
             print_success "All commits re-applied"
         fi
-        
+
         print_header_success "Complete!"
-        
+
         # Show final history
         echo -e "${BOLD}Final history:${NC}"
         git log --format="%h %ai %s" -5
-        
+
         echo ""
         echo -e "${BOLD}Edit latest commit date? [y/N]:${NC}"
         read -rp "  (Current: $(git log -1 --format=%aI HEAD)) " edit_date
-        
+
         if [[ "$edit_date" =~ ^[Yy] ]]; then
             echo ""
             echo -e "Current date: ${CYAN}$(git log -1 --format=%aI HEAD)${NC}"
             echo -e "Format: ${CYAN}YYYY-MM-DDTHH:MM:SS±HH:MM${NC}"
             read -rp "New date: " new_date
-            
+
             if [[ -n "$new_date" ]]; then
                 GIT_AUTHOR_DATE="$new_date" \
-                GIT_COMMITTER_DATE="$new_date" \
-                git commit --amend --no-edit --quiet
+                    GIT_COMMITTER_DATE="$new_date" \
+                    git commit --amend --no-edit --quiet
                 print_success "Date updated to: $new_date"
             fi
         fi
-        
+
         echo ""
         read -rp "Push to remote? [y/N]: " should_push
         if [[ "$should_push" =~ ^[Yy] ]]; then
@@ -1700,25 +1719,25 @@ REBASE_EOF
         else
             print_info "Changes ready. Run when ready: ${CYAN}git push --force-with-lease${NC}"
         fi
-        
+
         exit 0
     fi
-    
+
     if [[ "$DRY_RUN" == "true" ]]; then
         echo -e "${YELLOW}${BOLD}🔍 DRY RUN MODE - No changes will be applied${NC}\n"
     fi
-    
+
     check_git_repo
-    
+
     print_info "Git repository verified"
     echo ""
-    
+
     extract_commits "$RANGE" "$TEMP_COMMITS"
     echo ""
-    
+
     display_commit_history "$TEMP_COMMITS"
     echo ""
-    
+
     if [[ "$INTERACTIVE" == "true" ]]; then
         read -rp "Edit commits? [Y/n]: " should_edit_interactive
         if [[ ! "$should_edit_interactive" =~ ^[Nn] ]]; then
@@ -1729,9 +1748,9 @@ REBASE_EOF
     else
         cp "$TEMP_COMMITS" "$TEMP_OPERATIONS"
     fi
-    
+
     show_changes_preview "$TEMP_COMMITS" "$TEMP_OPERATIONS"
-    
+
     if confirm_changes; then
         apply_changes "$TEMP_OPERATIONS"
         show_summary
@@ -1739,7 +1758,7 @@ REBASE_EOF
         print_info "Changes cancelled - no commits modified"
         exit 0
     fi
-    
+
     # Offer cleanup of tmp/backup refs at end of successful operation
     if [[ "$NO_CLEANUP" != "true" ]]; then
         echo ""

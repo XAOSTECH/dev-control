@@ -24,7 +24,7 @@ BLINK='\033[5m'
 REVERSE='\033[7m'
 
 # Reset
-NC='\033[0m'  # No Colour / Reset
+NC='\033[0m' # No Colour / Reset
 RESET='\033[0m'
 
 # Background colours

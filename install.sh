@@ -60,7 +60,7 @@ NO_CLEANUP_PROMPT=false
 # ============================================================================
 
 show_help() {
-    cat << EOF
+    cat <<EOF
 Dev-Control Installer
 
 USAGE:
@@ -99,15 +99,42 @@ EOF
 parse_args() {
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            --prefix=*) PREFIX="${1#*=}"; shift ;;
-            --bin=*)    BIN_DIR="${1#*=}"; shift ;;
-            --uninstall)    UNINSTALL=true; shift ;;
-            --upgrade)      UPGRADE=true; shift ;;
-            --no-aliases)   NO_ALIASES=true; shift ;;
-            --no-cleanup)   NO_CLEANUP_PROMPT=true; shift ;;
-            --quiet|-q)     QUIET=true; shift ;;
-            -h|--help) show_help; exit 0 ;;
-            *) print_error "Unknown option: $1"; exit 1 ;;
+            --prefix=*)
+                PREFIX="${1#*=}"
+                shift
+                ;;
+            --bin=*)
+                BIN_DIR="${1#*=}"
+                shift
+                ;;
+            --uninstall)
+                UNINSTALL=true
+                shift
+                ;;
+            --upgrade)
+                UPGRADE=true
+                shift
+                ;;
+            --no-aliases)
+                NO_ALIASES=true
+                shift
+                ;;
+            --no-cleanup)
+                NO_CLEANUP_PROMPT=true
+                shift
+                ;;
+            --quiet | -q)
+                QUIET=true
+                shift
+                ;;
+            -h | --help)
+                show_help
+                exit 0
+                ;;
+            *)
+                print_error "Unknown option: $1"
+                exit 1
+                ;;
         esac
     done
 }
@@ -118,17 +145,17 @@ parse_args() {
 
 check_prerequisites() {
     local missing=()
-    
+
     command -v git &>/dev/null || missing+=("git")
     command -v curl &>/dev/null || missing+=("curl")
-    
+
     if [[ ${#missing[@]} -gt 0 ]]; then
         print_error "Missing required tools: ${missing[*]}"
         echo "Please install them first:"
         echo "  sudo apt install ${missing[*]}"
         exit 1
     fi
-    
+
     # Optional tools
     if ! command -v gh &>/dev/null; then
         print_warning "GitHub CLI (gh) not found - some features will be limited"
@@ -189,25 +216,25 @@ install_dev_control() {
     mkdir -p "$BIN_DIR"
     print_info "Creating symlink: $BIN_DIR/dc -> $PREFIX/dc"
     ln -sf "$PREFIX/dc" "$BIN_DIR/dc"
-    
+
     # Create config directory
     local config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/dev-control"
     mkdir -p "$config_dir"
-    
+
     # Suppress "Emulate Docker CLI using podman" advisory (host-level).
     local _nodocker_sys=/etc/containers/nodocker
     local _nodocker_usr="${XDG_CONFIG_HOME:-$HOME/.config}/containers/nodocker"
     if [[ ! -f "$_nodocker_sys" && ! -f "$_nodocker_usr" ]]; then
         if sudo -n true 2>/dev/null; then
-            sudo mkdir -p /etc/containers && sudo touch "$_nodocker_sys" && \
-                print_info "Created /etc/containers/nodocker (system-wide)" || true
+            sudo mkdir -p /etc/containers && sudo touch "$_nodocker_sys" \
+                && print_info "Created /etc/containers/nodocker (system-wide)" || true
         else
             mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/containers"
             touch "$_nodocker_usr"
             print_info "Created $_nodocker_usr (user-level)"
         fi
     fi
-    
+
     # Copy example config if doesn't exist
     if [[ ! -f "$config_dir/config.yaml" ]]; then
         if [[ -f "$PREFIX/config/example-global.config.yaml" ]]; then
@@ -215,7 +242,7 @@ install_dev_control() {
             print_info "Created default config: $config_dir/config.yaml"
         fi
     fi
-    
+
     # Install aliases if requested
     if [[ "$NO_ALIASES" != "true" ]]; then
         install_aliases
@@ -224,8 +251,8 @@ install_dev_control() {
     print_success "Dev-Control installed successfully!"
 
     # ── Offer to clean up the unpacked source ────────────────────────────────
-    if [[ -n "$DC_SOURCE_DIR" && "$NO_CLEANUP_PROMPT" != "true" && "$QUIET" != "true" ]] && \
-       [[ "$(realpath "$DC_SOURCE_DIR")" != "$(realpath "$PREFIX")" ]]; then
+    if [[ -n "$DC_SOURCE_DIR" && "$NO_CLEANUP_PROMPT" != "true" && "$QUIET" != "true" ]] \
+        && [[ "$(realpath "$DC_SOURCE_DIR")" != "$(realpath "$PREFIX")" ]]; then
         echo ""
         echo -e "${BOLD}Source folder:${NC} $DC_SOURCE_DIR"
         read -rp "Remove the source folder now that it is installed? [y/N]: " _rm_src
@@ -233,8 +260,10 @@ install_dev_control() {
             rm -rf "$DC_SOURCE_DIR"
             print_info "Removed: $DC_SOURCE_DIR"
             # If a tarball sits one level above with a matching name, offer to remove it too
-            local _parent; _parent="$(dirname "$DC_SOURCE_DIR")"
-            local _slug; _slug="$(basename "$DC_SOURCE_DIR")"
+            local _parent
+            _parent="$(dirname "$DC_SOURCE_DIR")"
+            local _slug
+            _slug="$(basename "$DC_SOURCE_DIR")"
             local _tarball="${_parent}/${_slug}.tar.gz"
             if [[ -f "$_tarball" ]]; then
                 read -rp "Also remove ${_tarball}? [y/N]: " _rm_tar
@@ -246,20 +275,20 @@ install_dev_control() {
 
 install_aliases() {
     print_info "Installing bash aliases..."
-    
+
     local bash_aliases="$HOME/.bash_aliases"
     local bashrc="$HOME/.bashrc"
     local marker="# Dev-Control aliases"
-    
+
     # Check if already installed
     if grep -q "$marker" "$bash_aliases" 2>/dev/null; then
         print_info "Aliases already installed, updating..."
         # Remove old aliases
         sed -i "/$marker/,/# end dev-control/d" "$bash_aliases"
     fi
-    
+
     # Append aliases
-    cat >> "$bash_aliases" << EOF
+    cat >>"$bash_aliases" <<EOF
 $marker
 alias dc='$PREFIX/dc'
 alias dc-init='$PREFIX/dc init'
@@ -272,10 +301,10 @@ alias dc-mcp='$PREFIX/dc mcp'
 alias dc-aliases='$PREFIX/dc aliases'
 # end dev-control
 EOF
-    
+
     # Ensure .bashrc sources .bash_aliases
     if ! grep -q "\.bash_aliases" "$bashrc" 2>/dev/null; then
-        cat >> "$bashrc" << 'EOF'
+        cat >>"$bashrc" <<'EOF'
 
 # Load aliases
 if [ -f ~/.bash_aliases ]; then
@@ -284,7 +313,7 @@ fi
 EOF
         print_info "Updated .bashrc to load .bash_aliases"
     fi
-    
+
     print_success "Aliases installed"
 }
 
@@ -294,26 +323,26 @@ EOF
 
 uninstall_dev_control() {
     print_info "Uninstalling Dev-Control..."
-    
+
     # Remove symlink
     if [[ -L "$BIN_DIR/dc" ]]; then
         rm "$BIN_DIR/dc"
         print_info "Removed symlink: $BIN_DIR/dc"
     fi
-    
+
     # Remove installation
     if [[ -d "$PREFIX" ]]; then
         rm -rf "$PREFIX"
         print_info "Removed: $PREFIX"
     fi
-    
+
     # Remove aliases
     local bash_aliases="$HOME/.bash_aliases"
     if grep -q "# dev-control aliases" "$bash_aliases" 2>/dev/null; then
         sed -i '/# dev-control aliases/,/# end dev-control/d' "$bash_aliases"
         print_info "Removed aliases from .bash_aliases"
     fi
-    
+
     print_success "Dev-Control uninstalled"
     print_info "Note: Configuration in ~/.config/dev-control was preserved"
 
@@ -374,7 +403,7 @@ install_updater() {
     mkdir -p "$_timer_dir"
 
     # One-shot service: fetch latest release tarball, unpack over PREFIX, run install.
-    cat > "$_timer_dir/dc-update.service" << EOF
+    cat >"$_timer_dir/dc-update.service" <<EOF
 [Unit]
 Description=Dev-Control auto-update
 After=network-online.target
@@ -395,7 +424,7 @@ ExecStart=/bin/bash -c '\
 EOF
 
     # Weekly timer (Sunday 03:00 local time)
-    cat > "$_timer_dir/dc-update.timer" << 'EOF'
+    cat >"$_timer_dir/dc-update.timer" <<'EOF'
 [Unit]
 Description=Dev-Control weekly auto-update
 
@@ -419,18 +448,18 @@ EOF
 
 main() {
     parse_args "$@"
-    
+
     echo -e "${BOLD}${CYAN}"
     echo "  ╔═══════════════════════════════════════╗"
     echo "  ║         Dev-Control Installer         ║"
     echo "  ╚═══════════════════════════════════════╝"
     echo -e "${NC}"
-    
+
     if [[ "$UNINSTALL" == "true" ]]; then
         uninstall_dev_control
         exit 0
     fi
-    
+
     check_prerequisites
     install_dev_control
     install_updater

@@ -38,9 +38,9 @@ TEST_REPO_DIR="${TEST_REPO_DIR:-$DC_ROOT/test-repo}"
 TEST_GNUPGHOME="${TEST_GNUPGHOME:-$TEST_REPO_DIR/.gnupg}"
 TEST_GPG_NAME="Dev-Control Test"
 TEST_GPG_EMAIL="test@dev-control.local"
-TEST_GPG_KEY_ID=""   # populated by ensure_gpg_key
+TEST_GPG_KEY_ID="" # populated by ensure_gpg_key
 
-ACTION="cycle"   # cycle | clean | init | list
+ACTION="cycle" # cycle | clean | init | list
 ONLY=""
 NO_GPG=false
 
@@ -83,13 +83,35 @@ EOF
 parse_args() {
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            --clean) ACTION="clean"; shift ;;
-            --init)  ACTION="init"; shift ;;
-            --list)  ACTION="list"; shift ;;
-            --only)  ONLY="$2"; shift 2 ;;
-            --no-gpg) NO_GPG=true; shift ;;
-            -h|--help) show_help; exit 0 ;;
-            *) print_error "Unknown option: $1"; show_help; exit 1 ;;
+            --clean)
+                ACTION="clean"
+                shift
+                ;;
+            --init)
+                ACTION="init"
+                shift
+                ;;
+            --list)
+                ACTION="list"
+                shift
+                ;;
+            --only)
+                ONLY="$2"
+                shift 2
+                ;;
+            --no-gpg)
+                NO_GPG=true
+                shift
+                ;;
+            -h | --help)
+                show_help
+                exit 0
+                ;;
+            *)
+                print_error "Unknown option: $1"
+                show_help
+                exit 1
+                ;;
         esac
     done
 }
@@ -152,7 +174,7 @@ ensure_gpg_key() {
 # Bind the ephemeral key to a fixture's local git config.  The repo will look up GNUPGHOME from the environment (recycle-test-repo.sh exports it for the build phase; for ad-hoc dc-fix runs the developer should
 # `export GNUPGHOME=$DC_ROOT/test-repo/.gnupg` or run via this script's helpers).
 _bind_gpg_to_repo() {
-    local dir="$1" sign_default="$2"   # sign_default: true|false
+    local dir="$1" sign_default="$2" # sign_default: true|false
     if [[ "$NO_GPG" == "true" || -z "$TEST_GPG_KEY_ID" ]]; then
         git -C "$dir" config commit.gpgsign false
         git -C "$dir" config tag.gpgsign false
@@ -164,7 +186,7 @@ _bind_gpg_to_repo() {
     git -C "$dir" config tag.gpgsign false
 
     # Drop a tiny pointer file so the developer knows where the key lives.
-    cat > "$dir/.git/TEST_GPG_INFO" <<EOF
+    cat >"$dir/.git/TEST_GPG_INFO" <<EOF
 Test GPG key bound to this fixture by scripts/recycle-test-repo.sh
 GNUPGHOME=$TEST_GNUPGHOME
 key=$TEST_GPG_KEY_ID
@@ -195,8 +217,8 @@ _init_repo() {
 _commit() {
     local dir="$1" date="$2" msg="$3"
     GIT_AUTHOR_DATE="$date" \
-    GIT_COMMITTER_DATE="$date" \
-    git -C "$dir" commit -q --date "$date" -m "$msg"
+        GIT_COMMITTER_DATE="$date" \
+        git -C "$dir" commit -q --date "$date" -m "$msg"
 }
 
 build_linear() {
@@ -205,7 +227,7 @@ build_linear() {
     _init_repo "$dir"
     local i
     for i in 1 2 3 4 5; do
-        echo "line $i" > "$dir/file$i.txt"
+        echo "line $i" >"$dir/file$i.txt"
         git -C "$dir" add "file$i.txt"
         _commit "$dir" "2024-01-0${i} 12:00:00 +0000" "c$i: add file$i"
     done
@@ -218,30 +240,30 @@ build_with_merges() {
     # Sign during build so we have a signed-history-with-merges fixture ready for dc-fix --sign --preserve-topology / rebase-merges tests.
     _init_repo "$dir" true
 
-    echo "main 1" > "$dir/main.txt"
+    echo "main 1" >"$dir/main.txt"
     git -C "$dir" add main.txt
     _commit "$dir" "2024-02-01 09:00:00 +0000" "main: initial"
 
-    echo "main 2" >> "$dir/main.txt"
+    echo "main 2" >>"$dir/main.txt"
     git -C "$dir" add main.txt
     _commit "$dir" "2024-02-02 09:00:00 +0000" "main: extend"
 
     git -C "$dir" checkout -q -b feature
-    echo "feature work" > "$dir/feature.txt"
+    echo "feature work" >"$dir/feature.txt"
     git -C "$dir" add feature.txt
     _commit "$dir" "2024-02-03 10:00:00 +0000" "feature: add feature.txt"
-    echo "more feature" >> "$dir/feature.txt"
+    echo "more feature" >>"$dir/feature.txt"
     git -C "$dir" add feature.txt
     _commit "$dir" "2024-02-04 10:00:00 +0000" "feature: extend feature.txt"
 
     git -C "$dir" checkout -q main
-    echo "main 3" >> "$dir/main.txt"
+    echo "main 3" >>"$dir/main.txt"
     git -C "$dir" add main.txt
     _commit "$dir" "2024-02-05 09:00:00 +0000" "main: diverge"
 
     GIT_AUTHOR_DATE="2024-02-06 11:00:00 +0000" \
-    GIT_COMMITTER_DATE="2024-02-06 11:00:00 +0000" \
-    git -C "$dir" merge --no-ff --no-edit -q feature \
+        GIT_COMMITTER_DATE="2024-02-06 11:00:00 +0000" \
+        git -C "$dir" merge --no-ff --no-edit -q feature \
         -m "merge: feature into main" 2>/dev/null || {
         # If the merge auto-resolves cleanly we still want a deterministic date.
         :
@@ -260,7 +282,7 @@ build_unsigned() {
     _init_repo "$dir" false
     local i
     for i in 1 2 3 4; do
-        echo "u$i" > "$dir/u$i.txt"
+        echo "u$i" >"$dir/u$i.txt"
         git -C "$dir" add "u$i.txt"
         _commit "$dir" "2024-03-0${i} 14:00:00 +0000" "unsigned: u$i"
     done
@@ -273,7 +295,7 @@ build_signed() {
     _init_repo "$dir" true
     local i
     for i in 1 2 3 4; do
-        echo "s$i" > "$dir/s$i.txt"
+        echo "s$i" >"$dir/s$i.txt"
         git -C "$dir" add "s$i.txt"
         _commit "$dir" "2024-04-0${i} 16:00:00 +0000" "signed: s$i"
     done
@@ -297,12 +319,20 @@ build_all() {
         export GNUPGHOME="$TEST_GNUPGHOME"
     fi
     case "$ONLY" in
-        "")             build_linear; build_with_merges; build_unsigned; build_signed ;;
-        linear)         build_linear ;;
-        with-merges)    build_with_merges ;;
-        unsigned)       build_unsigned ;;
-        signed)         build_signed ;;
-        *) print_error "Unknown fixture: $ONLY (allowed: linear|with-merges|unsigned|signed)"; exit 1 ;;
+        "")
+            build_linear
+            build_with_merges
+            build_unsigned
+            build_signed
+            ;;
+        linear) build_linear ;;
+        with-merges) build_with_merges ;;
+        unsigned) build_unsigned ;;
+        signed) build_signed ;;
+        *)
+            print_error "Unknown fixture: $ONLY (allowed: linear|with-merges|unsigned|signed)"
+            exit 1
+            ;;
     esac
 }
 
@@ -332,7 +362,7 @@ do_clean() {
 do_init() {
     if [[ -z "$ONLY" && -d "$TEST_REPO_DIR" ]] \
         && find "$TEST_REPO_DIR" -mindepth 1 -maxdepth 1 -print -quit \
-            | grep -q .; then
+        | grep -q .; then
         print_error "$TEST_REPO_DIR is not empty; use --clean first or run without --init to cycle"
         exit 1
     fi
@@ -382,6 +412,6 @@ parse_args "$@"
 case "$ACTION" in
     cycle) do_cycle ;;
     clean) do_clean ;;
-    init)  do_init ;;
-    list)  do_list ;;
+    init) do_init ;;
+    list) do_list ;;
 esac

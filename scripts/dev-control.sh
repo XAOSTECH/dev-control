@@ -28,7 +28,7 @@ set -e
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEV_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
-export DEV_CONTROL_DIR  # Used by sourced libraries
+export DEV_CONTROL_DIR # Used by sourced libraries
 
 # Source shared libraries
 source "$SCRIPT_DIR/lib/colours.sh"
@@ -43,7 +43,7 @@ source "$SCRIPT_DIR/lib/print.sh"
 check_script_exists() {
     local script="$1"
     local path="$SCRIPT_DIR/$script"
-    
+
     if [[ -f "$path" && -x "$path" ]]; then
         return 0
     elif [[ -f "$path" ]]; then
@@ -62,7 +62,7 @@ run_cluster_setup() {
     echo ""
     print_info "Setup fully fledged cluster: templates + container + MCP"
     echo ""
-    
+
     # Step 1: Select container type
     echo -e "${BOLD}Step 1: Select container type${NC}"
     echo "  1) Custom base image (--bare)"
@@ -70,7 +70,7 @@ run_cluster_setup() {
     echo "  3) Just templates & MCP (skip   container)"
     echo ""
     read -rp "Choice [1-3]: " container_choice
-    
+
     case "$container_choice" in
         1)
             CLUSTER_MODE="bare"
@@ -89,7 +89,7 @@ run_cluster_setup() {
             echo "  6) dev-tools   - GCC, build-essential, compilers"
             echo ""
             read -rp "Choice [1-6]: " category_choice
-            
+
             case "$category_choice" in
                 1) CLUSTER_CATEGORY="--game-dev" ;;
                 2) CLUSTER_CATEGORY="--art" ;;
@@ -97,7 +97,10 @@ run_cluster_setup() {
                 4) CLUSTER_CATEGORY="--streaming" ;;
                 5) CLUSTER_CATEGORY="--web-dev" ;;
                 6) CLUSTER_CATEGORY="--dev-tools" ;;
-                *) print_error "Invalid choice"; exit 1 ;;
+                *)
+                    print_error "Invalid choice"
+                    exit 1
+                    ;;
             esac
             echo -e "${CYAN}→ Using category: ${CLUSTER_CATEGORY}${NC}"
             ;;
@@ -110,17 +113,17 @@ run_cluster_setup() {
             exit 1
             ;;
     esac
-    
+
     echo ""
     print_step "Starting cluster setup..."
     echo ""
-    
+
     # Step: Initialise templates
     print_step "1/3 Initialising templates..."
-    check_script_exists "template-loading.sh" && \
-        bash "$SCRIPT_DIR/template-loading.sh" -y --reuse-owner <<< "y" 2>/dev/null || true
+    check_script_exists "template-loading.sh" \
+        && bash "$SCRIPT_DIR/template-loading.sh" -y --reuse-owner <<<"y" 2>/dev/null || true
     echo ""
-    
+
     # Step: Setup container (unless templates-only)
     if [[ "$CLUSTER_MODE" != "templates-only" ]]; then
         print_step "2/3 Setting up container..."
@@ -130,20 +133,20 @@ run_cluster_setup() {
         elif [[ "$CLUSTER_MODE" == "img" ]]; then
             containerise_args="--img $CLUSTER_CATEGORY --defaults"
         fi
-        check_script_exists "containerise.sh" && \
-           bash "$SCRIPT_DIR/containerise.sh" "$containerise_args" 2>/dev/null || true
+        check_script_exists "containerise.sh" \
+            && bash "$SCRIPT_DIR/containerise.sh" "$containerise_args" 2>/dev/null || true
         echo ""
     else
         print_info "Skipped: container setup (templates-only mode)"
         echo ""
     fi
-    
+
     # Step: Setup MCP
     print_step "3/3 Setting up MCP servers..."
-    check_script_exists "mcp-setup.sh" && \
-        bash "$SCRIPT_DIR/mcp-setup.sh" --config-only 2>/dev/null || true
+    check_script_exists "mcp-setup.sh" \
+        && bash "$SCRIPT_DIR/mcp-setup.sh" --config-only 2>/dev/null || true
     echo ""
-    
+
     print_header_success "Cluster setup complete!"
     echo ""
     print_section "What's been set up:"
@@ -161,7 +164,7 @@ run_cluster_setup() {
 # ============================================================================
 
 show_help() {
-    cat << 'EOF'
+    cat <<'EOF'
 Dev-Control - Comprehensive Git workflow automation toolkit
 
 USAGE:
@@ -228,26 +231,26 @@ EOF
 
 display_menu() {
     print_header "Dev-Control"
-    
+
     echo -e "${BOLD}Setup & Configuration${NC}"
     print_menu_item "1" "Alias Loading (dc-aliases)       - Install bash aliases"
     print_menu_item "2" "Git Services (dc-git)            - Unified git workflow tools"
     echo ""
-    
+
     echo -e "${BOLD}Repository Management${NC}"
     print_menu_item "3" "Template Loading (dc-init)       - Initialise repo templates"
     print_menu_item "4" "Repository Creator (dc-repo)     - Create GitHub repository"
     print_menu_item "5" "PR Creator (dc-pr)               - Create pull request"
     print_menu_item "6" "Module Nesting (dc-modules)      - Manage submodules"
     echo ""
-    
+
     echo -e "${BOLD}Maintenance & Tools${NC}"
     print_menu_item "7" "History Fixer (dc-fix)           - Fix commit history"
     print_menu_item "8" "Licence Auditor (dc-licences)    - Audit licences"
     print_menu_item "9" "Package Builder (dc-package)     - Build release packages"
     print_menu_item "f" "Full Fix (dc-full-fix)           - Dedup + sign commits + template refresh"
     echo ""
-    
+
     echo -e "${BOLD}Environment${NC}"
     print_menu_item "m" "MCP Setup (dc-mcp)               - Setup MCP servers"
     print_menu_item "c" "Containerise (dc-container)      - Setup devcontainer"
@@ -259,70 +262,70 @@ display_menu() {
 run_tool() {
     local choice="$1"
     shift
-    
+
     case "$choice" in
-        1|alias|aliases)
-            check_script_exists "alias-loading.sh" && \
-                bash "$SCRIPT_DIR/alias-loading.sh" "$@"
+        1 | alias | aliases)
+            check_script_exists "alias-loading.sh" \
+                && bash "$SCRIPT_DIR/alias-loading.sh" "$@"
             ;;
-        2|git|git-control)
-            check_script_exists "git-control.sh" && \
-                bash "$SCRIPT_DIR/git-control.sh" "$@"
+        2 | git | git-control)
+            check_script_exists "git-control.sh" \
+                && bash "$SCRIPT_DIR/git-control.sh" "$@"
             ;;
-        3|init|template|templates)
-            check_script_exists "template-loading.sh" && \
-                bash "$SCRIPT_DIR/template-loading.sh" "$@"
+        3 | init | template | templates)
+            check_script_exists "template-loading.sh" \
+                && bash "$SCRIPT_DIR/template-loading.sh" "$@"
             ;;
-        4|repo|create)
-            check_script_exists "create-repo.sh" && \
-                bash "$SCRIPT_DIR/create-repo.sh" "$@"
+        4 | repo | create)
+            check_script_exists "create-repo.sh" \
+                && bash "$SCRIPT_DIR/create-repo.sh" "$@"
             ;;
-        5|pr)
-            check_script_exists "create-pr.sh" && \
-                bash "$SCRIPT_DIR/create-pr.sh" "$@"
+        5 | pr)
+            check_script_exists "create-pr.sh" \
+                && bash "$SCRIPT_DIR/create-pr.sh" "$@"
             ;;
-        6|modules|nest|nesting)
-            check_script_exists "module-nesting.sh" && \
-                bash "$SCRIPT_DIR/module-nesting.sh" "$@"
+        6 | modules | nest | nesting)
+            check_script_exists "module-nesting.sh" \
+                && bash "$SCRIPT_DIR/module-nesting.sh" "$@"
             ;;
-        7|fix|history)
-            check_script_exists "fix-history.sh" && \
-                bash "$SCRIPT_DIR/fix-history.sh" "$@"
+        7 | fix | history)
+            check_script_exists "fix-history.sh" \
+                && bash "$SCRIPT_DIR/fix-history.sh" "$@"
             ;;
-        8|licences|lic)
-            check_script_exists "licences.sh" && \
-                bash "$SCRIPT_DIR/licences.sh" "$@"
+        8 | licences | lic)
+            check_script_exists "licences.sh" \
+                && bash "$SCRIPT_DIR/licences.sh" "$@"
             ;;
-        9|package|pkg)
-            check_script_exists "packaging.sh" && \
-                bash "$SCRIPT_DIR/packaging.sh" "$@"
+        9 | package | pkg)
+            check_script_exists "packaging.sh" \
+                && bash "$SCRIPT_DIR/packaging.sh" "$@"
             ;;
-        m|M|mcp)
-            check_script_exists "mcp-setup.sh" && \
-                bash "$SCRIPT_DIR/mcp-setup.sh" "$@"
+        m | M | mcp)
+            check_script_exists "mcp-setup.sh" \
+                && bash "$SCRIPT_DIR/mcp-setup.sh" "$@"
             ;;
-        c|C|container|containerise)
-            check_script_exists "containerise.sh" && \
-                bash "$SCRIPT_DIR/containerise.sh" "$@"
+        c | C | container | containerise)
+            check_script_exists "containerise.sh" \
+                && bash "$SCRIPT_DIR/containerise.sh" "$@"
             ;;
-        l|L|cluster)
+        l | L | cluster)
             run_cluster_setup
             ;;
-        f|F|full-fix|ff)
+        f | F | full-fix | ff)
             check_script_exists "fix-history.sh" || return 1
             bash "$SCRIPT_DIR/fix-history.sh" --full-fix "$@"
             echo ""
             read -rp "Update workflow and action templates now? [Y/n]: " _upd
             if [[ ! "${_upd:-y}" =~ ^[Nn] ]]; then
-                check_script_exists "template-loading.sh" && \
-                    bash "$SCRIPT_DIR/template-loading.sh" --batch --update --defaults <<< "2,3"
+                check_script_exists "template-loading.sh" \
+                    && bash "$SCRIPT_DIR/template-loading.sh" --batch --update --defaults <<<"2,3"
             fi
             ;;
-        0|exit|q|quit)
+        0 | exit | q | quit)
             print_info "Goodbye!"
             exit 0
             ;;
-        help|-h|--help)
+        help | -h | --help)
             show_help
             ;;
         *)
@@ -354,9 +357,15 @@ _dc_menu_choose() {
     local -a tokens=(1 2 3 4 5 6 7 8 9 f m c l 0)
     local choice i
     choice=$(tui_choose "Dev-Control — select a tool" "${labels[@]}" || true)
-    [[ -z "$choice" ]] && { echo ""; return; }
+    [[ -z "$choice" ]] && {
+        echo ""
+        return
+    }
     for i in "${!labels[@]}"; do
-        [[ "${labels[$i]}" == "$choice" ]] && { echo "${tokens[$i]}"; return; }
+        [[ "${labels[$i]}" == "$choice" ]] && {
+            echo "${tokens[$i]}"
+            return
+        }
     done
     echo ""
 }
@@ -396,7 +405,10 @@ main() {
         echo ""
         if [[ "$_tui" == "true" ]]; then
             if declare -f tui_confirm &>/dev/null; then
-                tui_confirm "Return to the Dev-Control menu?" "yes" || { print_info "Goodbye!"; exit 0; }
+                tui_confirm "Return to the Dev-Control menu?" "yes" || {
+                    print_info "Goodbye!"
+                    exit 0
+                }
             fi
         else
             read -rp "Press Enter to continue..."

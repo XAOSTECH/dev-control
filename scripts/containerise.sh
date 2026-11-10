@@ -31,7 +31,7 @@ set -e
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEV_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
-export DEV_CONTROL_DIR  # Export to avoid SC2034 warning
+export DEV_CONTROL_DIR # Export to avoid SC2034 warning
 
 # Source shared libraries
 source "$SCRIPT_DIR/lib/colours.sh"
@@ -40,9 +40,9 @@ source "$SCRIPT_DIR/lib/validation.sh"
 source "$SCRIPT_DIR/lib/container.sh"
 
 # CLI options
-MODE=""  # "base" or "image"
+MODE="" # "base" or "image"
 CATEGORY_FLAG=""
-CATEGORY_FLAGS=()  # All category flags (for --nest filter)
+CATEGORY_FLAGS=() # All category flags (for --nest filter)
 BARE_MODE=false
 USE_DEFAULTS=false
 CONFIG_FILE=""
@@ -62,7 +62,7 @@ EXCLUDE_DIRS=()
 ################################################################################
 
 show_help() {
-    cat << 'EOF'
+    cat <<'EOF'
 Dev-Control Containerisation - Build base images or generate devcontainers
 
 USAGE:
@@ -136,7 +136,7 @@ EOF
 parse_args() {
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            -h|--help)
+            -h | --help)
                 SHOW_HELP=true
                 shift
                 ;;
@@ -166,7 +166,7 @@ parse_args() {
                 USE_DEFAULTS=true
                 shift
                 ;;
-            -a|--all)
+            -a | --all)
                 PRUNE_ALL=true
                 shift
                 ;;
@@ -178,27 +178,27 @@ parse_args() {
                 NO_CACHE=true
                 shift
                 ;;
-            -y|--yes|--force)
+            -y | --yes | --force)
                 ASSUME_YES=true
                 shift
                 ;;
-            --exclude|--skip)
+            --exclude | --skip)
                 shift
                 while [[ $# -gt 0 && ! "$1" =~ ^- ]]; do
                     EXCLUDE_DIRS+=("$1")
                     shift
                 done
                 ;;
-            --game-dev|--art|--data-science|--streaming|--web-dev|--dev-tools)
+            --game-dev | --art | --data-science | --streaming | --web-dev | --dev-tools)
                 CATEGORY_FLAG="${1#--}"
-                CATEGORY_FLAGS+=("$1")  # Keep -- prefix for run_nest_mode passthrough
+                CATEGORY_FLAGS+=("$1") # Keep -- prefix for run_nest_mode passthrough
                 shift
                 ;;
-            -d|--defaults)
+            -d | --defaults)
                 USE_DEFAULTS=true
                 shift
                 ;;
-            -c|--config)
+            -c | --config)
                 if [[ -n "${2:-}" && "$2" != -* ]]; then
                     CONFIG_FILE="$2"
                     shift 2
@@ -230,9 +230,9 @@ parse_args() {
 # Interactive configuration prompts
 run_interactive_config() {
     print_header "Container Configuration"
-    
+
     echo -e "${DIM}Press Enter to accept default values shown in green${NC}"
-    
+
     # Container/User name
     local default_name
     default_name=$(basename "$PROJECT_PATH")
@@ -244,14 +244,14 @@ run_interactive_config() {
     echo -e "  ${DIM}Used for container name, user account, and project reference${NC}"
     read -rp "Name [$default_name]: " input
     CFG_CONTAINER_NAME="${input:-$default_name}"
-    
+
     # GitHub user
     echo ""
     echo -e "${BOLD}GitHub username/organisation:${NC}"
     local gh_default="${CFG_GITHUB_USER:-$(git config --get user.name 2>/dev/null || echo "")}"
     read -rp "GitHub user [$gh_default]: " input
     CFG_GITHUB_USER="${input:-$gh_default}"
-    
+
     # GPG key
     echo ""
     echo -e "${BOLD}GPG signing key ID:${NC}"
@@ -263,7 +263,7 @@ run_interactive_config() {
     else
         read -rp "GPG key ID (optional): " CFG_GPG_KEY_ID
     fi
-    
+
     # Base image category or custom
     if [[ -n "$CATEGORY_FLAG" && -n "${BASE_IMAGE_CATEGORIES[$CATEGORY_FLAG]:-}" ]]; then
         # CLI category flags (--img/--base --dev-tools etc.) take precedence over prompts
@@ -284,7 +284,7 @@ run_interactive_config() {
             echo -e "      ${DIM}$desc${NC}"
         done
         echo ""
-        
+
         if confirm "Use a dev-control category image?"; then
             CFG_USE_BASE_CATEGORY="true"
             local categories=("${!BASE_IMAGE_CATEGORIES[@]}")
@@ -299,7 +299,7 @@ run_interactive_config() {
                 elif [[ "$category" == "Custom image..." ]]; then
                     CFG_USE_BASE_CATEGORY="false"
                     CFG_BASE_IMAGE=$(select_from_list "Select custom base Docker image:" "$CFG_BASE_IMAGE" "${BASE_IMAGES[@]}")
-                    
+
                     # Check if the custom image matches a known category
                     for cat in "${!BASE_IMAGE_CATEGORIES[@]}"; do
                         if [[ "$CFG_BASE_IMAGE" == *"${BASE_IMAGE_CATEGORIES[$cat]}"* ]]; then
@@ -315,7 +315,7 @@ run_interactive_config() {
         else
             CFG_USE_BASE_CATEGORY="false"
             CFG_BASE_IMAGE=$(select_from_list "Select base Docker image:" "$CFG_BASE_IMAGE" "${BASE_IMAGES[@]}")
-            
+
             # Check if the custom image matches a known category
             for cat in "${!BASE_IMAGE_CATEGORIES[@]}"; do
                 if [[ "$CFG_BASE_IMAGE" == *"${BASE_IMAGE_CATEGORIES[$cat]}"* ]]; then
@@ -327,16 +327,16 @@ run_interactive_config() {
             done
         fi
     fi
-    
+
     # Timezone
     CFG_TIMEZONE=$(select_from_list "Select timezone:" "$CFG_TIMEZONE" "${TIMEZONES[@]}")
-    
+
     # Locale
     CFG_LOCALE=$(select_from_list "Select locale:" "$CFG_LOCALE" "${LOCALES[@]}")
-    
+
     # Mirror
     CFG_UBUNTU_MIRROR=$(select_mirror "$CFG_UBUNTU_MIRROR")
-    
+
     # Streaming/CUDA features
     # SKIPPED: Pre-built images (--img, --base, or category selected) already contain these
     if [[ "$MODE" != "image" && "$MODE" != "base" && "$CFG_USE_BASE_CATEGORY" != "true" ]]; then
@@ -345,12 +345,12 @@ run_interactive_config() {
         echo -e "${BOLD}Streaming & CUDA Features:${NC}"
         echo -e "  ${DIM}Enable these for video streaming, transcoding, and GPU-accelerated workflows${NC}"
         echo ""
-        
+
         if confirm "Install CUDA Toolkit 13.1? (for GPU-accelerated compute)"; then
             CFG_INSTALL_CUDA="true"
             CFG_ENABLE_NVIDIA_DEVICES="true"
         fi
-        
+
         if confirm "Install FFmpeg from source with NVENC/NVDEC? (requires CUDA)"; then
             CFG_INSTALL_FFMPEG="true"
             if [[ "$CFG_INSTALL_CUDA" != "true" ]]; then
@@ -359,20 +359,20 @@ run_interactive_config() {
                 CFG_ENABLE_NVIDIA_DEVICES="true"
             fi
         fi
-        
+
         if confirm "Install NGINX with RTMP module? (for streaming server)"; then
             CFG_INSTALL_NGINX_RTMP="true"
         fi
-        
+
         if confirm "Install streaming utilities? (mediainfo, sox, v4l-utils, imagemagick)"; then
             CFG_INSTALL_STREAMING_UTILS="true"
         fi
-        
+
         if confirm "Mount Cloudflare Wrangler config? (for Workers development)"; then
             CFG_MOUNT_WRANGLER="true"
         fi
     fi
-    
+
     # Show summary
     echo ""
     print_separator
@@ -384,7 +384,7 @@ run_interactive_config() {
     print_kv "Timezone" "$CFG_TIMEZONE"
     print_kv "Locale" "$CFG_LOCALE"
     print_kv "Ubuntu mirror" "$CFG_UBUNTU_MIRROR"
-    
+
     # Only show these if they were prompted (not using pre-built images or categories)
     if [[ "$MODE" != "image" && "$MODE" != "base" && "$CFG_USE_BASE_CATEGORY" != "true" ]]; then
         print_kv "CUDA 13.1" "${CFG_INSTALL_CUDA:-false}"
@@ -395,7 +395,7 @@ run_interactive_config() {
         print_kv "Wrangler mount" "${CFG_MOUNT_WRANGLER:-false}"
     fi
     print_separator
-    
+
     # Offer to save as defaults
     echo ""
     if confirm "Save these settings as global defaults?"; then
@@ -411,8 +411,8 @@ run_interactive_config() {
 generate_dockerignore() {
     local devcontainer_dir="$1"
     local dockerignore_file="$devcontainer_dir/.dockerignore"
-    
-    cat > "$dockerignore_file" << 'DOCKERIGNORE_EOF'
+
+    cat >"$dockerignore_file" <<'DOCKERIGNORE_EOF'
 # Git
 .git/
 .gitignore
@@ -471,14 +471,14 @@ DOCKERIGNORE_EOF
 generate_dockerfile() {
     local devcontainer_dir="$1"
     local dockerfile_path="$devcontainer_dir/Dockerfile"
-    
+
     # Determine if we need to customise a base ubuntu image
     local is_ubuntu_base=false
     if [[ "$CFG_BASE_IMAGE" == ubuntu:* ]]; then
         is_ubuntu_base=true
     fi
-    
-    cat > "$dockerfile_path" << DOCKERFILE_EOF
+
+    cat >"$dockerfile_path" <<DOCKERFILE_EOF
 FROM ${CFG_BASE_IMAGE}
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -486,7 +486,7 @@ DOCKERFILE_EOF
 
     # For Ubuntu base images, add full customisation
     if [[ "$is_ubuntu_base" == true ]]; then
-        cat >> "$dockerfile_path" << DOCKERFILE_EOF
+        cat >>"$dockerfile_path" <<DOCKERFILE_EOF
 
 # Install tool development tools and dependencies
 RUN apt-get update && apt-get upgrade -y && apt-get install -y \\
@@ -519,7 +519,7 @@ DOCKERFILE_EOF
 
         # Add GitHub CLI installation if enabled
         if [[ "$CFG_INSTALL_GH_CLI" == "true" ]]; then
-            cat >> "$dockerfile_path" << 'DOCKERFILE_EOF'
+            cat >>"$dockerfile_path" <<'DOCKERFILE_EOF'
 
 # Install GitHub CLI
 RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
@@ -530,13 +530,13 @@ DOCKERFILE_EOF
         fi
 
         # Suppress "Emulate Docker CLI using podman" advisory
-        cat >> "$dockerfile_path" << 'DOCKERFILE_EOF'
+        cat >>"$dockerfile_path" <<'DOCKERFILE_EOF'
 
 # Suppress "Emulate Docker CLI using podman" advisory message
 RUN mkdir -p /etc/containers && touch /etc/containers/nodocker
 DOCKERFILE_EOF
         if [[ "$CFG_INSTALL_CUDA" == "true" ]]; then
-            cat >> "$dockerfile_path" << 'DOCKERFILE_EOF'
+            cat >>"$dockerfile_path" <<'DOCKERFILE_EOF'
 
 # Install CUDA Toolkit 13.1
 RUN curl -fsSL --retry 5 --retry-delay 10 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-keyring_1.1-1_all.deb -o /tmp/cuda-keyring.deb \
@@ -556,7 +556,7 @@ DOCKERFILE_EOF
 
         # Add FFmpeg from source with NVENC/NVDEC if enabled
         if [[ "$CFG_INSTALL_FFMPEG" == "true" ]]; then
-            cat >> "$dockerfile_path" << 'DOCKERFILE_EOF'
+            cat >>"$dockerfile_path" <<'DOCKERFILE_EOF'
 
 # Install FFmpeg build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -601,7 +601,7 @@ DOCKERFILE_EOF
 
         # Add NGINX with RTMP if enabled
         if [[ "$CFG_INSTALL_NGINX_RTMP" == "true" ]]; then
-            cat >> "$dockerfile_path" << 'DOCKERFILE_EOF'
+            cat >>"$dockerfile_path" <<'DOCKERFILE_EOF'
 
 # Build NGINX with RTMP module (latest mainline with GPG verification)
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -633,7 +633,7 @@ DOCKERFILE_EOF
 
         # Add streaming utilities if enabled
         if [[ "$CFG_INSTALL_STREAMING_UTILS" == "true" ]]; then
-            cat >> "$dockerfile_path" << 'DOCKERFILE_EOF'
+            cat >>"$dockerfile_path" <<'DOCKERFILE_EOF'
 
 # Install streaming utilities
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -645,7 +645,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 DOCKERFILE_EOF
         fi
 
-        cat >> "$dockerfile_path" << DOCKERFILE_EOF
+        cat >>"$dockerfile_path" <<DOCKERFILE_EOF
 
 # Create user ${CFG_CONTAINER_NAME} with sudo privileges
 RUN if id ubuntu &>/dev/null; then \\
@@ -673,14 +673,14 @@ DOCKERFILE_EOF
 
         # Add hush login if enabled
         if [[ "$CFG_HUSH_LOGIN" == "true" ]]; then
-            cat >> "$dockerfile_path" << DOCKERFILE_EOF
+            cat >>"$dockerfile_path" <<DOCKERFILE_EOF
 
 RUN touch ~/.hushlogin
 DOCKERFILE_EOF
         fi
 
         # Install nvm and Node.js (required for npx-dependent MCP servers)
-        cat >> "$dockerfile_path" << DOCKERFILE_EOF
+        cat >>"$dockerfile_path" <<DOCKERFILE_EOF
 
 # Install nvm and Node.js (required for npx-dependent MCP servers like firecrawl)
 # System-wide installation (consistent with common.Dockerfile base images)
@@ -699,21 +699,21 @@ DOCKERFILE_EOF
 
         # Add git configuration (always include safe.directory and defaultBranch, user/email/gpg if provided)
         local git_config_cmd=$(generate_git_config_dockerfile "$CFG_GITHUB_USER" "$CFG_GITHUB_USER_EMAIL" "$CFG_GPG_KEY_ID")
-        
-        cat >> "$dockerfile_path" << DOCKERFILE_EOF
+
+        cat >>"$dockerfile_path" <<DOCKERFILE_EOF
 
 # Bake git config into image
 RUN $git_config_cmd
 DOCKERFILE_EOF
 
-        cat >> "$dockerfile_path" << DOCKERFILE_EOF
+        cat >>"$dockerfile_path" <<DOCKERFILE_EOF
 
 WORKDIR /workspaces
 DOCKERFILE_EOF
 
     else
         # For devcontainer images, minimal customisation
-        cat >> "$dockerfile_path" << DOCKERFILE_EOF
+        cat >>"$dockerfile_path" <<DOCKERFILE_EOF
 
 # Set timezone
 ENV TZ=${CFG_TIMEZONE}
@@ -722,7 +722,7 @@ DOCKERFILE_EOF
 
         local git_config_cmd
         git_config_cmd=$(generate_git_config_dockerfile "$CFG_GITHUB_USER" "$CFG_GITHUB_USER_EMAIL" "$CFG_GPG_KEY_ID")
-        cat >> "$dockerfile_path" << DOCKERFILE_EOF
+        cat >>"$dockerfile_path" <<DOCKERFILE_EOF
 
 # Bake git config into image
 RUN $git_config_cmd
@@ -735,51 +735,51 @@ DOCKERFILE_EOF
 # Generate devcontainer.json
 generate_devcontainer_json() {
     local devcontainer_dir="$1"
-    local use_image="${2:-}"               # Optional: image tag to use instead of building
-    local category="${3:-}"                # Optional: category for header comments
-    local skip_category_extensions="${4:-false}"  # Optional: do not inject category extensions
+    local use_image="${2:-}"                     # Optional: image tag to use instead of building
+    local category="${3:-}"                      # Optional: category for header comments
+    local skip_category_extensions="${4:-false}" # Optional: do not inject category extensions
     local devcontainer_file="$devcontainer_dir/devcontainer.json"
     local project_name
     project_name=$(basename "${PROJECT_PATH:-$(pwd)}")
-    
+
     # Determine remote user FIRST (needed for mount paths)
     local remote_user
     if [[ -n "$use_image" || -n "$category" ]]; then
         # --img and --base modes: use category name (matches user in base image)
-        remote_user="${category,,}"  # Force lowercase
+        remote_user="${category,,}" # Force lowercase
     elif [[ "$CFG_BASE_IMAGE" == mcr.microsoft.com/* ]]; then
         remote_user="vscode"
     else
         # General mode: use folder name
         remote_user="$CFG_CONTAINER_NAME"
     fi
-    
+
     # Build mounts array
     local mounts=""
     local uid
     uid=$(id -u)
-    
+
     if [[ "$CFG_MOUNT_GPG" == "true" ]]; then
         if [[ -n "$mounts" ]]; then mounts+=","; fi
         # VS Code no longer auto-forwards the host gpg-agent socket; bind-mount it so GPG 2.1+ finds it at the XDG_RUNTIME_DIR path.
         mounts+="\"source=/run/user/${uid}/gnupg/S.gpg-agent,target=/run/user/${uid}/gnupg/S.gpg-agent,type=bind\""
     fi
-    
+
     if [[ "$CFG_MOUNT_DOCKER_SOCKET" == "true" ]]; then
         if [[ -n "$mounts" ]]; then mounts+=","; fi
         mounts+="\"source=/run/user/${uid}/podman/podman.sock,target=/var/run/docker.sock,type=bind\""
     fi
-    
+
     if [[ "$CFG_MOUNT_GH_CONFIG" == "true" ]]; then
         if [[ -n "$mounts" ]]; then mounts+=","; fi
         mounts+="\"source=\${localEnv:HOME}/.config/gh,target=/home/${remote_user}/.config/gh,type=bind,consistency=cached\""
     fi
-    
+
     if [[ "$CFG_MOUNT_WRANGLER" == "true" ]]; then
         if [[ -n "$mounts" ]]; then mounts+=","; fi
         mounts+="\"source=\${localEnv:HOME}/.config/.wrangler,target=/home/${remote_user}/.config/.wrangler,type=bind,consistency=cached\""
     fi
-    
+
     # Add Wayland/X11 mounts for NVIDIA categories
     if [[ "$CFG_ENABLE_NVIDIA_DEVICES" == "true" ]]; then
         if [[ -n "$mounts" ]]; then mounts+=","; fi
@@ -789,7 +789,7 @@ generate_devcontainer_json() {
         mounts+="\"source=/usr/lib/x86_64-linux-gnu/libcuda.so.1,target=/usr/lib/x86_64-linux-gnu/libcuda.so.1,type=bind,readonly\","
         mounts+="\"source=/usr/lib/x86_64-linux-gnu/libnvcuvid.so.1,target=/usr/lib/x86_64-linux-gnu/libnvcuvid.so.1,type=bind,readonly\""
     fi
-    
+
     # Streaming category: Add NVENC encoding library mount
     if [[ "$category" == "streaming" ]]; then
         if [[ -n "$mounts" ]]; then mounts+=","; fi
@@ -797,7 +797,7 @@ generate_devcontainer_json() {
         # Bind host /dev so late-attached capture devices appear under /host-dev/* without a hard --device path that fails when unplugged.
         mounts+="\"source=/dev,target=/host-dev,type=bind,readonly\""
     fi
-    
+
     # User-writable dirs as named volumes with U=true (chowns to container user on mount). Avoids fuse-overlayfs perm/ownership loss on NTFS graphRoot.
     # Per-project (${remote_user}-${proj_slug}-*): .vscode-server, .devcontainer, .cache — must not be shared across projects on the same base image, or restored terminal sessions point at a stale cwd and the postCreate marker leaks across containers.
     # Shared per-category (${remote_user}-*): .gnupg, .ssh — identity material is intentionally reused.
@@ -822,20 +822,20 @@ generate_devcontainer_json() {
     if [[ "$CFG_ENABLE_NVIDIA_DEVICES" == "true" ]]; then
         run_args+=",\"--shm-size=1g\",\"--device=/dev/dri\",\"--device=/dev/nvidia0\",\"--device=/dev/nvidiactl\",\"--device=/dev/nvidia-modeset\",\"--device=/dev/nvidia-uvm\",\"--device=/dev/nvidia-uvm-tools\""
     fi
-    
+
     # Streaming category: always enable NVIDIA devices and DRI/KMS access. Do not hard-require a specific USB video node at start time.
     if [[ "$category" == "streaming" ]]; then
         run_args="\"--tmpfs=/tmp:exec,nosuid,size=512m,mode=1777\",\"--shm-size=1g\",\"--device=/dev/dri\",\"--device=/dev/nvidia0\",\"--device=/dev/nvidiactl\",\"--device=/dev/nvidia-modeset\",\"--device=/dev/nvidia-uvm\",\"--device=/dev/nvidia-uvm-tools\",\"--group-add=video\",\"--group-add=render\",\"--security-opt=label=disable\""
     fi
-    
+
     # Build extensions array (default + category-specific)
     local extensions=""
-    IFS=',' read -ra ext_array <<< "$CFG_VSCODE_EXTENSIONS"
+    IFS=',' read -ra ext_array <<<"$CFG_VSCODE_EXTENSIONS"
     for ext in "${ext_array[@]}"; do
         if [[ -n "$extensions" ]]; then extensions+=","; fi
         extensions+="\"${ext}\""
     done
-    
+
     # Add category-specific extensions if available
     if [[ "$skip_category_extensions" != "true" && -n "$category" && -n "${CATEGORY_EXTENSIONS[$category]:-}" ]]; then
         for ext in ${CATEGORY_EXTENSIONS[$category]}; do
@@ -843,7 +843,7 @@ generate_devcontainer_json() {
             extensions+="\"${ext}\""
         done
     fi
-    
+
     # Build container environment vars
     # GPG_TTY cannot be set here (tty unknown at JSON generation time); it is set at shell startup via postCreateCommand or terminal init.
     local container_env="\"GPG_KEY_ID\": \"${CFG_GPG_KEY_ID}\",
@@ -851,7 +851,7 @@ generate_devcontainer_json() {
     \"DOCKER_HOST\": \"unix:///var/run/docker.sock\",
     \"DISPLAY\": \"\${localEnv:DISPLAY}\",
     \"TZ\": \"${CFG_TIMEZONE}\""
-    
+
     if [[ "$CFG_ENABLE_NVIDIA_DEVICES" == "true" || "$category" == "streaming" ]]; then
         container_env+=",
     \"NVIDIA_VISIBLE_DEVICES\": \"all\",
@@ -861,7 +861,7 @@ generate_devcontainer_json() {
     \"WAYLAND_DISPLAY\": \"wayland-0\",
     \"XDG_RUNTIME_DIR\": \"/tmp\""
     fi
-    
+
     # Build runArgs
     local run_args_block=""
     if [[ -n "$run_args" ]]; then
@@ -869,7 +869,7 @@ generate_devcontainer_json() {
     ${run_args}
   ],"
     fi
-    
+
     # Build git config line from saved YAML configuration (always include safe.directory and defaultBranch)
     local git_config_line=" && $(generate_git_config_postcreate "$CFG_GITHUB_USER" "$CFG_GITHUB_USER_EMAIL" "$CFG_GPG_KEY_ID")"
     local git_config_cmd="${git_config_line:4}"
@@ -881,11 +881,11 @@ generate_devcontainer_json() {
     if [[ "$CFG_MOUNT_GPG" == "true" ]]; then
         gpg_fwd_step="\"gpgFwd\": \"ln -sf /run/user/${uid}/gnupg/S.gpg-agent /home/${remote_user}/.gnupg/S.gpg-agent 2>/dev/null || true && gpgconf --kill gpg-agent 2>/dev/null || true\","
     fi
-    
+
     # Determine image_or_build and store category metadata for README
     local image_or_build=""
     local category_metadata=""
-    
+
     if [[ -n "$use_image" ]]; then
         # Using pre-built image
         image_or_build="\"image\": \"$use_image\","
@@ -907,8 +907,8 @@ generate_devcontainer_json() {
     \"dockerfile\": \"Dockerfile\"
   },"
     fi
-    
-    cat > "$devcontainer_file" << DEVCONTAINER_EOF
+
+    cat >"$devcontainer_file" <<DEVCONTAINER_EOF
 {
   "name": "${project_name^^}",
   ${image_or_build}
@@ -948,7 +948,7 @@ DEVCONTAINER_EOF
     if [[ -n "$category_metadata" ]]; then
         generate_category_readme "$devcontainer_dir" "$category_metadata"
     fi
-    
+
     print_success "Created: $devcontainer_file"
 }
 
@@ -956,7 +956,7 @@ DEVCONTAINER_EOF
 generate_category_readme() {
     local devcontainer_dir="$1"
     local metadata="$2"
-    
+
     # Parse metadata JSON (simple extraction without jq)
     local category=$(echo "$metadata" | grep -oP '(?<="category":")[^"]*')
     local type=$(echo "$metadata" | grep -oP '(?<="type":")[^"]*')
@@ -964,13 +964,13 @@ generate_category_readme() {
     local image_tag=$(echo "$metadata" | grep -oP '(?<="image_tag":")[^"]*')
     local source=$(echo "$metadata" | grep -oP '(?<="source":")[^"]*')
     local features=$(echo "$metadata" | grep -oP '(?<="features":")[^"]*')
-    
+
     local readme_file="$devcontainer_dir/README.md"
     local project_dir
     project_dir="$(dirname "$devcontainer_dir")"
     local container_name
     container_name="$(basename "$project_dir")"
-    
+
     write_devcontainer_readme \
         "$readme_file" \
         "$category" \
@@ -985,11 +985,11 @@ generate_category_readme() {
 # Generate all devcontainer files
 generate_devcontainer() {
     local devcontainer_dir="$PROJECT_PATH/.devcontainer"
-    
+
     print_info "Generating devcontainer configuration..."
-    
+
     mkdir -p "$devcontainer_dir"
-    
+
     generate_dockerignore "$devcontainer_dir"
     generate_dockerfile "$devcontainer_dir"
     generate_devcontainer_json "$devcontainer_dir"
@@ -1005,21 +1005,21 @@ generate_devcontainer() {
 generate_container_readme() {
     local devcontainer_dir="$1"
     local readme_file="$devcontainer_dir/README.md"
-    
+
     # Determine container type from devcontainer.json
     local container_type="custom"
     if [[ -f "$devcontainer_dir/devcontainer.json" ]]; then
         grep -q '"build"' "$devcontainer_dir/devcontainer.json" && container_type="build"
         grep -q '"image"' "$devcontainer_dir/devcontainer.json" && container_type="image"
     fi
-    
+
     # Determine category - check if we're in base/image mode
     local category="custom"
     [[ -n "$CATEGORY_FLAG" ]] && category="$CATEGORY_FLAG"
-    
+
     local container_name
     container_name=$(basename "$PROJECT_PATH")
-    
+
     write_devcontainer_readme \
         "$readme_file" \
         "$category" \
@@ -1033,33 +1033,31 @@ generate_container_readme() {
 
 show_activation_instructions() {
     print_header_success "Containerisation Complete!"
-    
+
     print_section "Generated Files:"
     print_list_item ".devcontainer/devcontainer.json"
     print_list_item ".devcontainer/Dockerfile"
     print_list_item ".devcontainer/.dockerignore"
     echo ""
-    
+
     print_section "Configuration:"
     print_kv "Container name" "$CFG_CONTAINER_NAME" 20
     print_kv "Base image" "$CFG_BASE_IMAGE" 20
     print_kv "Timezone" "$CFG_TIMEZONE" 20
     print_kv "Locale" "$CFG_LOCALE" 20
     echo ""
-    
+
     print_section "Next Steps:"
     echo -e "  1. Download dev-control with: ${GREEN}gh release download latest --repo xaoscience/dev-control${NC}"
     echo -e "  2. Load aliases: ${GREEN}source ./scripts/alias-loading.sh${NC}"
     echo -e "  3. Open the project in VS Code: ${GREEN}code $PROJECT_PATH${NC}"
     echo -e "  4. Press ${CYAN}F1${NC} and run: ${CYAN}Dev Containers: Reopen in Container${NC}"
     echo ""
-    
+
     print_section "One-Click Mode:"
     echo -e "  Next time, run: ${GREEN}dc-container --defaults${NC}"
     echo ""
 }
-
-
 
 ################################################################################
 # Config Variant Generation (_example and _minimal)
@@ -1073,7 +1071,7 @@ show_activation_instructions() {
 # Variant files (Dockerfile_example, devcontainer_example.json, etc.) are tracked.
 generate_config_variants() {
     local devcontainer_dir="$1"
-    local mode="${2:-}"       # "base", "image", or "" (no-flag)
+    local mode="${2:-}" # "base", "image", or "" (no-flag)
     local category="${3:-}"
     local image_tag="${4:-}"
 
@@ -1138,7 +1136,7 @@ _generate_variant() {
     local mode="$2"
     local category="$3"
     local image_tag="$4"
-    local suffix="$5"  # "_example" or "_minimal"
+    local suffix="$5" # "_example" or "_minimal"
 
     local variant_label=""
     if [[ "$suffix" == "_example" ]]; then
@@ -1163,7 +1161,7 @@ _generate_variant() {
             echo "# This is a tracked reference file. Personal config (Dockerfile) is gitignored."
             echo "#"
             cat "$devcontainer_dir/Dockerfile${suffix}"
-        } > "$devcontainer_dir/Dockerfile${suffix}.tmp"
+        } >"$devcontainer_dir/Dockerfile${suffix}.tmp"
         mv "$devcontainer_dir/Dockerfile${suffix}.tmp" "$devcontainer_dir/Dockerfile${suffix}"
         print_success "Created: Dockerfile${suffix}"
     fi
@@ -1193,17 +1191,17 @@ build_base_image() {
     local category="$1"
     local image_tag="${BASE_IMAGE_CATEGORIES[$category]}"
     local github_ref="${CATEGORY_GITHUB_PATHS[$category]}"
-    
+
     if [[ -z "$image_tag" ]]; then
         print_error "Unknown category: $category"
         echo "Available: ${!BASE_IMAGE_CATEGORIES[*]}"
         exit 1
     fi
-    
+
     local project_dir="$(pwd)"
     local project_name=$(basename "$project_dir")
     local devcontainer_dir="$project_dir/.devcontainer"
-    
+
     print_header "Generating Base Image Config: $category"
     print_kv "Category" "$category"
     print_kv "Image tag" "$image_tag"
@@ -1216,43 +1214,43 @@ build_base_image() {
     print_kv "Mount GH Config" "$CFG_MOUNT_GH_CONFIG"
     print_kv "Mount Docker" "$CFG_MOUNT_DOCKER_SOCKET"
     echo ""
-    
+
     # Create .devcontainer directory
     mkdir -p "$devcontainer_dir"
-    
+
     # Generate Dockerfile with all category features
     print_info "Generating Dockerfile with $category features..."
     generate_category_dockerfile "$category" "$devcontainer_dir/Dockerfile"
     print_success "Created: $devcontainer_dir/Dockerfile"
-    
+
     # Generate .dockerignore
     generate_dockerignore "$devcontainer_dir"
-    
+
     # Generate devcontainer.json referencing the built image so VS Code never re-runs the Dockerfile
     PROJECT_PATH="$project_dir" generate_devcontainer_json "$devcontainer_dir" "$image_tag" "$category"
-    
+
     # Add personal config to .gitignore
     add_devcontainer_to_gitignore "$project_dir"
 
     # Generate tracked config variants (_example + _minimal)
     PROJECT_PATH="$project_dir" generate_config_variants "$devcontainer_dir" "base" "$category" "$image_tag"
     echo ""
-    
+
     print_header_success "Base Image Config Generated!"
     echo ""
     print_kv "Dockerfile" "$devcontainer_dir/Dockerfile"
     print_kv "Config" "$devcontainer_dir/devcontainer.json"
     echo ""
-    
+
     echo -e "${BOLD}Build now?${NC}"
     echo -e "  ${CYAN}Y${NC}) Build image with podman (may take 10-30 minutes)"
     echo -e "  ${CYAN}N${NC}) Skip - use 'Open in Container' in VS Code instead"
     echo ""
-    
+
     if confirm "Build $image_tag now?"; then
         print_info "Building image (this may take several minutes)..."
         echo ""
-        
+
         cd "$devcontainer_dir"
         local build_args=(--pull=true)
         [[ "$NO_CACHE" == "true" ]] && build_args+=("--no-cache")
@@ -1315,16 +1313,16 @@ generate_image_devcontainer() {
     local category="$1"
     local image_tag="${BASE_IMAGE_CATEGORIES[$category]}"
     local github_ref="${CATEGORY_GITHUB_PATHS[$category]}"
-    
+
     if [[ -z "$image_tag" ]]; then
         print_error "Unknown category: $category"
         echo "Available: ${!BASE_IMAGE_CATEGORIES[*]}"
         exit 1
     fi
-    
+
     local project_name=$(basename "$(pwd)")
     local devcontainer_dir=".devcontainer"
-    
+
     print_header "Generating Devcontainer: $project_name"
     print_kv "Category" "$category"
     print_kv "Base image" "$image_tag"
@@ -1335,7 +1333,7 @@ generate_image_devcontainer() {
     print_kv "Mount GH Config" "$CFG_MOUNT_GH_CONFIG"
     print_kv "Mount Docker" "$CFG_MOUNT_DOCKER_SOCKET"
     echo ""
-    
+
     # Check if image exists (podman adds localhost/ prefix)
     if ! podman images --format "{{.Repository}}:{{.Tag}}" | grep -E "(localhost/)?${image_tag}$"; then
         print_warning "Base image not found locally: $image_tag"
@@ -1348,12 +1346,12 @@ generate_image_devcontainer() {
             exit 1
         fi
     fi
-    
+
     mkdir -p "$devcontainer_dir"
-    
+
     # Generate devcontainer.json using the standard function
     PROJECT_PATH="$(pwd)" generate_devcontainer_json "$devcontainer_dir" "$image_tag" "$category"
-    
+
     # Add personal config to .gitignore
     add_devcontainer_to_gitignore "$(pwd)"
 
@@ -1404,11 +1402,10 @@ nest_path_is_excluded() {
     return 1
 }
 
-
 run_prune_mode() {
     local start_dir="${1:-$(pwd)}"
     print_header "Prune Mode"
-    
+
     # Prune devcontainers under this start_dir
     local -a all_container_ids
     mapfile -t all_container_ids < <(
@@ -1421,12 +1418,12 @@ run_prune_mode() {
     for container_id in "${all_container_ids[@]}"; do
         local folder
         folder=$(docker inspect "$container_id" --format='{{index .Config.Labels "devcontainer.local_folder"}}' 2>/dev/null || echo "")
-        
+
         # In prune mode, -a implies we prune ALL dev-control containers across the system, unless excluded.
         if [[ "$PRUNE_ALL" != true && -n "$folder" && "$folder" != "$start_dir"* && "$folder" != "$start_dir" ]]; then
             continue
         fi
-        
+
         if [[ ${#EXCLUDE_DIRS[@]} -gt 0 && -n "$folder" ]] && nest_path_is_excluded "$folder" "$start_dir"; then
             kept_container_ids+=("$container_id")
         else
@@ -1452,7 +1449,7 @@ run_prune_mode() {
             echo "  - ${folder:-unknown} (${container_id:0:12})"
         done
         echo ""
-        
+
         if confirm "Delete these containers and associated volumes?"; then
             echo ""
             local -a keep_vol_names=()
@@ -1486,7 +1483,10 @@ run_prune_mode() {
             for vol in "${all_vol_names[@]}"; do
                 is_kept=false
                 for keep_vol in "${keep_vol_names[@]}"; do
-                    [[ "$vol" == "$keep_vol" ]] && { is_kept=true; break; }
+                    [[ "$vol" == "$keep_vol" ]] && {
+                        is_kept=true
+                        break
+                    }
                 done
                 [[ "$is_kept" == false ]] && vols_to_remove+=("$vol")
             done
@@ -1501,13 +1501,13 @@ run_prune_mode() {
         print_info "No dev-control containers found to delete."
         echo ""
     fi
-    
+
     if [[ "$PRUNE_IMAGES" == true ]]; then
         local -a excl_basenames=()
         if [[ ${#EXCLUDE_DIRS[@]} -gt 0 ]]; then
             local _ed
             for _ed in "${EXCLUDE_DIRS[@]}"; do
-                excl_basenames+=( "$(basename "${_ed%/}" | tr '[:upper:]' '[:lower:]')" )
+                excl_basenames+=("$(basename "${_ed%/}" | tr '[:upper:]' '[:lower:]')")
             done
         fi
 
@@ -1523,7 +1523,10 @@ run_prune_mode() {
             for wrapper in "${stale_wrappers[@]}"; do
                 keep_wrapper=false
                 for _bn in "${excl_basenames[@]}"; do
-                    [[ -n "$_bn" && "$wrapper" == "localhost/vsc-$_bn-"* ]] && { keep_wrapper=true; break; }
+                    [[ -n "$_bn" && "$wrapper" == "localhost/vsc-$_bn-"* ]] && {
+                        keep_wrapper=true
+                        break
+                    }
                 done
                 if [[ "$keep_wrapper" == true ]]; then
                     print_info "Excluding wrapper image (kept): $wrapper"
@@ -1541,7 +1544,7 @@ run_prune_mode() {
                 fi
             fi
         fi
-        
+
         if [[ "$PRUNE_ALL" == true ]]; then
             if confirm "Run podman system prune -a --volumes (Warning: deletes all stopped containers and unused images globally)?"; then
                 # Graceful state awareness: start kept containers to protect them and their images from global prune
@@ -1575,8 +1578,8 @@ run_prune_mode() {
 run_nest_mode() {
     local start_dir="${1:-$(pwd)}"
     local include_root=false
-    shift || true  # Remove first argument
-    
+    shift || true # Remove first argument
+
     # Check if first arg is "." to include root directory
     if [[ "$start_dir" == "." ]]; then
         include_root=true
@@ -1599,13 +1602,13 @@ run_nest_mode() {
     local allowed_cats=""
     for arg in "$@"; do
         case "$arg" in
-            --game-dev|--art|--data-science|--streaming|--web-dev|--dev-tools)
+            --game-dev | --art | --data-science | --streaming | --web-dev | --dev-tools)
                 allowed_cats+="${arg#--}|"
                 ;;
         esac
     done
-    allowed_cats="${allowed_cats%|}"  # Remove trailing |
-    
+    allowed_cats="${allowed_cats%|}" # Remove trailing |
+
     local file1="$start_dir/.devcontainer/nest.json"
     [ -f "$file1" ] && local nest_json="$file1" || local nest_json="$SCRIPT_DIR/../config/containers/nest.json"
 
@@ -1619,12 +1622,12 @@ run_nest_mode() {
         print_kv "Excluding" "${EXCLUDE_DIRS[*]}"
     fi
     echo ""
-    
+
     # Check if nest.json exists - use it as source of truth
     if [[ -f "$nest_json" ]]; then
         print_info "Using existing nest.json as source of truth"
         echo ""
-        
+
         # Extract projects from nest.json using grep/sed
         # Each line: {"path": "...", "type": "...", "category": "..."}
         grep -oP '\{"path"[^}]+\}' "$nest_json" | while read -r project_obj; do
@@ -1632,7 +1635,7 @@ run_nest_mode() {
             local path=$(echo "$project_obj" | grep -oP '"path":\s*"\K[^"]+')
             local type=$(echo "$project_obj" | grep -oP '"type":\s*"\K[^"]+')
             local category=$(echo "$project_obj" | grep -oP '"category":\s*"\K[^"]+')
-            
+
             [[ -z "$path" || -z "$type" || -z "$category" ]] && continue
 
             # NOTE: --exclude is intentionally NOT applied here. Excluded projects
@@ -1645,33 +1648,33 @@ run_nest_mode() {
                 done
                 [[ $match -eq 0 ]] && continue
             fi
-            
+
             echo "$path|$type|$category"
-        done > "$nest_json.tmp"
+        done >"$nest_json.tmp"
     else
         # No nest.json - scan for .devcontainer dirs and extract categories from README.md
         print_info "No nest.json found. Scanning for containers..."
         echo ""
-        
+
         # Find all .devcontainer dirs and build projects list (exclude .tmp and .bak)
-        local find_prune_args=( -name ".tmp" -o -name ".bak" -o -name "*.tmp" -o -name "*.bak" )
+        local find_prune_args=(-name ".tmp" -o -name ".bak" -o -name "*.tmp" -o -name "*.bak")
         for _excl in "${EXCLUDE_DIRS[@]}"; do
             _excl="${_excl%/}"
-            find_prune_args+=( -o -name "$_excl" )
+            find_prune_args+=(-o -name "$_excl")
         done
         find "$start_dir" \( "${find_prune_args[@]}" \) -prune -o -type d -name ".devcontainer" -print 2>/dev/null | sort | while read -r devcontainer_dir; do
             local project_dir="$(dirname "$devcontainer_dir")"
             local rel_path="${project_dir#"$start_dir"/}"
             [[ "$rel_path" == "$project_dir" ]] && rel_path="."
-            
+
             # Root is handled separately as a dedicated scaffold (see the include_root block after the build loop); never record it as a tracked nest project.
             if [[ "$rel_path" == "." ]]; then
                 continue
             fi
-            
+
             local dcjson="$devcontainer_dir/devcontainer.json"
             [[ ! -f "$dcjson" ]] && continue
-            
+
             # Extract category from README.md first
             local category="unknown"
             local readme_file="$devcontainer_dir/README.md"
@@ -1679,13 +1682,13 @@ run_nest_mode() {
                 category=$(grep -oP '(?<=^- \*\*Category\*\*: `)[^`]*' "$readme_file" 2>/dev/null | head -1)
                 category="${category:-unknown}"
             fi
-            
+
             # Fallback: try comment in devcontainer.json
             if [[ "$category" == "unknown" ]]; then
                 category=$(grep -oiP '//\s*category:\s*\K[a-z0-9-]+' "$dcjson" 2>/dev/null | head -1)
                 category="${category:-unknown}"
             fi
-            
+
             # Filter by allowed categories if specified
             if [[ -n "$allowed_cats" ]]; then
                 local match=0
@@ -1694,17 +1697,16 @@ run_nest_mode() {
                 done
                 [[ $match -eq 0 ]] && continue
             fi
-            
+
             local type=""
             [[ $(grep -c '"build"' "$dcjson" 2>/dev/null) -gt 0 ]] && type="BASE"
             [[ $(grep -c '"image"' "$dcjson" 2>/dev/null) -gt 0 ]] && type="IMG"
             [[ -z "$type" ]] && continue
-            
+
             echo "$rel_path|$type|$category"
-        done > "$nest_json.tmp"
+        done >"$nest_json.tmp"
     fi
 
-    
     # Handle --regen: delete existing .devcontainer directories (except root)
     if [[ "$NEST_REGEN" == true ]]; then
         print_kv "Regenerate mode" "DELETE existing containers and .devcontainer dirs (keeping root)"
@@ -1751,7 +1753,7 @@ run_nest_mode() {
                 echo "  - ${folder:-unknown} (${container_id:0:12})"
             done
             echo ""
-            
+
             if confirm "Delete these containers?"; then
                 echo ""
                 # Volumes belonging to kept (excluded) containers must be preserved even if a soon-to-be-deleted container happens to share them.
@@ -1790,7 +1792,10 @@ run_nest_mode() {
                 for vol in "${all_vol_names[@]}"; do
                     is_kept=false
                     for keep_vol in "${keep_vol_names[@]}"; do
-                        [[ "$vol" == "$keep_vol" ]] && { is_kept=true; break; }
+                        [[ "$vol" == "$keep_vol" ]] && {
+                            is_kept=true
+                            break
+                        }
                     done
                     [[ "$is_kept" == false ]] && vols_to_remove+=("$vol")
                 done
@@ -1847,7 +1852,7 @@ run_nest_mode() {
             local count=0
             local dc_dir
             echo ""
-            
+
             # Temporarily disable set -e for deletion loop (rm might fail on some dirs)
             set +e
             for dc_dir in "${regen_dirs[@]}"; do
@@ -1861,7 +1866,7 @@ run_nest_mode() {
                 ((count++))
             done
             set -e
-            
+
             echo ""
             print_success "Deleted $count .devcontainer directories"
             echo ""
@@ -1873,7 +1878,7 @@ run_nest_mode() {
             return 0
         fi
     fi
-    
+
     echo ""
 
     # Read results
@@ -1882,19 +1887,19 @@ run_nest_mode() {
         rm -f "$nest_json.tmp"
         return 1
     fi
-    
+
     # Separate unknown and known categories
     local -a unknown_projects
     local -a known_projects
-    
+
     while IFS='|' read -r path type category; do
         if [[ "$category" == "unknown" ]]; then
             unknown_projects+=("$path|$type|$category")
         else
             known_projects+=("$path|$type|$category")
         fi
-    done < "$nest_json.tmp"
-    
+    done <"$nest_json.tmp"
+
     # Display unknown projects first
     echo ""
     if [[ ${#unknown_projects[@]} -gt 0 ]]; then
@@ -1902,7 +1907,7 @@ run_nest_mode() {
         echo ""
         local idx=1
         for proj in "${unknown_projects[@]}"; do
-            IFS='|' read -r path type category <<< "$proj"
+            IFS='|' read -r path type category <<<"$proj"
             printf "  ${CYAN}%d.${NC} %-30s ${YELLOW}%s${NC}\n" "$idx" "$path" "$type"
             ((idx++))
         done
@@ -1914,25 +1919,25 @@ run_nest_mode() {
         echo -e "  3. Or add them to ${CYAN}$nest_json${NC} manually"
         echo ""
     fi
-    
+
     # Display recognised projects
     print_header "Recognised Projects (will be regenerated)"
     echo ""
-    
+
     if [[ ${#known_projects[@]} -eq 0 ]]; then
         print_warning "No recognised category projects found"
         rm -f "$nest_json.tmp"
         return 1
     fi
-    
+
     local idx=1
     for proj in "${known_projects[@]}"; do
-        IFS='|' read -r path type category <<< "$proj"
+        IFS='|' read -r path type category <<<"$proj"
         printf "  ${CYAN}%d.${NC} %-30s ${YELLOW}%s${NC} ${GREEN}(%s)${NC}\n" "$idx" "$path" "$type" "$category"
         ((idx++))
     done
     echo ""
-    
+
     # Save to nest.json (only known projects)
     mkdir -p "$start_dir/.devcontainer"
     {
@@ -1942,7 +1947,7 @@ run_nest_mode() {
         echo "  \"projects\": ["
         local first=true
         for proj in "${known_projects[@]}"; do
-            IFS='|' read -r path type category <<< "$proj"
+            IFS='|' read -r path type category <<<"$proj"
             if [[ "$first" != true ]]; then echo ","; fi
             printf "    {\"path\": \"%s\", \"type\": \"%s\", \"category\": \"%s\"}" "$path" "$type" "$category"
             first=false
@@ -1950,11 +1955,11 @@ run_nest_mode() {
         echo ""
         echo "  ]"
         echo "}"
-    } > "$nest_json"
-    
+    } >"$nest_json"
+
     print_success "Saved configuration to $nest_json"
     echo ""
-    
+
     # ASK FOR CONFIRMATION FOR RECOGNISED PROJECTS
     # Skip if --regen was used (user already confirmed delete operation)
     if [[ "$NEST_REGEN" != true ]]; then
@@ -1970,13 +1975,13 @@ run_nest_mode() {
         print_info "Auto-proceeding with rebuild of ${#known_projects[@]} containers..."
         echo ""
     fi
-    
+
     # Prune stale VS Code UID-wrapper images (vsc-*-uid) ONCE here, before any base is built, for both --nest and --nest --regen. The per-build prune in build_base_image() is suppressed during nest via NESTED=true, so this is the single prune for the whole tree. --force only under --regen (which deleted the containers first); plain --nest relies on Podman skipping wrappers still in use by an active container.
     local -a excl_basenames=()
     if [[ ${#EXCLUDE_DIRS[@]} -gt 0 ]]; then
         local _ed
         for _ed in "${EXCLUDE_DIRS[@]}"; do
-            excl_basenames+=( "$(basename "${_ed%/}" | tr '[:upper:]' '[:lower:]')" )
+            excl_basenames+=("$(basename "${_ed%/}" | tr '[:upper:]' '[:lower:]')")
         done
     fi
 
@@ -1994,7 +1999,10 @@ run_nest_mode() {
         for wrapper in "${stale_wrappers[@]}"; do
             keep_wrapper=false
             for _bn in "${excl_basenames[@]}"; do
-                [[ -n "$_bn" && "$wrapper" == "localhost/vsc-$_bn-"* ]] && { keep_wrapper=true; break; }
+                [[ -n "$_bn" && "$wrapper" == "localhost/vsc-$_bn-"* ]] && {
+                    keep_wrapper=true
+                    break
+                }
             done
             if [[ "$keep_wrapper" == true ]]; then
                 print_info "Excluding wrapper image (kept): $wrapper"
@@ -2016,24 +2024,24 @@ run_nest_mode() {
     # Execute builds (only known projects)
     print_header "Building recognised containers"
     echo ""
-    
+
     for proj in "${known_projects[@]}"; do
-        IFS='|' read -r path type category <<< "$proj"
+        IFS='|' read -r path type category <<<"$proj"
         local full_path="$start_dir/$path"
         [[ "$path" == "." ]] && full_path="$start_dir"
-        
+
         # Verify project directory exists
         [[ ! -d "$full_path" ]] && continue
-        
+
         # Skip --exclude'd projects at build time (they stay recorded in nest.json)
         if [[ ${#EXCLUDE_DIRS[@]} -gt 0 ]] && nest_path_is_excluded "$full_path" "$start_dir"; then
             print_info "Excluding (kept in nest.json): $path"
             continue
         fi
-        
+
         echo ""
         print_info "$type: $path ($category)"
-        (cd "$full_path" && NESTED=true "$SCRIPT_DIR/containerise.sh" --defaults --"${type,,}" --"$category" <<< y)
+        (cd "$full_path" && NESTED=true "$SCRIPT_DIR/containerise.sh" --defaults --"${type,,}" --"$category" <<<y)
     done
 
     # Regenerate the root scaffold
@@ -2044,10 +2052,10 @@ run_nest_mode() {
         else
             echo ""
             print_info "Root scaffold: $start_dir (dev-tools img)"
-            (cd "$start_dir" && NESTED=true "$SCRIPT_DIR/containerise.sh" --defaults --img --dev-tools <<< y)
+            (cd "$start_dir" && NESTED=true "$SCRIPT_DIR/containerise.sh" --defaults --img --dev-tools <<<y)
         fi
     fi
-    
+
     rm -f "$nest_json.tmp"
     echo ""
     print_header_success "Nest Mode Complete"
@@ -2060,12 +2068,12 @@ run_nest_mode() {
 main() {
     # Parse arguments
     parse_args "$@"
-    
+
     # Propagate the auto-confirm switch to the shared confirm() helper and to any child containerise.sh invocations spawned during --nest rebuilds.
     if [[ "$ASSUME_YES" == true ]]; then
         export DC_ASSUME_YES=true
     fi
-    
+
     # Suppress "Emulate Docker CLI using podman" advisory on the host.
     # The VS Code Dev Containers extension probes the Docker socket (docker version, docker buildx version) on the host machine, which triggers this message when podman is emulating the Docker CLI.  The presence of either the system-wide or user-level sentinel file is the documented opt-out mechanism.
     # Only run on the host (not inside a devcontainer) to avoid redundant work.
@@ -2081,67 +2089,67 @@ main() {
             fi
         fi
     fi
-    
+
     # Show help if requested
     if [[ "$SHOW_HELP" == true ]]; then
         show_help
         exit 0
     fi
-    
+
     # Always set project path first
     if [[ -z "$PROJECT_PATH" ]]; then
         PROJECT_PATH="$(pwd)"
     fi
-    
+
     # Load categories from YAML
     load_categories
-    
+
     # Handle --nest mode early and exit
     if [[ "$NEST_MODE" == true ]]; then
         run_nest_mode "$PROJECT_PATH" "${CATEGORY_FLAGS[@]}"
         exit 0
     fi
-    
+
     if [[ "$PRUNE_MODE" == true ]]; then
         run_prune_mode "$PROJECT_PATH"
         exit 0
     fi
-    
+
     # Handle --bare mode
     if [[ "$BARE_MODE" == true ]]; then
         print_header "Dev-Control Containerisation (Bare Mode)"
         print_info "Setting up minimal devcontainer (custom base image only)"
         # Bare mode: don't require defaults, continue to interactive config
     fi
-    
+
     # Always load user configuration (GPG, mounts, GitHub user, etc.)
     load_container_config
-    
+
     # Ensure container name is set from folder if not in config
     if [[ -z "$CFG_CONTAINER_NAME" ]]; then
         CFG_CONTAINER_NAME=$(basename "$PROJECT_PATH")
     fi
-    
+
     # Check if already in devcontainer
     if is_in_devcontainer; then
         print_warning "Already running inside a devcontainer"
         print_info "This script is meant to be run on the host machine"
         exit 0
     fi
-    
+
     # Run interactive config unless using --defaults
     if [[ "$USE_DEFAULTS" != true ]]; then
         # Only run full interactive mode if no MODE specified
         if [[ -z "$MODE" ]]; then
             print_header "Dev-Control Containerisation"
             detect_project_path "$PROJECT_PATH"
-            load_container_config  # Reload if path changed
+            load_container_config # Reload if path changed
         fi
         run_interactive_config
     else
         print_info "Using saved defaults from configuration"
     fi
-    
+
     # Handle MODE-based workflows (--base or --img)
     if [[ -n "$MODE" ]]; then
         if [[ -z "$CATEGORY_FLAG" ]]; then
@@ -2150,14 +2158,14 @@ main() {
             show_help
             exit 1
         fi
-        
+
         # Auto-enable NVIDIA for categories that use CUDA
         case "$CATEGORY_FLAG" in
-            streaming|data-science|game-dev|art)
+            streaming | data-science | game-dev | art)
                 CFG_ENABLE_NVIDIA_DEVICES="true"
                 ;;
         esac
-        
+
         if [[ "$MODE" == "base" ]]; then
             build_base_image "$CATEGORY_FLAG"
             exit 0
@@ -2166,7 +2174,7 @@ main() {
             exit 0
         fi
     fi
-    
+
     # Bare mode requires defaults or will use interactive config
     if [[ "$BARE_MODE" == true ]]; then
         if [[ "$USE_DEFAULTS" != true ]]; then
@@ -2175,7 +2183,7 @@ main() {
             exit 1
         fi
     fi
-    
+
     # Check/install podman (optional)
     if ! check_podman; then
         if confirm "Install rootless podman?"; then
@@ -2184,7 +2192,7 @@ main() {
             print_warning "Continuing without podman verification"
         fi
     fi
-    
+
     # Generate devcontainer
     if [[ -d "$PROJECT_PATH/.devcontainer" ]]; then
         if confirm "Devcontainer directory exists. Overwrite?"; then
@@ -2195,7 +2203,7 @@ main() {
     else
         generate_devcontainer
     fi
-    
+
     show_activation_instructions
 }
 

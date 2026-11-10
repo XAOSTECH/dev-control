@@ -51,7 +51,7 @@ git_root() {
 # Require being in a git repository (exits with error if not)
 # Usage: require_git_repo
 require_git_repo() {
-    if ! git rev-parse --git-dir > /dev/null 2>&1; then
+    if ! git rev-parse --git-dir >/dev/null 2>&1; then
         print_error "Not a git repository."
         exit 1
     fi
@@ -61,7 +61,7 @@ require_git_repo() {
 # Usage: require_clean_worktree [allow_prompt]
 require_clean_worktree() {
     local allow_prompt="${1:-false}"
-    
+
     if ! git diff --quiet 2>/dev/null || ! git diff --cached --quiet 2>/dev/null; then
         if [[ "$allow_prompt" == "true" ]]; then
             print_warning "You have uncommitted changes."
@@ -79,14 +79,14 @@ require_clean_worktree() {
 # Require GitHub CLI to be installed and authenticated
 # Usage: require_gh_cli
 require_gh_cli() {
-    if ! command -v gh &> /dev/null; then
+    if ! command -v gh &>/dev/null; then
         print_error "GitHub CLI (gh) is not installed."
         echo -e "  Install with: ${CYAN}sudo apt install gh${NC} or ${CYAN}brew install gh${NC}"
         echo -e "  Then run: ${CYAN}gh auth login${NC}"
         exit 1
     fi
-    
-    if ! gh auth status &> /dev/null; then
+
+    if ! gh auth status &>/dev/null; then
         print_error "GitHub CLI is not authenticated."
         echo -e "  Run: ${CYAN}gh auth login${NC}"
         exit 1
@@ -96,7 +96,7 @@ require_gh_cli() {
 # Require git to be installed
 # Usage: require_git
 require_git() {
-    if ! command -v git &> /dev/null; then
+    if ! command -v git &>/dev/null; then
         print_error "Git is not installed."
         exit 1
     fi
@@ -119,12 +119,12 @@ get_remote_url() {
 parse_github_url() {
     local url="$1"
     local owner="" repo=""
-    
+
     if [[ "$url" =~ github\.com[:/]([^/]+)/([^/.]+) ]]; then
         owner="${BASH_REMATCH[1]}"
         repo="${BASH_REMATCH[2]%.git}"
     fi
-    
+
     echo "$owner $repo"
 }
 
@@ -134,7 +134,7 @@ get_repo_owner() {
     local dir="${1:-.}"
     local url
     url=$(get_remote_url "$dir")
-    read -r owner _ <<< "$(parse_github_url "$url")"
+    read -r owner _ <<<"$(parse_github_url "$url")"
     echo "$owner"
 }
 
@@ -144,7 +144,7 @@ get_repo_name() {
     local dir="${1:-.}"
     local url
     url=$(get_remote_url "$dir")
-    read -r _ repo <<< "$(parse_github_url "$url")"
+    read -r _ repo <<<"$(parse_github_url "$url")"
     echo "$repo"
 }
 
@@ -163,7 +163,7 @@ get_current_branch() {
 get_default_branch() {
     local default
     default=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
-    
+
     if [[ -z "$default" ]]; then
         if git show-ref --verify --quiet refs/heads/main; then
             default="main"
@@ -173,7 +173,7 @@ get_default_branch() {
             default="master"
         fi
     fi
-    
+
     echo "${default:-main}"
 }
 
@@ -199,7 +199,7 @@ require_feature_branch() {
     current=$(get_current_branch)
     local default
     default=$(get_default_branch)
-    
+
     if [[ "$current" == "$default" ]] || [[ "$current" == "main" ]] || [[ "$current" == "master" ]]; then
         print_error "You are on the default branch ($current). Create a feature branch first."
         exit 1
@@ -232,11 +232,11 @@ has_untracked_files() {
 # Usage: get_status_summary
 get_status_summary() {
     local staged=0 modified=0 untracked=0
-    
+
     staged=$(git diff --cached --numstat 2>/dev/null | wc -l)
     modified=$(git diff --numstat 2>/dev/null | wc -l)
     untracked=$(git ls-files --others --exclude-standard 2>/dev/null | wc -l)
-    
+
     echo "staged:$staged modified:$modified untracked:$untracked"
 }
 

@@ -25,7 +25,7 @@ DC_PROJECT_CONTAINER_CONFIG=".devcontainer.yaml"
 
 # Default values (neutral defaults, customisable for any region)
 declare -A CONTAINER_DEFAULTS=(
-    ["container_name"]=""  # Will be set to folder name if empty
+    ["container_name"]="" # Will be set to folder name if empty
     ["github_user"]=""
     ["github_user_email"]=""
     ["gpg_key_id"]=""
@@ -144,18 +144,20 @@ load_categories() {
         if [[ -n "$current_category" && "$line" =~ ^[[:space:]]+([a-zA-Z][a-zA-Z0-9_-]*):[[:space:]]*(.*) ]]; then
             field="${BASH_REMATCH[1]}"
             value="${BASH_REMATCH[2]}"
-            value="${value#\"}" ; value="${value%\"}"
-            value="${value#\'}"; value="${value%\'}"
+            value="${value#\"}"
+            value="${value%\"}"
+            value="${value#\'}"
+            value="${value%\'}"
 
             case "$field" in
-                image)       BASE_IMAGE_CATEGORIES["$current_category"]="$value" ;;
-                features)    CATEGORY_FEATURES["$current_category"]="$value" ;;
-                extensions)  CATEGORY_EXTENSIONS["$current_category"]="$value" ;;
+                image) BASE_IMAGE_CATEGORIES["$current_category"]="$value" ;;
+                features) CATEGORY_FEATURES["$current_category"]="$value" ;;
+                extensions) CATEGORY_EXTENSIONS["$current_category"]="$value" ;;
                 github-path) CATEGORY_GITHUB_PATHS["$current_category"]="$value" ;;
-                nvidia)      CATEGORY_NVIDIA["$current_category"]="$value" ;;
+                nvidia) CATEGORY_NVIDIA["$current_category"]="$value" ;;
             esac
         fi
-    done < "$categories_file"
+    done <"$categories_file"
 }
 
 # ============================================================================
@@ -191,34 +193,34 @@ parse_container_yaml() {
             # Export to current config (skipping empty values).
             [[ -z "$value" ]] && continue
             case "$key" in
-                container_name)   CFG_CONTAINER_NAME="$value" ;;
-                github_user)      CFG_GITHUB_USER="$value" ;;
+                container_name) CFG_CONTAINER_NAME="$value" ;;
+                github_user) CFG_GITHUB_USER="$value" ;;
                 github_user_email) CFG_GITHUB_USER_EMAIL="$value" ;;
-                gpg_key_id)       CFG_GPG_KEY_ID="$value" ;;
-                timezone)         CFG_TIMEZONE="$value" ;;
-                locale)           CFG_LOCALE="$value" ;;
-                ubuntu_mirror)    CFG_UBUNTU_MIRROR="$value" ;;
+                gpg_key_id) CFG_GPG_KEY_ID="$value" ;;
+                timezone) CFG_TIMEZONE="$value" ;;
+                locale) CFG_LOCALE="$value" ;;
+                ubuntu_mirror) CFG_UBUNTU_MIRROR="$value" ;;
                 use_base_category) CFG_USE_BASE_CATEGORY="$value" ;;
-                base_category)    CFG_BASE_CATEGORY="$value" ;;
-                base_image)       CFG_BASE_IMAGE="$value" ;;
-                hush_login)       CFG_HUSH_LOGIN="$value" ;;
+                base_category) CFG_BASE_CATEGORY="$value" ;;
+                base_image) CFG_BASE_IMAGE="$value" ;;
+                hush_login) CFG_HUSH_LOGIN="$value" ;;
                 vscode_extensions) CFG_VSCODE_EXTENSIONS="$value" ;;
-                mount_gpg)        CFG_MOUNT_GPG="$value" ;;
-                mount_gh_config)  CFG_MOUNT_GH_CONFIG="$value" ;;
+                mount_gpg) CFG_MOUNT_GPG="$value" ;;
+                mount_gh_config) CFG_MOUNT_GH_CONFIG="$value" ;;
                 mount_docker_socket) CFG_MOUNT_DOCKER_SOCKET="$value" ;;
-                mount_wrangler)   CFG_MOUNT_WRANGLER="$value" ;;
-                install_gh_cli)   CFG_INSTALL_GH_CLI="$value" ;;
-                install_git_control|install_dev_control) CFG_INSTALL_DEV_CONTROL="$value" ;;
-                git_control_version|dev_control_version) CFG_DEV_CONTROL_VERSION="$value" ;;
+                mount_wrangler) CFG_MOUNT_WRANGLER="$value" ;;
+                install_gh_cli) CFG_INSTALL_GH_CLI="$value" ;;
+                install_git_control | install_dev_control) CFG_INSTALL_DEV_CONTROL="$value" ;;
+                git_control_version | dev_control_version) CFG_DEV_CONTROL_VERSION="$value" ;;
                 # Streaming/CUDA features
-                install_cuda)     CFG_INSTALL_CUDA="$value" ;;
-                install_ffmpeg)   CFG_INSTALL_FFMPEG="$value" ;;
+                install_cuda) CFG_INSTALL_CUDA="$value" ;;
+                install_ffmpeg) CFG_INSTALL_FFMPEG="$value" ;;
                 install_nginx_rtmp) CFG_INSTALL_NGINX_RTMP="$value" ;;
                 install_streaming_utils) CFG_INSTALL_STREAMING_UTILS="$value" ;;
                 enable_nvidia_devices) CFG_ENABLE_NVIDIA_DEVICES="$value" ;;
             esac
         fi
-    done < "$file"
+    done <"$file"
 }
 
 # Load configuration from all sources
@@ -289,7 +291,7 @@ save_container_config() {
 
     mkdir -p "$dir"
 
-    cat > "$file" << EOF
+    cat >"$file" <<EOF
 # Dev-Control container configuration
 # Generated by containerise.sh on $(date +%Y-%m-%d)
 #
@@ -352,7 +354,7 @@ generate_git_config_dockerfile() {
     local user="$1"
     local email="$2"
     local gpg_key="$3"
-    local home_dir="$4"  # Optional: if running as root for another user
+    local home_dir="$4" # Optional: if running as root for another user
 
     local home_prefix=""
     if [[ -n "$home_dir" ]]; then
@@ -427,7 +429,7 @@ check_podman() {
     fi
 
     # Check if rootless
-    if podman info --format '{{.Host.Security.Rootless}}' 2>/dev/null | grep  true; then
+    if podman info --format '{{.Host.Security.Rootless}}' 2>/dev/null | grep true; then
         print_success "Rootless podman available"
         return 0
     else
@@ -449,7 +451,7 @@ install_rootless_podman() {
     print_info "Configuring rootless podman..."
 
     # Enable user namespaces
-    if [[ ! -f /etc/subuid ]] || ! grep  "^$(whoami):" /etc/subuid; then
+    if [[ ! -f /etc/subuid ]] || ! grep "^$(whoami):" /etc/subuid; then
         sudo usermod --add-subuids 100000-165535 --add-subgids 100000-165535 "$(whoami)"
     fi
 
@@ -492,8 +494,8 @@ select_from_list() {
         return
     fi
 
-    if [[ "$choice" =~ ^[0-9]+$ ]] && (( choice >= 1 && choice <= ${#options[@]} )); then
-        echo "${options[$((choice-1))]}"
+    if [[ "$choice" =~ ^[0-9]+$ ]] && ((choice >= 1 && choice <= ${#options[@]})); then
+        echo "${options[$((choice - 1))]}"
     elif [[ "$choice" == "$i" ]] || [[ "$choice" == "c" ]] || [[ "$choice" == "C" ]]; then
         read -rp "Enter custom value: " custom
         echo "$custom"
@@ -532,8 +534,8 @@ select_mirror() {
         return
     fi
 
-    if [[ "$choice" =~ ^[0-9]+$ ]] && (( choice >= 1 && choice <= ${#keys[@]} )); then
-        echo "${UBUNTU_MIRRORS[${keys[$((choice-1))]}]}"
+    if [[ "$choice" =~ ^[0-9]+$ ]] && ((choice >= 1 && choice <= ${#keys[@]})); then
+        echo "${UBUNTU_MIRRORS[${keys[$((choice - 1))]}]}"
     elif [[ "$choice" == "$i" ]]; then
         read -rp "Enter custom mirror URL: " custom
         echo "$custom"
@@ -567,12 +569,12 @@ add_devcontainer_to_gitignore() {
         if ! grep -qxF "$entry" "$gitignore" 2>/dev/null; then
             # Add section header if first addition
             if [[ "$added" == false ]]; then
-                echo "" >> "$gitignore"
-                echo "# Personal devcontainer config (generated by containerise.sh)" >> "$gitignore"
-                echo "# Use _example or _minimal variants as tracked references" >> "$gitignore"
+                echo "" >>"$gitignore"
+                echo "# Personal devcontainer config (generated by containerise.sh)" >>"$gitignore"
+                echo "# Use _example or _minimal variants as tracked references" >>"$gitignore"
                 added=true
             fi
-            echo "$entry" >> "$gitignore"
+            echo "$entry" >>"$gitignore"
         fi
     done
 
@@ -700,7 +702,7 @@ write_devcontainer_readme() {
         echo ""
         echo "For more information, see the Dev Containers docs:"
         echo "https://code.visualstudio.com/docs/devcontainers/containers"
-    } > "$readme_file"
+    } >"$readme_file"
 
     print_success "Created: $readme_file"
 }
@@ -714,28 +716,28 @@ generate_category_dockerfile() {
     local category="$1"
     local output_path="$2"
     local containers_dir="$DEV_CONTROL_DIR/config/containers"
-    
+
     # Validate category exists
     if [[ ! -f "$containers_dir/${category}.Dockerfile" ]]; then
         print_error "Unknown category: $category"
         return 1
     fi
-    
+
     # Build git config command for footer template
     local git_config_cmd
     git_config_cmd=$(generate_git_config_dockerfile "$CFG_GITHUB_USER" "$CFG_GITHUB_USER_EMAIL" "$CFG_GPG_KEY_ID" "/home/${category}")
-    
+
     # Escape & for sed (git config command contains &&)
     local git_config_cmd_escaped="${git_config_cmd//&/\\&}"
-    
+
     # Get locale and timezone from config (with fallback defaults)
     local locale="${CFG_LOCALE:-en_US.UTF-8}"
     local timezone="${CFG_TIMEZONE:-UTC}"
-    
+
     # Check if category needs video/render groups (streaming)
     local needs_device_groups=false
     [[ "$category" == "streaming" ]] && needs_device_groups=true
-    
+
     # Concatenate: common + category-specific + optional groups + footer
     {
         # Common base layer (substitute locale and timezone variables)
@@ -747,10 +749,10 @@ generate_category_dockerfile() {
         # Category-specific layer
         cat "$containers_dir/${category}.Dockerfile"
         echo ""
-        
+
         # Add device groups if needed (before user creation)
         if [[ "$needs_device_groups" == true ]]; then
-            cat << 'DOCKERFILE_GROUPS'
+            cat <<'DOCKERFILE_GROUPS'
 # ============================================================================
 # Streaming: Create video and render groups for DRI/KMS device access
 # ============================================================================
@@ -759,17 +761,17 @@ RUN groupadd -f -g 44 video && groupadd -f -g 109 render
 DOCKERFILE_GROUPS
             echo ""
         fi
-        
+
         # Common footer (user setup, dev-control)
         # Replace template variables: CATEGORY, GIT_CONFIG_CMD
         sed -e "s/\${CATEGORY}/${category}/g" \
             -e "s|\${GIT_CONFIG_CMD}|${git_config_cmd_escaped}|g" \
             "$containers_dir/footer.Dockerfile"
-            
+
         # Add streaming-specific user group membership
         if [[ "$needs_device_groups" == true ]]; then
             echo ""
-            cat << DOCKERFILE_STREAMING_GROUPS
+            cat <<DOCKERFILE_STREAMING_GROUPS
 
 # Add ${category} to video and render groups for DRI/KMS access
 USER root
@@ -777,8 +779,8 @@ RUN usermod -aG video,render ${category}
 USER ${category}
 DOCKERFILE_STREAMING_GROUPS
         fi
-        
-    } > "$output_path"
-    
+
+    } >"$output_path"
+
     print_success "Generated category Dockerfile: $output_path"
 }

@@ -86,7 +86,7 @@ auto_resolve_all_conflicts() {
     local attempts=0
 
     while true; do
-        attempts=$((attempts+1))
+        attempts=$((attempts + 1))
         if auto_add_conflicted_files "$mode"; then
             # git rebase --continue succeeded and rebase finished
             return 0
@@ -101,7 +101,7 @@ auto_resolve_all_conflicts() {
             return 1
         fi
 
-        if (( attempts > 15 )); then
+        if ((attempts > 15)); then
             print_error "Too many auto-resolve attempts; aborting"
             return 1
         fi

@@ -34,11 +34,11 @@ REPO_NEW_NAME="" # target name for --repo mode
 
 # main() — parse CLI args, apply defaults, print the run banner. Only invoked when the module is executed directly (see the guarded call at the foot of the file).
 main() {
-# Argument parsing
-while [[ $# -gt 0 ]]; do
-    case "$1" in
-        -h|--help)
-            cat << 'EOF'
+    # Argument parsing
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -h | --help)
+                cat <<'EOF'
 Branch Renaming Tool - Rename branches or repositories
 
 USAGE:
@@ -74,101 +74,102 @@ NOTES:
   - Updates GitHub default branch setting after branch rename
 
 EOF
-            exit 0
-            ;;
-        -n|--dry-run)
-            DRY_RUN=true
-            shift
-            ;;
-        --branch)
-            MODE="branch"
-            if [[ -n "${2:-}" && "${2}" != -* ]]; then
-                if [[ "$2" =~ ^([^:]+):([^:]+)$ ]]; then
-                    OLD_BRANCH="${BASH_REMATCH[1]}"
-                    NEW_BRANCH="${BASH_REMATCH[2]}"
-                elif [[ "$2" =~ ^([^-]+)-\>(.+)$ ]]; then
-                    OLD_BRANCH="${BASH_REMATCH[1]}"
-                    NEW_BRANCH="${BASH_REMATCH[2]}"
-                else
-                    NEW_BRANCH="$2"
-                fi
-                shift 2
-            else
+                exit 0
+                ;;
+            -n | --dry-run)
+                DRY_RUN=true
                 shift
-            fi
-            ;;
-        --repo)
-            MODE="repo"
-            if [[ -z "${2:-}" || "${2}" == -* ]]; then
-                echo "Error: --repo requires a new repository name." >&2; exit 1
-            fi
-            REPO_NEW_NAME="$2"
-            shift 2
-            ;;
-        *)
-            # Check if it's a branch spec (contains : or ->)
-            if [[ "$1" =~ ^([^:]+):([^:]+)$ ]]; then
-                # Format: Main:main
-                OLD_BRANCH="${BASH_REMATCH[1]}"
-                NEW_BRANCH="${BASH_REMATCH[2]}"
-                shift
-            elif [[ "$1" =~ ^([^-]+)-\>(.+)$ ]]; then
-                # Format: Main->main
-                OLD_BRANCH="${BASH_REMATCH[1]}"
-                NEW_BRANCH="${BASH_REMATCH[2]}"
-                shift
-            elif [[ -z "$OWNER" ]]; then
-                OWNER="$1"
-                shift
-            elif [[ -z "$NEW_BRANCH" ]]; then
-                # Could be either old_branch or new_branch
-                if [[ -z "$OLD_BRANCH" ]]; then
-                    # If next arg looks like a branch or is missing, this is new_branch only
-                    if [[ $# -eq 1 ]] || [[ "$2" == /* ]] || [[ "$2" == .* ]] || [[ -d "$2" ]]; then
-                        NEW_BRANCH="$1"
+                ;;
+            --branch)
+                MODE="branch"
+                if [[ -n "${2:-}" && "${2}" != -* ]]; then
+                    if [[ "$2" =~ ^([^:]+):([^:]+)$ ]]; then
+                        OLD_BRANCH="${BASH_REMATCH[1]}"
+                        NEW_BRANCH="${BASH_REMATCH[2]}"
+                    elif [[ "$2" =~ ^([^-]+)-\>(.+)$ ]]; then
+                        OLD_BRANCH="${BASH_REMATCH[1]}"
+                        NEW_BRANCH="${BASH_REMATCH[2]}"
                     else
-                        OLD_BRANCH="$1"
+                        NEW_BRANCH="$2"
                     fi
+                    shift 2
                 else
-                    NEW_BRANCH="$1"
+                    shift
                 fi
-                shift
-            else
-                # Must be a path
-                REPO_PATHS+=("$1")
-                shift
-            fi
-            ;;
-    esac
-done
+                ;;
+            --repo)
+                MODE="repo"
+                if [[ -z "${2:-}" || "${2}" == -* ]]; then
+                    echo "Error: --repo requires a new repository name." >&2
+                    exit 1
+                fi
+                REPO_NEW_NAME="$2"
+                shift 2
+                ;;
+            *)
+                # Check if it's a branch spec (contains : or ->)
+                if [[ "$1" =~ ^([^:]+):([^:]+)$ ]]; then
+                    # Format: Main:main
+                    OLD_BRANCH="${BASH_REMATCH[1]}"
+                    NEW_BRANCH="${BASH_REMATCH[2]}"
+                    shift
+                elif [[ "$1" =~ ^([^-]+)-\>(.+)$ ]]; then
+                    # Format: Main->main
+                    OLD_BRANCH="${BASH_REMATCH[1]}"
+                    NEW_BRANCH="${BASH_REMATCH[2]}"
+                    shift
+                elif [[ -z "$OWNER" ]]; then
+                    OWNER="$1"
+                    shift
+                elif [[ -z "$NEW_BRANCH" ]]; then
+                    # Could be either old_branch or new_branch
+                    if [[ -z "$OLD_BRANCH" ]]; then
+                        # If next arg looks like a branch or is missing, this is new_branch only
+                        if [[ $# -eq 1 ]] || [[ "$2" == /* ]] || [[ "$2" == .* ]] || [[ -d "$2" ]]; then
+                            NEW_BRANCH="$1"
+                        else
+                            OLD_BRANCH="$1"
+                        fi
+                    else
+                        NEW_BRANCH="$1"
+                    fi
+                    shift
+                else
+                    # Must be a path
+                    REPO_PATHS+=("$1")
+                    shift
+                fi
+                ;;
+        esac
+    done
 
-# Set defaults
-OWNER="${OWNER:-$(gh api user --jq '.login' 2>/dev/null || echo "")}"
-NEW_BRANCH="${NEW_BRANCH:-main}"
-[[ -z "$MODE" ]] && MODE="branch"
+    # Set defaults
+    OWNER="${OWNER:-$(gh api user --jq '.login' 2>/dev/null || echo "")}"
+    NEW_BRANCH="${NEW_BRANCH:-main}"
+    [[ -z "$MODE" ]] && MODE="branch"
 
-if [[ "$DRY_RUN" == "true" ]]; then
-    print_warning "DRY RUN MODE - No changes will be made"
-fi
+    if [[ "$DRY_RUN" == "true" ]]; then
+        print_warning "DRY RUN MODE - No changes will be made"
+    fi
 
-print_header "Branch Renaming Tool"
+    print_header "Branch Renaming Tool"
 }
 
 # Function to detect default branch in a git repo
 detect_default_branch() {
     local repo_path="$1"
     local branch
-    
+
     pushd "$repo_path" &>/dev/null || return 1
-    
+
     # Try to get remote default branch
     branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
-    
+
     # Fallback to current branch
     if [[ -z "$branch" ]]; then
         branch=$(git symbolic-ref --short HEAD 2>/dev/null || echo "")
     fi
-    
+
     popd &>/dev/null || true
     echo "$branch"
 }
@@ -185,23 +186,23 @@ rename_repo_branch() {
     local old_branch="$2"
     local new_branch="$3"
     local repo_name="$4"
-    
+
     print_separator
     print_section "Processing: $repo_name"
     print_info "Path: $repo_path"
-    
+
     pushd "$repo_path" &>/dev/null || {
         print_error "Failed to access directory: $repo_path"
         return 1
     }
-    
+
     # Verify it's a git repo
     if [[ ! -d ".git" ]]; then
         print_error "Not a git repository: $repo_path"
         popd &>/dev/null || true
         return 1
     fi
-    
+
     # Auto-detect old branch if not specified
     if [[ -z "$old_branch" ]]; then
         old_branch=$(detect_default_branch ".")
@@ -212,20 +213,20 @@ rename_repo_branch() {
         fi
         print_info "Detected branch: $old_branch"
     fi
-    
+
     # Check if already on target branch
     if [[ "$old_branch" == "$new_branch" ]]; then
         print_success "Already using '$new_branch', skipping"
         popd &>/dev/null || true
         return 0
     fi
-    
+
     # Fetch latest from remote
     if git remote get-url origin &>/dev/null; then
         print_info "Fetching from remote..."
         git fetch origin --prune --prune-tags 2>/dev/null || print_warning "Failed to fetch (continuing anyway)"
     fi
-    
+
     # Check if old branch exists
     if ! git show-ref --verify --quiet "refs/heads/$old_branch"; then
         print_warning "Branch '$old_branch' doesn't exist locally, checking remote..."
@@ -242,7 +243,7 @@ rename_repo_branch() {
             return 1
         fi
     fi
-    
+
     # Checkout old branch if not already on it
     current_branch=$(git symbolic-ref --short HEAD 2>/dev/null || echo "")
     if [[ "$current_branch" != "$old_branch" ]]; then
@@ -253,7 +254,7 @@ rename_repo_branch() {
             return 1
         }
     fi
-    
+
     # Check for tag conflicts
     if git show-ref --verify --quiet "refs/tags/$new_branch"; then
         print_warning "Local tag '$new_branch' exists and will cause push conflicts"
@@ -264,7 +265,7 @@ rename_repo_branch() {
             print_info "[DRY RUN] Would delete local tag '$new_branch'"
         fi
     fi
-    
+
     # Rename locally
     if [[ "$DRY_RUN" == "true" ]]; then
         print_info "[DRY RUN] Would rename $old_branch → $new_branch locally"
@@ -272,7 +273,7 @@ rename_repo_branch() {
         print_info "Renaming $old_branch → $new_branch locally..."
         git branch -m "$old_branch" "$new_branch"
     fi
-    
+
     # Push new branch to remote if remote exists
     if git remote get-url origin &>/dev/null; then
         if [[ "$DRY_RUN" == "true" ]]; then
@@ -286,23 +287,23 @@ rename_repo_branch() {
             if git push origin "refs/heads/$new_branch:refs/heads/$new_branch"; then
                 # Set upstream tracking
                 git branch --set-upstream-to="origin/$new_branch" "$new_branch"
-                
+
                 # Try to update default branch on GitHub
                 if command -v gh &>/dev/null && [[ -n "$OWNER" ]]; then
                     print_info "Updating default branch on GitHub..."
-                    
+
                     # Debug: show what we're trying
                     local api_response
                     api_response=$(gh api "repos/$OWNER/$repo_name" -X PATCH -f default_branch="$new_branch" 2>&1)
                     local api_status=$?
-                    
+
                     if [[ $api_status -eq 0 ]]; then
                         print_success "Default branch updated to $new_branch on GitHub"
-                        
+
                         # Wait for GitHub to propagate the change
                         print_info "Waiting for GitHub to update..."
                         sleep 2
-                        
+
                         # Delete old branch from remote (safe now that it's not default)
                         print_info "Deleting $old_branch from remote..."
                         if git push origin --delete "$old_branch" 2>/dev/null; then
@@ -313,7 +314,7 @@ rename_repo_branch() {
                         fi
                     else
                         print_warning "Could not update GitHub default branch"
-                        
+
                         # Diagnose the issue
                         if echo "$api_response" | grep -q "Not Found"; then
                             print_error "Repository not found: $OWNER/$repo_name"
@@ -325,7 +326,7 @@ rename_repo_branch() {
                         else
                             print_warning "API error: $api_response"
                         fi
-                        
+
                         print_info "Manually update at: https://github.com/$OWNER/$repo_name/settings/branches"
                         print_warning "Cannot delete $old_branch from remote (it's still the default branch)"
                         print_info "After updating default branch on GitHub, run:"
@@ -335,7 +336,7 @@ rename_repo_branch() {
                     print_warning "GitHub CLI not available, cannot update default branch"
                     print_info "Manually update at: https://github.com/$OWNER/$repo_name/settings/branches"
                 fi
-                
+
                 print_success "✓ $repo_name: $old_branch → $new_branch"
             else
                 print_error "Failed to push to remote"
@@ -354,7 +355,7 @@ rename_repo_branch() {
             print_success "✓ $repo_name: $old_branch → $new_branch (local only)"
         fi
     fi
-    
+
     popd &>/dev/null || true
     echo ""
     return 0
@@ -365,7 +366,10 @@ rename_repository() {
     local new_name="$1"
     local repo_path="${REPO_PATHS[0]:-$(pwd)}"
 
-    pushd "$repo_path" &>/dev/null || { print_error "Failed to access: $repo_path"; return 1; }
+    pushd "$repo_path" &>/dev/null || {
+        print_error "Failed to access: $repo_path"
+        return 1
+    }
 
     if [[ ! -d ".git" ]]; then
         print_error "Not a git repository: $repo_path"
@@ -386,7 +390,7 @@ rename_repository() {
     fi
 
     print_header "Repository Rename: $old_name → $new_name"
-    print_kv "Owner"    "${OWNER:-unknown}"
+    print_kv "Owner" "${OWNER:-unknown}"
     print_kv "Old name" "$old_name"
     print_kv "New name" "$new_name"
     echo ""
@@ -431,97 +435,97 @@ rename_repository() {
 
 # main_dispatch() — drive the actual rename, either over the locally supplied paths or by listing matching repositories from GitHub. Only invoked when the module is executed directly.
 main_dispatch() {
-# Repository rename mode: single GitHub API call + remote URL update
-if [[ "$MODE" == "repo" ]]; then
-    rename_repository "$REPO_NEW_NAME"
-    print_header_success "Repository Rename Complete!"
-    return 0
-fi
+    # Repository rename mode: single GitHub API call + remote URL update
+    if [[ "$MODE" == "repo" ]]; then
+        rename_repository "$REPO_NEW_NAME"
+        print_header_success "Repository Rename Complete!"
+        return 0
+    fi
 
-# Branch rename mode (default)
-# Main execution
-if [[ ${#REPO_PATHS[@]} -gt 0 ]]; then
-    # Local mode: process specified paths
-    print_info "Local mode: Processing ${#REPO_PATHS[@]} repositories"
-    
-    if [[ -n "$OLD_BRANCH" ]]; then
-        print_info "Renaming: $OLD_BRANCH → $NEW_BRANCH"
+    # Branch rename mode (default)
+    # Main execution
+    if [[ ${#REPO_PATHS[@]} -gt 0 ]]; then
+        # Local mode: process specified paths
+        print_info "Local mode: Processing ${#REPO_PATHS[@]} repositories"
+
+        if [[ -n "$OLD_BRANCH" ]]; then
+            print_info "Renaming: $OLD_BRANCH → $NEW_BRANCH"
+        else
+            print_info "Auto-detecting branches, renaming to: $NEW_BRANCH"
+        fi
+
+        echo ""
+        for repo_path in "${REPO_PATHS[@]}"; do
+            repo_name=$(get_repo_name "$repo_path")
+            rename_repo_branch "$repo_path" "$OLD_BRANCH" "$NEW_BRANCH" "$repo_name"
+        done
+
     else
-        print_info "Auto-detecting branches, renaming to: $NEW_BRANCH"
-    fi
-    
-    echo ""
-    for repo_path in "${REPO_PATHS[@]}"; do
-        repo_name=$(get_repo_name "$repo_path")
-        rename_repo_branch "$repo_path" "$OLD_BRANCH" "$NEW_BRANCH" "$repo_name"
-    done
-    
-else
-    # GitHub mode: fetch repos from GitHub
-    if [[ -z "$OWNER" ]]; then
-        print_error "No owner specified and gh CLI not configured"
-        print_info "Usage: rename.sh OWNER [OLD_BRANCH] [NEW_BRANCH] [PATHS...]"
-        exit 1
-    fi
-    
-    # Auto-detect old branch if not specified
-    if [[ -z "$OLD_BRANCH" ]]; then
-        print_warning "No branch specified, detecting from GitHub repos..."
-        # Get most common default branch
-        OLD_BRANCH=$(gh repo list "$OWNER" --limit 1000 --json defaultBranchRef --jq '.[].defaultBranchRef.name' | sort | uniq -c | sort -rn | head -1 | awk '{print $2}')
-        if [[ -z "$OLD_BRANCH" ]]; then
-            print_error "Could not auto-detect branch"
+        # GitHub mode: fetch repos from GitHub
+        if [[ -z "$OWNER" ]]; then
+            print_error "No owner specified and gh CLI not configured"
+            print_info "Usage: rename.sh OWNER [OLD_BRANCH] [NEW_BRANCH] [PATHS...]"
             exit 1
         fi
-        print_info "Detected most common branch: $OLD_BRANCH"
-    fi
-    
-    print_info "GitHub mode: Renaming $OLD_BRANCH → $NEW_BRANCH for $OWNER"
-    
-    # Get all repos with the old branch
-    print_info "Fetching repositories from GitHub..."
-    REPOS=$(gh repo list "$OWNER" --limit 1000 --json name,defaultBranchRef --jq ".[] | select(.defaultBranchRef.name == \"$OLD_BRANCH\") | .name")
-    
-    if [[ -z "$REPOS" ]]; then
-        print_warning "No repositories found with default branch '$OLD_BRANCH'"
-        exit 0
-    fi
-    
-    echo ""
-    print_info "Found repositories with '$OLD_BRANCH' branch:"
-    echo "$REPOS" | while read -r repo; do
-        echo "  - $repo"
-    done
-    echo ""
-    
-    if ! confirm "Rename $OLD_BRANCH → $NEW_BRANCH for all these repos?"; then
-        print_info "Aborted"
-        exit 0
-    fi
-    
-    # Process each repo
-    echo "$REPOS" | while read -r repo; do
-        # Check if we have it locally
-        if [[ -d "$repo" ]]; then
-            rename_repo_branch "$repo" "$OLD_BRANCH" "$NEW_BRANCH" "$repo"
-        else
-            # Need to clone
-            print_separator
-            print_section "Processing: $OWNER/$repo"
-            print_info "Not found locally, cloning..."
-            
-            if gh repo clone "$OWNER/$repo" "$repo"; then
+
+        # Auto-detect old branch if not specified
+        if [[ -z "$OLD_BRANCH" ]]; then
+            print_warning "No branch specified, detecting from GitHub repos..."
+            # Get most common default branch
+            OLD_BRANCH=$(gh repo list "$OWNER" --limit 1000 --json defaultBranchRef --jq '.[].defaultBranchRef.name' | sort | uniq -c | sort -rn | head -1 | awk '{print $2}')
+            if [[ -z "$OLD_BRANCH" ]]; then
+                print_error "Could not auto-detect branch"
+                exit 1
+            fi
+            print_info "Detected most common branch: $OLD_BRANCH"
+        fi
+
+        print_info "GitHub mode: Renaming $OLD_BRANCH → $NEW_BRANCH for $OWNER"
+
+        # Get all repos with the old branch
+        print_info "Fetching repositories from GitHub..."
+        REPOS=$(gh repo list "$OWNER" --limit 1000 --json name,defaultBranchRef --jq ".[] | select(.defaultBranchRef.name == \"$OLD_BRANCH\") | .name")
+
+        if [[ -z "$REPOS" ]]; then
+            print_warning "No repositories found with default branch '$OLD_BRANCH'"
+            exit 0
+        fi
+
+        echo ""
+        print_info "Found repositories with '$OLD_BRANCH' branch:"
+        echo "$REPOS" | while read -r repo; do
+            echo "  - $repo"
+        done
+        echo ""
+
+        if ! confirm "Rename $OLD_BRANCH → $NEW_BRANCH for all these repos?"; then
+            print_info "Aborted"
+            exit 0
+        fi
+
+        # Process each repo
+        echo "$REPOS" | while read -r repo; do
+            # Check if we have it locally
+            if [[ -d "$repo" ]]; then
                 rename_repo_branch "$repo" "$OLD_BRANCH" "$NEW_BRANCH" "$repo"
             else
-                print_error "Failed to clone $repo"
-                echo ""
-            fi
-        fi
-    done
-fi
+                # Need to clone
+                print_separator
+                print_section "Processing: $OWNER/$repo"
+                print_info "Not found locally, cloning..."
 
-print_header_success "Branch Renaming Complete!"
-print_info "All repositories now use '$NEW_BRANCH' as default branch"
+                if gh repo clone "$OWNER/$repo" "$repo"; then
+                    rename_repo_branch "$repo" "$OLD_BRANCH" "$NEW_BRANCH" "$repo"
+                else
+                    print_error "Failed to clone $repo"
+                    echo ""
+                fi
+            fi
+        done
+    fi
+
+    print_header_success "Branch Renaming Complete!"
+    print_info "All repositories now use '$NEW_BRANCH' as default branch"
 }
 
 # Direct-execution entrypoint. When sourced, this block is skipped and the caller drives the public functions itself.

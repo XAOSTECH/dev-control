@@ -19,7 +19,7 @@ source "$DC_ROOT/scripts/lib/config.sh"
 source "$DC_ROOT/scripts/lib/tui.sh"
 
 show_help() {
-    cat << 'EOF'
+    cat <<'EOF'
 Dev-Control Configuration Manager
 
 USAGE:
@@ -54,16 +54,16 @@ EOF
 
 cmd_show() {
     print_header "Dev-Control Configuration"
-    
+
     load_dc_config
-    
+
     print_section "Current Values:"
     dc_config_show "${DC_JSON:+json}"
-    
+
     echo ""
     print_section "Config Files:"
     print_detail "Global" "$DC_GLOBAL_CONFIG"
-    
+
     local project_root
     if project_root=$(git rev-parse --show-toplevel 2>/dev/null); then
         if [[ -f "$project_root/$DC_PROJECT_CONFIG" ]]; then
@@ -81,28 +81,28 @@ cmd_get() {
         print_error "Usage: dc config get <key>"
         return 1
     fi
-    
+
     load_dc_config
     dc_config "${key//-/_}"
 }
 
 cmd_set() {
     local scope="project"
-    
+
     # Check for --global flag
     if [[ "$1" == "--global" ]]; then
         scope="global"
         shift
     fi
-    
+
     local key="$1"
     local value="$2"
-    
+
     if [[ -z "$key" || -z "$value" ]]; then
         print_error "Usage: dc config set [--global] <key> <value>"
         return 1
     fi
-    
+
     dc_config_set "$key" "$value" "$scope"
     print_success "Set $key = $value ($scope)"
 }
@@ -110,7 +110,7 @@ cmd_set() {
 cmd_edit() {
     local scope="${1:-project}"
     local config_file
-    
+
     if [[ "$scope" == "global" ]]; then
         config_file="$DC_GLOBAL_CONFIG"
         init_gc_config_dir
@@ -122,14 +122,14 @@ cmd_edit() {
         }
         config_file="$project_root/$DC_PROJECT_CONFIG"
     fi
-    
+
     # Create if doesn't exist
     if [[ ! -f "$config_file" ]]; then
         print_info "Creating $config_file"
-        cp "$DC_ROOT/config/example.dc-init.yaml" "$config_file" 2>/dev/null || \
-            echo "# Dev-Control configuration" > "$config_file"
+        cp "$DC_ROOT/config/example.dc-init.yaml" "$config_file" 2>/dev/null \
+            || echo "# Dev-Control configuration" >"$config_file"
     fi
-    
+
     ${EDITOR:-nano} "$config_file"
 }
 
@@ -139,26 +139,26 @@ cmd_init() {
         print_error "Not in a git repository"
         return 1
     }
-    
+
     local config_file="$project_root/$DC_PROJECT_CONFIG"
-    
+
     if [[ -f "$config_file" ]]; then
         print_warning "Config already exists: $config_file"
         if ! tui_confirm "Overwrite?"; then
             return 0
         fi
     fi
-    
+
     print_info "Creating project configuration..."
-    
+
     # Interactive setup using TUI
     local project_name licence github_org
-    
+
     project_name=$(tui_input "Project name:" "$(basename "$project_root")")
     licence=$(tui_choose "Default licence:" "MIT" "Apache-2.0" "GPL-3.0" "BSD-3-Clause" "LGPL-3.0" "Unlicence")
     github_org=$(tui_input "GitHub organisation (leave empty for personal):" "")
-    
-    cat > "$config_file" << EOF
+
+    cat >"$config_file" <<EOF
 # Dev-Control project configuration
 # Generated on $(date +%Y-%m-%d)
 
@@ -174,7 +174,7 @@ visibility: public
 auto-sign-commits: true
 template-set: default
 EOF
-    
+
     print_success "Created: $config_file"
 }
 
@@ -182,14 +182,14 @@ EOF
 main() {
     local cmd="${1:-show}"
     shift 2>/dev/null || true
-    
+
     case "$cmd" in
-        show|list) cmd_show ;;
+        show | list) cmd_show ;;
         get) cmd_get "$@" ;;
         set) cmd_set "$@" ;;
         edit) cmd_edit "$@" ;;
         init) cmd_init ;;
-        -h|--help|help) show_help ;;
+        -h | --help | help) show_help ;;
         *)
             # Check if it looks like a key
             if [[ "$cmd" =~ ^[a-z-]+$ ]]; then

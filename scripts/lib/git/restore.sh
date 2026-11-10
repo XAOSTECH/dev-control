@@ -65,7 +65,10 @@ restore_candidate() {
     if git ls-remote --heads origin "refs/heads/${candidate}" >/dev/null 2>&1; then
         TIMESTAMP=$(date -u +%Y%m%dT%H%M%SZ)
         local_restore="restore/${candidate//\//_}-${TIMESTAMP}"
-        git fetch origin "refs/heads/${candidate}:refs/heads/${local_restore}" || { print_error "Failed to fetch origin/${candidate}"; return 1; }
+        git fetch origin "refs/heads/${candidate}:refs/heads/${local_restore}" || {
+            print_error "Failed to fetch origin/${candidate}"
+            return 1
+        }
         git push -u origin "$local_restore" || print_warning "Failed to push restore branch to origin"
         print_success "Created restore branch: $local_restore"
         return 0
@@ -95,13 +98,13 @@ list_backups_and_restore() {
     echo "Choose a backup to inspect/restore:"
 
     for b in "${bundles[@]}"; do
-        idx=$((idx+1))
+        idx=$((idx + 1))
         choices[$idx]="bundle:$b"
         echo "  $idx) bundle: $(basename "$b")"
     done
 
     for t in "${tags[@]}"; do
-        idx=$((idx+1))
+        idx=$((idx + 1))
         choices[$idx]="tag:$t"
         echo "  $idx) tag: $t"
     done
@@ -123,14 +126,15 @@ list_backups_and_restore() {
         return 1
     fi
 
-    IFS=':' read -r typ val <<< "${choices[$sel]}"
+    IFS=':' read -r typ val <<<"${choices[$sel]}"
 
     TIMESTAMP=$(date -u +%Y%m%dT%H%M%SZ)
 
     if [[ "$typ" == "bundle" ]]; then
         local bundle_file="$val"
         echo "Bundle selected: $bundle_file"
-        echo "Contents:"; git bundle list-heads "$bundle_file" || true
+        echo "Contents:"
+        git bundle list-heads "$bundle_file" || true
 
         read -u 3 -rp "Enter the ref to restore (e.g. refs/heads/devcontainer/minimal) or 'q' to cancel: " ref_choice
         if [[ "$ref_choice" == "q" ]]; then
@@ -144,7 +148,10 @@ list_backups_and_restore() {
             print_info "DRY-RUN: would run: git fetch \"$bundle_file\" \"$ref_choice\":refs/heads/$restore_branch"
             print_info "DRY-RUN: would run: git push -u origin \"$restore_branch\""
         else
-            git fetch "$bundle_file" "$ref_choice":"refs/heads/$restore_branch" || { print_error "Failed to fetch ref from bundle"; return 1; }
+            git fetch "$bundle_file" "$ref_choice":"refs/heads/$restore_branch" || {
+                print_error "Failed to fetch ref from bundle"
+                return 1
+            }
             git push -u origin "$restore_branch" || print_warning "Failed to push restore branch to origin; branch is local"
         fi
 

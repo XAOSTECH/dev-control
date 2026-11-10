@@ -2,7 +2,7 @@
 #
 # GitHub MCP Setup Script
 # Automates GitHub MCP configuration for VS Code with secure token management
-# 
+#
 # Features:
 #   ✓ Automated PAT creation via browser auth (GitHub CLI)
 #   ✓ Configures VS Code MCP settings with secure headers
@@ -13,7 +13,7 @@
 #
 # Usage:
 #   ./mcp-setup.sh [--config-only] [--test] [--show-token] [--help]
-#   
+#
 #   (no args)           Initialise MCP and configure servers (DEFAULT)
 #   --config-only       Initialise MCP config only
 #   --test              Test GitHub MCP connection only
@@ -29,7 +29,7 @@ set -e
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEV_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
-export DEV_CONTROL_DIR  # Used by sourced libraries
+export DEV_CONTROL_DIR # Used by sourced libraries
 
 # Source shared libraries
 source "$SCRIPT_DIR/lib/colours.sh"
@@ -54,7 +54,7 @@ detect_keyring_support() {
 detect_config_dir() {
     # Try to detect from current directory first (handles both container and host)
     local cwd="$PWD"
-    
+
     # Check if we're in a git worktree from current directory
     if git -C "$cwd" rev-parse --is-inside-work-tree &>/dev/null; then
         local root
@@ -70,7 +70,7 @@ detect_config_dir() {
             return
         fi
     fi
-    
+
     # Fallback to user config only if not in git repo
     local user_config="${HOME}/.config/Code/User"
     if [[ -d "$user_config" ]]; then
@@ -100,7 +100,7 @@ declare -A SCOPE_PRESETS=(
 # ============================================================================
 
 show_help() {
-    cat << 'EOF'
+    cat <<'EOF'
 Dev-Control MCP Setup - Configure Model Context Protocol servers
 
 USAGE:
@@ -166,14 +166,14 @@ check_keyring_availability() {
     local has_secret_tool=false
     local has_pass=false
     local has_gnome_keyring=false
-    
+
     command -v secret-tool &>/dev/null && has_secret_tool=true
     command -v pass &>/dev/null && has_pass=true
-    
+
     if pgrep -f gnome-keyring-daemon &>/dev/null; then
         has_gnome_keyring=true
     fi
-    
+
     if [[ "$has_secret_tool" == "false" && "$has_pass" == "false" ]]; then
         if [[ "$has_gnome_keyring" == "true" ]]; then
             print_warning "GNOME Keyring daemon detected, but CLI tools not installed"
@@ -204,28 +204,28 @@ check_keyring_availability() {
         else
             print_info "No keyring detected. Will use VS Code secure input"
         fi
-        
+
         # Re-check after potential installation
         if [[ "$has_secret_tool" == "false" && "$has_pass" == "false" ]]; then
             return 1
         fi
     fi
-    
+
     if [[ "$has_secret_tool" == "true" || "$has_pass" == "true" ]]; then
         print_success "Keyring available: ${CYAN}${has_secret_tool:+secret-tool}${has_pass:+pass}${NC}"
         return 0
     fi
-    
+
     return 1
 }
 
 store_token_securely() {
     local token="$1"
-    
+
     # Try system keyring first (most secure)
     if [[ "$USE_KEYRING" == "true" ]]; then
         if command -v secret-tool &>/dev/null; then
-            if secret-tool store --label="GitHub MCP Token" "$KEYRING_SERVICE" "$KEYRING_KEY" <<< "$token" 2>/dev/null; then
+            if secret-tool store --label="GitHub MCP Token" "$KEYRING_SERVICE" "$KEYRING_KEY" <<<"$token" 2>/dev/null; then
                 print_success "Token stored in system keyring"
                 echo "keyring://${KEYRING_SERVICE}/${KEYRING_KEY}"
                 return 0
@@ -238,7 +238,7 @@ store_token_securely() {
             fi
         fi
     fi
-    
+
     # Fallback: environment variable
     print_warning "Keyring storage not available"
     print_info "Export token manually: ${CYAN}export GH_MCP_TOKEN='your-token'${NC}"
@@ -247,7 +247,7 @@ store_token_securely() {
 
 retrieve_token_securely() {
     local token_ref="$1"
-    
+
     if [[ "$token_ref" == "keyring://"* ]]; then
         local service=${token_ref#keyring://}
         service=${service%%/*}
@@ -267,13 +267,13 @@ retrieve_token_securely() {
         eval "echo \"\${$env_var}\""
         return 0
     fi
-    
+
     return 1
 }
 
 verify_github_auth() {
     print_info "Checking GitHub authentication..."
-    
+
     if gh auth status &>/dev/null; then
         local username
         username=$(gh api user --jq '.login' 2>/dev/null || echo "unknown")
@@ -290,22 +290,22 @@ create_github_pat() {
     print_info "Scopes: ${CYAN}$TOKEN_SCOPES${NC}" >&2
     print_info "This will open your browser for authentication" >&2
     echo "" >&2
-    
+
     # Use gh auth refresh to create/refresh token with required scopes
     if ! gh auth refresh --scopes "$TOKEN_SCOPES" -h github.com >&2; then
         print_error "Failed to authenticate with GitHub" >&2
         return 1
     fi
-    
+
     # Get the session token
     local token
     token=$(gh auth token 2>/dev/null)
-    
+
     if [[ -z "$token" ]]; then
         print_error "Failed to retrieve token" >&2
         return 1
     fi
-    
+
     echo "$token"
 }
 
@@ -319,7 +319,7 @@ get_github_token() {
             return 0
         fi
     fi
-    
+
     # Try keyring (if --create-pat was used)
     if detect_keyring_support; then
         local token
@@ -329,18 +329,18 @@ get_github_token() {
             return 0
         fi
     fi
-    
+
     # Try environment variables
     if [[ -n "${GH_MCP_TOKEN:-}" ]]; then
         echo "$GH_MCP_TOKEN"
         return 0
     fi
-    
+
     if [[ -n "${GITHUB_TOKEN:-}" ]]; then
         echo "$GITHUB_TOKEN"
         return 0
     fi
-    
+
     # Try to extract from mcp.json (if it was embedded)
     if [[ -f "$MCP_CONFIG_FILE" ]] && command -v grep &>/dev/null; then
         local embedded_token
@@ -351,7 +351,7 @@ get_github_token() {
             return 0
         fi
     fi
-    
+
     return 1
 }
 
@@ -360,7 +360,7 @@ show_token_info() {
     if token=$(get_github_token); then
         local masked="${token:0:4}...${token: -4}"
         print_info "GitHub token: ${CYAN}$masked${NC}"
-        
+
         # Try to get token info
         if command -v gh &>/dev/null; then
             local username
@@ -377,25 +377,23 @@ show_token_info() {
 # HELPER FUNCTIONS
 # ============================================================================
 
-
-
 # ============================================================================
 # MCP CONFIGURATION
 # ============================================================================
 
 create_mcp_config() {
     print_info "Creating MCP configuration..."
-    
+
     # Verify gh cli is available for initial token validation
     if ! command -v gh &>/dev/null; then
         print_warning "GitHub CLI (gh) not found - token validation skipped"
         print_info "Install with: sudo apt install gh"
     fi
-    
+
     mkdir -p "$MCP_CONFIG_DIR"
-    
+
     # Generate config with secure inputs
-    cat > "$MCP_CONFIG_FILE" << MCP_EOF
+    cat >"$MCP_CONFIG_FILE" <<MCP_EOF
 {
   "inputs": [
     {
@@ -436,7 +434,7 @@ create_mcp_config() {
     }
 }
 MCP_EOF
-    
+
     print_success "Created: $MCP_CONFIG_FILE"
     print_info "Firecrawl will source NVM from ~/.bashrc dynamically"
     print_info "VS Code will prompt for tokens on first use"
@@ -445,14 +443,14 @@ MCP_EOF
 # Create MCP config with embedded token (for --create-pat mode)
 create_mcp_config_with_token() {
     local token="$1"
-    
+
     print_info "Creating MCP configuration with embedded token..."
-    
+
     # Ensure directory exists
     mkdir -p "$MCP_CONFIG_DIR"
-    
+
     # Create config with token embedded in Authorisation header
-    cat > "$MCP_CONFIG_FILE" << EOF
+    cat >"$MCP_CONFIG_FILE" <<EOF
 {
   "inputs": [
     {
@@ -487,7 +485,7 @@ create_mcp_config_with_token() {
     }
 }
 EOF
-    
+
     print_success "Created: $MCP_CONFIG_FILE"
     print_info "Firecrawl will source NVM from ~/.bashrc dynamically"
     print_info "Token embedded in config (secure file permissions recommended)"
@@ -496,14 +494,14 @@ EOF
 
 test_mcp_connection() {
     print_info "Testing MCP configuration..."
-    
+
     if [[ ! -f "$MCP_CONFIG_FILE" ]]; then
         print_error "MCP config not found: $MCP_CONFIG_FILE"
         return 1
     fi
-    
+
     print_success "MCP config found: $MCP_CONFIG_FILE"
-    
+
     # Verify config is valid JSON
     if ! command -v jq &>/dev/null; then
         print_warning "jq not installed - skipping JSON validation"
@@ -516,7 +514,7 @@ test_mcp_connection() {
             return 1
         fi
     fi
-    
+
     # Test GitHub MCP endpoint accessibility
     if command -v curl &>/dev/null; then
         print_info "Testing GitHub MCP endpoint..."
@@ -526,7 +524,7 @@ test_mcp_connection() {
             print_warning "GitHub MCP endpoint test inconclusive (check network)"
         fi
     fi
-    
+
     # Verify npx availability for Firecrawl (optional)
     if command -v npx &>/dev/null; then
         print_success "npx available for Firecrawl integration"
@@ -534,7 +532,7 @@ test_mcp_connection() {
         print_warning "npx not found - Firecrawl server disabled"
         print_info "Install Node.js 18+ to enable: ${CYAN}sudo apt install nodejs npm${NC}"
     fi
-    
+
     # Check GitHub authentication
     if command -v gh &>/dev/null; then
         if gh auth status &>/dev/null; then
@@ -554,21 +552,39 @@ test_mcp_connection() {
 
 main() {
     local mode="full"
-    
+
     # Parse arguments
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            --config-only) mode="config"; shift ;;
-            --create-pat) mode="create-pat"; shift ;;
-            --test) mode="test"; shift ;;
-            --show-token) mode="token"; shift ;;
-            -h|--help) show_help; exit 0 ;;
-            *) print_error "Unknown option: $1"; exit 1 ;;
+            --config-only)
+                mode="config"
+                shift
+                ;;
+            --create-pat)
+                mode="create-pat"
+                shift
+                ;;
+            --test)
+                mode="test"
+                shift
+                ;;
+            --show-token)
+                mode="token"
+                shift
+                ;;
+            -h | --help)
+                show_help
+                exit 0
+                ;;
+            *)
+                print_error "Unknown option: $1"
+                exit 1
+                ;;
         esac
     done
-    
+
     print_header "Dev-Control MCP Setup"
-    
+
     case "$mode" in
         token)
             show_token_info
@@ -577,20 +593,20 @@ main() {
             require_gh_cli
             print_info "This will create a GitHub PAT with scopes: ${CYAN}$TOKEN_SCOPES${NC}"
             echo ""
-            
+
             # Check if already authenticated
             if ! verify_github_auth; then
                 print_info "Please authenticate first: ${CYAN}gh auth login${NC}"
                 exit 1
             fi
-            
+
             # Create PAT
             local token
             if token=$(create_github_pat); then
                 print_success "PAT created successfully"
                 local masked="${token:0:4}...${token: -4}"
                 print_info "Token: ${CYAN}$masked${NC}"
-                
+
                 # Store in keyring (recommended)
                 local stored_in_keyring=false
                 if check_keyring_availability; then
@@ -604,7 +620,7 @@ main() {
                         fi
                     fi
                 fi
-                
+
                 # Copy to clipboard if available
                 local copied_to_clipboard=false
                 if command -v xclip &>/dev/null || command -v wl-copy &>/dev/null || command -v pbcopy &>/dev/null; then
@@ -626,13 +642,13 @@ main() {
                         fi
                     fi
                 fi
-                
+
                 # Create standard config with VS Code secure inputs (NOT embedded token)
                 echo ""
                 create_mcp_config
-                
+
                 print_header_success "PAT Created!"
-                
+
                 if [[ "$stored_in_keyring" == "true" ]]; then
                     print_section "Token Storage:"
                     print_list_item "✓ Stored in system keyring (GNOME Keyring)"
@@ -646,17 +662,17 @@ main() {
                         print_warning "Save this token - it won't be shown again!"
                     fi
                 fi
-                
+
                 if [[ "$copied_to_clipboard" == "true" ]]; then
                     print_section "Clipboard:"
                     print_list_item "✓ Token copied to clipboard"
                     print_list_item "Ready to paste in VS Code prompt"
                 fi
-                
+
                 print_section "MCP Configuration:"
                 print_list_item "Config created at: ${CYAN}$MCP_CONFIG_FILE${NC}"
                 print_list_item "Uses VS Code secure inputs (no hardcoded token)"
-                
+
                 print_section "Next Steps:"
                 echo -e "  ${CYAN}1.${NC} Reload VS Code window"
                 echo -e "     • Press ${CYAN}Ctrl+Shift+P${NC}"
@@ -674,7 +690,7 @@ main() {
                 echo -e "  ${CYAN}3.${NC} Start using MCP tools in Copilot Chat"
                 echo -e "     • Open chat and try MCP commands"
                 echo ""
-                
+
                 print_section "Tips:"
                 print_list_item "Token stored in VS Code's secure credential store on first use"
                 print_list_item "Won't be prompted again until token expires or is revoked"
@@ -696,27 +712,27 @@ main() {
             ;;
         full)
             require_gh_cli
-            
+
             # Check keyring availability (don't exit on failure)
             check_keyring_availability || true
-            
+
             # Check authentication status (don't exit on failure)
             if ! verify_github_auth; then
                 print_warning "Not authenticated. MCP will use VS Code secure input"
                 print_info "Or authenticate now: ${CYAN}gh auth login${NC}"
                 echo ""
             fi
-            
+
             create_mcp_config
             test_mcp_connection
-            
+
             print_header_success "MCP Setup Complete!"
-            
+
             print_section "Configured Servers:"
             print_list_item "GitHub MCP - Repository and PR management"
             print_list_item "Stack Overflow - Q&A search"
             print_list_item "Firecrawl - Web scraping (requires npx)"
-            
+
             print_section "Token Configuration:"
             if detect_keyring_support; then
                 print_list_item "Option 1: Use ${CYAN}dc-mcp --create-pat${NC} to create and store in keyring"
@@ -724,7 +740,7 @@ main() {
             else
                 print_list_item "VS Code will prompt for your GitHub PAT on first use"
             fi
-            
+
             print_section "Next Steps:"
             echo -e "  1. Reload VS Code window (${CYAN}Ctrl+Shift+P${NC} -> ${CYAN}Reload Window${NC})"
             echo -e "  2. VS Code will prompt for your GitHub PAT when you first use MCP"

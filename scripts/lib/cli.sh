@@ -62,14 +62,14 @@ parse_common_flags() {
     DEBUG=false
     DRY_RUN=false
     REMAINING_ARGS=()
-    
+
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            -h|--help)
+            -h | --help)
                 SHOW_HELP=true
                 shift
                 ;;
-            -v|--verbose)
+            -v | --verbose)
                 VERBOSE=true
                 shift
                 ;;
@@ -77,7 +77,7 @@ parse_common_flags() {
                 DEBUG=true
                 shift
                 ;;
-            -n|--dry-run)
+            -n | --dry-run)
                 DRY_RUN=true
                 shift
                 ;;
@@ -99,14 +99,14 @@ parse_common_flags() {
 dispatch_command() {
     local cmd="$1"
     shift
-    
+
     if [[ -z "$cmd" ]]; then
         cmd="help"
     fi
-    
+
     local func="cmd_${cmd//-/_}"
-    
-    if declare -f "$func" > /dev/null; then
+
+    if declare -f "$func" >/dev/null; then
         "$func" "$@"
     else
         print_error "Unknown command: $cmd"

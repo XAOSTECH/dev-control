@@ -40,7 +40,7 @@ dc_version() {
 # Usage: dc_install_info
 dc_install_info() {
     local install_dir="${DC_INSTALL_DIR:-$(cd "$_VERSION_LIB_DIR/../.." && pwd)}"
-    
+
     if [[ -d "$install_dir/.git" ]]; then
         local commit
         commit=$(git -C "$install_dir" rev-parse --short HEAD 2>/dev/null || echo "unknown")
@@ -67,34 +67,34 @@ dc_install_info() {
 version_compare() {
     local v1="$1"
     local v2="$2"
-    
+
     if [[ "$v1" == "$v2" ]]; then
         echo "0"
         return 0
     fi
-    
+
     local IFS=.
     local i
     local -a v1_parts
     local -a v2_parts
     # SC2206: Use read -a or mapfile instead of word splitting
-    read -ra v1_parts <<< "$v1"
-    read -ra v2_parts <<< "$v2"
-    
+    read -ra v1_parts <<<"$v1"
+    read -ra v2_parts <<<"$v2"
+
     # Fill empty positions with zeros
-    for ((i=${#v1_parts[@]}; i<${#v2_parts[@]}; i++)); do
+    for ((i = ${#v1_parts[@]}; i < ${#v2_parts[@]}; i++)); do
         v1_parts[i]=0
     done
-    for ((i=${#v2_parts[@]}; i<${#v1_parts[@]}; i++)); do
+    for ((i = ${#v2_parts[@]}; i < ${#v1_parts[@]}; i++)); do
         v2_parts[i]=0
     done
-    
+
     # Compare parts
-    for ((i=0; i<${#v1_parts[@]}; i++)); do
+    for ((i = 0; i < ${#v1_parts[@]}; i++)); do
         # Remove any non-numeric suffix (e.g., 1.0.0-beta)
         local p1=${v1_parts[i]%%[!0-9]*}
         local p2=${v2_parts[i]%%[!0-9]*}
-        
+
         if ((p1 > p2)); then
             echo "1"
             return 0
@@ -104,7 +104,7 @@ version_compare() {
             return 0
         fi
     done
-    
+
     echo "0"
 }
 
@@ -134,19 +134,19 @@ dc_check_update() {
     local current="$DC_VERSION"
     local latest
     local update_url="https://api.github.com/repos/${DC_REPO}/releases/latest"
-    
+
     # Try to get latest version
     if command -v curl &>/dev/null; then
         latest=$(curl -s "$update_url" 2>/dev/null | grep '"tag_name"' | sed -E 's/.*"v?([^"]+)".*/\1/')
     elif command -v wget &>/dev/null; then
         latest=$(wget -qO- "$update_url" 2>/dev/null | grep '"tag_name"' | sed -E 's/.*"v?([^"]+)".*/\1/')
     fi
-    
+
     if [[ -z "$latest" ]]; then
         echo "Could not check for updates"
         return 1
     fi
-    
+
     if version_gt "$latest" "$current"; then
         echo "Update available: v$current -> v$latest"
         echo "Run: dc update"
@@ -161,17 +161,17 @@ dc_check_update() {
 # Usage: dc_update
 dc_update() {
     local install_dir="${DC_INSTALL_DIR:-$(cd "$_VERSION_LIB_DIR/../.." && pwd)}"
-    
+
     if [[ ! -d "$install_dir/.git" ]]; then
         echo "Cannot update: not a git installation"
         echo "Reinstall with: curl -sSL https://raw.githubusercontent.com/${DC_REPO}/${DC_BRANCH}/install.sh | bash"
         return 1
     fi
-    
+
     echo "Updating Dev-Control..."
     git -C "$install_dir" fetch origin
     git -C "$install_dir" reset --hard "origin/${DC_BRANCH}"
-    
+
     echo "Updated to: $(dc_version_string)"
 }
 
@@ -184,12 +184,12 @@ dc_update() {
 dc_changelog() {
     local version="${1:-$DC_VERSION}"
     local changelog_file="${DC_INSTALL_DIR:-$(cd "$_VERSION_LIB_DIR/../.." && pwd)}/CHANGELOG.md"
-    
+
     if [[ ! -f "$changelog_file" ]]; then
         echo "No changelog found"
         return 1
     fi
-    
+
     # Extract section for version
     awk -v ver="$version" '
         /^## \[/ {
@@ -205,12 +205,12 @@ dc_changelog() {
 dc_recent_changes() {
     local count="${1:-5}"
     local changelog_file="${DC_INSTALL_DIR:-$(cd "$_VERSION_LIB_DIR/../.." && pwd)}/CHANGELOG.md"
-    
+
     if [[ ! -f "$changelog_file" ]]; then
         echo "No changelog found"
         return 1
     fi
-    
+
     # Get first N version entries
     awk -v count="$count" '
         /^## \[/ { found++; if (found > count) exit }

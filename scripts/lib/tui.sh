@@ -100,7 +100,7 @@ install_gum() {
     if check_gum; then
         return 0
     fi
-    
+
     echo "Gum is not installed. It provides beautiful terminal UI."
     echo ""
     echo "Install options:"
@@ -108,7 +108,7 @@ install_gum() {
     echo "  sudo snap install gum     # Ubuntu/Snap"
     echo "  go install github.com/charmbracelet/gum@latest  # Go"
     echo ""
-    
+
     read -rp "Would you like to install Gum now? [y/N]: " confirm
     if [[ "$confirm" =~ ^[Yy] ]]; then
         if command -v brew &>/dev/null; then
@@ -133,7 +133,7 @@ install_gum() {
 tui_set_theme() {
     local theme_name="${1:-matrix}"
     DC_THEME="$theme_name"
-    
+
     case "$theme_name" in
         matrix)
             for key in "${!THEME_MATRIX[@]}"; do
@@ -157,7 +157,7 @@ tui_set_theme() {
             done
             ;;
     esac
-    
+
     # Export Gum environment variables
     export GUM_INPUT_PROMPT_FOREGROUND="${CURRENT_THEME[primary]}"
     export GUM_INPUT_CURSOR_FOREGROUND="${CURRENT_THEME[cursor]}"
@@ -192,7 +192,7 @@ tui_choose_theme() {
         echo "Available themes: matrix, hacker, cyber"
         read -rp "Choose theme: " choice
     fi
-    
+
     if [[ -n "$choice" ]]; then
         tui_set_theme "$choice"
         echo "$choice"
@@ -209,7 +209,7 @@ tui_input() {
     local prompt="${1:-Enter value}"
     local default="${2:-}"
     local placeholder="${3:-Type here...}"
-    
+
     if [[ "$GUM_AVAILABLE" == "true" ]]; then
         gum input \
             --prompt "${CURRENT_THEME[prompt_indicator]} $prompt: " \
@@ -233,7 +233,7 @@ tui_input() {
 # Usage: secret=$(tui_password "Enter password")
 tui_password() {
     local prompt="${1:-Password}"
-    
+
     if [[ "$GUM_AVAILABLE" == "true" ]]; then
         gum input \
             --password \
@@ -251,8 +251,8 @@ tui_password() {
 # Usage: tui_confirm "Are you sure?" && echo "Confirmed"
 tui_confirm() {
     local prompt="${1:-Continue?}"
-    local default="${2:-no}"  # yes or no
-    
+    local default="${2:-no}" # yes or no
+
     if [[ "$GUM_AVAILABLE" == "true" ]]; then
         local affirmative="Yes"
         local negative="No"
@@ -265,7 +265,7 @@ tui_confirm() {
     else
         local yn_prompt="[y/N]"
         [[ "$default" == "yes" ]] && yn_prompt="[Y/n]"
-        
+
         read -rp "$prompt $yn_prompt: " response
         if [[ "$default" == "yes" ]]; then
             [[ ! "$response" =~ ^[Nn] ]]
@@ -281,7 +281,7 @@ tui_choose() {
     local header="${1:-}"
     shift
     local options=("$@")
-    
+
     if [[ "$GUM_AVAILABLE" == "true" ]]; then
         if [[ -n "$header" ]]; then
             printf '%s\n' "${options[@]}" | gum choose \
@@ -303,8 +303,8 @@ tui_choose() {
             ((i++))
         done
         read -rp "Select [1-${#options[@]}]: " choice
-        if [[ "$choice" =~ ^[0-9]+$ ]] && (( choice >= 1 && choice <= ${#options[@]} )); then
-            echo "${options[$((choice-1))]}"
+        if [[ "$choice" =~ ^[0-9]+$ ]] && ((choice >= 1 && choice <= ${#options[@]})); then
+            echo "${options[$((choice - 1))]}"
         fi
     fi
 }
@@ -315,7 +315,7 @@ tui_multiselect() {
     local header="${1:-}"
     shift
     local options=("$@")
-    
+
     if [[ "$GUM_AVAILABLE" == "true" ]]; then
         if [[ -n "$header" ]]; then
             printf '%s\n' "${options[@]}" | gum choose --no-limit \
@@ -338,8 +338,8 @@ tui_multiselect() {
         done
         read -rp "Select: " selections
         for sel in $selections; do
-            if [[ "$sel" =~ ^[0-9]+$ ]] && (( sel >= 1 && sel <= ${#options[@]} )); then
-                echo "${options[$((sel-1))]}"
+            if [[ "$sel" =~ ^[0-9]+$ ]] && ((sel >= 1 && sel <= ${#options[@]})); then
+                echo "${options[$((sel - 1))]}"
             fi
         done
     fi
@@ -354,10 +354,10 @@ tui_multiselect() {
 tui_echo() {
     local message="$1"
     local style="${2:-primary}"
-    
+
     local colour="${CURRENT_THEME[$style]}"
     [[ -z "$colour" ]] && colour="${CURRENT_THEME[foreground]}"
-    
+
     if [[ "$GUM_AVAILABLE" == "true" ]]; then
         gum style --foreground "$colour" "$message"
     else
@@ -371,7 +371,7 @@ tui_box() {
     local title="$1"
     shift
     local content="$*"
-    
+
     if [[ "$GUM_AVAILABLE" == "true" ]]; then
         echo "$content" | gum style \
             --border "${CURRENT_THEME[border_style]}" \
@@ -392,7 +392,7 @@ tui_box() {
 tui_spin() {
     local title="$1"
     shift
-    
+
     if [[ "$GUM_AVAILABLE" == "true" && "$1" == "--" ]]; then
         shift
         gum spin \
@@ -416,12 +416,12 @@ tui_progress() {
     local bar_width=40
     local filled=$((percent * bar_width / 100))
     local empty=$((bar_width - filled))
-    
+
     printf "\r%s [" "$message"
     printf "%${filled}s" | tr ' ' '█'
     printf "%${empty}s" | tr ' ' '░'
     printf "] %3d%%" "$percent"
-    
+
     [[ $current -eq $total ]] && echo ""
 }
 
@@ -434,11 +434,11 @@ tui_progress() {
 tui_banner() {
     local title="$1"
     local subtitle="${2:-}"
-    
+
     if [[ "$GUM_AVAILABLE" == "true" ]]; then
         local banner_text="$title"
         [[ -n "$subtitle" ]] && banner_text="$title\n$subtitle"
-        
+
         echo -e "$banner_text" | gum style \
             --border "${CURRENT_THEME[border_style]}" \
             --border-foreground "${CURRENT_THEME[border]}" \
@@ -450,12 +450,12 @@ tui_banner() {
     else
         local width=60
         local top_border="" j
-        for ((j=0; j<width; j++)); do top_border+="═"; done
+        for ((j = 0; j < width; j++)); do top_border+="═"; done
 
         echo "╔${top_border}╗"
-        printf "║%*s%s%*s║\n" $(( (width - ${#title}) / 2 )) "" "$title" $(( (width - ${#title} + 1) / 2 )) ""
+        printf "║%*s%s%*s║\n" $(((width - ${#title}) / 2)) "" "$title" $(((width - ${#title} + 1) / 2)) ""
         if [[ -n "$subtitle" ]]; then
-            printf "║%*s%s%*s║\n" $(( (width - ${#subtitle}) / 2 )) "" "$subtitle" $(( (width - ${#subtitle} + 1) / 2 )) ""
+            printf "║%*s%s%*s║\n" $(((width - ${#subtitle}) / 2)) "" "$subtitle" $(((width - ${#subtitle} + 1) / 2)) ""
         fi
         echo "╚${top_border}╝"
     fi

@@ -24,7 +24,7 @@ shopt -s dotglob
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEV_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
-export DEV_CONTROL_DIR  # Used by sourced libraries
+export DEV_CONTROL_DIR # Used by sourced libraries
 
 # Make sure ERR is traced in functions
 set -o errtrace
@@ -52,7 +52,7 @@ EXCLUDE_TEMP=(build CMakeFiles dist target bin obj out cmake-build-debug .git .w
 # (used for module-nesting discovery only)
 path_has_excluded_component() {
     local p="$1"
-    IFS='/' read -ra parts <<< "$p"
+    IFS='/' read -ra parts <<<"$p"
     for comp in "${parts[@]}"; do
         for e in "${EXCLUDE_DIRS[@]}"; do
             if [[ "$comp" == "$e" ]]; then
@@ -67,7 +67,7 @@ path_has_excluded_component() {
 # (used when inspecting temp/build directories during copy/prune/aggressive flows)
 path_has_excluded_temp_component() {
     local p="$1"
-    IFS='/' read -ra parts <<< "$p"
+    IFS='/' read -ra parts <<<"$p"
     for comp in "${parts[@]}"; do
         for e in "${EXCLUDE_TEMP[@]}"; do
             if [[ "$comp" == "$e" ]]; then
@@ -133,8 +133,7 @@ print_ephemeral_notice_once() {
         print_info "$msg"
         DRY_RUN_EPHEMERAL_NOTICE_SHOWN=true
     fi
-} 
-
+}
 
 should_skip_dir() {
     local dname
@@ -174,9 +173,9 @@ get_submodule_name() {
 get_relative_path() {
     local parent="$1"
     local child="$2"
-    
+
     local relative="${child#"$parent"/}"
-    
+
     echo "$relative"
 }
 
@@ -188,7 +187,7 @@ get_relative_path() {
 find_direct_git_children() {
     local parent_dir="$1"
     local git_children=()
-    
+
     for dir in "$parent_dir"/*/; do
         [[ -d "$dir" ]] || continue
         dir="${dir%/}"
@@ -202,7 +201,7 @@ find_direct_git_children() {
             git_children+=("$dir")
         fi
     done
-    
+
     echo "${git_children[@]}"
 }
 
@@ -210,13 +209,13 @@ find_direct_git_children() {
 find_all_git_repos() {
     local root_dir="$1"
     local repos=()
-    
+
     while IFS= read -r -d '' git_dir; do
         local repo_dir
         repo_dir=$(dirname "$git_dir")
         repos+=("$repo_dir")
     done < <(find "$root_dir" -name ".git" -print0 2>/dev/null)
-    
+
     echo "${repos[@]}"
 }
 
@@ -230,7 +229,7 @@ generate_gitmodules() {
     local root_dir="$2"
     local content=""
     local submodule_count=0
-    
+
     print_debug "generate_gitmodules: repo_dir=$repo_dir root_dir=$root_dir"
     # Find direct git children (submodules)
     for child_dir in "$repo_dir"/*/; do
@@ -246,7 +245,7 @@ generate_gitmodules() {
         # We need to find the first git repos under this directory
         find_git_repos_for_parent "$repo_dir" "$child_dir" "$root_dir" content submodule_count
     done
-    
+
     echo "$content"
 }
 
@@ -261,24 +260,24 @@ find_git_repos_for_parent() {
     local -n content_ref="$content_name"
     local -n count_ref="$count_name"
     print_debug "ENTER find_git_repos_for_parent parent=${parent_repo} current=${current_dir} root=${root_dir} (content=${content_name} count=${count_name})"
-    
+
     # If this is a git repo, add it as a submodule
     if is_git_repo "$current_dir"; then
         local rel_path name url
         rel_path=$(get_relative_path "$parent_repo" "$current_dir")
         name=$(get_submodule_name "$current_dir")
         url=$(get_remote_url "$current_dir")
-        
+
         # If no remote URL, use relative path from root
         if [[ -z "$url" ]]; then
             url=$(get_relative_path "$root_dir" "$current_dir")
         fi
-        
+
         content_ref+="[submodule \"$name\"]"$'\n'
         content_ref+="	path = $rel_path"$'\n'
         content_ref+="	url = $url"$'\n'
         content_ref+=$'\n'
-        
+
         # Increment the caller's counter without triggering 'set -e' when the previous value is 0 (using arithmetic expansion with direct assignment)
         count_ref=$((count_ref + 1))
         print_debug "count_ref now: ${count_ref} (parent_repo=${parent_repo}, current_dir=${current_dir})"
@@ -287,7 +286,7 @@ find_git_repos_for_parent() {
         # Don't recurse into this git repo (it has its own submodules)
         return
     fi
-    
+
     # Not a git repo, check subdirectories
     for subdir in "$current_dir"/*/; do
         [[ -d "$subdir" ]] || continue
@@ -334,7 +333,7 @@ write_gitmodules() {
 ' "$content" | sed -n '1,120p'
         fi
     else
-        echo -e "$content" > "$gitmodules_path"
+        echo -e "$content" >"$gitmodules_path"
         # Use a simple, unescaped basename expansion to avoid embedding stray quote characters
         print_success "Generated .gitmodules for: $(basename "$repo_dir")"
     fi
@@ -349,26 +348,26 @@ process_repository() {
     local root_dir="$2"
     local depth="$3"
     local indent=""
-    
-    for ((i=0; i<depth; i++)); do
+
+    for ((i = 0; i < depth; i++)); do
         indent+="  "
     done
-    
+
     print_info "${indent}Processing: $(get_relative_path "$root_dir" "$repo_dir")"
     print_debug "ENTER process_repository repo=${repo_dir} root=${root_dir} depth=${depth}"
-    
+
     # Generate and write .gitmodules for this repository
     local content=""
     local submodule_count=0
-    
+
     # Find all git repos that should be submodules of this repo
     for child in "$repo_dir"/*/; do
         [[ -d "$child" ]] || continue
         child="${child%/}"
-        
+
         # Skip .git directory
         [[ "$(basename "$child")" == ".git" ]] && continue
-        
+
         # Skip noisy directories
         if should_skip_dir "$child"; then
             print_debug "Skipping excluded dir: $child"
@@ -377,7 +376,7 @@ process_repository() {
 
         find_git_repos_for_parent "$repo_dir" "$child" "$root_dir" content submodule_count
     done
-    
+
     if [[ $submodule_count -gt 0 ]]; then
         write_gitmodules "$repo_dir" "$content"
         print_info "${indent}  Found $submodule_count submodule(s)"
@@ -427,7 +426,7 @@ process_repository() {
 
 get_root_directory() {
     local root_dir="${1:-}"
-    
+
     if [[ -n "$root_dir" ]]; then
         if [[ ! -d "$root_dir" ]]; then
             print_error "Directory does not exist: $root_dir"
@@ -437,21 +436,21 @@ get_root_directory() {
         echo -e "${BOLD}Enter the root directory path${NC}" >&2
         echo -e "(Press Enter to use current directory: $(pwd))" >&2
         read -rp "> " root_dir
-        
+
         if [[ -z "$root_dir" ]]; then
             root_dir=$(pwd)
         fi
-        
+
         root_dir="${root_dir/#\~/$HOME}"
-        
+
         if [[ ! -d "$root_dir" ]]; then
             print_error "Directory does not exist: $root_dir"
             exit 1
         fi
     fi
-    
+
     root_dir=$(cd "$root_dir" && pwd)
-    
+
     echo "$root_dir"
 }
 
@@ -459,7 +458,7 @@ get_root_directory() {
 # Usage: prune_dirs "$root_dir" ".tmp" "$record_file"
 prune_dirs() {
     local root_dir="$1"
-    local dest_term="$2"  # ".tmp" or ".bak"
+    local dest_term="$2" # ".tmp" or ".bak"
     local record_file="$3"
 
     if [[ -z "$root_dir" ]]; then
@@ -508,7 +507,7 @@ prune_dirs() {
 
         # safety: skip if src is the destination or under the destination (exact directory or subpath)
         case "$src" in
-            "$dest_dir" | "$dest_dir"/* )
+            "$dest_dir" | "$dest_dir"/*)
                 print_info "Skipping $src (inside destination: $dest_dir)"
                 [[ "${DEBUG:-false}" == "true" ]] && print_debug "Skipped because it matches destination pattern: $src starts with $dest_dir"
                 skipped=$((skipped + 1))
@@ -621,7 +620,7 @@ prune_dirs() {
         print_info "Linked $src -> $rel_tgt (relative -> $tgt)"
 
         pruned=$((pruned + 1))
-    done < "$record_file"
+    done <"$record_file"
 
     print_success "Prune ($dest_term) complete: processed=$total pruned=$pruned skipped=$skipped"
     if [[ $warned_large -gt 0 ]]; then
@@ -654,10 +653,10 @@ prune_bak_dirs() {
 #   Parameters after KEEP_EPHEMERAL are directory patterns to match (case-insensitive)
 copy_dirs() {
     local root_dir="$1"
-    local dest_term="$2"  # ".tmp" or ".bak"
+    local dest_term="$2" # ".tmp" or ".bak"
     local KEEP_EPHEMERAL="${3:-false}"
     shift 3
-    local patterns=("$@")  # patterns to match (e.g., ".tmp" ".temp" "*.tmp" "*.temp")
+    local patterns=("$@") # patterns to match (e.g., ".tmp" ".temp" "*.tmp" "*.temp")
 
     if [[ -z "$root_dir" ]]; then
         print_error "copy_dirs: root_dir required"
@@ -699,7 +698,7 @@ copy_dirs() {
     # Canonicalize destination path to correctly detect symlinks and subpaths
     local dest_canon
     dest_canon=$(realpath -m "$dest_dir" 2>/dev/null || echo "$dest_dir")
-    
+
     # Build find pattern from patterns array (case-insensitive)
     # Note: patterns are passed unquoted so find can interpret wildcards
     local find_pattern=""
@@ -714,7 +713,7 @@ copy_dirs() {
     # Build prune args from EXCLUDE_TEMP so we do not descend into known build/output directories
     local prune_args=()
     for e in "${EXCLUDE_TEMP[@]}"; do
-        prune_args+=( -iname "$e" -o )
+        prune_args+=(-iname "$e" -o)
     done
     # remove trailing -o
     if [[ ${#prune_args[@]} -gt 0 ]]; then
@@ -761,7 +760,7 @@ copy_dirs() {
         local target
         local folder_name
         folder_name=$(basename "$srcdir")
-        
+
         # Determine if this folder matched a wildcard pattern (e.g., *.bak, *.tmp) by checking if folder_name ends with a pattern or IS a pattern
         local matched_wildcard=false
         for pattern in "${patterns[@]}"; do
@@ -776,7 +775,7 @@ copy_dirs() {
                 fi
             fi
         done
-        
+
         if [[ "$matched_wildcard" == "true" ]]; then
             # Wildcard match (e.g., XAOSTECH.bak): preserve folder name with date stamp
             local date_stamp
@@ -803,7 +802,7 @@ copy_dirs() {
 
         # record mapping for pruning (source<TAB>target) — only when a record file exists
         if [[ -n "$COPIED_RECORD" ]]; then
-            printf '%s\t%s\n' "$srcdir" "$target" >> "$COPIED_RECORD"
+            printf '%s\t%s\n' "$srcdir" "$target" >>"$COPIED_RECORD"
         else
             print_info "DRY-RUN: Would record mapping $srcdir -> $target"
         fi
@@ -885,10 +884,10 @@ copy_bak_dirs() {
 #   Naming strategy is determined by pattern type (same as copy_dirs)
 aggressive_replace() {
     local root_dir="$1"
-    local dest_term="$2"  # ".tmp" or ".bak"
+    local dest_term="$2" # ".tmp" or ".bak"
     local KEEP_EPHEMERAL="${3:-false}"
     shift 3
-    local patterns=("$@")  # patterns to match (e.g., ".tmp" ".temp" "*.tmp" "*.temp")
+    local patterns=("$@") # patterns to match (e.g., ".tmp" ".temp" "*.tmp" "*.temp")
 
     if [[ -z "$root_dir" ]]; then
         print_error "aggressive_replace: root_dir required"
@@ -953,7 +952,7 @@ aggressive_replace() {
     # Build prune args from EXCLUDE_TEMP so we do not descend into known build/output directories
     local prune_args=()
     for e in "${EXCLUDE_TEMP[@]}"; do
-        prune_args+=( -iname "$e" -o )
+        prune_args+=(-iname "$e" -o)
     done
     if [[ ${#prune_args[@]} -gt 0 ]]; then
         unset 'prune_args[${#prune_args[@]}-1]'
@@ -1006,7 +1005,7 @@ aggressive_replace() {
         local target
         local folder_name
         folder_name=$(basename "$srcdir")
-        
+
         # Determine if this folder matched a wildcard pattern (e.g., *.bak, *.tmp)
         local matched_wildcard=false
         for pattern in "${patterns[@]}"; do
@@ -1021,7 +1020,7 @@ aggressive_replace() {
                 fi
             fi
         done
-        
+
         if [[ "$matched_wildcard" == "true" ]]; then
             # Wildcard match (e.g., XAOSTECH.bak): preserve folder name with date stamp
             local date_stamp
@@ -1041,7 +1040,7 @@ aggressive_replace() {
         else
             rsync -a --ignore-existing --prune-empty-dirs "$srcdir/" "$target/"
             print_info "Merged $srcdir -> $target"
-            
+
             # Fix internal .tmp symlinks that may have been created with old relative paths
             # When we merge XAOSTECH into .bak/XAOSTECH.bak_2026-01-01, any .tmp symlink inside it needs to point to the shared .tmp location, not old relative paths
             if [[ -L "$target/.tmp" ]]; then
@@ -1054,7 +1053,7 @@ aggressive_replace() {
         fi
 
         # record mapping for tracing (source<TAB>target)
-        printf '%s\t%s\n' "$srcdir" "$target" >> "$COPIED_RECORD"
+        printf '%s\t%s\n' "$srcdir" "$target" >>"$COPIED_RECORD"
 
         # Append to .gitignore if basename != dest_term (case-insensitive)
         local base
@@ -1086,7 +1085,7 @@ aggressive_replace() {
                 fi
             else
                 if ! grep -Fxq "$entry" "$gitignore_file"; then
-                    printf '%s\n' "$entry" >> "$gitignore_file"
+                    printf '%s\n' "$entry" >>"$gitignore_file"
                     print_info "Appended '$entry' to $gitignore_file"
                 else
                     print_debug "'$entry' already in $gitignore_file"
@@ -1176,15 +1175,14 @@ aggressive_replace_bak_dirs() {
     aggressive_replace "$1" ".bak" "${2:-false}" ".bak" ".backup" "bak" "backup" "*.bak" "*.backup"
 }
 
-
 show_plan() {
     local root_dir="$1"
-    
+
     echo ""
     echo -e "${BOLD}Scan Plan:${NC}"
     echo -e "  Root directory: ${CYAN}$root_dir${NC}"
     echo ""
-    
+
     # Count git repos
     mapfile -d '' -t git_dirs < <(find "$root_dir" -name ".git" -print0 2>/dev/null)
     local repo_count=${#git_dirs[@]}
@@ -1192,19 +1190,19 @@ show_plan() {
     # Debug: print first few .git paths (only if DEBUG=true)
     if [[ "${DEBUG}" == "true" && $repo_count -gt 0 ]]; then
         echo "DEBUG: first .git entries:"
-        for ((i=0;i<${#git_dirs[@]} && i<10;i++)); do
+        for ((i = 0; i < ${#git_dirs[@]} && i < 10; i++)); do
             printf '  %s\n' "${git_dirs[i]}"
         done
     fi
-    
+
     echo -e "  Git repositories found: ${GREEN}$repo_count${NC}"
     echo ""
-    
+
     if [[ $repo_count -eq 0 ]]; then
         print_warning "No git repositories found in $root_dir"
         exit 0
     fi
-    
+
     echo -e "${BOLD}This will:${NC}"
     echo -e "  • Scan all directories for git repositories"
     echo -e "  • Generate .gitmodules for each parent repository"
@@ -1305,7 +1303,7 @@ show_summary() {
 
 main() {
     print_header
-    
+
     local root_dir=""
 
     # Parse CLI flags: --copy-temp, --copy-bak and variants
@@ -1355,10 +1353,10 @@ main() {
             --test)
                 TEST=true
                 ;;
-            -y|--yes)
+            -y | --yes)
                 FORCE=true
                 ;;
-            -h|--help)
+            -h | --help)
                 cat <<'HELP'
 Dev-Control Module Nesting - Manage .gitmodules and consolidate project temp/bak folders
 
@@ -1464,7 +1462,7 @@ HELP
                 print_info "DRY-RUN: Using ephemeral record $record for prune preview"
 
                 # If the ephemeral record was created by a dry-run and is empty, generate simulated target directories so prune preview can exercise the flow.
-                if [[ "${COPIED_RECORD_TEMP:-false}" == "true" && $(wc -l < "$record" 2>/dev/null || echo 0) -eq 0 ]]; then
+                if [[ "${COPIED_RECORD_TEMP:-false}" == "true" && $(wc -l <"$record" 2>/dev/null || echo 0) -eq 0 ]]; then
                     print_info "DRY-RUN: Ephemeral record is empty; generating simulated targets for prune preview"
                     SIM_TARGET_BASE=$(mktemp -d)
                     SIM_TARGET_MARKER="$SIM_TARGET_BASE"
@@ -1472,7 +1470,7 @@ HELP
                     # Re-use the same find arguments as copy_temp_dirs to locate candidates
                     local prune_args=()
                     for e in "${EXCLUDE_TEMP[@]}"; do
-                        prune_args+=( -iname "$e" -o )
+                        prune_args+=(-iname "$e" -o)
                     done
                     if [[ ${#prune_args[@]} -gt 0 ]]; then
                         unset 'prune_args[${#prune_args[@]}-1]'
@@ -1485,7 +1483,7 @@ HELP
                         mkdir -p "$target"
                         touch "$target/.simulated"
                         printf '%s	%s
-' "$tempdir" "$target" >> "$record"
+' "$tempdir" "$target" >>"$record"
                         print_info "DRY-RUN: Simulated mapping $tempdir -> $target"
                     done < <(if [[ ${#prune_args[@]} -gt 0 ]]; then find "$root_dir" \( "${prune_args[@]}" \) -prune -o -type d \( -iname '.tmp' -o -iname '.temp' -o -iname 'tmp' -o -iname 'temp' \) -print0 2>/dev/null; else find "$root_dir" -type d \( -iname '.tmp' -o -iname '.temp' -o -iname 'tmp' -o -iname 'temp' \) -print0 2>/dev/null; fi)
                 fi
@@ -1612,7 +1610,7 @@ HELP
     root_dir=$(get_root_directory "$root_dir")
 
     print_info "Root directory: $root_dir"
-    
+
     if ! is_git_repo "$root_dir"; then
         print_warning "Root directory is not a git repository."
         echo -e "  Initialise with: ${CYAN}cd $root_dir && git init${NC}"
@@ -1624,11 +1622,11 @@ HELP
     fi
 
     show_plan "$root_dir"
-    
+
     echo ""
     print_info "Scanning directory structure..."
     echo ""
-    
+
     if is_git_repo "$root_dir"; then
         process_repository "$root_dir" "$root_dir" 0
     else
@@ -1637,7 +1635,7 @@ HELP
             process_repository "$repo_dir" "$root_dir" 0
         done < <(find "$root_dir" -maxdepth 2 -name ".git" -print0 2>/dev/null)
     fi
-    
+
     show_summary
 
     # Optionally copy/merge temp folders after module nesting

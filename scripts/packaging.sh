@@ -87,7 +87,7 @@ SELECTED_THEME=""
 # ============================================================================
 
 show_help() {
-    cat << 'EOF'
+    cat <<'EOF'
 Dev-Control Packaging Automation - Build multi-platform packages
 
 USAGE:
@@ -186,15 +186,15 @@ parse_args() {
                 SELECTED_THEME="$2"
                 shift 2
                 ;;
-            -o|--output)
+            -o | --output)
                 PKG_OUTPUT_DIR="$2"
                 shift 2
                 ;;
-            -c|--config)
+            -c | --config)
                 PKG_CONFIG_FILE="$2"
                 shift 2
                 ;;
-            -v|--version)
+            -v | --version)
                 PKG_VERSION="$2"
                 shift 2
                 ;;
@@ -206,7 +206,7 @@ parse_args() {
                 VERBOSE=true
                 shift
                 ;;
-            -h|--help)
+            -h | --help)
                 show_help
                 exit 0
                 ;;
@@ -217,7 +217,7 @@ parse_args() {
                 ;;
         esac
     done
-    
+
     # If --all, enable everything
     if [[ "$BUILD_ALL" == "true" ]]; then
         BUILD_TARBALL=true
@@ -227,7 +227,7 @@ parse_args() {
         BUILD_NIX=true
         BUILD_DOCKER=true
     fi
-    
+
     # Apply theme if specified
     if [[ -n "$SELECTED_THEME" && "$TUI_AVAILABLE" == "true" ]]; then
         tui_set_theme "$SELECTED_THEME"
@@ -240,15 +240,15 @@ parse_args() {
 
 detect_package_info() {
     # Try to detect from various sources
-    
+
     # Package name from folder
     [[ -z "$PKG_NAME" ]] && PKG_NAME=$(basename "$(pwd)")
-    
+
     # Version from git tag or CHANGELOG
     if [[ -z "$PKG_VERSION" ]]; then
         PKG_VERSION=$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || echo "0.1.0")
     fi
-    
+
     # Homepage from git remote
     if [[ -z "$PKG_HOMEPAGE" ]]; then
         local remote_url
@@ -257,7 +257,7 @@ detect_package_info() {
             PKG_HOMEPAGE="https://github.com/${BASH_REMATCH[1]}/${BASH_REMATCH[2]}"
         fi
     fi
-    
+
     # Description from README or git config
     if [[ -z "$PKG_DESCRIPTION" ]]; then
         if command -v gh &>/dev/null && [[ -n "$PKG_HOMEPAGE" ]]; then
@@ -267,12 +267,12 @@ detect_package_info() {
         fi
         [[ -z "$PKG_DESCRIPTION" ]] && PKG_DESCRIPTION="A CLI tool"
     fi
-    
+
     # Licence from LICENCE file or git config
     if [[ -z "$PKG_LICENSE" ]]; then
         PKG_LICENSE=$(git config --local dc-init.licence-type 2>/dev/null || echo "MIT")
     fi
-    
+
     # Maintainer from git
     if [[ -z "$PKG_MAINTAINER" ]]; then
         local name email
@@ -285,12 +285,12 @@ detect_package_info() {
 load_config() {
     if [[ -f "$PKG_CONFIG_FILE" ]]; then
         print_info "Loading config from $PKG_CONFIG_FILE"
-        
+
         # Parse YAML config (simple parser)
         while IFS=':' read -r key value; do
             key=$(echo "$key" | tr -d ' ')
             value=$(echo "$value" | sed 's/^[ ]*//;s/[ ]*$//' | tr -d '"')
-            
+
             case "$key" in
                 name) [[ -z "$PKG_NAME" ]] && PKG_NAME="$value" ;;
                 version) [[ -z "$PKG_VERSION" ]] && PKG_VERSION="$value" ;;
@@ -302,13 +302,13 @@ load_config() {
                 theme) [[ -z "$SELECTED_THEME" ]] && SELECTED_THEME="$value" ;;
             esac
         done < <(grep -v '^#' "$PKG_CONFIG_FILE" | grep -v '^$' | grep -v '^  -')
-        
+
         # Parse include list
         PKG_INCLUDE_DIRS=$(grep -A 100 '^include:' "$PKG_CONFIG_FILE" 2>/dev/null | grep '^  -' | sed 's/^  - //' | tr '\n' ' ' || echo "")
-        
+
         # Parse dependencies list
         PKG_DEPENDENCIES=$(grep -A 100 '^dependencies:' "$PKG_CONFIG_FILE" 2>/dev/null | grep '^  -' | sed 's/^  - //' | tr '\n' ' ' || echo "")
-        
+
         # Apply theme from config if not set via CLI
         if [[ -n "$SELECTED_THEME" && "$TUI_AVAILABLE" == "true" ]]; then
             tui_set_theme "$SELECTED_THEME"
@@ -316,7 +316,7 @@ load_config() {
     else
         print_warning "No config file found. Using auto-detection."
     fi
-    
+
     # Fill in missing values with detection
     detect_package_info
 }
@@ -331,11 +331,11 @@ init_config() {
     else
         print_header "Package Configuration Setup"
     fi
-    
+
     detect_package_info
-    
+
     echo -e "${BOLD}Package Information${NC}"
-    
+
     if [[ "$TUI_AVAILABLE" == "true" ]]; then
         PKG_NAME=$(tui_input "Package name" "$PKG_NAME")
         PKG_VERSION=$(tui_input "Version" "$PKG_VERSION")
@@ -344,34 +344,34 @@ init_config() {
         PKG_LICENSE=$(tui_input "Licence" "$PKG_LICENSE")
         PKG_MAINTAINER=$(tui_input "Maintainer" "$PKG_MAINTAINER")
         PKG_ENTRY_POINT=$(tui_input "Entry point script" "./dc")
-        
+
         # Theme selection with glamorous chooser
         SELECTED_THEME=$(tui_choose "Select default theme" "matrix" "hacker" "cyber")
-        
+
         PKG_INCLUDE_DIRS=$(tui_input "Directories/files to include" "scripts/,config/,docs/,README.md,LICENCE")
         PKG_DEPENDENCIES=$(tui_input "Runtime dependencies" "git,gh,jq,gum")
     else
         read -rp "Package name [$PKG_NAME]: " input
         PKG_NAME="${input:-$PKG_NAME}"
-        
+
         read -rp "Version [$PKG_VERSION]: " input
         PKG_VERSION="${input:-$PKG_VERSION}"
-        
+
         read -rp "Description [$PKG_DESCRIPTION]: " input
         PKG_DESCRIPTION="${input:-$PKG_DESCRIPTION}"
-        
+
         read -rp "Homepage [$PKG_HOMEPAGE]: " input
         PKG_HOMEPAGE="${input:-$PKG_HOMEPAGE}"
-        
+
         read -rp "Licence [$PKG_LICENSE]: " input
         PKG_LICENSE="${input:-$PKG_LICENSE}"
-        
+
         read -rp "Maintainer [$PKG_MAINTAINER]: " input
         PKG_MAINTAINER="${input:-$PKG_MAINTAINER}"
-        
+
         read -rp "Entry point script [./dc or ./main.sh]: " input
         PKG_ENTRY_POINT="${input:-./dc}"
-        
+
         echo ""
         echo "Select default theme:"
         echo "  1) matrix  - Green fluorescent terminal"
@@ -383,20 +383,20 @@ init_config() {
             3) SELECTED_THEME="cyber" ;;
             *) SELECTED_THEME="matrix" ;;
         esac
-        
+
         echo ""
         echo "Directories/files to include (comma-separated):"
         read -rp "Include [scripts/,config/,docs/,README.md,LICENCE]: " input
         PKG_INCLUDE_DIRS="${input:-scripts/,config/,docs/,README.md,LICENCE}"
-        
+
         echo ""
         echo "Runtime dependencies (comma-separated):"
         read -rp "Dependencies [git,gh,jq,gum]: " input
         PKG_DEPENDENCIES="${input:-git,gh,jq,gum}"
     fi
-    
+
     # Generate config file
-    cat > "$PKG_CONFIG_FILE" << EOF
+    cat >"$PKG_CONFIG_FILE" <<EOF
 # Dev-Control Packaging Configuration
 # Generated by dc-package --init
 
@@ -429,7 +429,7 @@ $(echo "$PKG_DEPENDENCIES" | tr ',' '\n' | sed 's/^/  - /')
 #   port: 8080
 #   theme: matrix
 EOF
-    
+
     print_success "Created $PKG_CONFIG_FILE"
     echo ""
     echo "Next steps:"
@@ -447,17 +447,17 @@ build_tarball() {
     local tarball_file="${PKG_OUTPUT_DIR}/${tarball_name}.tar.gz"
     local temp_dir
     temp_dir=$(mktemp -d)
-    
+
     print_info "Building tarball: $tarball_file"
-    
+
     if [[ "$DRY_RUN" == "true" ]]; then
         print_info "[DRY RUN] Would create: $tarball_file"
         return 0
     fi
-    
+
     mkdir -p "$PKG_OUTPUT_DIR"
     mkdir -p "$temp_dir/$tarball_name"
-    
+
     # Copy included files/dirs
     for item in $PKG_INCLUDE_DIRS; do
         item=$(echo "$item" | tr -d ',')
@@ -466,41 +466,41 @@ build_tarball() {
             [[ "$VERBOSE" == "true" ]] && print_info "  Added: $item"
         fi
     done
-    
+
     # Copy entry point
     if [[ -n "$PKG_ENTRY_POINT" && -f "$PKG_ENTRY_POINT" ]]; then
         cp "$PKG_ENTRY_POINT" "$temp_dir/$tarball_name/"
     fi
-    
+
     # Bundle theme configuration
     if [[ -f "config/theme.yaml" ]]; then
         mkdir -p "$temp_dir/$tarball_name/config"
         cp "config/theme.yaml" "$temp_dir/$tarball_name/config/"
         [[ "$VERBOSE" == "true" ]] && print_info "  Added: config/theme.yaml"
     fi
-    
+
     # Create install script if not exists
     if [[ ! -f "$temp_dir/$tarball_name/install.sh" ]]; then
         create_install_script "$temp_dir/$tarball_name/install.sh"
     fi
-    
+
     # Create tarball
     tar -czvf "$tarball_file" -C "$temp_dir" "$tarball_name" >/dev/null
-    
+
     # Generate SHA256
     local sha256
     sha256=$(sha256sum "$tarball_file" | cut -d ' ' -f 1)
-    echo "$sha256" > "${tarball_file}.sha256"
-    
+    echo "$sha256" >"${tarball_file}.sha256"
+
     rm -rf "$temp_dir"
-    
+
     print_success "Tarball created: $tarball_file"
     print_info "SHA256: $sha256"
 }
 
 create_install_script() {
     local path="$1"
-    cat > "$path" << 'INSTALL_EOF'
+    cat >"$path" <<'INSTALL_EOF'
 #!/usr/bin/env bash
 # Auto-generated install script
 set -e
@@ -530,7 +530,7 @@ echo "Make sure $BIN_DIR is in your PATH"
 echo ""
 echo "Set your theme: export DC_THEME=matrix|hacker|cyber"
 INSTALL_EOF
-    
+
     # Replace placeholders
     sed -i "s|PKG_NAME_PLACEHOLDER|$PKG_NAME|g" "$path"
     sed -i "s|ENTRY_POINT_PLACEHOLDER|$(basename "$PKG_ENTRY_POINT")|g" "$path"
@@ -544,27 +544,27 @@ INSTALL_EOF
 build_homebrew() {
     local formula_dir="${PKG_OUTPUT_DIR}/homebrew"
     local formula_file="${formula_dir}/${PKG_NAME}.rb"
-    
+
     print_info "Generating Homebrew formula: $formula_file"
-    
+
     if [[ "$DRY_RUN" == "true" ]]; then
         print_info "[DRY RUN] Would create: $formula_file"
         return 0
     fi
-    
+
     mkdir -p "$formula_dir"
-    
+
     # Convert name to Ruby class name (capitalize, remove hyphens)
     local class_name
     class_name=$(echo "$PKG_NAME" | sed 's/-/ /g' | awk '{for(i=1;i<=NF;i++) $i=toupper(substr($i,1,1)) tolower(substr($i,2))}1' | tr -d ' ')
-    
+
     # Get SHA256 from tarball if exists
     local sha256="REPLACE_WITH_SHA256"
     if [[ -f "${PKG_OUTPUT_DIR}/${PKG_NAME}-${PKG_VERSION}.tar.gz.sha256" ]]; then
         sha256=$(cat "${PKG_OUTPUT_DIR}/${PKG_NAME}-${PKG_VERSION}.tar.gz.sha256")
     fi
-    
-    cat > "$formula_file" << EOF
+
+    cat >"$formula_file" <<EOF
 # Homebrew Formula for $PKG_NAME
 # Generated by Dev-Control Packaging (dc-package)
 #
@@ -581,17 +581,17 @@ class $class_name < Formula
   
   # Dependencies
 EOF
-    
+
     # Add dependencies
     for dep in $PKG_DEPENDENCIES; do
         dep=$(echo "$dep" | tr -d ',')
-        echo "  depends_on \"$dep\"" >> "$formula_file"
+        echo "  depends_on \"$dep\"" >>"$formula_file"
     done
-    
+
     # Add gum for TUI theming
-    echo "  depends_on \"gum\"  # For glamorous TUI" >> "$formula_file"
-    
-    cat >> "$formula_file" << EOF
+    echo "  depends_on \"gum\"  # For glamorous TUI" >>"$formula_file"
+
+    cat >>"$formula_file" <<EOF
 
   def install
     # Install scripts directory
@@ -617,7 +617,7 @@ EOF
   end
 end
 EOF
-    
+
     print_success "Homebrew formula created: $formula_file"
     print_info "Next: Create a tap repo and copy the formula there"
 }
@@ -629,17 +629,17 @@ EOF
 build_snap() {
     local snap_dir="${PKG_OUTPUT_DIR}/snap"
     local snapcraft_file="${snap_dir}/snapcraft.yaml"
-    
+
     print_info "Generating Snap package config: $snapcraft_file"
-    
+
     if [[ "$DRY_RUN" == "true" ]]; then
         print_info "[DRY RUN] Would create: $snapcraft_file"
         return 0
     fi
-    
+
     mkdir -p "$snap_dir"
-    
-    cat > "$snapcraft_file" << EOF
+
+    cat >"$snapcraft_file" <<EOF
 name: $PKG_NAME
 version: '$PKG_VERSION'
 summary: $PKG_DESCRIPTION
@@ -683,13 +683,13 @@ parts:
       $(basename "$PKG_ENTRY_POINT"): bin/$(basename "$PKG_ENTRY_POINT")
     stage-packages:
 EOF
-    
+
     # Add dependencies as stage-packages
     for dep in $PKG_DEPENDENCIES; do
         dep=$(echo "$dep" | tr -d ',')
-        [[ "$dep" != "gum" ]] && echo "      - $dep" >> "$snapcraft_file"
+        [[ "$dep" != "gum" ]] && echo "      - $dep" >>"$snapcraft_file"
     done
-    
+
     print_success "Snap config created: $snapcraft_file"
     echo ""
     echo "To build the snap:"
@@ -707,24 +707,24 @@ EOF
 
 build_debian() {
     local deb_dir="${PKG_OUTPUT_DIR}/debian/${PKG_NAME}-${PKG_VERSION}"
-    
+
     print_info "Generating Debian package structure: $deb_dir"
-    
+
     if [[ "$DRY_RUN" == "true" ]]; then
         print_info "[DRY RUN] Would create: $deb_dir"
         return 0
     fi
-    
+
     mkdir -p "$deb_dir/DEBIAN"
     mkdir -p "$deb_dir/usr/share/$PKG_NAME"
     mkdir -p "$deb_dir/usr/bin"
-    
+
     # Control file
     # Format dependencies properly for Debian (comma-space separated, no trailing comma)
     local deb_deps
     deb_deps=$(echo "$PKG_DEPENDENCIES" | tr ',' ' ' | tr -s ' ' | sed 's/^ *//;s/ *$//' | tr ' ' '\n' | sort -u | grep -v '^$' | tr '\n' ',' | sed 's/,/, /g;s/, $//')
-    
-    cat > "$deb_dir/DEBIAN/control" << EOF
+
+    cat >"$deb_dir/DEBIAN/control" <<EOF
 Package: $PKG_NAME
 Version: $PKG_VERSION
 Section: utils
@@ -739,9 +739,9 @@ Description: $PKG_DESCRIPTION
  Generated by Dev-Control Packaging (dc-package)
 Homepage: $PKG_HOMEPAGE
 EOF
-    
+
     # Post-install script
-    cat > "$deb_dir/DEBIAN/postinst" << 'EOF'
+    cat >"$deb_dir/DEBIAN/postinst" <<'EOF'
 #!/bin/bash
 set -e
 ln -sf /usr/share/PKG_NAME/ENTRY_POINT /usr/bin/PKG_NAME
@@ -763,7 +763,7 @@ EOF
     sed -i "s|PKG_NAME|$PKG_NAME|g" "$deb_dir/DEBIAN/postinst"
     sed -i "s|ENTRY_POINT|$(basename "$PKG_ENTRY_POINT")|g" "$deb_dir/DEBIAN/postinst"
     chmod 755 "$deb_dir/DEBIAN/postinst"
-    
+
     # Copy files
     for item in $PKG_INCLUDE_DIRS; do
         item=$(echo "$item" | tr -d ',')
@@ -771,19 +771,19 @@ EOF
             cp -r "$item" "$deb_dir/usr/share/$PKG_NAME/"
         fi
     done
-    
+
     # Copy theme config
     if [[ -f "config/theme.yaml" ]]; then
         mkdir -p "$deb_dir/usr/share/$PKG_NAME/config"
         cp "config/theme.yaml" "$deb_dir/usr/share/$PKG_NAME/config/"
     fi
-    
+
     # Copy entry point
     if [[ -n "$PKG_ENTRY_POINT" && -f "$PKG_ENTRY_POINT" ]]; then
         cp "$PKG_ENTRY_POINT" "$deb_dir/usr/share/$PKG_NAME/"
         chmod +x "$deb_dir/usr/share/$PKG_NAME/$(basename "$PKG_ENTRY_POINT")"
     fi
-    
+
     print_success "Debian package structure created: $deb_dir"
     echo ""
     echo "To build the .deb file:"
@@ -800,17 +800,17 @@ EOF
 build_nix() {
     local nix_dir="${PKG_OUTPUT_DIR}/nix"
     local flake_file="${nix_dir}/flake.nix"
-    
+
     print_info "Generating Nix flake: $flake_file"
-    
+
     if [[ "$DRY_RUN" == "true" ]]; then
         print_info "[DRY RUN] Would create: $flake_file"
         return 0
     fi
-    
+
     mkdir -p "$nix_dir"
-    
-    cat > "$flake_file" << EOF
+
+    cat >"$flake_file" <<EOF
 {
   description = "$PKG_DESCRIPTION";
 
@@ -877,7 +877,7 @@ build_nix() {
     );
 }
 EOF
-    
+
     print_success "Nix flake created: $flake_file"
     echo ""
     echo "To build with Nix:"
@@ -894,17 +894,17 @@ EOF
 build_docker() {
     local docker_dir="${PKG_OUTPUT_DIR}/docker"
     local dockerfile="${docker_dir}/Dockerfile"
-    
+
     print_info "Generating Docker config: $dockerfile"
-    
+
     if [[ "$DRY_RUN" == "true" ]]; then
         print_info "[DRY RUN] Would create: $dockerfile"
         return 0
     fi
-    
+
     mkdir -p "$docker_dir"
-    
-    cat > "$dockerfile" << EOF
+
+    cat >"$dockerfile" <<EOF
 # Dockerfile for $PKG_NAME with web terminal (ttyd) and Gum TUI
 # Generated by Dev-Control Packaging (dc-package)
 #
@@ -968,9 +968,9 @@ EXPOSE 8080
 # Theme-aware terminal colours based on DC_THEME
 CMD ["sh", "-c", "ttyd -p 8080 -W -t fontSize=14 -t fontFamily='JetBrains Mono, Fira Code, monospace' /app/$(basename "$PKG_ENTRY_POINT")"]
 EOF
-    
+
     # Create docker-compose.yml with theme selection
-    cat > "${docker_dir}/docker-compose.yml" << EOF
+    cat >"${docker_dir}/docker-compose.yml" <<EOF
 version: '3.8'
 
 services:
@@ -1011,7 +1011,7 @@ services:
       - DC_THEME=cyber
     profiles: ["themed"]
 EOF
-    
+
     print_success "Docker files created: $docker_dir"
     echo ""
     echo "To build and run:"
@@ -1043,7 +1043,7 @@ display_menu() {
         echo -e "${BOLD}Package: ${CYAN}$PKG_NAME${NC} v${PKG_VERSION}"
     fi
     echo ""
-    
+
     echo -e "${BOLD}Build Options${NC}"
     print_menu_item "1" "Tarball (.tar.gz)        - Universal release archive"
     print_menu_item "2" "Homebrew Formula         - macOS/Linux (brew install)"
@@ -1062,7 +1062,7 @@ display_menu() {
 run_interactive() {
     while true; do
         display_menu
-        
+
         local choice
         if [[ "$TUI_AVAILABLE" == "true" ]]; then
             choice=$(tui_choose "Select option" "1" "2" "3" "4" "5" "6" "A" "T" "I" "0")
@@ -1070,7 +1070,7 @@ run_interactive() {
             read -rp "Select option: " choice
         fi
         echo ""
-        
+
         case "$choice" in
             1) build_tarball ;;
             2) build_homebrew ;;
@@ -1105,7 +1105,7 @@ run_interactive() {
                 print_success "Theme set to: $SELECTED_THEME"
                 ;;
             [Ii]) init_config ;;
-            0|q|Q) 
+            0 | q | Q)
                 print_info "Goodbye!"
                 exit 0
                 ;;
@@ -1113,7 +1113,7 @@ run_interactive() {
                 print_error "Invalid option"
                 ;;
         esac
-        
+
         echo ""
         if [[ "$TUI_AVAILABLE" == "true" ]]; then
             tui_confirm "Continue?" && continue || exit 0
@@ -1133,16 +1133,16 @@ show_build_summary() {
     else
         print_header_success "Build Complete!"
     fi
-    
+
     print_section "Package Info:"
     print_detail "Name" "$PKG_NAME"
     print_detail "Version" "$PKG_VERSION"
     print_detail "Theme" "${SELECTED_THEME:-matrix}"
     print_detail "Output" "$PKG_OUTPUT_DIR"
-    
+
     echo ""
     echo "Built packages:"
-    
+
     [[ "$BUILD_TARBALL" == "true" ]] && print_list_item "Tarball: ${PKG_OUTPUT_DIR}/${PKG_NAME}-${PKG_VERSION}.tar.gz"
     [[ "$BUILD_HOMEBREW" == "true" ]] && print_list_item "Homebrew: ${PKG_OUTPUT_DIR}/homebrew/${PKG_NAME}.rb"
     [[ "$BUILD_SNAP" == "true" ]] && print_list_item "Snap: ${PKG_OUTPUT_DIR}/snap/snapcraft.yaml"
@@ -1158,33 +1158,33 @@ show_build_summary() {
 
 main() {
     parse_args "$@"
-    
+
     # Initialise config mode
     if [[ "$INIT_CONFIG" == "true" ]]; then
         init_config
         exit 0
     fi
-    
+
     # Load configuration
     load_config
-    
+
     # If no build options specified, run interactive
-    if [[ "$BUILD_TARBALL" != "true" && "$BUILD_HOMEBREW" != "true" && 
-          "$BUILD_SNAP" != "true" && "$BUILD_DEBIAN" != "true" && 
-          "$BUILD_NIX" != "true" && "$BUILD_DOCKER" != "true" ]]; then
+    if [[ "$BUILD_TARBALL" != "true" && "$BUILD_HOMEBREW" != "true" &&
+        "$BUILD_SNAP" != "true" && "$BUILD_DEBIAN" != "true" &&
+        "$BUILD_NIX" != "true" && "$BUILD_DOCKER" != "true" ]]; then
         run_interactive
         exit 0
     fi
-    
+
     if [[ "$TUI_AVAILABLE" == "true" ]]; then
         tui_banner "Dev-Control Package Builder" "Theme: ${SELECTED_THEME:-matrix}"
     else
         print_header "Dev-Control Package Builder"
     fi
-    
+
     print_info "Building packages for: ${CYAN}$PKG_NAME${NC} v${PKG_VERSION}"
     echo ""
-    
+
     # Run requested builds
     [[ "$BUILD_TARBALL" == "true" ]] && build_tarball
     [[ "$BUILD_HOMEBREW" == "true" ]] && build_homebrew
@@ -1192,7 +1192,7 @@ main() {
     [[ "$BUILD_DEBIAN" == "true" ]] && build_debian
     [[ "$BUILD_NIX" == "true" ]] && build_nix
     [[ "$BUILD_DOCKER" == "true" ]] && build_docker
-    
+
     # Show summary
     show_build_summary
 }

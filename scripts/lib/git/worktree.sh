@@ -36,7 +36,7 @@ find_worktree_paths_for_branch() {
     local out
     out=$(git worktree list --porcelain 2>/dev/null || true)
     local paths=()
-    
+
     if [[ -z "$out" ]]; then
         echo ""
         return 0
@@ -53,7 +53,7 @@ find_worktree_paths_for_branch() {
                 paths+=("$path")
             fi
         fi
-    done <<< "$out"
+    done <<<"$out"
 
     # Print newline-separated paths
     (for p in "${paths[@]}"; do echo "$p"; done)
@@ -73,7 +73,7 @@ get_worktree_branch() {
     local worktree_path="$1"
     local out
     out=$(git worktree list --porcelain 2>/dev/null || true)
-    
+
     local current_path="" in_target=false
     while IFS= read -r line; do
         if [[ "$line" == worktree* ]]; then
@@ -89,8 +89,8 @@ get_worktree_branch() {
             echo "${bref#refs/heads/}"
             return 0
         fi
-    done <<< "$out"
-    
+    done <<<"$out"
+
     echo ""
 }
 
@@ -160,21 +160,21 @@ reset_worktree_to_ref() {
     local target_ref="$2"
     local ts
     ts=$(date -u +%Y%m%dT%H%M%SZ)
-    
+
     if [[ ! -d "$worktree_path" ]]; then
         print_error "Worktree path does not exist: $worktree_path"
         return 1
     fi
-    
+
     local curr_branch
     curr_branch=$(git -C "$worktree_path" symbolic-ref --quiet --short HEAD 2>/dev/null || echo "HEAD")
-    
+
     # Create backup
     local bundle="/tmp/git-fix-worktree-backup-${curr_branch//\//-}-${ts}.bundle"
     if git -C "$worktree_path" bundle create "$bundle" HEAD 2>/dev/null; then
         print_info "Created backup: $bundle"
     fi
-    
+
     # Reset to target ref
     if git -C "$worktree_path" reset --hard "$target_ref"; then
         print_success "Reset worktree $worktree_path to $target_ref"

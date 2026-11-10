@@ -26,11 +26,12 @@ print_header() {
     local title="$1"
     local width=${2:-68}
     local title_len=${#title}
-    local total_padding=$(( width - title_len))
-    local left_padding=$(( total_padding / 2 ))
-    local right_padding=$(( total_padding - left_padding ))
+    local total_padding=$((width - title_len))
+    local left_padding=$((total_padding / 2))
+    local right_padding=$((total_padding - left_padding))
     # Build bar with a bash loop — seq-based printf fails in non-TTY subshells.
-    local bar=''; for (( _bhi=0; _bhi<width; _bhi++ )); do bar+='═'; done
+    local bar=''
+    for ((_bhi = 0; _bhi < width; _bhi++)); do bar+='═'; done
     echo -e "\n${BOLD}${BLUE}╔${bar}╗${NC}"
     echo -e "${BOLD}${BLUE}║$(printf '%*s' $left_padding '')${CYAN}${title}${NC}$(printf '%*s' $right_padding '')${BOLD}${BLUE}║${NC}"
     echo -e "${BOLD}${BLUE}╚${bar}╝${NC}\n"
@@ -42,10 +43,11 @@ print_header_success() {
     local title="$1"
     local width=${2:-60}
     local title_len=${#title}
-    local total_padding=$(( width - title_len))
-    local left_padding=$(( total_padding / 2 ))
-    local right_padding=$(( total_padding - left_padding ))
-    local bar=''; for (( _bhi=0; _bhi<width; _bhi++ )); do bar+='═'; done
+    local total_padding=$((width - title_len))
+    local left_padding=$((total_padding / 2))
+    local right_padding=$((total_padding - left_padding))
+    local bar=''
+    for ((_bhi = 0; _bhi < width; _bhi++)); do bar+='═'; done
     echo -e "\n${BOLD}${GREEN}╔${bar}╗${NC}"
     echo -e "${BOLD}${GREEN}║$(printf '%*s' $left_padding '')${CYAN}${title}${NC}$(printf '%*s' $right_padding '')${BOLD}${GREEN}║${NC}"
     echo -e "${BOLD}${GREEN}╚${bar}╝${NC}\n"
@@ -57,10 +59,10 @@ print_header_warning() {
     local title="$1"
     local width=${2:-60}
     local title_len=${#title}
-    local total_padding=$(( width - title_len))
-    local left_padding=$(( total_padding / 2 ))
-    local right_padding=$(( total_padding - left_padding ))
-    
+    local total_padding=$((width - title_len))
+    local left_padding=$((total_padding / 2))
+    local right_padding=$((total_padding - left_padding))
+
     echo -e "\n${BOLD}${YELLOW}╔$(printf '═%.0s' $(seq 1 "$width"))╗${NC}"
     echo -e "${BOLD}${YELLOW}║$(printf '%*s' $left_padding '')${CYAN}${title}${NC}$(printf '%*s' $right_padding '')${BOLD}${YELLOW}║${NC}"
     echo -e "${BOLD}${YELLOW}╚$(printf '═%.0s' $(seq 1 "$width"))╝${NC}\n"
@@ -155,10 +157,10 @@ print_box() {
     local colour="${2:-$CYAN}"
     local len=${#text}
     local width=$((len + 4))
-    
-    echo -e "${colour}┌$(printf '─%.0s' $(seq 1 $((width-2))))┐${NC}"
+
+    echo -e "${colour}┌$(printf '─%.0s' $(seq 1 $((width - 2))))┐${NC}"
     echo -e "${colour}│${NC} $text ${colour}│${NC}"
-    echo -e "${colour}└$(printf '─%.0s' $(seq 1 $((width-2))))┘${NC}"
+    echo -e "${colour}└$(printf '─%.0s' $(seq 1 $((width - 2))))┘${NC}"
 }
 
 # ============================================================================
@@ -175,12 +177,12 @@ confirm() {
     local prompt="${1:-Continue?}"
     local default="${2:-n}"
     local response
-    
+
     if [[ "${DC_ASSUME_YES:-false}" == "true" ]]; then
         echo "${prompt} [auto-yes]"
         return 0
     fi
-    
+
     if [[ "$default" =~ ^[Yy] ]]; then
         read -rp "${prompt} [Y/n]: " response
         [[ -z "$response" || "$response" =~ ^[Yy] ]]
@@ -196,7 +198,7 @@ read_input() {
     local prompt="$1"
     local default="$2"
     local result
-    
+
     if [[ -n "$default" ]]; then
         read -rp "$prompt [$default]: " result
         echo "${result:-$default}"
@@ -213,17 +215,17 @@ run_with_spinner() {
     local msg="${2:-Working...}"
     local spin='-\|/'
     local i=0
-    
+
     echo -n "$msg "
     eval "$cmd" &
     local pid=$!
-    
+
     while kill -0 $pid 2>/dev/null; do
-        i=$(( (i+1) % 4 ))
+        i=$(((i + 1) % 4))
         printf "\r%s %s" "$msg" "${spin:$i:1}"
         sleep 0.1
     done
-    
+
     wait $pid
     local status=$?
     printf "\r%s " "$msg"

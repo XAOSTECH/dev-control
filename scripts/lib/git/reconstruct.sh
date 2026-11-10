@@ -56,12 +56,12 @@ recreate_history_with_dates() {
     fi
 
     local total
-    total=$(wc -l < "$TEMP_ALL_DATES" | tr -d ' ')
+    total=$(wc -l <"$TEMP_ALL_DATES" | tr -d ' ')
     if [[ "$total" -eq 0 ]]; then
         print_warning "Captured dates file empty; nothing to do"
         return 0
     fi
-    
+
     # CRITICAL: Make a copy of TEMP_ALL_DATES before rebase-based restoration modifies it
     # This preserves the complete list for reconstruction fallback
     local DATES_FOR_RECONSTRUCTION
@@ -97,11 +97,11 @@ recreate_history_with_dates() {
             helper_script=$(generate_apply_dates_helper_file)
         fi
 
-# preserve everything after first '|' (date may contain spaces)
-date="\$(echo \"\${line}\" | cut -d'|' -f2-)"
-# (removed) Inline date-apply log - date application delegated to helper script
-# (removed) Inline commit amend - helper will perform amend/sign/verification per commit
-# The helper script is responsible for removing applied lines from the dates file helper file ready (either repo helper or generated helper)
+        # preserve everything after first '|' (date may contain spaces)
+        date="\$(echo \"\${line}\" | cut -d'|' -f2-)"
+        # (removed) Inline date-apply log - date application delegated to helper script
+        # (removed) Inline commit amend - helper will perform amend/sign/verification per commit
+        # The helper script is responsible for removing applied lines from the dates file helper file ready (either repo helper or generated helper)
 
         local rebase_base
         if [[ -z "$parent" ]]; then
@@ -156,21 +156,25 @@ date="\$(echo \"\${line}\" | cut -d'|' -f2-)"
     fi
 
     local dummy_file=".tmp-date-fix-$$"
-    echo "Temporary file for date restoration - will be removed" > "$dummy_file"
+    echo "Temporary file for date restoration - will be removed" >"$dummy_file"
     git add "$dummy_file"
 
     print_info "Step 1/3: Adding dummy file to trigger commit rewrite..."
     print_info "Step 2/3: Amending HEAD with date: $head_new_date"
     GIT_AUTHOR_DATE="$head_new_date" \
-    GIT_COMMITTER_DATE="$head_new_date" \
-    git commit --amend --no-edit || { print_error "Failed to amend HEAD for date restoration"; rm -f "$dummy_file"; return 1; }
+        GIT_COMMITTER_DATE="$head_new_date" \
+        git commit --amend --no-edit || {
+        print_error "Failed to amend HEAD for date restoration"
+        rm -f "$dummy_file"
+        return 1
+    }
 
     print_info "Step 3/3: Removing dummy file and finalising amend"
     rm -f "$dummy_file"
     git rm -f "$dummy_file" 2>/dev/null || true
     GIT_AUTHOR_DATE="$head_new_date" \
-    GIT_COMMITTER_DATE="$head_new_date" \
-    git commit --amend --no-edit || print_warning "Final amend failed"
+        GIT_COMMITTER_DATE="$head_new_date" \
+        git commit --amend --no-edit || print_warning "Final amend failed"
 
     print_success "Fallback date restoration complete"
 
@@ -182,7 +186,7 @@ date="\$(echo \"\${line}\" | cut -d'|' -f2-)"
         else
             # CRITICAL: Restore the complete list from copy before rebase-based phase modified it
             cp "$DATES_FOR_RECONSTRUCTION" "$TEMP_ALL_DATES"
-            
+
             # Try reconstruction, optionally with auto strategies
             try_reconstruct_with_strategies "${RECONSTRUCT_TARGET:-$oldest_commit}" || {
                 print_warning "Reconstruction fallback failed"
@@ -195,10 +199,10 @@ date="\$(echo \"\${line}\" | cut -d'|' -f2-)"
             }
         fi
     fi
-    
+
     # Cleanup reconstruction copy
     rm -f "$DATES_FOR_RECONSTRUCTION"
-} 
+}
 
 # ============================================================================
 # RECONSTRUCTION STRATEGIES
@@ -289,22 +293,22 @@ prompt_override_same_branch() {
         local total_dates=0 matched_dates=0 missing_dates=0
         while IFS='|' read -r orig signed date; do
             if [[ -z "$signed" || -z "$date" ]]; then continue; fi
-            total_dates=$((total_dates+1))
+            total_dates=$((total_dates + 1))
             # Compare by epoch
             existing_epoch=$(git show -s --format=%aI "$signed" 2>/dev/null || true)
             if [[ -n "$existing_epoch" ]]; then
                 existing_epoch_s=$(date -d "$existing_epoch" +%s 2>/dev/null || true)
                 date_epoch=$(date -d "$date" +%s 2>/dev/null || true)
                 if [[ -n "$existing_epoch_s" && -n "$date_epoch" && "$existing_epoch_s" -eq "$date_epoch" ]]; then
-                    matched_dates=$((matched_dates+1))
+                    matched_dates=$((matched_dates + 1))
                 fi
             fi
-        done < "$LAST_PRESERVE_MAP"
-        missing_dates=$((total_dates-matched_dates))
+        done <"$LAST_PRESERVE_MAP"
+        missing_dates=$((total_dates - matched_dates))
         if [[ "$total_dates" -gt 0 && "$missing_dates" -gt 0 ]]; then
             print_warning "Preserved branch '$src_branch' has $missing_dates/$total_dates commits with mismatched dates. Overwriting remote will lose reconstructed date fixes."
             if [[ "${ALLOW_OVERRIDE_SAME_BRANCH:-}" != "true" ]]; then
-                echo "To proceed anyway, type 'override' (case-sensitive), or re-run with ALLOW_OVERRIDE_SAME_BRANCH=true to auto-accept." 
+                echo "To proceed anyway, type 'override' (case-sensitive), or re-run with ALLOW_OVERRIDE_SAME_BRANCH=true to auto-accept."
                 read -rp "Type 'override' to confirm replacement: " _confirm
                 if [[ "$_confirm" != "override" ]]; then
                     print_info "Override not confirmed; aborting replace to avoid losing reconstructed dates."
@@ -318,7 +322,10 @@ prompt_override_same_branch() {
     fi
 
     # If we previously applied a reconstruction to the remote branch, detect whether origin/$dest_branch already points at the reconstruction result.
-    if [[ -n "${LAST_RECONSTRUCT_BRANCH:-}" && $(git rev-parse --verify --quiet "$LAST_RECONSTRUCT_BRANCH" >/dev/null; echo $?) -eq 0 ]]; then
+    if [[ -n "${LAST_RECONSTRUCT_BRANCH:-}" && $(
+        git rev-parse --verify --quiet "$LAST_RECONSTRUCT_BRANCH" >/dev/null
+        echo $?
+    ) -eq 0 ]]; then
         remote_sha=$(git ls-remote origin "refs/heads/$dest_branch" | cut -f1 || true)
         recon_sha=$(git rev-parse --verify "$LAST_RECONSTRUCT_BRANCH" 2>/dev/null || true)
         if [[ -n "$remote_sha" && -n "$recon_sha" && "$remote_sha" == "$recon_sha" ]]; then
@@ -327,7 +334,7 @@ prompt_override_same_branch() {
             if [[ "${ALLOW_OVERRIDE_SAME_BRANCH:-}" == "true" ]]; then
                 print_info "ALLOW_OVERRIDE_SAME_BRANCH=true: continuing with override"
             else
-                echo "Options:" 
+                echo "Options:"
                 echo "  1) Continue and replace remote with $src_branch (may lose reconstructed dates)"
                 echo "  2) Keep reconstructed branch ($LAST_RECONSTRUCT_BRANCH) as remote (recommended)"
                 echo "  3) Cancel"
@@ -363,7 +370,7 @@ prompt_override_same_branch() {
                 src_branch="$LAST_RECONSTRUCT_BRANCH"
                 _ans=y
             else
-                echo "Choose replacement source:" 
+                echo "Choose replacement source:"
                 echo "  1) Use preserved branch: $src_branch (may have missing dates)"
                 echo "  2) Use reconstructed branch: $LAST_RECONSTRUCT_BRANCH (dates applied via reconstruction)"
                 echo "  3) Cancel"
@@ -471,7 +478,7 @@ reconstruct_history_without_commit() {
     git checkout -b "$tmp_branch" "$parent"
 
     local report_file="$REPORT_DIR/reconstruct-${target_hash:0:8}-${ts}.txt"
-    echo "Reconstruction report: $report_file" > "$report_file"
+    echo "Reconstruction report: $report_file" >"$report_file"
     echo "Starting reconstruction of commits after $target_hash" | tee -a "$report_file"
 
     # Read remaining commits from the dates file in order (oldest first)
@@ -496,7 +503,7 @@ reconstruct_history_without_commit() {
         if git merge-base --is-ancestor "$commit" HEAD 2>/dev/null; then
             echo "SKIP: $commit already present in the current branch" | tee -a "$report_file"
             # remove the line from the master dates file
-            grep -v -F -- "${commit}|${commit_date}" "$TEMP_ALL_DATES" > "${TEMP_ALL_DATES}.tmp" && mv "${TEMP_ALL_DATES}.tmp" "$TEMP_ALL_DATES"
+            grep -v -F -- "${commit}|${commit_date}" "$TEMP_ALL_DATES" >"${TEMP_ALL_DATES}.tmp" && mv "${TEMP_ALL_DATES}.tmp" "$TEMP_ALL_DATES"
             continue
         fi
 
@@ -518,9 +525,9 @@ reconstruct_history_without_commit() {
             parent_args=()
             for p in $parents; do
                 if [[ -n "${new_sha_map[$p]:-}" ]]; then
-                    parent_args+=( -p "${new_sha_map[$p]}" )
+                    parent_args+=(-p "${new_sha_map[$p]}")
                 else
-                    parent_args+=( -p "$p" )
+                    parent_args+=(-p "$p")
                 fi
             done
 
@@ -529,7 +536,7 @@ reconstruct_history_without_commit() {
                 echo "$commit_msg" | git commit-tree "$tree" "${parent_args[@]}" 2>/dev/null); then
                 new_sha_map[$commit]="$new_sha"
                 echo "OK: Recreated merge commit $commit -> $new_sha" | tee -a "$report_file"
-                grep -v -F -- "${commit}|${commit_date}" "$TEMP_ALL_DATES" > "${TEMP_ALL_DATES}.tmp" && mv "${TEMP_ALL_DATES}.tmp" "$TEMP_ALL_DATES"
+                grep -v -F -- "${commit}|${commit_date}" "$TEMP_ALL_DATES" >"${TEMP_ALL_DATES}.tmp" && mv "${TEMP_ALL_DATES}.tmp" "$TEMP_ALL_DATES"
                 continue
             else
                 echo "WARN: Failed to recreate merge commit $commit; attempting cherry-pick fallback" | tee -a "$report_file"
@@ -549,8 +556,8 @@ reconstruct_history_without_commit() {
             orig_author_email=$(git show -s --format='%ae' "$commit" 2>/dev/null || true)
             if [[ -n "$orig_author_name" && -n "$orig_author_email" && -n "$commit_date" ]]; then
                 GIT_AUTHOR_NAME="$orig_author_name" GIT_AUTHOR_EMAIL="$orig_author_email" \
-                GIT_AUTHOR_DATE="$commit_date" GIT_COMMITTER_DATE="$commit_date" \
-                git commit --amend --no-edit --no-verify >/dev/null 2>&1 || true
+                    GIT_AUTHOR_DATE="$commit_date" GIT_COMMITTER_DATE="$commit_date" \
+                    git commit --amend --no-edit --no-verify >/dev/null 2>&1 || true
             fi
 
             # Map original -> new sha for future merge recreation
@@ -560,7 +567,7 @@ reconstruct_history_without_commit() {
 
             echo "OK: Cherry-picked $commit" | tee -a "$report_file"
             # remove the line
-            grep -v -F -- "${commit}|${commit_date}" "$TEMP_ALL_DATES" > "${TEMP_ALL_DATES}.tmp" && mv "${TEMP_ALL_DATES}.tmp" "$TEMP_ALL_DATES"
+            grep -v -F -- "${commit}|${commit_date}" "$TEMP_ALL_DATES" >"${TEMP_ALL_DATES}.tmp" && mv "${TEMP_ALL_DATES}.tmp" "$TEMP_ALL_DATES"
             continue
         fi
 
@@ -581,8 +588,8 @@ reconstruct_history_without_commit() {
                     orig_author_email=$(git show -s --format='%ae' "$commit" 2>/dev/null || true)
                     if [[ -n "$orig_author_name" && -n "$orig_author_email" && -n "$commit_date" ]]; then
                         GIT_AUTHOR_NAME="$orig_author_name" GIT_AUTHOR_EMAIL="$orig_author_email" \
-                        GIT_AUTHOR_DATE="$commit_date" GIT_COMMITTER_DATE="$commit_date" \
-                        git commit --amend --no-edit --no-verify >/dev/null 2>&1 || true
+                            GIT_AUTHOR_DATE="$commit_date" GIT_COMMITTER_DATE="$commit_date" \
+                            git commit --amend --no-edit --no-verify >/dev/null 2>&1 || true
                     fi
 
                     # Map original -> new sha
@@ -591,14 +598,14 @@ reconstruct_history_without_commit() {
                     fi
 
                     echo "OK: Cherry-picked $commit with auto-resolve" | tee -a "$report_file"
-                    grep -v -F -- "${commit}|${commit_date}" "$TEMP_ALL_DATES" > "${TEMP_ALL_DATES}.tmp" && mv "${TEMP_ALL_DATES}.tmp" "$TEMP_ALL_DATES"
+                    grep -v -F -- "${commit}|${commit_date}" "$TEMP_ALL_DATES" >"${TEMP_ALL_DATES}.tmp" && mv "${TEMP_ALL_DATES}.tmp" "$TEMP_ALL_DATES"
                     continue
                 else
                     # If the cherry-pick ended empty, skip it
                     if git status --porcelain | grep -q '^$'; then
                         echo "SKIP: Cherry-pick of $commit resulted in empty commit; skipping" | tee -a "$report_file"
                         git cherry-pick --skip >/dev/null 2>&1 || true
-                        grep -v -F -- "${commit}|${commit_date}" "$TEMP_ALL_DATES" > "${TEMP_ALL_DATES}.tmp" && mv "${TEMP_ALL_DATES}.tmp" "$TEMP_ALL_DATES"
+                        grep -v -F -- "${commit}|${commit_date}" "$TEMP_ALL_DATES" >"${TEMP_ALL_DATES}.tmp" && mv "${TEMP_ALL_DATES}.tmp" "$TEMP_ALL_DATES"
                         continue
                     fi
                 fi
@@ -612,15 +619,15 @@ reconstruct_history_without_commit() {
             status=1
             break
         fi
-    done < "$dates_tmp"
+    done <"$dates_tmp"
 
     # Cleanup temp copy
     rm -f "$dates_tmp"
 
     if [[ $status -eq 0 ]]; then
         echo "Reconstruction completed successfully onto $tmp_branch" | tee -a "$report_file"
-        echo "Remaining dates file:" >> "$report_file"
-        [[ -f "$TEMP_ALL_DATES" ]] && sed -n '1,200p' "$TEMP_ALL_DATES" >> "$report_file"
+        echo "Remaining dates file:" >>"$report_file"
+        [[ -f "$TEMP_ALL_DATES" ]] && sed -n '1,200p' "$TEMP_ALL_DATES" >>"$report_file"
         echo "You can inspect branch: $tmp_branch" | tee -a "$report_file"
 
         # Prompt whether to replace the original branch with this reconstructed branch (destructive)
@@ -669,4 +676,4 @@ reconstruct_history_without_commit() {
         echo "Reconstruction failed; leaving branch $tmp_branch for manual inspection" | tee -a "$report_file"
         return 1
     fi
-} 
+}

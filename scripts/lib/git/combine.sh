@@ -64,8 +64,14 @@ combine_commits() {
 
     # Resolve both refs to full commit SHAs
     local A B
-    A=$(git rev-parse --verify --quiet "${COMBINE_A}^{commit}") || { print_error "Commit not found: $COMBINE_A"; exit 1; }
-    B=$(git rev-parse --verify --quiet "${COMBINE_B}^{commit}") || { print_error "Commit not found: $COMBINE_B"; exit 1; }
+    A=$(git rev-parse --verify --quiet "${COMBINE_A}^{commit}") || {
+        print_error "Commit not found: $COMBINE_A"
+        exit 1
+    }
+    B=$(git rev-parse --verify --quiet "${COMBINE_B}^{commit}") || {
+        print_error "Commit not found: $COMBINE_B"
+        exit 1
+    }
 
     if [[ "$A" == "$B" ]]; then
         print_error "Cannot combine a commit with itself"
@@ -75,9 +81,11 @@ combine_commits() {
     # Determine chronological order (the ancestor is the older commit)
     local older newer
     if git merge-base --is-ancestor "$A" "$B" 2>/dev/null; then
-        older="$A"; newer="$B"
+        older="$A"
+        newer="$B"
     elif git merge-base --is-ancestor "$B" "$A" 2>/dev/null; then
-        older="$B"; newer="$A"
+        older="$B"
+        newer="$A"
     else
         print_error "Commits are on divergent branches; cannot combine."
         exit 1
@@ -88,7 +96,7 @@ combine_commits() {
     newer_parent=$(git rev-parse --verify --quiet "${newer}^") || true
     if [[ "$newer_parent" != "$older" ]]; then
         print_error "Commits are not subsequent (adjacent)."
-        print_info  "Non-subsequent combine is not supported here. Drop the intermediate commit(s) first (see --drop), or choose two adjacent commits."
+        print_info "Non-subsequent combine is not supported here. Drop the intermediate commit(s) first (see --drop), or choose two adjacent commits."
         exit 1
     fi
 
@@ -173,13 +181,21 @@ combine_commits() {
         if [[ "$c" == "$newer" ]]; then
             tree=$(git rev-parse "${newer}^{tree}")
             msg="${o_msg}"$'\n\n'"${n_msg}"
-            an="$o_an"; ae="$o_ae"; ad="$o_ad"
-            cn="$o_cn"; ce="$o_ce"; cd="$o_cd"
+            an="$o_an"
+            ae="$o_ae"
+            ad="$o_ad"
+            cn="$o_cn"
+            ce="$o_ce"
+            cd="$o_cd"
         else
             tree=$(git rev-parse "${c}^{tree}")
             msg=$(git log -1 --format=%B "$c")
-            an=$(git log -1 --format=%an "$c"); ae=$(git log -1 --format=%ae "$c"); ad=$(git log -1 --format=%aI "$c")
-            cn=$(git log -1 --format=%cn "$c"); ce=$(git log -1 --format=%ce "$c"); cd=$(git log -1 --format=%cI "$c")
+            an=$(git log -1 --format=%an "$c")
+            ae=$(git log -1 --format=%ae "$c")
+            ad=$(git log -1 --format=%aI "$c")
+            cn=$(git log -1 --format=%cn "$c")
+            ce=$(git log -1 --format=%ce "$c")
+            cd=$(git log -1 --format=%cI "$c")
         fi
 
         local -a parent_arg=()

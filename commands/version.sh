@@ -17,9 +17,9 @@ source "$SCRIPT_DIR/../scripts/lib/output.sh"
 show_version() {
     local verbose=false
     [[ "${1:-}" == "-v" || "${1:-}" == "--verbose" ]] && verbose=true
-    
+
     dc_version_string
-    
+
     if [[ "$verbose" == "true" ]]; then
         echo ""
         dc_install_info
@@ -38,13 +38,13 @@ show_json() {
     install_dir=$(cd "$SCRIPT_DIR/.." && pwd)
     local commit="unknown"
     local branch="unknown"
-    
+
     if [[ -d "$install_dir/.git" ]]; then
         commit=$(git -C "$install_dir" rev-parse --short HEAD 2>/dev/null || echo "unknown")
         branch=$(git -C "$install_dir" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
     fi
-    
-    cat << EOF
+
+    cat <<EOF
 {
   "version": "$DC_VERSION",
   "date": "$DC_VERSION_DATE",
@@ -74,7 +74,7 @@ show_changelog() {
 }
 
 show_help() {
-    cat << 'EOF'
+    cat <<'EOF'
 Version and update management
 
 USAGE:
@@ -109,10 +109,10 @@ EOF
 main() {
     local cmd="${1:-show}"
     shift 2>/dev/null || true
-    
+
     # Handle flags that can come first
     case "$cmd" in
-        -v|--verbose)
+        -v | --verbose)
             show_version --verbose
             return
             ;;
@@ -120,12 +120,12 @@ main() {
             show_json
             return
             ;;
-        -h|--help|help)
+        -h | --help | help)
             show_help
             return
             ;;
     esac
-    
+
     case "$cmd" in
         show)
             if [[ "${1:-}" == "--json" ]]; then

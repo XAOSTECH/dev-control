@@ -48,31 +48,31 @@ parse_yaml() {
     local file="$1"
     local prefix="${2:-}"
     local line key value
-    
+
     [[ ! -f "$file" ]] && return 1
-    
+
     while IFS= read -r line || [[ -n "$line" ]]; do
         # Skip comments and empty lines
         [[ "$line" =~ ^[[:space:]]*# ]] && continue
         [[ -z "${line// /}" ]] && continue
-        
+
         # Match key: value
         if [[ "$line" =~ ^[[:space:]]*([a-zA-Z_][a-zA-Z0-9_-]*)[[:space:]]*:[[:space:]]*(.*)[[:space:]]*$ ]]; then
             key="${BASH_REMATCH[1]}"
             value="${BASH_REMATCH[2]}"
-            
+
             # Remove quotes
             value="${value#\"}"
             value="${value%\"}"
             value="${value#\'}"
             value="${value%\'}"
-            
+
             # Replace hyphens with underscores
             key="${key//-/_}"
-            
+
             printf '%s%s=%q\n' "$prefix" "$key" "$value"
         fi
-    done < "$file"
+    done <"$file"
 }
 
 # ============================================================================
@@ -81,17 +81,17 @@ parse_yaml() {
 
 load_dc_config() {
     local key value
-    
+
     # Start with defaults
     for key in "${!DC_DEFAULTS[@]}"; do
         eval "DC_CONFIG_${key}=\"${DC_DEFAULTS[$key]}\""
     done
-    
+
     # Load global config
     if [[ -f "$DC_GLOBAL_CONFIG" ]]; then
         eval "$(parse_yaml "$DC_GLOBAL_CONFIG" "DC_CONFIG_")"
     fi
-    
+
     # Find project root and load project config
     local project_root
     if project_root=$(git rev-parse --show-toplevel 2>/dev/null); then
@@ -101,7 +101,7 @@ load_dc_config() {
             eval "$(parse_yaml "$project_root/$DC_LEGACY_PROJECT_CONFIG" "DC_CONFIG_")"
         fi
     fi
-    
+
     return 0
 }
 
@@ -109,11 +109,11 @@ dc_config() {
     local key="$1"
     local default="${2:-}"
     local var_name
-    
+
     # Replace dots and dashes with underscores for variable name
     var_name="DC_CONFIG_${key//./_}"
     var_name="${var_name//-/_}"
-    
+
     if [[ -n "${!var_name+x}" ]]; then
         echo "${!var_name}"
     else
@@ -127,11 +127,11 @@ dc_config_set() {
     local scope="${3:-project}"
     local config_file
     local var_name
-    
+
     # Replace dots and dashes with underscores for variable name
     var_name="DC_CONFIG_${key//./_}"
     var_name="${var_name//-/_}"
-    
+
     if [[ "$scope" == "global" ]]; then
         config_file="$DC_GLOBAL_CONFIG"
         mkdir -p "$(dirname "$config_file")"
@@ -140,24 +140,24 @@ dc_config_set() {
         project_root=$(git rev-parse --show-toplevel 2>/dev/null) || return 1
         config_file="$project_root/$DC_PROJECT_CONFIG"
     fi
-    
+
     if [[ ! -f "$config_file" ]]; then
-        echo "# Dev-Control configuration" > "$config_file"
+        echo "# Dev-Control configuration" >"$config_file"
     fi
-    
+
     if grep -q "^${key}:" "$config_file" 2>/dev/null; then
         sed -i "s|^${key}:.*|${key}: ${value}|" "$config_file"
     else
-        echo "${key}: ${value}" >> "$config_file"
+        echo "${key}: ${value}" >>"$config_file"
     fi
-    
+
     printf -v "$var_name" '%s' "$value"
 }
 
 dc_config_show() {
     local format="${1:-text}"
     local key var
-    
+
     if [[ "$format" == "json" ]]; then
         echo "{"
         local first=true
@@ -185,7 +185,7 @@ dc_config_show() {
 # Note: These variables are intended for use by caller scripts
 load_gc_metadata() {
     git rev-parse --git-dir &>/dev/null || return 1
-    
+
     PROJECT_NAME=$(git config --local --get dc-init.project-name 2>/dev/null || echo "")
     REPO_SLUG=$(git config --local --get dc-init.repo-slug 2>/dev/null || echo "")
     LICENSE_TYPE=$(git config --local --get dc-init.licence-type 2>/dev/null || echo "")
@@ -195,7 +195,7 @@ load_gc_metadata() {
     VISIBILITY=$(git config --local --get dc-init.visibility 2>/dev/null || echo "")
     TEMPLATE_SET=$(git config --local --get dc-init.template-set 2>/dev/null || echo "")
     WEBSITE_URL=$(git config --local --get dc-init.website-url 2>/dev/null || echo "")
-    
+
     return 0
 }
 

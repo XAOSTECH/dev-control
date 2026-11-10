@@ -51,14 +51,14 @@ capture_all_dates() {
 
     print_info "Capturing original dates for ALL commits..."
 
-    > "$TEMP_ALL_DATES"
+    >"$TEMP_ALL_DATES"
 
     # If start_ref is empty or equals HEAD, capture only HEAD
     if [[ -z "$start_ref" || "$start_ref" == "HEAD" ]]; then
         for commit in $(git rev-list --reverse HEAD); do
             local author_date
             author_date=$(git log -1 --format=%aI "$commit")
-            echo "$commit|$author_date" >> "$TEMP_ALL_DATES"
+            echo "$commit|$author_date" >>"$TEMP_ALL_DATES"
         done
     else
         # If start_ref is a single commit hash (parent), we capture commits after it
@@ -73,12 +73,12 @@ capture_all_dates() {
         for commit in $(git rev-list --reverse "$range"); do
             local author_date
             author_date=$(git log -1 --format=%aI "$commit")
-            echo "$commit|$author_date" >> "$TEMP_ALL_DATES"
+            echo "$commit|$author_date" >>"$TEMP_ALL_DATES"
         done
     fi
 
     local count
-    count=$(wc -l < "$TEMP_ALL_DATES")
+    count=$(wc -l <"$TEMP_ALL_DATES")
     print_success "Captured original dates for $count commits"
 }
 
@@ -88,14 +88,14 @@ capture_all_dates() {
 capture_dates_for_range() {
     local range="$1"
     print_info "Capturing dates for range: $range"
-    > "$TEMP_ALL_DATES"
+    >"$TEMP_ALL_DATES"
     for commit in $(git rev-list --reverse "$range"); do
         local author_date
         author_date=$(git log -1 --format=%aI "$commit")
-        echo "$commit|$author_date" >> "$TEMP_ALL_DATES"
+        echo "$commit|$author_date" >>"$TEMP_ALL_DATES"
     done
     local count
-    count=$(wc -l < "$TEMP_ALL_DATES")
+    count=$(wc -l <"$TEMP_ALL_DATES")
     print_success "Captured original dates for $count commits in range"
 }
 
@@ -132,7 +132,7 @@ generate_apply_dates_helper_file() {
     pid=$$
     tmpf="/tmp/git-fix-apply-dates-${pid}-${ts}.sh"
 
-    cat > "$tmpf" <<'APPLY_DATES_HELPER'
+    cat >"$tmpf" <<'APPLY_DATES_HELPER'
 #!/usr/bin/env bash
 set -euo pipefail
 # Inline generated helper: applies first date line to current commit and verifies signing & date
@@ -235,7 +235,7 @@ apply_dates_from_preserve_map() {
     local ts logf
     ts=$(date -u +%Y%m%dT%H%M%SZ)
     logf="/tmp/git-fix-preserve-dates-${ts}.log"
-    : > "$logf"
+    : >"$logf"
 
     print_info "Applying dates using map: $mapfile (log: $logf)"
     local remaining=0
@@ -278,11 +278,11 @@ apply_dates_from_preserve_map() {
     local map_lines=()
     while IFS= read -r L; do
         map_lines+=("$L")
-    done < "$mapfile"
+    done <"$mapfile"
 
     for L in "${map_lines[@]}"; do
         local orig new_sha date
-        IFS='|' read -r orig new_sha date <<< "$L"
+        IFS='|' read -r orig new_sha date <<<"$L"
         if [[ -z "$orig" || -z "$new_sha" || -z "$date" ]]; then
             echo "[WARN] Skipping malformed line: $L" | tee -a "$logf"
             continue
@@ -303,14 +303,14 @@ apply_dates_from_preserve_map() {
         # Checkout commit in detached HEAD and try to amend with retry
         if ! git checkout --quiet "$new_sha" 2>/dev/null; then
             echo "[WARN] Failed to checkout $new_sha" | tee -a "$logf"
-            remaining=$((remaining+1))
+            remaining=$((remaining + 1))
             continue
         fi
 
         local attempt=0
         local success=false
         while [[ $attempt -lt 3 ]]; do
-            attempt=$((attempt+1))
+            attempt=$((attempt + 1))
             echo "[DEBUG] Amend attempt $attempt for $new_sha" | tee -a "$logf"
             GIT_AUTHOR_DATE="$date" GIT_COMMITTER_DATE="$date" \
                 git commit --amend --no-edit -n -S >/dev/null 2>>"$logf" && success=true && break
@@ -319,7 +319,7 @@ apply_dates_from_preserve_map() {
 
         if [[ "$success" != "true" ]]; then
             echo "[WARN] Amend failed for $new_sha after $attempt attempts" | tee -a "$logf"
-            remaining=$((remaining+1))
+            remaining=$((remaining + 1))
             continue
         fi
 
@@ -329,7 +329,7 @@ apply_dates_from_preserve_map() {
 
         # Update the map: replace second field with the new SHA
         local tmp_map="${mapfile}.tmp"
-        awk -F'|' -v OFS='|' -v o="$orig" -v ns="$signed_new" '{ if ($1==o) $2=ns; print }' "$mapfile" > "$tmp_map" && mv "$tmp_map" "$mapfile" || true
+        awk -F'|' -v OFS='|' -v o="$orig" -v ns="$signed_new" '{ if ($1==o) $2=ns; print }' "$mapfile" >"$tmp_map" && mv "$tmp_map" "$mapfile" || true
 
         # Update target branch ref if we detected it
         if [[ -n "$target_branch" ]]; then
@@ -339,7 +339,7 @@ apply_dates_from_preserve_map() {
 
     if [[ "$remaining" -eq 0 ]]; then
         # All dates applied: clear TEMP_ALL_DATES if set
-        [[ -n "${TEMP_ALL_DATES:-}" ]] && : > "$TEMP_ALL_DATES" || true
+        [[ -n "${TEMP_ALL_DATES:-}" ]] && : >"$TEMP_ALL_DATES" || true
         print_success "Applied all dates via preserve map (see $logf)"
         return 0
     else
@@ -358,37 +358,37 @@ apply_dates_from_preserve_map() {
 display_and_edit_dates() {
     local dates_file="$1"
     local target_commit="$2"
-    
+
     if [[ ! -f "$dates_file" ]]; then
         return 0
     fi
-    
+
     echo ""
     echo -e "${BOLD}${CYAN}════════════════════════════════════════════════════════════${NC}"
     echo -e "${BOLD}Commit Creation Times${NC}"
     echo -e "${BOLD}${CYAN}════════════════════════════════════════════════════════════${NC}"
-    
+
     local commit_idx=0
-    
+
     while IFS='|' read -r commit_hash orig_date; do
         commit_idx=$((commit_idx + 1))
         local short_hash
         short_hash=$(git rev-parse --short "$commit_hash" 2>/dev/null || echo "${commit_hash:0:7}")
         local subject
         subject=$(git log -1 --format=%s "$commit_hash" 2>/dev/null || echo "unknown")
-        
+
         if [[ "$commit_hash" == "$target_commit" ]]; then
             echo -e "${YELLOW}[$commit_idx]${NC} ${YELLOW}[AMENDING]${NC} $short_hash: $subject"
         else
             echo -e "[$commit_idx] $short_hash: $subject"
         fi
         echo -e "    Created: ${CYAN}$orig_date${NC}"
-    done < "$dates_file"
-    
+    done <"$dates_file"
+
     echo ""
     echo -e "${BOLD}Do any of these timestamps need to be edited? [y/N]:${NC}"
     read -rp "> " edit_dates
-    
+
     if [[ "$edit_dates" =~ ^[Yy] ]]; then
         _edit_dates_interactive "$dates_file"
     fi
@@ -397,38 +397,40 @@ display_and_edit_dates() {
 # Internal: interactive date editing loop
 _edit_dates_interactive() {
     local dates_file="$1"
-    
+
     echo ""
     echo -e "${BOLD}Edit timestamps:${NC}"
     echo -e "${GREY}(Accept formats: 2025-12-18, 2025-12-18 14:30, 2025-12-18T14:30:00+01:00, or empty to skip)${NC}"
     echo ""
-    
+
     local commit_idx=0
-    > "${dates_file}.edited"
-    
+    >"${dates_file}.edited"
+
     # Use FD4 for reading file to keep FD3 for interactive input
     while IFS='|' read -r commit_hash orig_date <&4; do
         commit_idx=$((commit_idx + 1))
         local short_hash
         short_hash=$(git rev-parse --short "$commit_hash" 2>/dev/null || echo "${commit_hash:0:7}")
-        
+
         echo -e "[$commit_idx] $short_hash"
         echo -e "    Current: ${CYAN}$orig_date${NC}"
-        
+
         local user_date
-        if read -u 3 -rp "    New date (empty to keep): " user_date 2>/dev/null; then :
-        else read -rp "    New date (empty to keep): " user_date
+        if read -u 3 -rp "    New date (empty to keep): " user_date 2>/dev/null; then
+            :
+        else
+            read -rp "    New date (empty to keep): " user_date
         fi
-        
+
         local new_date="$orig_date"
-        
+
         if [[ -n "$user_date" ]]; then
             new_date=$(_parse_user_date "$user_date" "$orig_date")
         fi
-        
-        echo "$commit_hash|$new_date" >> "${dates_file}.edited"
-    done 4< "$dates_file"
-    
+
+        echo "$commit_hash|$new_date" >>"${dates_file}.edited"
+    done 4<"$dates_file"
+
     mv "${dates_file}.edited" "$dates_file"
     print_success "Dates updated"
 }
@@ -438,13 +440,13 @@ _parse_user_date() {
     local user_date="$1"
     local fallback="$2"
     local parsed_date
-    
+
     # Try to parse as-is (for already formatted dates)
     if parsed_date=$(date -d "$user_date" --iso-8601=seconds 2>/dev/null); then
         echo "$parsed_date"
         return 0
     fi
-    
+
     # Try to handle common user input formats: "YYYY-MM-DD" or "YYYY-MM-DD HH:MM"
     if [[ "$user_date" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}($|\ [0-9]{2}:[0-9]{2}) ]]; then
         # Add time if not provided
@@ -456,7 +458,7 @@ _parse_user_date() {
             return 0
         fi
     fi
-    
+
     print_warning "Could not parse date '$user_date'. Keeping original: $fallback"
     echo "$fallback"
 }
@@ -471,20 +473,20 @@ _parse_user_date() {
 verify_commit_date() {
     local commit="$1"
     local expected_date="$2"
-    local tolerance="${3:-86400}"  # Default 24 hours
-    
+    local tolerance="${3:-86400}" # Default 24 hours
+
     local actual_epoch expected_epoch
     actual_epoch=$(git show -s --format=%at "$commit" 2>/dev/null || echo "0")
     expected_epoch=$(date -d "$expected_date" +%s 2>/dev/null || echo "0")
-    
+
     if [[ "$actual_epoch" -eq 0 || "$expected_epoch" -eq 0 ]]; then
         return 1
     fi
-    
+
     local diff=$((actual_epoch - expected_epoch))
-    if (( diff < 0 )); then diff=$(( -diff )); fi
-    
-    if (( diff <= tolerance )); then
+    if ((diff < 0)); then diff=$((-diff)); fi
+
+    if ((diff <= tolerance)); then
         return 0
     else
         return 1

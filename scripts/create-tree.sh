@@ -59,7 +59,7 @@ while [[ $# -gt 0 ]]; do
             OUTPUT_DIR="$2"
             shift 2
             ;;
-        -h|--help)
+        -h | --help)
             cat <<-EOF
 Git Tree Visualizer - Fractal/Mandelbrot-style git history visualisation
 
@@ -155,20 +155,20 @@ fi
 # Step 5: Embed in README
 if [[ "$EMBED_README" == "true" && "$GENERATE_SVG" == "true" ]]; then
     print_info "Embedding visualisation in README..."
-    
+
     # Find README
     README=""
     # Derive relative path from OUTPUT_DIR (strip repo root prefix)
     _out_rel="${OUTPUT_DIR#"$REPO_ROOT/"}"
-    
+
     if [[ -f "$REPO_ROOT/README.md" ]]; then
         README="$REPO_ROOT/README.md"
         README_REL_PATH="$_out_rel"
     elif [[ -f "$REPO_ROOT/docs/README.md" ]]; then
         README="$REPO_ROOT/docs/README.md"
-        README_REL_PATH="../$_out_rel"  # One level up from docs/
+        README_REL_PATH="../$_out_rel" # One level up from docs/
     fi
-    
+
     if [[ -n "$README" ]]; then
         # Check if tree-viz section already exists
         if grep -q "<!-- TREE-VIZ-START -->" "$README"; then
@@ -190,12 +190,12 @@ if [[ "$EMBED_README" == "true" && "$GENERATE_SVG" == "true" ]]; then
                     in_tree=0
                 }
                 !in_tree {print}
-            ' "$README" > "$README.tmp"
+            ' "$README" >"$README.tmp"
             mv "$README.tmp" "$README"
         else
             # Append new section
             print_info "Adding tree visualisation section to README..."
-            cat >> "$README" <<-EOF
+            cat >>"$README" <<-EOF
 
 <!-- TREE-VIZ-START -->
 

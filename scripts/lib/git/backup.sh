@@ -33,7 +33,7 @@ fi
 # Returns: Path to created bundle
 create_backup_bundle() {
     local output="${1:-/tmp/git-backup-$(date -u +%Y%m%dT%H%M%SZ).bundle}"
-    
+
     print_info "Creating backup bundle..."
     if git bundle create "$output" --all; then
         print_success "Backup saved: $output"
@@ -53,7 +53,7 @@ create_branch_bundle() {
     local ts
     ts=$(date -u +%Y%m%dT%H%M%SZ)
     local output="${2:-/tmp/git-branch-backup-${branch//\//-}-${ts}.bundle}"
-    
+
     print_info "Creating backup bundle for branch: $branch"
     if git bundle create "$output" "refs/heads/$branch"; then
         print_success "Branch backup saved: $output"
@@ -74,7 +74,7 @@ create_ref_bundle() {
     ts=$(date -u +%Y%m%dT%H%M%SZ)
     local safe_name="${ref//\//-}"
     local output="${2:-/tmp/git-ref-backup-${safe_name}-${ts}.bundle}"
-    
+
     print_info "Creating backup bundle for ref: $ref"
     if git bundle create "$output" "$ref"; then
         print_success "Ref backup saved: $output"
@@ -102,12 +102,12 @@ list_backup_bundles() {
 # Usage: show_bundle_contents "bundle_path"
 show_bundle_contents() {
     local bundle="$1"
-    
+
     if [[ ! -f "$bundle" ]]; then
         print_error "Bundle not found: $bundle"
         return 1
     fi
-    
+
     print_info "Bundle contents: $bundle"
     git bundle list-heads "$bundle"
 }
@@ -116,12 +116,12 @@ show_bundle_contents() {
 # Usage: verify_bundle "bundle_path"
 verify_bundle() {
     local bundle="$1"
-    
+
     if [[ ! -f "$bundle" ]]; then
         print_error "Bundle not found: $bundle"
         return 1
     fi
-    
+
     if git bundle verify "$bundle" 2>/dev/null; then
         print_success "Bundle is valid: $bundle"
         return 0
@@ -139,12 +139,12 @@ verify_bundle() {
 # Usage: unbundle "bundle_path"
 unbundle() {
     local bundle="$1"
-    
+
     if [[ ! -f "$bundle" ]]; then
         print_error "Bundle not found: $bundle"
         return 1
     fi
-    
+
     print_info "Restoring from bundle: $bundle"
     if git bundle unbundle "$bundle"; then
         print_success "Bundle restored successfully"
@@ -161,12 +161,12 @@ create_branch_from_bundle() {
     local bundle="$1"
     local ref="$2"
     local new_branch="$3"
-    
+
     if [[ ! -f "$bundle" ]]; then
         print_error "Bundle not found: $bundle"
         return 1
     fi
-    
+
     print_info "Fetching $ref from bundle to create branch $new_branch"
     if git fetch "$bundle" "$ref:refs/heads/$new_branch"; then
         print_success "Created branch: $new_branch"
@@ -190,7 +190,7 @@ create_backup_tag() {
     local ts
     ts=$(date -u +%Y%m%dT%H%M%SZ)
     local tag_name="${prefix}/${branch//\//-}-${ts}"
-    
+
     print_info "Creating backup tag: $tag_name"
     if git tag -f "$tag_name" "refs/heads/$branch" 2>/dev/null; then
         print_success "Created tag: $tag_name"
@@ -214,7 +214,7 @@ list_backup_tags() {
 push_backup_tag() {
     local tag="$1"
     local remote="${2:-origin}"
-    
+
     print_info "Pushing backup tag: $tag"
     if git push "$remote" "refs/tags/$tag"; then
         print_success "Pushed tag: $tag"

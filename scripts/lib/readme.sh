@@ -74,7 +74,7 @@ readme_apply() {
     done < <(readme_extract_placeholders "$template")
 
     if [[ ${#sed_args[@]} -gt 0 ]]; then
-        sed "${sed_args[@]}" "$template" > "$dest"
+        sed "${sed_args[@]}" "$template" >"$dest"
     else
         cp "$template" "$dest"
     fi
@@ -107,14 +107,15 @@ readme_insert_badges() {
     _lic_badge="${_lic_badge//-/--}"
 
     local badges
-    badges=$(cat <<'EOF'
+    badges=$(
+        cat <<'EOF'
 <p align="center">
   <a href="{{REPO_URL}}"><img alt="GitHub repo" src="https://img.shields.io/badge/GitHub-{{ORG_NAME}}%2F{{REPO_SLUG}}-181717?style=for-the-badge&logo=github"></a>
   <a href="{{REPO_URL}}/releases"><img alt="GitHub release" src="https://img.shields.io/github/v/release/{{ORG_NAME}}/{{REPO_SLUG}}?style=for-the-badge&logo=semantic-release&color=blue"></a>
   <a href="{{REPO_URL}}/blob/main/LICENSE"><img alt="Licence" src="https://img.shields.io/badge/licence-{{LICENSE_TYPE_BADGE}}-green?style=for-the-badge"></a>
 </p>
 EOF
-)
+    )
     badges="${badges//\{\{REPO_URL\}\}/$REPO_URL}"
     badges="${badges//\{\{ORG_NAME\}\}/$ORG_NAME}"
     badges="${badges//\{\{REPO_SLUG\}\}/$REPO_SLUG}"
@@ -125,7 +126,7 @@ EOF
         if [[ -f "$DEV_CONTROL_DIR/docs-templates/README.md" ]]; then
             readme_apply "$DEV_CONTROL_DIR/docs-templates/README.md" "$readme_path"
         else
-            echo -e "# $PROJECT_NAME\n" > "$readme_path"
+            echo -e "# $PROJECT_NAME\n" >"$readme_path"
         fi
     fi
 
@@ -178,10 +179,10 @@ EOF
     }
     phase=="rest" { print; next }
     { print; next }
-    ' "$readme_path" > "$tmp"
+    ' "$readme_path" >"$tmp"
 
     # Only write back when something actually changed (idempotent)
-    if ! diff -q "$readme_path" "$tmp" > /dev/null 2>&1; then
+    if ! diff -q "$readme_path" "$tmp" >/dev/null 2>&1; then
         mv "$tmp" "$readme_path"
         print_success "Updated badge block in $readme_path"
     else

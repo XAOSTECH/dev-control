@@ -123,7 +123,7 @@ harness_run() {
 
     # Capture pre-op log snapshot (limit by RESTORE_LIST_N)
     PRE_LOG="$REPORT_DIR/pre-${TIMESTAMP}.log"
-    git --no-pager log --oneline -n "${RESTORE_LIST_N}" > "$PRE_LOG"
+    git --no-pager log --oneline -n "${RESTORE_LIST_N}" >"$PRE_LOG"
     echo "Pre-op log (last ${RESTORE_LIST_N} commits):" | tee -a "$REPORT_FILE"
     sed 's/^/  /' "$PRE_LOG" | tee -a "$REPORT_FILE"
 
@@ -164,7 +164,7 @@ harness_run() {
                 echo "DRY-RUN: drop operation simulated (no changes applied)" | tee -a "$REPORT_FILE"
                 # Capture post-op log snapshot
                 POST_LOG="$REPORT_DIR/post-${TIMESTAMP}.log"
-                git --no-pager log --oneline -n "${RESTORE_LIST_N}" > "$POST_LOG"
+                git --no-pager log --oneline -n "${RESTORE_LIST_N}" >"$POST_LOG"
                 echo "Post-op log (last ${RESTORE_LIST_N} commits):" | tee -a "$REPORT_FILE"
                 sed 's/^/  /' "$POST_LOG" | tee -a "$REPORT_FILE"
 
@@ -190,7 +190,7 @@ harness_run() {
 
             # Capture post-op log snapshot
             POST_LOG="$REPORT_DIR/post-${TIMESTAMP}.log"
-            git --no-pager log --oneline -n "${RESTORE_LIST_N}" > "$POST_LOG"
+            git --no-pager log --oneline -n "${RESTORE_LIST_N}" >"$POST_LOG"
             echo "Post-op log (last ${RESTORE_LIST_N} commits):" | tee -a "$REPORT_FILE"
             sed 's/^/  /' "$POST_LOG" | tee -a "$REPORT_FILE"
 
@@ -226,11 +226,13 @@ harness_run() {
             if ! deduplicate_mode 2>&1 | tee -a "$REPORT_FILE"; then
                 echo "Dedup failed" | tee -a "$REPORT_FILE"
                 harness_restore_backup "$BUNDLE" "$REPORT_FILE"
-                RANGE="$OLD_RANGE"; NO_CLEANUP="$OLD_NO_CLEANUP"
+                RANGE="$OLD_RANGE"
+                NO_CLEANUP="$OLD_NO_CLEANUP"
                 DRY_RUN="$PREV_DRY_RUN"
                 return 1
             fi
-            RANGE="$OLD_RANGE"; NO_CLEANUP="$OLD_NO_CLEANUP"
+            RANGE="$OLD_RANGE"
+            NO_CLEANUP="$OLD_NO_CLEANUP"
             # Content-preservation check ("changes between periods"): a real dedup run must leave the net working tree byte-identical.
             if [[ "$PREV_DRY_RUN" != "true" ]]; then
                 POST_TREE=$(git rev-parse "HEAD^{tree}" 2>/dev/null || echo "")
