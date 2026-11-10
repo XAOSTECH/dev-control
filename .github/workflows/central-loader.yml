@@ -82,12 +82,12 @@ jobs:
     
     steps:
       - name: Checkout calling repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
       
       - name: Checkout Dev-Control templates
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: xaoscience/dev-control
           path: .dev-control-templates
