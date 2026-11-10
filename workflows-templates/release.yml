@@ -1050,7 +1050,7 @@ jobs:
           EOF
 
             # Append build artifact checksums from SHA256SUMS.txt files
-            if [[ -f "dist/SHA256SUMS.txt" ]]; then
+            if [[ "$EVENT_NAME" == "push" && "${{ steps.build_workflows.outputs.has_builds }}" == "true" && "${{ steps.check_release.outputs.exists }}" != "true" && -f "dist/SHA256SUMS.txt" ]]; then
               while IFS= read -r line; do
                 line="${line//$'\r'/}"
                 [[ -z "$line" ]] && continue
