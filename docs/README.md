@@ -380,7 +380,7 @@ See [open issues](https://github.com/xaostech/dev-control/issues) for more.
 
 ## 📄 Licence
 
-GPL-3.0. See [LICENSE](../LICENSE).
+GPL-3.0. See [LICENCE](../LICENSE).
 
 <!-- TREE-VIZ-START -->
 
