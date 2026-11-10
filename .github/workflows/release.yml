@@ -700,8 +700,13 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.app_token.outputs.token }}
           RUN_IDS: ${{ steps.build_workflows.outputs.run_ids }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           set -euo pipefail
+          if [[ "${EVENT_NAME}" != "push" ]]; then
+            echo "Skipping artifact download for non-push event: ${EVENT_NAME}"
+            exit 0
+          fi
           mkdir -p dist
           STAGING=$(mktemp -d)
 
