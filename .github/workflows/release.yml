@@ -1010,6 +1010,12 @@ jobs:
           # Previous version tag — sourced from 'Gather commit history' step
           PREV_TAG="${{ steps.commits.outputs.prev_tag }}"
 
+          # Only allow artifact-derived content for trusted push-triggered runs
+          ALLOW_ARTIFACT_CONTENT="false"
+          if [[ "${EVENT_NAME}" == "push" && "${{ steps.build_workflows.outputs.has_builds }}" == "true" && "${{ steps.check_release.outputs.exists }}" != "true" ]]; then
+            ALLOW_ARTIFACT_CONTENT="true"
+          fi
+
           # Generate release notes
           NOTES_FILE=$(mktemp)
           
@@ -1049,7 +1055,7 @@ jobs:
           EOF
 
             # Append build artifact checksums from SHA256SUMS.txt files
-            if [[ "$EVENT_NAME" == "push" && "${{ steps.build_workflows.outputs.has_builds }}" == "true" && "${{ steps.check_release.outputs.exists }}" != "true" && -f "dist/SHA256SUMS.txt" ]]; then
+            if [[ "$ALLOW_ARTIFACT_CONTENT" == "true" && -r "dist/SHA256SUMS.txt" ]]; then
               while IFS= read -r line; do
                 line="${line//$'\r'/}"
                 [[ -z "$line" ]] && continue
@@ -1086,7 +1092,7 @@ jobs:
           fi
 
           # If build artifacts exist but no tarball, still show checksums
-          if [[ "$EVENT_NAME" == "push" && "${{ steps.build_workflows.outputs.has_builds }}" == "true" && "${{ steps.check_release.outputs.exists }}" != "true" && -z "${tarball_name:-}" && -f "dist/SHA256SUMS.txt" ]]; then
+          if [[ "$ALLOW_ARTIFACT_CONTENT" == "true" && -z "${tarball_name:-}" && -r "dist/SHA256SUMS.txt" ]]; then
             echo "" >> "$NOTES_FILE"
             echo "## Checksums" >> "$NOTES_FILE"
             echo "" >> "$NOTES_FILE"
