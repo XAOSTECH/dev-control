@@ -197,7 +197,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          ALERT_LIST=$(jq -r '.[] | "- [\(.severity | ascii_upcase)] `\(.rule)` — `\(.file):\(.line)` — \(.message)"' \
+          ALERT_LIST=$(jq -r '.[] | "- [\(.severity | ascii_upcase)] \(.rule) — \(.file):\(.line) — \(.message)"' \
             /tmp/alerts.json 2>/dev/null | head -20 || true)
           echo "alert_list<<EOF" >> "$GITHUB_OUTPUT"
           echo "$ALERT_LIST" >> "$GITHUB_OUTPUT"
@@ -236,6 +236,9 @@ jobs:
         if: steps.changes.outputs.has_changes == 'true' && github.event.inputs.dry_run != 'true'
         env:
           GH_TOKEN: ${{ steps.app_token.outputs.token }}
+          ALERT_LIST: ${{ steps.ai_hints.outputs.alert_list }}
+          AI_HINTS: ${{ steps.ai_hints.outputs.hints }}
+          REPO: ${{ github.repository }}
         run: |
           BRANCH="fix/auto-remediate-$(date -u +%Y%m%d-%H%M%S)"
           git checkout -b "$BRANCH"
@@ -248,9 +251,9 @@ jobs:
             "${{ steps.shfmt.outputs.formatted }}" \
             "${{ steps.codeql_fixes.outputs.fixed }}" \
             "${{ steps.alerts.outputs.count }}" \
-            "${{ steps.ai_hints.outputs.alert_list }}" \
-            "${{ steps.ai_hints.outputs.hints }}" \
-            "${{ github.repository }}" > /tmp/pr_body.md
+            "$ALERT_LIST" \
+            "$AI_HINTS" \
+            "$REPO" > /tmp/pr_body.md
           gh pr create \
             --repo "${{ github.repository }}" \
             --base main \
@@ -263,13 +266,15 @@ jobs:
         if: steps.changes.outputs.has_changes == 'false' && steps.alerts.outputs.count > 0
         env:
           GH_TOKEN: ${{ steps.app_token.outputs.token }}
+          ALERT_LIST: ${{ steps.ai_hints.outputs.alert_list }}
+          AI_HINTS: ${{ steps.ai_hints.outputs.hints }}
+          REPO: ${{ github.repository }}
         run: |
+          gh label create "security-review" --color "#e11d48" --description "Security alerts requiring manual review" --force 2>/dev/null || true
           OPEN=$(gh issue list --state open --label security-review --json number --jq 'length' 2>/dev/null || echo 0)
           [[ "$OPEN" -gt 0 ]] && { echo "Issue already open"; exit 0; }
           printf 'Open alerts for manual review\n\n%s\n\nAI hints:\n%s\n\nTip: Enable Copilot Autofix in Settings > Security > Code scanning for inline AI-generated fixes.\n\nhttps://github.com/%s/security/code-scanning\n' \
-            "${{ steps.ai_hints.outputs.alert_list }}" \
-            "${{ steps.ai_hints.outputs.hints }}" \
-            "${{ github.repository }}" > /tmp/issue_body.md
+            "$ALERT_LIST" "$AI_HINTS" "$REPO" > /tmp/issue_body.md
           gh issue create \
             --title "Security Alerts Require Manual Review" \
             --label "security-review,help-wanted" \
