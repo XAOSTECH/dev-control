@@ -3,6 +3,8 @@
 ## [0.5.15] - 2026-11-11 (re-release)
 
 ### Added
+- add --batch --only-cleanup and fix batch operation docs
+- add --tags flag to create missing GitHub labels per repo
 - add fix job to backfill notes for past releases
 - add template loading test suite
 - trigger prose and security maintenance workflows from weekly run
@@ -12,6 +14,8 @@
 - fall back to v0.1.0 when no prior releases exist
 
 ### Fixed
+- extend --only-cleanup to cover workflow branches and prune stale ones in-workflow
+- skip tests gracefully when no suite exists, guard against duplicate PRs
 - fix predecessor tag direction and include .sha256 sidecar in checksums
 - fix 404 log URL and bash syntax error in fix job
 - honour --exclude for multi-level relative paths at any depth
