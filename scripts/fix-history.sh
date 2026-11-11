@@ -209,8 +209,13 @@ Options:
   --full-fix, -ff [N]        Dedup then GPG-sign the last N commits (default 20). Prompts for N
                              unless supplied on the command line. Use -y to skip all prompts.
   -y, --yes                  Auto-confirm all rewrite prompts (non-interactive / batch-safe).
-  -b, --batch                Run --full-fix on every git repo found under the current directory.
-                             Implies -y. Combines with --full-fix [N].
+  -b, --batch                Run the specified operation on every git repo found under the current
+                             directory. Implies -y. Supported operations:
+                               --full-fix [N]     dedup + GPG-sign in every repo
+                               --only-cleanup     sweep temp/backup/workflow branches from every repo
+                               --diagnose [--fix] scan every repo for orphaned tags
+                               --restore          equivalent to --batch-restore
+                             When no operation is given, --full-fix is assumed.
   --atomic-preserve          Deterministic preserve: recreate commits (including merges) with
                              `git commit-tree`, immediately sign and set author/committer dates (atomic)
   --drop COMMIT [COMMIT…]   Drop (remove) one or more non-root commits from history.
@@ -249,7 +254,9 @@ Options:
                              is byte-identical before/after (Honours global ${CYAN}--dry-run${NC} flag)
   --harness-no-cleanup       Keep temporary branch after running the harness for inspection
   --no-cleanup               Skip cleanup prompt at end of operation; do not offer to delete tmp/backup refs
-  --only-cleanup             Only cleanup tmp/backup tags and branches (no other operations)
+  --only-cleanup             Only cleanup tmp/backup tags and branches (no other operations).
+                             Supports --batch to sweep all sub-repos at once; uses a single
+                             consolidated confirmation (auto-confirmed with -y / --batch).
   --cleanup-merged           Also offer to cleanup merged branches (safe to delete)
   --auto-resolve <mode>      Auto-resolve conflicts during automated rebase/drop. Modes: ${CYAN}ours${NC}, ${CYAN}theirs${NC}
                              If provided, conflicting files will be auto-added (checkout --ours/--theirs)
@@ -266,6 +273,7 @@ Options:
                              equivalent to --restore --batch. Prints the tracker path after --full-fix --batch.
   --diagnose [--fix]         Scan for orphaned release tags or lost commits after a history rewrite.
                              --fix auto-restores from backup when all orphans are resolvable.
+                             Supports --batch to scan every sub-repo.
   --offline                  Include local-only repos (no remote) in --batch/--full-fix/--diagnose
   --online                   (default) Skip local-only repos in batch operations
   --refresh-cache            Force rescan of sub-repos for --batch (ignores today's cached list)
@@ -292,6 +300,7 @@ Examples:
   ./scripts/fix-history.sh --full-fix 30 -y          # Same for 30 commits, no prompts (batch-safe)
   ./scripts/fix-history.sh -ff --batch               # Dedup + sign last 20 commits in every sub-repo
   ./scripts/fix-history.sh -ff 10 --batch            # Same, 10 commits per repo
+  ./scripts/fix-history.sh --only-cleanup --batch     # Sweep temp/backup/workflow branches from every sub-repo
   ./scripts/fix-history.sh --diagnose --batch        # Scan all sub-repos for orphaned tags
   ./scripts/fix-history.sh --diagnose --fix          # Scan and auto-restore resolvable orphans
   ./scripts/fix-history.sh --batch-restore           # Restore all repos from today's tracker
@@ -1080,6 +1089,105 @@ cleanup_tmp_and_backup_refs() {
     fi
 }
 
+# Scan all sub-repos, show consolidated ref list, confirm once, then delete.
+# Called when BATCH_MODE=true && CLEANUP_ONLY=true.
+run_batch_cleanup() {
+    _ensure_filter_config
+
+    local -a repos=()
+    while IFS= read -r gitdir; do
+        local _r
+        _r=$(dirname "$gitdir")
+        _repo_filter "$_r" "$BATCH_ONLINE" || continue
+        repos+=("$_r")
+    done < <(find . -name .git -not -path './.git' \
+        -not -path '*/node_modules/*' -not -path '*/.bak/*' \
+        -not -path '*/vendor/*' \
+        -not -path '*/test-repo/*' | sort)
+
+    if [[ ${#repos[@]} -eq 0 ]]; then
+        print_warning "--batch --only-cleanup: no sub-repos found under $(pwd)"
+        return 0
+    fi
+
+    print_info "Scanning ${#repos[@]} repo(s) for temporary and backup refs..."
+    echo ""
+
+    # First pass: collect refs into temp files so we can show a summary before confirming.
+    local tmp_dir
+    tmp_dir=$(mktemp -d)
+    local total_refs=0
+
+    for _repo in "${repos[@]}"; do
+        pushd "$_repo" >/dev/null || continue
+        local lt lb rt rb
+        lt=$(get_tmp_backup_tags); lb=$(get_tmp_backup_branches)
+        rt=$(get_remote_tmp_backup_tags); rb=$(get_remote_tmp_backup_branches)
+        local n=$(( $(count_lines "$lt") + $(count_lines "$lb") + $(count_lines "$rt") + $(count_lines "$rb") ))
+        if [[ $n -gt 0 ]]; then
+            local key
+            key=$(printf '%s' "$_repo" | md5sum | cut -c1-16)
+            printf '%s' "$lt" > "$tmp_dir/${key}.lt"
+            printf '%s' "$lb" > "$tmp_dir/${key}.lb"
+            printf '%s' "$rt" > "$tmp_dir/${key}.rt"
+            printf '%s' "$rb" > "$tmp_dir/${key}.rb"
+            printf '%s' "$_repo" > "$tmp_dir/${key}.path"
+            total_refs=$((total_refs + n))
+            print_info "  $_repo (${n} ref(s))"
+            [[ -n "$lt" ]] && echo "$lt" | sed 's/^/    local tag:     /'
+            [[ -n "$lb" ]] && echo "$lb" | sed 's/^/    local branch:  /'
+            [[ -n "$rt" ]] && echo "$rt" | sed 's/^/    remote tag:    /'
+            [[ -n "$rb" ]] && echo "$rb" | sed 's/^/    remote branch: /'
+        fi
+        popd >/dev/null || true
+    done
+
+    if [[ $total_refs -eq 0 ]]; then
+        print_success "No temporary or backup refs found across ${#repos[@]} repo(s)"
+        rm -rf "$tmp_dir"
+        return 0
+    fi
+
+    echo ""
+    local do_delete=false
+    if [[ "${ASSUME_YES:-false}" == "true" ]]; then
+        do_delete=true
+        print_info "Auto-confirming deletion of ${total_refs} ref(s) (--yes / --batch)"
+    else
+        if read -u 3 -rp "Delete all ${total_refs} ref(s) across ${#repos[@]} repo(s)? [y/N]: " _bk 2>/dev/null \
+            || read -rp "Delete all ${total_refs} ref(s) across ${#repos[@]} repo(s)? [y/N]: " _bk; then
+            [[ "$_bk" =~ ^[Yy] ]] && do_delete=true
+        fi
+    fi
+
+    if [[ "$do_delete" == "false" ]]; then
+        print_info "Cancelled"
+        rm -rf "$tmp_dir"
+        return 0
+    fi
+
+    local cleaned_repos=0
+    for key_path in "$tmp_dir"/*.path; do
+        [[ -f "$key_path" ]] || continue
+        local base="${key_path%.path}"
+        base="${base##*/}"
+        local repo_path
+        repo_path=$(cat "$key_path")
+        pushd "$repo_path" >/dev/null || continue
+        delete_local_tags    "$(cat "$tmp_dir/${base}.lt" 2>/dev/null || true)"
+        delete_local_branches "$(cat "$tmp_dir/${base}.lb" 2>/dev/null || true)"
+        delete_remote_tags   "$(cat "$tmp_dir/${base}.rt" 2>/dev/null || true)"
+        delete_remote_branches "$(cat "$tmp_dir/${base}.rb" 2>/dev/null || true)"
+        print_success "  Cleaned: $repo_path"
+        ((cleaned_repos++)) || true
+        popd >/dev/null || true
+    done
+
+    rm -rf "$tmp_dir"
+    echo ""
+    print_success "Batch cleanup: ${total_refs} ref(s) deleted across ${cleaned_repos} repo(s)"
+}
+
 # Dedup then sign N commits from HEAD in one shot.
 full_fix_mode() {
     local depth="$FULL_FIX_DEPTH"
@@ -1319,8 +1427,12 @@ main() {
 
     # If cleanup-only mode, run cleanup and exit
     if [[ "$CLEANUP_ONLY" == "true" ]]; then
-        check_git_repo true # Skip uncommitted changes check - not needed for cleanup
-        cleanup_tmp_and_backup_refs
+        if [[ "$BATCH_MODE" == "true" ]]; then
+            run_batch_cleanup
+        else
+            check_git_repo true # Skip uncommitted changes check - not needed for cleanup
+            cleanup_tmp_and_backup_refs
+        fi
         exit 0
     fi
 
