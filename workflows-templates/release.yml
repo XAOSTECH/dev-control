@@ -1285,6 +1285,18 @@ jobs:
           echo "---" >> $GITHUB_STEP_SUMMARY
           echo "*Workflow template from [dev-control](https://github.com/XAOSTECH/dev-control)*" >> $GITHUB_STEP_SUMMARY
 
+  # Visible placeholder so the Actions log URL never 404s when fix mode is active.
+  release_routing:
+    name: Release (skipped — fix mode active)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.fix_release == 'true'
+    steps:
+      - name: Redirect notice
+        shell: bash
+        run: |
+          echo "Normal release flow was skipped because fix_release is checked." | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "See the **Backfill release notes** job in this run for the active work." | tee -a "$GITHUB_STEP_SUMMARY"
+
   fix:
     name: Backfill release notes
     runs-on: ubuntu-latest
@@ -1308,6 +1320,7 @@ jobs:
         id: validate
         env:
           GH_TOKEN: ${{ steps.app_token.outputs.token }}
+        shell: bash
         run: |
           VERSION="${{ github.event.inputs.fix_release_version }}"
           if [[ -z "$VERSION" ]]; then
@@ -1331,6 +1344,7 @@ jobs:
         id: prev
         env:
           GH_TOKEN: ${{ steps.app_token.outputs.token }}
+        shell: bash
         run: |
           TAG_NAME="${{ steps.validate.outputs.tag_name }}"
           PREV_TAG=""
@@ -1348,6 +1362,7 @@ jobs:
         id: checksums
         env:
           GH_TOKEN: ${{ steps.app_token.outputs.token }}
+        shell: bash
         run: |
           TAG_NAME="${{ steps.validate.outputs.tag_name }}"
           mkdir -p /tmp/fix-assets
@@ -1390,13 +1405,14 @@ jobs:
         id: notes
         env:
           GH_TOKEN: ${{ steps.app_token.outputs.token }}
+        shell: bash
         run: |
           TAG_NAME="${{ steps.validate.outputs.tag_name }}"
           VERSION="${{ steps.validate.outputs.version }}"
           PREV_TAG="${{ steps.prev.outputs.prev_tag }}"
           NOTES_FILE=$(mktemp)
 
-          printf '## What'\''s Changed\n\n' > "$NOTES_FILE"
+          printf $'## What\'s Changed\n\n' > "$NOTES_FILE"
 
           if [[ -n "$PREV_TAG" ]]; then
             printf '### Commits since %s\n\n' "$PREV_TAG" >> "$NOTES_FILE"
@@ -1435,6 +1451,7 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.app_token.outputs.token }}
           NOTES_FILE: ${{ steps.notes.outputs.notes_file }}
+        shell: bash
         run: |
           TAG_NAME="${{ steps.validate.outputs.tag_name }}"
           gh release edit "$TAG_NAME" --notes-file "$NOTES_FILE"
