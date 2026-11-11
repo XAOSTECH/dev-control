@@ -14,6 +14,8 @@
 - fall back to v0.1.0 when no prior releases exist
 
 ### Fixed
+- sanitise version input against common typos before validation
+- compute complete checksums for all assets on every release
 - extend --only-cleanup to cover workflow branches and prune stale ones in-workflow
 - skip tests gracefully when no suite exists, guard against duplicate PRs
 - fix predecessor tag direction and include .sha256 sidecar in checksums
@@ -34,6 +36,7 @@
 - generate image-based devcontainer in --base mode so VS Code never re-runs the Dockerfile
 
 ### Changed
+- refactor(release): remove fix_release_version input and reuse version for both flows
 - chore: consolidate releases — absorb changes into v0.5.15
 - chore: humanise hard-wrapped comments and prose
 - chore(docs): anglicise README footer licence link title
