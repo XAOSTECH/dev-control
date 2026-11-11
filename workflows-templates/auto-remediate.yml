@@ -177,6 +177,12 @@ jobs:
           git add -A
           git commit -S -m "fix(security): apply automated ShellCheck and CodeQL remediation"
           git push origin "$BRANCH"
+          # Prune stale fix/auto-remediate-* remote branches; keep the 5 most recent.
+          gh api "repos/${{ github.repository }}/branches" --paginate --jq '.[].name' \
+            | grep '^fix/auto-remediate-' | sort -r | tail -n +6 \
+            | while IFS= read -r _b; do
+                git push origin --delete "$_b" 2>/dev/null && echo "Pruned: $_b" || true
+              done
           # Bail if a previous run already opened an auto-remediate PR on this repo.
           OPEN=$(gh pr list --repo "${{ github.repository }}" --state open --json title \
             --jq '[.[] | select(.title == "Auto-Remediation: Security and Lint Fixes")] | length' \

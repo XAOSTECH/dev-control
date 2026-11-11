@@ -31,13 +31,13 @@ fi
 # Get local tags matching tmp/backup/restore/anglicise/security patterns
 # Usage: local_tags=$(get_tmp_backup_tags)
 get_tmp_backup_tags() {
-    git tag -l 2>/dev/null | grep -iE 'tmp|backup|restore|anglicise|security' || true
+    git tag -l 2>/dev/null | grep -iE 'tmp|backup|restore|anglicise|security|fix/auto-remediate|humanise/' || true
 }
 
 # Get local branches matching tmp/backup/restore/anglicise/security patterns (excluding current)
 # Usage: local_branches=$(get_tmp_backup_branches)
 get_tmp_backup_branches() {
-    git branch --list 2>/dev/null | grep -iE 'tmp|backup|restore|anglicise|security' | sed 's/^[* ]*//' || true
+    git branch --list 2>/dev/null | grep -iE 'tmp|backup|restore|anglicise|security|fix/auto-remediate|humanise/|chore/update-' | sed 's/^[* ]*//' || true
 }
 
 # Get remote tags matching tmp/backup/restore/anglicise/security patterns
@@ -45,7 +45,7 @@ get_tmp_backup_branches() {
 get_remote_tmp_backup_tags() {
     local remote="${1:-origin}"
     git ls-remote --tags "$remote" 2>/dev/null \
-        | grep -iE 'tmp|backup|restore|anglicise|security' \
+        | grep -iE 'tmp|backup|restore|anglicise|security|fix/auto-remediate|humanise/' \
         | sed 's/.*refs\/tags\///' \
         | sed 's/\^{}//' \
         | sort -u || true
@@ -56,7 +56,7 @@ get_remote_tmp_backup_tags() {
 get_remote_tmp_backup_branches() {
     local remote="${1:-origin}"
     git branch -r 2>/dev/null \
-        | grep -iE 'tmp|backup|restore|anglicise|security' \
+        | grep -iE 'tmp|backup|restore|anglicise|security|fix/auto-remediate|humanise/|chore/update-' \
         | grep "$remote/" \
         | sed "s/.*$remote\///" || true
 }
@@ -90,7 +90,7 @@ get_merged_local_branches() {
     git branch --merged "$base_branch" 2>/dev/null \
         | sed 's/^[* ]*//' \
         | grep -vE "^($current_branch|$base_branch|Main|main|master|develop)$" \
-        | grep -viE 'tmp|backup|restore|anglicise|security' || true
+        | grep -viE 'tmp|backup|restore|anglicise|security|fix/auto-remediate|humanise/|chore/update-' || true
 }
 
 # Get remote branches that are fully merged into base branch
@@ -105,7 +105,7 @@ get_merged_remote_branches() {
         | grep "$remote/" \
         | sed "s/.*$remote\///" \
         | grep -vE "^($base_branch|Main|main|master|develop|HEAD)$" \
-        | grep -viE 'tmp|backup|restore|anglicise|security' || true
+        | grep -viE 'tmp|backup|restore|anglicise|security|fix/auto-remediate|humanise/|chore/update-' || true
 }
 
 # ============================================================================
