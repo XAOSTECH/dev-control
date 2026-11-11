@@ -1217,14 +1217,13 @@ jobs:
           echo "Source zip:    $ZIP_SHA"
 
           CURRENT_BODY=$(gh release view "$TAG_NAME" --json body --jq '.body')
-          # Split at the first "---" separator that precedes the Full Changelog / footer.
-          PRE=$(echo "$CURRENT_BODY" | awk '/^---$/{exit} !/^## Checksums/{buf=buf $0 "\n"} /^## Checksums/{buf=""} END{printf "%s",buf}')
-          FOOTER=$(echo "$CURRENT_BODY" | awk '/^---$/{found=1} found')
-          if [[ -z "$FOOTER" ]]; then
-            FOOTER="---"
-            [[ -n "$PREV_TAG" ]] && FOOTER+=$'\n\n**Full Changelog**: https://github.com/'
-            FOOTER+="$GITHUB_REPOSITORY/compare/${PREV_TAG}...${TAG_NAME}"
-            FOOTER+=$'\n\n---\n*Workflow template from [dev-control](https://github.com/XAOSTECH/dev-control)*'
+          # Keep everything before ## Checksums (or before --- if no Checksums section yet).
+          PRE=$(echo "$CURRENT_BODY" | awk '/^## Checksums$/{exit} /^---$/{exit} {print}')
+          # Reconstruct footer from known values — no need to parse the existing body.
+          if [[ -n "$PREV_TAG" ]]; then
+            FOOTER=$'---\n\n**Full Changelog**: https://github.com/'"$GITHUB_REPOSITORY/compare/${PREV_TAG}...${TAG_NAME}"$'\n\n---\n*Workflow template from [dev-control](https://github.com/XAOSTECH/dev-control)*'
+          else
+            FOOTER=$'---\n*Workflow template from [dev-control](https://github.com/XAOSTECH/dev-control)*'
           fi
 
           printf '%s\n\n## Checksums\n\n| File | SHA256 |\n|------|--------|\n%s\n\n%s\n' \
