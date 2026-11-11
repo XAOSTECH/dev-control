@@ -1357,12 +1357,11 @@ jobs:
           TAG_NAME="${{ steps.validate.outputs.tag_name }}"
           PREV_TAG=""
           while IFS= read -r _tag; do
-            [[ "$_tag" == "$TAG_NAME" ]] && continue
+            [[ "$_tag" == "$TAG_NAME" ]] && break
             if gh release view "$_tag" &>/dev/null 2>&1; then
               PREV_TAG="$_tag"
-              break
             fi
-          done < <(git tag -l 'v*' --sort=-version:refname | grep -vE 'latest|alpha|beta|rc')
+          done < <(git tag -l 'v*' --sort=version:refname | grep -vE 'latest|alpha|beta|rc')
           echo "prev_tag=$PREV_TAG" >> "$GITHUB_OUTPUT"
           echo "Previous release: ${PREV_TAG:-none (initial release)}"
 
@@ -1378,7 +1377,6 @@ jobs:
 
           # Download each uploaded asset and compute a fresh SHA256
           while IFS= read -r asset_name; do
-            [[ "$asset_name" =~ \.sha256$ ]] && continue
             [[ "$asset_name" == "SHA256SUMS.txt" ]] && continue
             echo "Downloading asset: $asset_name"
             if gh release download "$TAG_NAME" --pattern "$asset_name" --dir /tmp/fix-assets --clobber 2>/dev/null; then
