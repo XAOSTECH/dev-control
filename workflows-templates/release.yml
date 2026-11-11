@@ -1189,39 +1189,43 @@ jobs:
 
       - name: Finalise release body checksums
         if: steps.check_release.outputs.exists != 'true'
+        shell: bash
         env:
           GH_TOKEN: ${{ steps.app_token.outputs.token }}
         run: |
           TAG_NAME="${{ steps.version.outputs.tag_name }}"
           PREV_TAG="${{ steps.commits.outputs.prev_tag }}"
-          mkdir -p /tmp/release-checksums
           CHECKSUMS_MD=""
 
-          # Download every uploaded asset and compute a fresh SHA256.
-          while IFS= read -r asset_name; do
+          # Read SHA256 for uploaded assets from the GitHub API digest field — no download needed.
+          while IFS=$'\t' read -r asset_name asset_digest; do
             [[ "$asset_name" == "SHA256SUMS.txt" ]] && continue
-            echo "Downloading: $asset_name"
-            if gh release download "$TAG_NAME" --pattern "$asset_name" --dir /tmp/release-checksums --clobber 2>/dev/null; then
-              HASH=$(sha256sum "/tmp/release-checksums/$asset_name" | awk '{print $1}')
-              CHECKSUMS_MD+="| ${asset_name} | \`${HASH}\` |"$'\n'
-              echo "  ${HASH}  ${asset_name}"
-            fi
-          done < <(gh release view "$TAG_NAME" --json assets --jq '.assets[].name')
+            SHA="${asset_digest#sha256:}"
+            [[ -z "$SHA" || "$SHA" == "null" ]] && continue
+            CHECKSUMS_MD+="| ${asset_name} | \`${SHA}\` |"$'\n'
+            echo "Asset: ${asset_name} -> ${SHA}"
+          done < <(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${TAG_NAME}" \
+            --jq '.assets[] | "\(.name)\t\(.digest)"' 2>/dev/null || true)
 
-          # Always compute source archive SHAs (GitHub-generated).
-          TAR_SHA=$(curl -fsSL "https://github.com/$GITHUB_REPOSITORY/archive/refs/tags/${TAG_NAME}.tar.gz" | sha256sum | awk '{print $1}')
-          ZIP_SHA=$(curl -fsSL "https://github.com/$GITHUB_REPOSITORY/archive/refs/tags/${TAG_NAME}.zip" | sha256sum | awk '{print $1}')
-          CHECKSUMS_MD+="| Source code (tar.gz) | \`${TAR_SHA}\` |"$'\n'
-          CHECKSUMS_MD+="| Source code (zip) | \`${ZIP_SHA}\` |"
-          echo "Source tar.gz: $TAR_SHA"
-          echo "Source zip:    $ZIP_SHA"
+          # GitHub-generated source archives: download and hash.
+          for _url_label in \
+            "https://github.com/${GITHUB_REPOSITORY}/archive/refs/tags/${TAG_NAME}.tar.gz|Source code (tar.gz)" \
+            "https://github.com/${GITHUB_REPOSITORY}/archive/refs/tags/${TAG_NAME}.zip|Source code (zip)"; do
+            _url="${_url_label%%|*}"
+            _label="${_url_label##*|}"
+            _hash=$(curl -fsSL "$_url" 2>/dev/null | sha256sum | awk '{print $1}') || true
+            if [[ -n "$_hash" ]]; then
+              CHECKSUMS_MD+="| ${_label} | \`${_hash}\` |"$'\n'
+              echo "${_label}: ${_hash}"
+            fi
+          done
 
           CURRENT_BODY=$(gh release view "$TAG_NAME" --json body --jq '.body')
           # Keep everything before ## Checksums (or before --- if no Checksums section yet).
           PRE=$(echo "$CURRENT_BODY" | awk '/^## Checksums$/{exit} /^---$/{exit} {print}')
           # Reconstruct footer from known values — no need to parse the existing body.
           if [[ -n "$PREV_TAG" ]]; then
-            FOOTER=$'---\n\n**Full Changelog**: https://github.com/'"$GITHUB_REPOSITORY/compare/${PREV_TAG}...${TAG_NAME}"$'\n\n---\n*Workflow template from [dev-control](https://github.com/XAOSTECH/dev-control)*'
+            FOOTER=$'---\n\n**Full Changelog**: https://github.com/'"${GITHUB_REPOSITORY}/compare/${PREV_TAG}...${TAG_NAME}"$'\n\n---\n*Workflow template from [dev-control](https://github.com/XAOSTECH/dev-control)*'
           else
             FOOTER=$'---\n*Workflow template from [dev-control](https://github.com/XAOSTECH/dev-control)*'
           fi
@@ -1230,7 +1234,6 @@ jobs:
             "${PRE%$'\n'}" "$CHECKSUMS_MD" "$FOOTER" > /tmp/new_body.md
           gh release edit "$TAG_NAME" --notes-file /tmp/new_body.md
           echo "✅ Release body updated with complete checksums"
-
       - name: Update 'latest' tag
         env:
           GH_TOKEN: ${{ steps.app_token.outputs.token }}
