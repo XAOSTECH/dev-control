@@ -1,5 +1,49 @@
 # Changelog
 
+## [0.5.15] - 2026-11-11
+
+### Added
+- add template loading test suite
+- trigger prose and security maintenance workflows from weekly run
+- add static pages and bats test runner templates
+- auto-label minor/patch PRs for automerge and approve
+- add Dependabot config and AI-powered auto-remediate workflow with ShellCheck patching, CodeQL fixes, and GitHub Models hints
+- fall back to v0.1.0 when no prior releases exist
+
+### Fixed
+- generate full release notes for all trigger types
+- fallback BOT_CLIENT_ID_SECRET to BOT_APP_ID_SECRET for legacy config
+- update stale action pins and parametrise hardcoded bot identity
+- use env vars for step outputs, remove backtick injection, create missing label
+- apply ShellCheck, shfmt and CodeQL remediation
+- apply automated ShellCheck and CodeQL remediation
+- fix stale CodeQL trigger
+- state-machine awk that skips old badge block after H1 and removes duplicate badge blocks
+- replace existing first badge block on 1AX instead of skipping; bail early when content unchanged
+- add BOT_CLIENT_ID_SECRET and SECURITY_CLIENT_ID_SECRET substitutions to process_template
+- use exact token match + remove extra suffix check that caused fallthrough to revoke selection 1AX functioning as A
+- pass run_ids and notes_file through env to close artifact poisoning script injection
+- generate image-based devcontainer in --base mode so VS Code never re-runs the Dockerfile
+
+### Changed
+- chore: consolidate releases — absorb changes into v0.5.15
+- chore: humanise hard-wrapped comments and prose
+- chore(docs): anglicise README footer licence link title
+- chore(template-loading): anglicise global var LICENCE_TYPE
+- chore(template-loading): americanise README template header licence shield href + footer URL
+- Potential fix for code scanning alert no. 55: Artifact poisoning
+- refactor(auto-remediate): coordination gate + shfmt + richer AI context
+- chore(deps)(deps): bump actions/checkout from 6 to 7
+- chore(deps)(deps): bump dotenv from 16.6.1 to 18.0.9 in /github-app
+- chore(deps)(deps): bump actions/upload-pages-artifact from 3 to 5
+- chore(deps)(deps): bump actions/deploy-pages from 4 to 5
+- chore(deps)(deps): bump actions/github-script from 6 to 9
+- chore(deps)(deps): bump actions/configure-pages from 5 to 6
+- chore(deps)(deps-dev): bump @types/node in /github-app
+- chore(deps)(deps): bump octokit from 4.1.4 to 5.0.5 in /github-app
+- chore(deps)(deps-dev): bump typescript in /github-app
+- docs(scripts): adapt --help
+
 ## [0.5.14] - 2026-11-09 (re-release)
 
 ### Added
