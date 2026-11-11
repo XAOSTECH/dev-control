@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.5.16] - 2026-11-11
+
+### Fixed
+- generate full release notes for all trigger types
+
 ## [0.5.15] - 2026-11-10
 
 ### Added
