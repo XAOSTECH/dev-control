@@ -98,7 +98,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version (leave blank to autoincrement, use current to rerelease)'
+        description: 'Version — leave blank to autoincrement; use current to rerelease; also the target version when fix_release is checked'
         required: false
         type: string
       prerelease:
@@ -136,11 +136,6 @@ on:
         required: false
         type: boolean
         default: false
-      fix_release_version:
-        description: 'Version to backfill (e.g. v0.5.14) — only used when fix_release is checked'
-        required: false
-        type: string
-        default: ''
 
 permissions:
   contents: write
@@ -1331,9 +1326,9 @@ jobs:
           GH_TOKEN: ${{ steps.app_token.outputs.token }}
         shell: bash
         run: |
-          VERSION="${{ github.event.inputs.fix_release_version }}"
+          VERSION="${{ github.event.inputs.version }}"
           if [[ -z "$VERSION" ]]; then
-            echo "::error::fix_release_version is required when fix_release is checked"
+            echo "::error::version is required when fix_release is checked"
             exit 1
           fi
           [[ "$VERSION" =~ ^v ]] || VERSION="v${VERSION}"
