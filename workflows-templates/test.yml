@@ -26,6 +26,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Install bats
+        if: hashFiles('tests/run_tests.sh') != ''
         run: |
           sudo apt-get update
           sudo apt-get install -y bats
@@ -33,7 +34,13 @@ jobs:
           git clone --depth 1 https://github.com/bats-core/bats-assert.git tests/test_helper/bats-assert
 
       - name: Run tests
-        run: chmod +x ./tests/run_tests.sh && ./tests/run_tests.sh
+        run: |
+          if [[ ! -f ./tests/run_tests.sh ]]; then
+            echo "No tests/run_tests.sh found — no test suite in this repo, skipping"
+            exit 0
+          fi
+          chmod +x ./tests/run_tests.sh
+          ./tests/run_tests.sh
 
       - name: ShellCheck
         run: sudo apt-get install -y shellcheck && find scripts -name '*.sh' -print0 | xargs -0 shellcheck 2>/dev/null || true

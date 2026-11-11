@@ -177,6 +177,15 @@ jobs:
           git add -A
           git commit -S -m "fix(security): apply automated ShellCheck and CodeQL remediation"
           git push origin "$BRANCH"
+          # Bail if a previous run already opened an auto-remediate PR on this repo.
+          OPEN=$(gh pr list --repo "${{ github.repository }}" --state open --json title \
+            --jq '[.[] | select(.title == "Auto-Remediation: Security and Lint Fixes")] | length' \
+            2>/dev/null || echo 0)
+          if [[ "$OPEN" -gt 0 ]]; then
+            echo "An auto-remediate PR is already open — skipping duplicate creation"
+            git push origin --delete "$BRANCH" 2>/dev/null || true
+            exit 0
+          fi
           printf 'Changes\nShellCheck: %s files patched (%s issues)\nCodeQL: %s fixes\nAlerts: %s\n%s\nAI hints:\n%s\nhttps://github.com/%s/security/code-scanning\n' \
             "${{ steps.shellcheck.outputs.patched }}" \
             "${{ steps.shellcheck.outputs.total }}" \
