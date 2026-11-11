@@ -1385,11 +1385,15 @@ nest_path_is_excluded() {
                 return 0
             fi
         elif [[ "$_excl" == */* ]]; then
-            # Relative path (contains a slash): resolve against the nest root
+            # Relative path (contains a slash): try anchored from nest root first, then suffix match at any depth.
             _excl="${_excl#./}"
             abs_excl="${start_dir}/${_excl}"
             abs_excl="${abs_excl%/}"
             if [[ "$candidate" == "$abs_excl" || "$candidate" == "$abs_excl/"* ]]; then
+                return 0
+            fi
+            # Suffix match: 'PRO/FS/dev-control' should match exclude 'FS/dev-control' at any depth below start_dir.
+            if [[ "$candidate" == *"/${_excl}" || "$candidate" == *"/${_excl}/"* ]]; then
                 return 0
             fi
         else
