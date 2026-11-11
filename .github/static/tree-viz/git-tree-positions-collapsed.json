@@ -3,10 +3,688 @@
     "repository": "dev-control",
     "current_branch": "main",
     "repo_url": "https://github.com/XAOSTECH/dev-control",
-    "generated": "2026-11-09T03:59:36Z",
+    "generated": "2026-11-10T23:57:19Z",
     "max_commits": 500
   },
   "commits": [
+    {
+      "sha": "c2c2164ed169006c1a5abeb89cd90cfe268ca170",
+      "short": "c2c2164",
+      "parents": "b6a0cbfd6ad91187a11e877c67302c05038d0223 8008572a77462c2ba69eb9180813e35e6ead2bab",
+      "author": "xaostech[bot]",
+      "email": "260314499+xaostech[bot]@users.noreply.github.com",
+      "date": "2026-11-10T23:57:19Z",
+      "timestamp": 1794355039,
+      "subject": "Merge pull request #121 from XAOSTECH:humanise/20261110-235645",
+      "refs": "HEAD -> main, origin/main",
+      "position": {
+        "x": 600,
+        "y": 60,
+        "lane": 0,
+        "radius": 10,
+        "depth": 0,
+        "is_trunk": true,
+        "is_merge": true,
+        "is_fork": false
+      }
+    },
+    {
+      "sha": "8008572a77462c2ba69eb9180813e35e6ead2bab",
+      "short": "8008572",
+      "parents": "b6a0cbfd6ad91187a11e877c67302c05038d0223",
+      "author": "xaos-bot",
+      "email": "262248812+xaos-bot@users.noreply.github.com",
+      "date": "2026-11-10T23:56:45Z",
+      "timestamp": 1794355005,
+      "subject": "chore: humanise hard-wrapped comments and prose",
+      "refs": "origin/humanise/20261110-235645",
+      "position": {
+        "x": 720,
+        "y": 100,
+        "lane": 1,
+        "radius": 6,
+        "depth": 1,
+        "is_trunk": false,
+        "is_merge": false,
+        "is_fork": false
+      }
+    },
+    {
+      "sha": "b6a0cbfd6ad91187a11e877c67302c05038d0223",
+      "short": "b6a0cbf",
+      "parents": "collapsed:cea864b89d1a1ddb5ced55051f6e43a24a52b69a:55f63af24cfe13b9eb632e3febaa9fa6dee71696",
+      "author": "xaos-bot",
+      "email": "262248812+xaos-bot@users.noreply.github.com",
+      "date": "2026-11-10T23:56:16Z",
+      "timestamp": 1794354976,
+      "subject": "chore: update CHANGELOG for v0.5.15",
+      "refs": "tag: v0.5.15, tag: latest",
+      "position": {
+        "x": 600,
+        "y": 180,
+        "lane": 0,
+        "radius": 9,
+        "depth": 2,
+        "is_trunk": true,
+        "is_merge": false,
+        "is_fork": true
+      }
+    },
+    {
+      "sha": "collapsed:cea864b89d1a1ddb5ced55051f6e43a24a52b69a:55f63af24cfe13b9eb632e3febaa9fa6dee71696",
+      "short": "7",
+      "parents": "af7fd4de0eb29fa377c7925a732a1e00bfe6483f",
+      "author": "",
+      "email": "",
+      "date": "2026-11-10T23:50:59Z",
+      "timestamp": 1794354659,
+      "subject": "7 commits",
+      "refs": "",
+      "collapsed": true,
+      "count": 7,
+      "position": {
+        "x": 600,
+        "y": 220,
+        "lane": 0,
+        "radius": 6,
+        "depth": 3,
+        "is_trunk": true,
+        "is_merge": false,
+        "is_fork": false
+      }
+    },
+    {
+      "sha": "af7fd4de0eb29fa377c7925a732a1e00bfe6483f",
+      "short": "af7fd4d",
+      "parents": "6b187a40cc12786559815a8af385c8551d28671d 55811be89801de1981ef31a185571237b6629c0d",
+      "author": "xaostech[bot]",
+      "email": "260314499+xaostech[bot]@users.noreply.github.com",
+      "date": "2026-11-10T12:22:12Z",
+      "timestamp": 1794313332,
+      "subject": "Merge pull request #120 from XAOSTECH:fix/auto-remediate-20261110-122138",
+      "refs": "",
+      "position": {
+        "x": 600,
+        "y": 260,
+        "lane": 0,
+        "radius": 10,
+        "depth": 4,
+        "is_trunk": true,
+        "is_merge": true,
+        "is_fork": false
+      }
+    },
+    {
+      "sha": "55811be89801de1981ef31a185571237b6629c0d",
+      "short": "55811be",
+      "parents": "6b187a40cc12786559815a8af385c8551d28671d",
+      "author": "xaos-bot",
+      "email": "262248812+xaos-bot@users.noreply.github.com",
+      "date": "2026-11-10T12:21:38Z",
+      "timestamp": 1794313298,
+      "subject": "fix(security): apply ShellCheck, shfmt and CodeQL remediation",
+      "refs": "origin/fix/auto-remediate-20261110-122138",
+      "position": {
+        "x": 480,
+        "y": 300,
+        "lane": -1,
+        "radius": 6,
+        "depth": 5,
+        "is_trunk": false,
+        "is_merge": false,
+        "is_fork": false
+      }
+    },
+    {
+      "sha": "6b187a40cc12786559815a8af385c8551d28671d",
+      "short": "6b187a4",
+      "parents": "collapsed:04c612b869f97170bc6989cea05f425cf91b8488:4da6547cd08073698648eaba53bd883fb95a95b4",
+      "author": "xaoscience",
+      "email": "69734795+xaoscience@users.noreply.github.com",
+      "date": "2026-11-10T02:34:14Z",
+      "timestamp": 1794278054,
+      "subject": "chore(docs): anglicise README footer licence link title",
+      "refs": "",
+      "position": {
+        "x": 600,
+        "y": 380,
+        "lane": 0,
+        "radius": 9,
+        "depth": 6,
+        "is_trunk": true,
+        "is_merge": false,
+        "is_fork": true
+      }
+    },
+    {
+      "sha": "collapsed:04c612b869f97170bc6989cea05f425cf91b8488:4da6547cd08073698648eaba53bd883fb95a95b4",
+      "short": "5",
+      "parents": "7e50dabc1a6157a966463181357369f484ff2f63",
+      "author": "",
+      "email": "",
+      "date": "2026-11-10T02:10:06Z",
+      "timestamp": 1794276606,
+      "subject": "5 commits",
+      "refs": "",
+      "collapsed": true,
+      "count": 5,
+      "position": {
+        "x": 600,
+        "y": 420,
+        "lane": 0,
+        "radius": 6,
+        "depth": 7,
+        "is_trunk": true,
+        "is_merge": false,
+        "is_fork": false
+      }
+    },
+    {
+      "sha": "62b70c4043128447999f4c5e31ce331e599cacfe",
+      "short": "62b70c4",
+      "parents": "7e50dabc1a6157a966463181357369f484ff2f63",
+      "author": "copilot-swe-agent[bot]",
+      "email": "198982749+Copilot@users.noreply.github.com",
+      "date": "2026-11-10T01:06:47Z",
+      "timestamp": 1794272807,
+      "subject": "Initial plan",
+      "refs": "origin/copilot/fix-security-alerts-review",
+      "position": {
+        "x": 840,
+        "y": 460,
+        "lane": 2,
+        "radius": 6,
+        "depth": 8,
+        "is_trunk": false,
+        "is_merge": false,
+        "is_fork": false
+      }
+    },
+    {
+      "sha": "7e50dabc1a6157a966463181357369f484ff2f63",
+      "short": "7e50dab",
+      "parents": "20fd2fb58b7587482b257505c77c68ac079187cc",
+      "author": "xaoscience",
+      "email": "69734795+xaoscience@users.noreply.github.com",
+      "date": "2026-11-10T01:05:41Z",
+      "timestamp": 1794272741,
+      "subject": "refactor(auto-remediate): coordination gate + shfmt + richer AI context",
+      "refs": "",
+      "position": {
+        "x": 600,
+        "y": 540,
+        "lane": 0,
+        "radius": 9,
+        "depth": 9,
+        "is_trunk": true,
+        "is_merge": false,
+        "is_fork": true
+      }
+    },
+    {
+      "sha": "20fd2fb58b7587482b257505c77c68ac079187cc",
+      "short": "20fd2fb",
+      "parents": "b5f67e006abc9ae6810a060804ec5a65fcd57359 3b8a62f802268cad39441efd2cf98a6454aad203",
+      "author": "xaostech[bot]",
+      "email": "260314499+xaostech[bot]@users.noreply.github.com",
+      "date": "2026-11-10T01:02:44Z",
+      "timestamp": 1794272564,
+      "subject": "Merge pull request #113 from XAOSTECH:dependabot/github_actions/actions/checkout-7",
+      "refs": "",
+      "position": {
+        "x": 600,
+        "y": 580,
+        "lane": 0,
+        "radius": 10,
+        "depth": 10,
+        "is_trunk": true,
+        "is_merge": true,
+        "is_fork": false
+      }
+    },
+    {
+      "sha": "b5f67e006abc9ae6810a060804ec5a65fcd57359",
+      "short": "b5f67e0",
+      "parents": "122c3e246971e117fb2ff1ca187132cc78d3743c 2780aeb56f73b12a149aa5de65d5c45efb55353e",
+      "author": "xaostech[bot]",
+      "email": "260314499+xaostech[bot]@users.noreply.github.com",
+      "date": "2026-11-10T01:02:41Z",
+      "timestamp": 1794272561,
+      "subject": "Merge pull request #111 from XAOSTECH:dependabot/npm_and_yarn/github-app/dotenv-18.0.9",
+      "refs": "",
+      "position": {
+        "x": 600,
+        "y": 620,
+        "lane": 0,
+        "radius": 10,
+        "depth": 11,
+        "is_trunk": true,
+        "is_merge": true,
+        "is_fork": false
+      }
+    },
+    {
+      "sha": "3b8a62f802268cad39441efd2cf98a6454aad203",
+      "short": "3b8a62f",
+      "parents": "122c3e246971e117fb2ff1ca187132cc78d3743c",
+      "author": "dependabot[bot]",
+      "email": "49699333+dependabot[bot]@users.noreply.github.com",
+      "date": "2026-11-10T01:02:09Z",
+      "timestamp": 1794272529,
+      "subject": "chore(deps)(deps): bump actions/checkout from 6 to 7",
+      "refs": "origin/dependabot/github_actions/actions/checkout-7",
+      "position": {
+        "x": 360,
+        "y": 660,
+        "lane": -2,
+        "radius": 6,
+        "depth": 12,
+        "is_trunk": false,
+        "is_merge": false,
+        "is_fork": false
+      }
+    },
+    {
+      "sha": "2780aeb56f73b12a149aa5de65d5c45efb55353e",
+      "short": "2780aeb",
+      "parents": "122c3e246971e117fb2ff1ca187132cc78d3743c",
+      "author": "dependabot[bot]",
+      "email": "49699333+dependabot[bot]@users.noreply.github.com",
+      "date": "2026-11-10T01:02:06Z",
+      "timestamp": 1794272526,
+      "subject": "chore(deps)(deps): bump dotenv from 16.6.1 to 18.0.9 in /github-app",
+      "refs": "",
+      "position": {
+        "x": 960,
+        "y": 740,
+        "lane": 3,
+        "radius": 6,
+        "depth": 13,
+        "is_trunk": false,
+        "is_merge": false,
+        "is_fork": false
+      }
+    },
+    {
+      "sha": "122c3e246971e117fb2ff1ca187132cc78d3743c",
+      "short": "122c3e2",
+      "parents": "192e804a35752284b2a7b15f7f4cd5087adfe4c6 a6fd746fbfe4a66a0c10c8aefaeba764be592186",
+      "author": "xaostech[bot]",
+      "email": "260314499+xaostech[bot]@users.noreply.github.com",
+      "date": "2026-11-10T01:00:21Z",
+      "timestamp": 1794272421,
+      "subject": "Merge pull request #116 from XAOSTECH:dependabot/github_actions/actions/upload-pages-artifact-5",
+      "refs": "",
+      "position": {
+        "x": 600,
+        "y": 820,
+        "lane": 0,
+        "radius": 10,
+        "depth": 14,
+        "is_trunk": true,
+        "is_merge": true,
+        "is_fork": true
+      }
+    },
+    {
+      "sha": "192e804a35752284b2a7b15f7f4cd5087adfe4c6",
+      "short": "192e804",
+      "parents": "885e7fbf8e041fe6d705d5bed8a86b170692c8ba 68b696be6e8ea219486d31a530c202fe8f1919b5",
+      "author": "xaostech[bot]",
+      "email": "260314499+xaostech[bot]@users.noreply.github.com",
+      "date": "2026-11-10T01:00:18Z",
+      "timestamp": 1794272418,
+      "subject": "Merge pull request #115 from XAOSTECH:dependabot/github_actions/actions/deploy-pages-5",
+      "refs": "",
+      "position": {
+        "x": 600,
+        "y": 860,
+        "lane": 0,
+        "radius": 10,
+        "depth": 15,
+        "is_trunk": true,
+        "is_merge": true,
+        "is_fork": false
+      }
+    },
+    {
+      "sha": "885e7fbf8e041fe6d705d5bed8a86b170692c8ba",
+      "short": "885e7fb",
+      "parents": "dc9baf95023254e40fdb5bca167251b60e9ea0ee a3a5290015ae2a597de8f88d06af80eb8e310a3f",
+      "author": "xaostech[bot]",
+      "email": "260314499+xaostech[bot]@users.noreply.github.com",
+      "date": "2026-11-10T01:00:15Z",
+      "timestamp": 1794272415,
+      "subject": "Merge pull request #114 from XAOSTECH:dependabot/github_actions/actions/github-script-9",
+      "refs": "",
+      "position": {
+        "x": 600,
+        "y": 900,
+        "lane": 0,
+        "radius": 10,
+        "depth": 16,
+        "is_trunk": true,
+        "is_merge": true,
+        "is_fork": false
+      }
+    },
+    {
+      "sha": "dc9baf95023254e40fdb5bca167251b60e9ea0ee",
+      "short": "dc9baf9",
+      "parents": "f667f21bd9bbe4f8ae7635b9d64c3b6796662dd9 3883ad59563cb3aab864123cda2c5ed56d38a9d7",
+      "author": "xaostech[bot]",
+      "email": "260314499+xaostech[bot]@users.noreply.github.com",
+      "date": "2026-11-10T01:00:11Z",
+      "timestamp": 1794272411,
+      "subject": "Merge pull request #112 from XAOSTECH:dependabot/github_actions/actions/configure-pages-6",
+      "refs": "",
+      "position": {
+        "x": 600,
+        "y": 940,
+        "lane": 0,
+        "radius": 10,
+        "depth": 17,
+        "is_trunk": true,
+        "is_merge": true,
+        "is_fork": false
+      }
+    },
+    {
+      "sha": "f667f21bd9bbe4f8ae7635b9d64c3b6796662dd9",
+      "short": "f667f21",
+      "parents": "0279ff1c7a68baac4bd1409e158628215c277ecc ae8f2ca313cb1a83aee308f3fa87a9ad8c04d1cf",
+      "author": "xaostech[bot]",
+      "email": "260314499+xaostech[bot]@users.noreply.github.com",
+      "date": "2026-11-10T01:00:00Z",
+      "timestamp": 1794272400,
+      "subject": "Merge pull request #110 from XAOSTECH:dependabot/npm_and_yarn/github-app/types/node-26.6.6",
+      "refs": "",
+      "position": {
+        "x": 600,
+        "y": 980,
+        "lane": 0,
+        "radius": 10,
+        "depth": 18,
+        "is_trunk": true,
+        "is_merge": true,
+        "is_fork": false
+      }
+    },
+    {
+      "sha": "0279ff1c7a68baac4bd1409e158628215c277ecc",
+      "short": "0279ff1",
+      "parents": "ebb2089a1710b51f8e27e050298727d55bd48724 1fc51ee2f436f5ad2017e30a4a008d0bc284e7e1",
+      "author": "xaostech[bot]",
+      "email": "260314499+xaostech[bot]@users.noreply.github.com",
+      "date": "2026-11-10T00:59:56Z",
+      "timestamp": 1794272396,
+      "subject": "Merge pull request #109 from XAOSTECH:dependabot/npm_and_yarn/github-app/octokit-5.0.5",
+      "refs": "",
+      "position": {
+        "x": 600,
+        "y": 1020,
+        "lane": 0,
+        "radius": 10,
+        "depth": 19,
+        "is_trunk": true,
+        "is_merge": true,
+        "is_fork": false
+      }
+    },
+    {
+      "sha": "ebb2089a1710b51f8e27e050298727d55bd48724",
+      "short": "ebb2089",
+      "parents": "895537d5cbde925f2c14dcb28a6f3eff43379b5a 0607cb5e11db207c394288c2ac20fe3527bf2c70",
+      "author": "xaostech[bot]",
+      "email": "260314499+xaostech[bot]@users.noreply.github.com",
+      "date": "2026-11-10T00:59:54Z",
+      "timestamp": 1794272394,
+      "subject": "Merge pull request #108 from XAOSTECH:dependabot/npm_and_yarn/github-app/typescript-7.0.2",
+      "refs": "",
+      "position": {
+        "x": 600,
+        "y": 1060,
+        "lane": 0,
+        "radius": 10,
+        "depth": 20,
+        "is_trunk": true,
+        "is_merge": true,
+        "is_fork": false
+      }
+    },
+    {
+      "sha": "895537d5cbde925f2c14dcb28a6f3eff43379b5a",
+      "short": "895537d",
+      "parents": "819efb850329536d24ece6d90500f5928406fe26 2b2362b294cf5abd1f7f6967c25b6dfb202dd038",
+      "author": "xaostech[bot]",
+      "email": "260314499+xaostech[bot]@users.noreply.github.com",
+      "date": "2026-11-10T00:43:38Z",
+      "timestamp": 1794271418,
+      "subject": "Merge pull request #117 from XAOSTECH:fix/auto-remediate-20261110-004257",
+      "refs": "",
+      "position": {
+        "x": 600,
+        "y": 1100,
+        "lane": 0,
+        "radius": 10,
+        "depth": 21,
+        "is_trunk": true,
+        "is_merge": true,
+        "is_fork": false
+      }
+    },
+    {
+      "sha": "2b2362b294cf5abd1f7f6967c25b6dfb202dd038",
+      "short": "2b2362b",
+      "parents": "819efb850329536d24ece6d90500f5928406fe26",
+      "author": "xaos-bot",
+      "email": "262248812+xaos-bot@users.noreply.github.com",
+      "date": "2026-11-10T00:42:57Z",
+      "timestamp": 1794271377,
+      "subject": "fix(security): apply automated ShellCheck and CodeQL remediation",
+      "refs": "origin/fix/auto-remediate-20261110-004257",
+      "position": {
+        "x": 240,
+        "y": 1140,
+        "lane": -3,
+        "radius": 6,
+        "depth": 22,
+        "is_trunk": false,
+        "is_merge": false,
+        "is_fork": false
+      }
+    },
+    {
+      "sha": "a6fd746fbfe4a66a0c10c8aefaeba764be592186",
+      "short": "a6fd746",
+      "parents": "819efb850329536d24ece6d90500f5928406fe26",
+      "author": "dependabot[bot]",
+      "email": "49699333+dependabot[bot]@users.noreply.github.com",
+      "date": "2026-11-10T00:42:18Z",
+      "timestamp": 1794271338,
+      "subject": "chore(deps)(deps): bump actions/upload-pages-artifact from 3 to 5",
+      "refs": "origin/dependabot/github_actions/actions/upload-pages-artifact-5",
+      "position": {
+        "x": 1080,
+        "y": 1220,
+        "lane": 4,
+        "radius": 6,
+        "depth": 23,
+        "is_trunk": false,
+        "is_merge": false,
+        "is_fork": false
+      }
+    },
+    {
+      "sha": "68b696be6e8ea219486d31a530c202fe8f1919b5",
+      "short": "68b696b",
+      "parents": "819efb850329536d24ece6d90500f5928406fe26",
+      "author": "dependabot[bot]",
+      "email": "49699333+dependabot[bot]@users.noreply.github.com",
+      "date": "2026-11-10T00:42:14Z",
+      "timestamp": 1794271334,
+      "subject": "chore(deps)(deps): bump actions/deploy-pages from 4 to 5",
+      "refs": "",
+      "position": {
+        "x": 120,
+        "y": 1300,
+        "lane": -4,
+        "radius": 6,
+        "depth": 24,
+        "is_trunk": false,
+        "is_merge": false,
+        "is_fork": false
+      }
+    },
+    {
+      "sha": "a3a5290015ae2a597de8f88d06af80eb8e310a3f",
+      "short": "a3a5290",
+      "parents": "819efb850329536d24ece6d90500f5928406fe26",
+      "author": "dependabot[bot]",
+      "email": "49699333+dependabot[bot]@users.noreply.github.com",
+      "date": "2026-11-10T00:42:11Z",
+      "timestamp": 1794271331,
+      "subject": "chore(deps)(deps): bump actions/github-script from 6 to 9",
+      "refs": "",
+      "position": {
+        "x": 1200,
+        "y": 1380,
+        "lane": 5,
+        "radius": 6,
+        "depth": 25,
+        "is_trunk": false,
+        "is_merge": false,
+        "is_fork": false
+      }
+    },
+    {
+      "sha": "3883ad59563cb3aab864123cda2c5ed56d38a9d7",
+      "short": "3883ad5",
+      "parents": "819efb850329536d24ece6d90500f5928406fe26",
+      "author": "dependabot[bot]",
+      "email": "49699333+dependabot[bot]@users.noreply.github.com",
+      "date": "2026-11-10T00:42:05Z",
+      "timestamp": 1794271325,
+      "subject": "chore(deps)(deps): bump actions/configure-pages from 5 to 6",
+      "refs": "",
+      "position": {
+        "x": 0,
+        "y": 1460,
+        "lane": -5,
+        "radius": 6,
+        "depth": 26,
+        "is_trunk": false,
+        "is_merge": false,
+        "is_fork": false
+      }
+    },
+    {
+      "sha": "ae8f2ca313cb1a83aee308f3fa87a9ad8c04d1cf",
+      "short": "ae8f2ca",
+      "parents": "819efb850329536d24ece6d90500f5928406fe26",
+      "author": "dependabot[bot]",
+      "email": "49699333+dependabot[bot]@users.noreply.github.com",
+      "date": "2026-11-10T00:41:53Z",
+      "timestamp": 1794271313,
+      "subject": "chore(deps)(deps-dev): bump @types/node in /github-app",
+      "refs": "origin/dependabot/npm_and_yarn/github-app/types/node-26.6.6",
+      "position": {
+        "x": 1320,
+        "y": 1540,
+        "lane": 6,
+        "radius": 6,
+        "depth": 27,
+        "is_trunk": false,
+        "is_merge": false,
+        "is_fork": false
+      }
+    },
+    {
+      "sha": "1fc51ee2f436f5ad2017e30a4a008d0bc284e7e1",
+      "short": "1fc51ee",
+      "parents": "819efb850329536d24ece6d90500f5928406fe26",
+      "author": "dependabot[bot]",
+      "email": "49699333+dependabot[bot]@users.noreply.github.com",
+      "date": "2026-11-10T00:41:47Z",
+      "timestamp": 1794271307,
+      "subject": "chore(deps)(deps): bump octokit from 4.1.4 to 5.0.5 in /github-app",
+      "refs": "",
+      "position": {
+        "x": -120,
+        "y": 1620,
+        "lane": -6,
+        "radius": 6,
+        "depth": 28,
+        "is_trunk": false,
+        "is_merge": false,
+        "is_fork": false
+      }
+    },
+    {
+      "sha": "0607cb5e11db207c394288c2ac20fe3527bf2c70",
+      "short": "0607cb5",
+      "parents": "819efb850329536d24ece6d90500f5928406fe26",
+      "author": "dependabot[bot]",
+      "email": "49699333+dependabot[bot]@users.noreply.github.com",
+      "date": "2026-11-10T00:41:42Z",
+      "timestamp": 1794271302,
+      "subject": "chore(deps)(deps-dev): bump typescript in /github-app",
+      "refs": "",
+      "position": {
+        "x": 1440,
+        "y": 1700,
+        "lane": 7,
+        "radius": 6,
+        "depth": 29,
+        "is_trunk": false,
+        "is_merge": false,
+        "is_fork": false
+      }
+    },
+    {
+      "sha": "819efb850329536d24ece6d90500f5928406fe26",
+      "short": "819efb8",
+      "parents": "collapsed:9ccb708e694065c7b2e2769bdfec7d862d6b6768:91d44851d8b1960925ee952a5dfd25b09ba7cbf0",
+      "author": "xaoscience",
+      "email": "69734795+xaoscience@users.noreply.github.com",
+      "date": "2026-11-10T00:40:31Z",
+      "timestamp": 1794271231,
+      "subject": "feat(dependabot): add Dependabot config and AI-powered auto-remediate workflow with ShellCheck patching, CodeQL fixes, and GitHub Models hints",
+      "refs": "",
+      "position": {
+        "x": 600,
+        "y": 1780,
+        "lane": 0,
+        "radius": 9,
+        "depth": 30,
+        "is_trunk": true,
+        "is_merge": false,
+        "is_fork": true
+      }
+    },
+    {
+      "sha": "collapsed:9ccb708e694065c7b2e2769bdfec7d862d6b6768:91d44851d8b1960925ee952a5dfd25b09ba7cbf0",
+      "short": "10",
+      "parents": "7a0d88a27f8448e0e6e9fc2d71960524aafca86d",
+      "author": "",
+      "email": "",
+      "date": "2026-11-10T00:40:19Z",
+      "timestamp": 1794271219,
+      "subject": "10 commits",
+      "refs": "",
+      "collapsed": true,
+      "count": 10,
+      "position": {
+        "x": 600,
+        "y": 1820,
+        "lane": 0,
+        "radius": 6,
+        "depth": 31,
+        "is_trunk": true,
+        "is_merge": false,
+        "is_fork": false
+      }
+    },
     {
       "sha": "7a0d88a27f8448e0e6e9fc2d71960524aafca86d",
       "short": "7a0d88a",
@@ -16,13 +694,13 @@
       "date": "2026-11-09T03:59:36Z",
       "timestamp": 1794196776,
       "subject": "chore: update CHANGELOG for v0.5.14 (re-release)",
-      "refs": "HEAD -> main, tag: v0.5.14, tag: latest, origin/main",
+      "refs": "tag: v0.5.14",
       "position": {
         "x": 600,
-        "y": 60,
+        "y": 1860,
         "lane": 0,
         "radius": 6,
-        "depth": 0,
+        "depth": 32,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -42,10 +720,10 @@
       "count": 7,
       "position": {
         "x": 600,
-        "y": 100,
+        "y": 1900,
         "lane": 0,
         "radius": 6,
-        "depth": 1,
+        "depth": 33,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -63,10 +741,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 140,
+        "y": 1940,
         "lane": 0,
         "radius": 10,
-        "depth": 2,
+        "depth": 34,
         "is_trunk": true,
         "is_merge": true,
         "is_fork": false
@@ -83,11 +761,11 @@
       "subject": "chore: humanise hard-wrapped comments and prose",
       "refs": "",
       "position": {
-        "x": 720,
-        "y": 180,
-        "lane": 1,
+        "x": -240,
+        "y": 1980,
+        "lane": -7,
         "radius": 6,
-        "depth": 3,
+        "depth": 35,
         "is_trunk": false,
         "is_merge": false,
         "is_fork": false
@@ -105,10 +783,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 260,
+        "y": 2060,
         "lane": 0,
         "radius": 9,
-        "depth": 4,
+        "depth": 36,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": true
@@ -128,10 +806,10 @@
       "count": 4,
       "position": {
         "x": 600,
-        "y": 300,
+        "y": 2100,
         "lane": 0,
         "radius": 6,
-        "depth": 5,
+        "depth": 37,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -149,10 +827,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 340,
+        "y": 2140,
         "lane": 0,
         "radius": 10,
-        "depth": 6,
+        "depth": 38,
         "is_trunk": true,
         "is_merge": true,
         "is_fork": false
@@ -169,11 +847,11 @@
       "subject": "chore: humanise hard-wrapped comments and prose",
       "refs": "",
       "position": {
-        "x": 480,
-        "y": 380,
-        "lane": -1,
+        "x": 1560,
+        "y": 2180,
+        "lane": 8,
         "radius": 6,
-        "depth": 7,
+        "depth": 39,
         "is_trunk": false,
         "is_merge": false,
         "is_fork": false
@@ -191,10 +869,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 460,
+        "y": 2260,
         "lane": 0,
         "radius": 9,
-        "depth": 8,
+        "depth": 40,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": true
@@ -214,10 +892,10 @@
       "count": 14,
       "position": {
         "x": 600,
-        "y": 500,
+        "y": 2300,
         "lane": 0,
         "radius": 6,
-        "depth": 9,
+        "depth": 41,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -235,10 +913,10 @@
       "refs": "tag: v0.5.13",
       "position": {
         "x": 600,
-        "y": 540,
+        "y": 2340,
         "lane": 0,
         "radius": 6,
-        "depth": 10,
+        "depth": 42,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -256,10 +934,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 580,
+        "y": 2380,
         "lane": 0,
         "radius": 10,
-        "depth": 11,
+        "depth": 43,
         "is_trunk": true,
         "is_merge": true,
         "is_fork": false
@@ -276,11 +954,11 @@
       "subject": "chore: humanise hard-wrapped comments and prose",
       "refs": "",
       "position": {
-        "x": 840,
-        "y": 620,
-        "lane": 2,
+        "x": -360,
+        "y": 2420,
+        "lane": -8,
         "radius": 6,
-        "depth": 12,
+        "depth": 44,
         "is_trunk": false,
         "is_merge": false,
         "is_fork": false
@@ -298,10 +976,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 700,
+        "y": 2500,
         "lane": 0,
         "radius": 9,
-        "depth": 13,
+        "depth": 45,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": true
@@ -321,10 +999,10 @@
       "count": 19,
       "position": {
         "x": 600,
-        "y": 740,
+        "y": 2540,
         "lane": 0,
         "radius": 6,
-        "depth": 14,
+        "depth": 46,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -342,10 +1020,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 780,
+        "y": 2580,
         "lane": 0,
         "radius": 6,
-        "depth": 15,
+        "depth": 47,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -362,11 +1040,11 @@
       "subject": "fix(dc-fix): push after direct-rebase sign, nest-mode dedup with conservative guard, DEDUP_TIMES=5 in full-fix",
       "refs": "tag: backup/main-pre-drop-20261014T000612Z",
       "position": {
-        "x": 360,
-        "y": 820,
-        "lane": -2,
+        "x": 1680,
+        "y": 2620,
+        "lane": 9,
         "radius": 6,
-        "depth": 16,
+        "depth": 48,
         "is_trunk": false,
         "is_merge": false,
         "is_fork": false
@@ -384,10 +1062,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 900,
+        "y": 2700,
         "lane": 0,
         "radius": 6,
-        "depth": 17,
+        "depth": 49,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -404,11 +1082,11 @@
       "subject": "feat(dc-fix): --offline/--online (default), conservative dedup in full-fix (chore only)",
       "refs": "",
       "position": {
-        "x": 960,
-        "y": 940,
-        "lane": 3,
+        "x": -480,
+        "y": 2740,
+        "lane": -9,
         "radius": 6,
-        "depth": 18,
+        "depth": 50,
         "is_trunk": false,
         "is_merge": false,
         "is_fork": false
@@ -426,10 +1104,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 1020,
+        "y": 2820,
         "lane": 0,
         "radius": 6,
-        "depth": 19,
+        "depth": 51,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -446,11 +1124,11 @@
       "subject": "fix(dc-fix): skip archived repos in batch — read-only, signing cannot be pushed",
       "refs": "",
       "position": {
-        "x": 240,
-        "y": 1060,
-        "lane": -3,
+        "x": 1800,
+        "y": 2860,
+        "lane": 10,
         "radius": 6,
-        "depth": 20,
+        "depth": 52,
         "is_trunk": false,
         "is_merge": false,
         "is_fork": false
@@ -468,10 +1146,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 1140,
+        "y": 2940,
         "lane": 0,
         "radius": 6,
-        "depth": 21,
+        "depth": 53,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -488,11 +1166,11 @@
       "subject": "fix(dc-fix): auto-confirm branch override prompt when ASSUME_YES",
       "refs": "",
       "position": {
-        "x": 1080,
-        "y": 1180,
-        "lane": 4,
+        "x": -600,
+        "y": 2980,
+        "lane": -10,
         "radius": 6,
-        "depth": 22,
+        "depth": 54,
         "is_trunk": false,
         "is_merge": false,
         "is_fork": false
@@ -510,10 +1188,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 1260,
+        "y": 3060,
         "lane": 0,
         "radius": 6,
-        "depth": 23,
+        "depth": 55,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -530,11 +1208,11 @@
       "subject": "fix(dc-fix): rebase failures return 1 not exit 1, exclude test-repo from batch",
       "refs": "",
       "position": {
-        "x": 120,
-        "y": 1300,
-        "lane": -4,
+        "x": 1920,
+        "y": 3100,
+        "lane": 11,
         "radius": 6,
-        "depth": 24,
+        "depth": 56,
         "is_trunk": false,
         "is_merge": false,
         "is_fork": false
@@ -552,10 +1230,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 1380,
+        "y": 3180,
         "lane": 0,
         "radius": 6,
-        "depth": 25,
+        "depth": 57,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -572,11 +1250,11 @@
       "subject": "fix(dc-fix): IFS corruption fix, auto-select topology option 2 in batch",
       "refs": "",
       "position": {
-        "x": 1200,
-        "y": 1420,
-        "lane": 5,
+        "x": -720,
+        "y": 3220,
+        "lane": -11,
         "radius": 6,
-        "depth": 26,
+        "depth": 58,
         "is_trunk": false,
         "is_merge": false,
         "is_fork": false
@@ -594,10 +1272,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 1500,
+        "y": 3300,
         "lane": 0,
         "radius": 6,
-        "depth": 27,
+        "depth": 59,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -614,11 +1292,11 @@
       "subject": "fix(dc-fix): prevent set -e exit on stash failure — use if ! pattern",
       "refs": "",
       "position": {
-        "x": 0,
-        "y": 1540,
-        "lane": -5,
+        "x": 2040,
+        "y": 3340,
+        "lane": 12,
         "radius": 6,
-        "depth": 28,
+        "depth": 60,
         "is_trunk": false,
         "is_merge": false,
         "is_fork": false
@@ -636,10 +1314,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 1620,
+        "y": 3420,
         "lane": 0,
         "radius": 6,
-        "depth": 29,
+        "depth": 61,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -656,11 +1334,11 @@
       "subject": "fix(dc-fix): pre-stash with failure-skip, pop after ops, double-stash guard, first-parent depth, -y warning prompt",
       "refs": "",
       "position": {
-        "x": 1320,
-        "y": 1660,
-        "lane": 6,
+        "x": -840,
+        "y": 3460,
+        "lane": -12,
         "radius": 6,
-        "depth": 30,
+        "depth": 62,
         "is_trunk": false,
         "is_merge": false,
         "is_fork": false
@@ -678,10 +1356,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 1740,
+        "y": 3540,
         "lane": 0,
         "radius": 6,
-        "depth": 31,
+        "depth": 63,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -698,11 +1376,11 @@
       "subject": "fix(dc-fix): box rendering, origin/HEAD push, malformed date skip, batch noise",
       "refs": "",
       "position": {
-        "x": -120,
-        "y": 1780,
-        "lane": -6,
+        "x": 2160,
+        "y": 3580,
+        "lane": 13,
         "radius": 6,
-        "depth": 32,
+        "depth": 64,
         "is_trunk": false,
         "is_merge": false,
         "is_fork": false
@@ -720,10 +1398,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 1860,
+        "y": 3660,
         "lane": 0,
         "radius": 6,
-        "depth": 33,
+        "depth": 65,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -740,11 +1418,11 @@
       "subject": "fix(dc-fix): owner guard from MEMBERS, --range respected, correct depth clamp, skip detached HEAD",
       "refs": "",
       "position": {
-        "x": 1440,
-        "y": 1900,
-        "lane": 7,
+        "x": -960,
+        "y": 3700,
+        "lane": -13,
         "radius": 6,
-        "depth": 34,
+        "depth": 66,
         "is_trunk": false,
         "is_merge": false,
         "is_fork": false
@@ -762,10 +1440,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 1980,
+        "y": 3780,
         "lane": 0,
         "radius": 6,
-        "depth": 35,
+        "depth": 67,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -782,11 +1460,11 @@
       "subject": "fix(dc-fix): arithmetic 0\\n0 bug, depth clamping for shallow repos, --allow-empty in date restore",
       "refs": "",
       "position": {
-        "x": -240,
-        "y": 2020,
-        "lane": -7,
+        "x": 2280,
+        "y": 3820,
+        "lane": 14,
         "radius": 6,
-        "depth": 36,
+        "depth": 68,
         "is_trunk": false,
         "is_merge": false,
         "is_fork": false
@@ -804,10 +1482,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 2100,
+        "y": 3900,
         "lane": 0,
         "radius": 6,
-        "depth": 37,
+        "depth": 69,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -824,11 +1502,11 @@
       "subject": "chore(README): americanise",
       "refs": "",
       "position": {
-        "x": 1560,
-        "y": 2140,
-        "lane": 8,
+        "x": -1080,
+        "y": 3940,
+        "lane": -14,
         "radius": 6,
-        "depth": 38,
+        "depth": 70,
         "is_trunk": false,
         "is_merge": false,
         "is_fork": false
@@ -846,10 +1524,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 2220,
+        "y": 4020,
         "lane": 0,
         "radius": 6,
-        "depth": 39,
+        "depth": 71,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -866,11 +1544,11 @@
       "subject": "fix(dc-fix): ASSUME_YES unblocks cleanup in batch - auto-stash and skip interactive cleanup",
       "refs": "",
       "position": {
-        "x": -360,
-        "y": 2260,
-        "lane": -8,
+        "x": 2400,
+        "y": 4060,
+        "lane": 15,
         "radius": 6,
-        "depth": 40,
+        "depth": 72,
         "is_trunk": false,
         "is_merge": false,
         "is_fork": false
@@ -888,10 +1566,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 2340,
+        "y": 4140,
         "lane": 0,
         "radius": 6,
-        "depth": 41,
+        "depth": 73,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -908,11 +1586,11 @@
       "subject": "fix(dc-fix): ASSUME_YES propagates to push/replace prompts; single batch warning before loop",
       "refs": "",
       "position": {
-        "x": 1680,
-        "y": 2380,
-        "lane": 9,
+        "x": -1200,
+        "y": 4180,
+        "lane": -15,
         "radius": 6,
-        "depth": 42,
+        "depth": 74,
         "is_trunk": false,
         "is_merge": false,
         "is_fork": false
@@ -930,10 +1608,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 2460,
+        "y": 4260,
         "lane": 0,
         "radius": 6,
-        "depth": 43,
+        "depth": 75,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -950,11 +1628,11 @@
       "subject": "fix(dc-fix): --allow-empty on rebase amend, skip sign when already signed, fix rollback branch name",
       "refs": "",
       "position": {
-        "x": -480,
-        "y": 2500,
-        "lane": -9,
+        "x": 2520,
+        "y": 4300,
+        "lane": 16,
         "radius": 6,
-        "depth": 44,
+        "depth": 76,
         "is_trunk": false,
         "is_merge": false,
         "is_fork": false
@@ -972,10 +1650,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 2580,
+        "y": 4380,
         "lane": 0,
         "radius": 6,
-        "depth": 45,
+        "depth": 77,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -992,11 +1670,11 @@
       "subject": "fix(dc-fix): add --batch to --full-fix — iterates every sub-repo under cwd",
       "refs": "",
       "position": {
-        "x": 1800,
-        "y": 2620,
-        "lane": 10,
+        "x": -1320,
+        "y": 4420,
+        "lane": -16,
         "radius": 6,
-        "depth": 46,
+        "depth": 78,
         "is_trunk": false,
         "is_merge": false,
         "is_fork": false
@@ -1014,10 +1692,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 2700,
+        "y": 4500,
         "lane": 0,
         "radius": 6,
-        "depth": 47,
+        "depth": 79,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -1034,11 +1712,11 @@
       "subject": "chore: file mods",
       "refs": "",
       "position": {
-        "x": -600,
-        "y": 2740,
-        "lane": -10,
+        "x": 2640,
+        "y": 4540,
+        "lane": 17,
         "radius": 6,
-        "depth": 48,
+        "depth": 80,
         "is_trunk": false,
         "is_merge": false,
         "is_fork": false
@@ -1056,10 +1734,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 2820,
+        "y": 4620,
         "lane": 0,
         "radius": 6,
-        "depth": 49,
+        "depth": 81,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -1076,11 +1754,11 @@
       "subject": "feat(dc-fix,dc-init,dc): --full-fix mode, push guard, and full-fix menu entry",
       "refs": "",
       "position": {
-        "x": 1920,
-        "y": 2860,
-        "lane": 11,
+        "x": -1440,
+        "y": 4660,
+        "lane": -17,
         "radius": 6,
-        "depth": 50,
+        "depth": 82,
         "is_trunk": false,
         "is_merge": false,
         "is_fork": false
@@ -1098,10 +1776,10 @@
       "refs": "tag: v0.5.12",
       "position": {
         "x": 600,
-        "y": 2940,
+        "y": 4740,
         "lane": 0,
         "radius": 6,
-        "depth": 51,
+        "depth": 83,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -1119,10 +1797,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 2980,
+        "y": 4780,
         "lane": 0,
         "radius": 6,
-        "depth": 52,
+        "depth": 84,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -1139,11 +1817,11 @@
       "subject": "chore: update CHANGELOG for v0.5.12",
       "refs": "",
       "position": {
-        "x": -720,
-        "y": 3020,
-        "lane": -11,
+        "x": 2760,
+        "y": 4820,
+        "lane": 18,
         "radius": 6,
-        "depth": 53,
+        "depth": 85,
         "is_trunk": false,
         "is_merge": false,
         "is_fork": false
@@ -1161,10 +1839,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 3100,
+        "y": 4900,
         "lane": 0,
         "radius": 6,
-        "depth": 54,
+        "depth": 86,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -1181,11 +1859,11 @@
       "subject": "Merge pull request #103 from XAOSTECH:humanise/20260918-132534",
       "refs": "",
       "position": {
-        "x": 2040,
-        "y": 3140,
-        "lane": 12,
+        "x": -1560,
+        "y": 4940,
+        "lane": -18,
         "radius": 6,
-        "depth": 55,
+        "depth": 87,
         "is_trunk": false,
         "is_merge": false,
         "is_fork": false
@@ -1203,10 +1881,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 3220,
+        "y": 5020,
         "lane": 0,
         "radius": 6,
-        "depth": 56,
+        "depth": 88,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -1223,11 +1901,11 @@
       "subject": "fix(humanise): include self",
       "refs": "",
       "position": {
-        "x": -840,
-        "y": 3260,
-        "lane": -12,
+        "x": 2880,
+        "y": 5060,
+        "lane": 19,
         "radius": 6,
-        "depth": 57,
+        "depth": 89,
         "is_trunk": false,
         "is_merge": false,
         "is_fork": false
@@ -1245,10 +1923,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 3340,
+        "y": 5140,
         "lane": 0,
         "radius": 6,
-        "depth": 58,
+        "depth": 90,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -1265,11 +1943,11 @@
       "subject": "chore: humanise hard-wrapped comments and prose",
       "refs": "",
       "position": {
-        "x": 2160,
-        "y": 3380,
-        "lane": 13,
+        "x": -1680,
+        "y": 5180,
+        "lane": -19,
         "radius": 6,
-        "depth": 59,
+        "depth": 91,
         "is_trunk": false,
         "is_merge": false,
         "is_fork": false
@@ -1287,10 +1965,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 3460,
+        "y": 5260,
         "lane": 0,
         "radius": 6,
-        "depth": 60,
+        "depth": 92,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -1307,11 +1985,11 @@
       "subject": "fix(anglicise): adapt + revalidate licence",
       "refs": "",
       "position": {
-        "x": -960,
-        "y": 3500,
-        "lane": -13,
+        "x": 3000,
+        "y": 5300,
+        "lane": 20,
         "radius": 6,
-        "depth": 61,
+        "depth": 93,
         "is_trunk": false,
         "is_merge": false,
         "is_fork": false
@@ -1329,10 +2007,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 3580,
+        "y": 5380,
         "lane": 0,
         "radius": 6,
-        "depth": 62,
+        "depth": 94,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -1349,11 +2027,11 @@
       "subject": "Merge pull request #102 from XAOSTECH:humanise/20260915-080613",
       "refs": "",
       "position": {
-        "x": 2280,
-        "y": 3620,
-        "lane": 14,
+        "x": -1800,
+        "y": 5420,
+        "lane": -20,
         "radius": 6,
-        "depth": 63,
+        "depth": 95,
         "is_trunk": false,
         "is_merge": false,
         "is_fork": false
@@ -1371,10 +2049,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 3700,
+        "y": 5500,
         "lane": 0,
         "radius": 6,
-        "depth": 64,
+        "depth": 96,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -1391,11 +2069,11 @@
       "subject": "Merge pull request #101 from XAOSTECH:anglicise/20260907-091602",
       "refs": "",
       "position": {
-        "x": -1080,
-        "y": 3740,
-        "lane": -14,
+        "x": 3120,
+        "y": 5540,
+        "lane": 21,
         "radius": 6,
-        "depth": 65,
+        "depth": 97,
         "is_trunk": false,
         "is_merge": false,
         "is_fork": false
@@ -1413,10 +2091,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 3820,
+        "y": 5620,
         "lane": 0,
         "radius": 6,
-        "depth": 66,
+        "depth": 98,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -1433,11 +2111,11 @@
       "subject": "chore(README): re-americanise",
       "refs": "",
       "position": {
-        "x": 2400,
-        "y": 3860,
-        "lane": 15,
+        "x": -1920,
+        "y": 5660,
+        "lane": -21,
         "radius": 6,
-        "depth": 67,
+        "depth": 99,
         "is_trunk": false,
         "is_merge": false,
         "is_fork": false
@@ -1455,10 +2133,10 @@
       "refs": "tag: v0.5.11",
       "position": {
         "x": 600,
-        "y": 3940,
+        "y": 5740,
         "lane": 0,
         "radius": 6,
-        "depth": 68,
+        "depth": 100,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -1475,11 +2153,11 @@
       "subject": "chore: convert American spellings to British English",
       "refs": "",
       "position": {
-        "x": -1200,
-        "y": 3980,
-        "lane": -15,
+        "x": 3240,
+        "y": 5780,
+        "lane": 22,
         "radius": 6,
-        "depth": 69,
+        "depth": 101,
         "is_trunk": false,
         "is_merge": false,
         "is_fork": false
@@ -1497,10 +2175,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 4060,
+        "y": 5860,
         "lane": 0,
         "radius": 6,
-        "depth": 70,
+        "depth": 102,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -1519,11 +2197,11 @@
       "collapsed": true,
       "count": 3,
       "position": {
-        "x": 2520,
-        "y": 4100,
-        "lane": 16,
+        "x": -2040,
+        "y": 5900,
+        "lane": -22,
         "radius": 6,
-        "depth": 71,
+        "depth": 103,
         "is_trunk": false,
         "is_merge": false,
         "is_fork": false
@@ -1541,10 +2219,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 4180,
+        "y": 5980,
         "lane": 0,
         "radius": 6,
-        "depth": 72,
+        "depth": 104,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -1562,10 +2240,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 4220,
+        "y": 6020,
         "lane": 0,
         "radius": 9,
-        "depth": 73,
+        "depth": 105,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": true
@@ -1583,10 +2261,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 4260,
+        "y": 6060,
         "lane": 0,
         "radius": 6,
-        "depth": 74,
+        "depth": 106,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -1604,10 +2282,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 4300,
+        "y": 6100,
         "lane": 0,
         "radius": 6,
-        "depth": 75,
+        "depth": 107,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -1625,10 +2303,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 4340,
+        "y": 6140,
         "lane": 0,
         "radius": 6,
-        "depth": 76,
+        "depth": 108,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -1646,10 +2324,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 4380,
+        "y": 6180,
         "lane": 0,
         "radius": 6,
-        "depth": 77,
+        "depth": 109,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -1667,10 +2345,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 4420,
+        "y": 6220,
         "lane": 0,
         "radius": 6,
-        "depth": 78,
+        "depth": 110,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -1688,10 +2366,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 4460,
+        "y": 6260,
         "lane": 0,
         "radius": 6,
-        "depth": 79,
+        "depth": 111,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -1708,11 +2386,11 @@
       "subject": "fix(dc-fix): IFS corruption fix, auto-select topology option 2 in batch",
       "refs": "tag: backup/main-pre-override-20261013T231605Z",
       "position": {
-        "x": -1320,
-        "y": 4500,
-        "lane": -16,
+        "x": 3360,
+        "y": 6300,
+        "lane": 23,
         "radius": 6,
-        "depth": 80,
+        "depth": 112,
         "is_trunk": false,
         "is_merge": false,
         "is_fork": false
@@ -1731,11 +2409,11 @@
       "collapsed": true,
       "count": 13,
       "position": {
-        "x": 2640,
-        "y": 4580,
-        "lane": 17,
+        "x": -2160,
+        "y": 6380,
+        "lane": -23,
         "radius": 6,
-        "depth": 81,
+        "depth": 113,
         "is_trunk": false,
         "is_merge": false,
         "is_fork": false
@@ -1752,11 +2430,11 @@
       "subject": "Merge pull request #103 from XAOSTECH:humanise/20260918-132534",
       "refs": "",
       "position": {
-        "x": -1440,
-        "y": 4660,
-        "lane": -17,
+        "x": 3480,
+        "y": 6460,
+        "lane": 24,
         "radius": 10,
-        "depth": 82,
+        "depth": 114,
         "is_trunk": false,
         "is_merge": true,
         "is_fork": false
@@ -1773,11 +2451,11 @@
       "subject": "chore: humanise hard-wrapped comments and prose",
       "refs": "",
       "position": {
-        "x": 2760,
-        "y": 4740,
-        "lane": 18,
+        "x": -2280,
+        "y": 6540,
+        "lane": -24,
         "radius": 6,
-        "depth": 83,
+        "depth": 115,
         "is_trunk": false,
         "is_merge": false,
         "is_fork": false
@@ -1794,11 +2472,11 @@
       "subject": "fix(humanise): include self",
       "refs": "",
       "position": {
-        "x": -1560,
-        "y": 4820,
-        "lane": -18,
+        "x": 3600,
+        "y": 6620,
+        "lane": 25,
         "radius": 9,
-        "depth": 84,
+        "depth": 116,
         "is_trunk": false,
         "is_merge": false,
         "is_fork": true
@@ -1815,11 +2493,11 @@
       "subject": "fix(anglicise): adapt + revalidate licence",
       "refs": "",
       "position": {
-        "x": 2880,
-        "y": 4900,
-        "lane": 19,
+        "x": -2400,
+        "y": 6700,
+        "lane": -25,
         "radius": 6,
-        "depth": 85,
+        "depth": 117,
         "is_trunk": false,
         "is_merge": false,
         "is_fork": false
@@ -1836,11 +2514,11 @@
       "subject": "Merge pull request #102 from XAOSTECH:humanise/20260915-080613",
       "refs": "",
       "position": {
-        "x": -1680,
-        "y": 4980,
-        "lane": -19,
+        "x": 3720,
+        "y": 6780,
+        "lane": 26,
         "radius": 10,
-        "depth": 86,
+        "depth": 118,
         "is_trunk": false,
         "is_merge": true,
         "is_fork": false
@@ -1857,11 +2535,11 @@
       "subject": "chore: humanise hard-wrapped comments and prose",
       "refs": "",
       "position": {
-        "x": 3000,
-        "y": 5060,
-        "lane": 20,
+        "x": -2520,
+        "y": 6860,
+        "lane": -26,
         "radius": 6,
-        "depth": 87,
+        "depth": 119,
         "is_trunk": false,
         "is_merge": false,
         "is_fork": false
@@ -1878,11 +2556,11 @@
       "subject": "Merge pull request #101 from XAOSTECH:anglicise/20260907-091602",
       "refs": "",
       "position": {
-        "x": -1800,
-        "y": 5140,
-        "lane": -20,
+        "x": 3840,
+        "y": 6940,
+        "lane": 27,
         "radius": 10,
-        "depth": 88,
+        "depth": 120,
         "is_trunk": false,
         "is_merge": true,
         "is_fork": true
@@ -1899,11 +2577,11 @@
       "subject": "chore: convert American spellings to British English",
       "refs": "",
       "position": {
-        "x": 3120,
-        "y": 5220,
-        "lane": 21,
+        "x": -2640,
+        "y": 7020,
+        "lane": -27,
         "radius": 6,
-        "depth": 89,
+        "depth": 121,
         "is_trunk": false,
         "is_merge": false,
         "is_fork": false
@@ -1920,11 +2598,11 @@
       "subject": "chore(README): re-americanise",
       "refs": "",
       "position": {
-        "x": -1920,
-        "y": 5300,
-        "lane": -21,
+        "x": 3960,
+        "y": 7100,
+        "lane": 28,
         "radius": 9,
-        "depth": 90,
+        "depth": 122,
         "is_trunk": false,
         "is_merge": false,
         "is_fork": true
@@ -1943,11 +2621,11 @@
       "collapsed": true,
       "count": 10,
       "position": {
-        "x": 3240,
-        "y": 5380,
-        "lane": 22,
+        "x": -2760,
+        "y": 7180,
+        "lane": -28,
         "radius": 6,
-        "depth": 91,
+        "depth": 123,
         "is_trunk": false,
         "is_merge": false,
         "is_fork": false
@@ -1965,10 +2643,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 5460,
+        "y": 7260,
         "lane": 0,
         "radius": 9,
-        "depth": 92,
+        "depth": 124,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": true
@@ -1988,10 +2666,10 @@
       "count": 2,
       "position": {
         "x": 600,
-        "y": 5500,
+        "y": 7300,
         "lane": 0,
         "radius": 6,
-        "depth": 93,
+        "depth": 125,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -2009,10 +2687,10 @@
       "refs": "tag: v0.5.10",
       "position": {
         "x": 600,
-        "y": 5540,
+        "y": 7340,
         "lane": 0,
         "radius": 6,
-        "depth": 94,
+        "depth": 126,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -2032,10 +2710,10 @@
       "count": 35,
       "position": {
         "x": 600,
-        "y": 5580,
+        "y": 7380,
         "lane": 0,
         "radius": 6,
-        "depth": 95,
+        "depth": 127,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -2053,10 +2731,10 @@
       "refs": "tag: backup/main-pre-override-20260823T055838Z",
       "position": {
         "x": 600,
-        "y": 5620,
+        "y": 7420,
         "lane": 0,
         "radius": 6,
-        "depth": 96,
+        "depth": 128,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -2074,10 +2752,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 5660,
+        "y": 7460,
         "lane": 0,
         "radius": 10,
-        "depth": 97,
+        "depth": 129,
         "is_trunk": true,
         "is_merge": true,
         "is_fork": false
@@ -2096,11 +2774,11 @@
       "collapsed": true,
       "count": 2,
       "position": {
-        "x": -2040,
-        "y": 5700,
-        "lane": -22,
+        "x": 4080,
+        "y": 7500,
+        "lane": 29,
         "radius": 6,
-        "depth": 98,
+        "depth": 130,
         "is_trunk": false,
         "is_merge": false,
         "is_fork": false
@@ -2118,10 +2796,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 5780,
+        "y": 7580,
         "lane": 0,
         "radius": 9,
-        "depth": 99,
+        "depth": 131,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": true
@@ -2141,10 +2819,10 @@
       "count": 17,
       "position": {
         "x": 600,
-        "y": 5820,
+        "y": 7620,
         "lane": 0,
         "radius": 6,
-        "depth": 100,
+        "depth": 132,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -2162,10 +2840,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 5860,
+        "y": 7660,
         "lane": 0,
         "radius": 10,
-        "depth": 101,
+        "depth": 133,
         "is_trunk": true,
         "is_merge": true,
         "is_fork": false
@@ -2184,11 +2862,11 @@
       "collapsed": true,
       "count": 4,
       "position": {
-        "x": 3360,
-        "y": 5900,
-        "lane": 23,
+        "x": -2880,
+        "y": 7700,
+        "lane": -29,
         "radius": 6,
-        "depth": 102,
+        "depth": 134,
         "is_trunk": false,
         "is_merge": false,
         "is_fork": false
@@ -2206,10 +2884,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 5980,
+        "y": 7780,
         "lane": 0,
         "radius": 9,
-        "depth": 103,
+        "depth": 135,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": true
@@ -2229,10 +2907,10 @@
       "count": 23,
       "position": {
         "x": 600,
-        "y": 6020,
+        "y": 7820,
         "lane": 0,
         "radius": 6,
-        "depth": 104,
+        "depth": 136,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -2250,10 +2928,10 @@
       "refs": "tag: v0.5.9",
       "position": {
         "x": 600,
-        "y": 6060,
+        "y": 7860,
         "lane": 0,
         "radius": 6,
-        "depth": 105,
+        "depth": 137,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -2273,10 +2951,10 @@
       "count": 20,
       "position": {
         "x": 600,
-        "y": 6100,
+        "y": 7900,
         "lane": 0,
         "radius": 6,
-        "depth": 106,
+        "depth": 138,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -2294,10 +2972,10 @@
       "refs": "tag: v0.5.8",
       "position": {
         "x": 600,
-        "y": 6140,
+        "y": 7940,
         "lane": 0,
         "radius": 6,
-        "depth": 107,
+        "depth": 139,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -2317,10 +2995,10 @@
       "count": 24,
       "position": {
         "x": 600,
-        "y": 6180,
+        "y": 7980,
         "lane": 0,
         "radius": 6,
-        "depth": 108,
+        "depth": 140,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -2338,10 +3016,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 6220,
+        "y": 8020,
         "lane": 0,
         "radius": 10,
-        "depth": 109,
+        "depth": 141,
         "is_trunk": true,
         "is_merge": true,
         "is_fork": false
@@ -2358,11 +3036,11 @@
       "subject": "chore: convert American spellings to British English",
       "refs": "",
       "position": {
-        "x": -2160,
-        "y": 6260,
-        "lane": -23,
+        "x": 4200,
+        "y": 8060,
+        "lane": 30,
         "radius": 6,
-        "depth": 110,
+        "depth": 142,
         "is_trunk": false,
         "is_merge": false,
         "is_fork": false
@@ -2380,10 +3058,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 6340,
+        "y": 8140,
         "lane": 0,
         "radius": 9,
-        "depth": 111,
+        "depth": 143,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": true
@@ -2401,10 +3079,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 6380,
+        "y": 8180,
         "lane": 0,
         "radius": 6,
-        "depth": 112,
+        "depth": 144,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -2422,10 +3100,10 @@
       "refs": "tag: v0.5.7",
       "position": {
         "x": 600,
-        "y": 6420,
+        "y": 8220,
         "lane": 0,
         "radius": 6,
-        "depth": 113,
+        "depth": 145,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -2445,10 +3123,10 @@
       "count": 91,
       "position": {
         "x": 600,
-        "y": 6460,
+        "y": 8260,
         "lane": 0,
         "radius": 6,
-        "depth": 114,
+        "depth": 146,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -2466,10 +3144,10 @@
       "refs": "tag: v0.5.6",
       "position": {
         "x": 600,
-        "y": 6500,
+        "y": 8300,
         "lane": 0,
         "radius": 6,
-        "depth": 115,
+        "depth": 147,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -2489,10 +3167,10 @@
       "count": 14,
       "position": {
         "x": 600,
-        "y": 6540,
+        "y": 8340,
         "lane": 0,
         "radius": 6,
-        "depth": 116,
+        "depth": 148,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -2510,10 +3188,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 6580,
+        "y": 8380,
         "lane": 0,
         "radius": 10,
-        "depth": 117,
+        "depth": 149,
         "is_trunk": true,
         "is_merge": true,
         "is_fork": false
@@ -2530,11 +3208,11 @@
       "subject": "security: auto-fix CodeQL alerts",
       "refs": "",
       "position": {
-        "x": 3480,
-        "y": 6620,
-        "lane": 24,
+        "x": -3000,
+        "y": 8420,
+        "lane": -30,
         "radius": 6,
-        "depth": 118,
+        "depth": 150,
         "is_trunk": false,
         "is_merge": false,
         "is_fork": false
@@ -2552,10 +3230,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 6700,
+        "y": 8500,
         "lane": 0,
         "radius": 9,
-        "depth": 119,
+        "depth": 151,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": true
@@ -2575,10 +3253,10 @@
       "count": 4,
       "position": {
         "x": 600,
-        "y": 6740,
+        "y": 8540,
         "lane": 0,
         "radius": 6,
-        "depth": 120,
+        "depth": 152,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -2596,10 +3274,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 6780,
+        "y": 8580,
         "lane": 0,
         "radius": 10,
-        "depth": 121,
+        "depth": 153,
         "is_trunk": true,
         "is_merge": true,
         "is_fork": false
@@ -2617,10 +3295,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 6820,
+        "y": 8620,
         "lane": 0,
         "radius": 6,
-        "depth": 122,
+        "depth": 154,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -2637,11 +3315,11 @@
       "subject": "Merge pull request #75 from XAOSTECH:security/autofix-1771725722",
       "refs": "",
       "position": {
-        "x": -2280,
-        "y": 6860,
-        "lane": -24,
+        "x": 4320,
+        "y": 8660,
+        "lane": 31,
         "radius": 10,
-        "depth": 123,
+        "depth": 155,
         "is_trunk": false,
         "is_merge": true,
         "is_fork": false
@@ -2658,11 +3336,11 @@
       "subject": "Merge pull request #77 from XAOSTECH:security/autofix-1771725763",
       "refs": "",
       "position": {
-        "x": 3600,
-        "y": 6940,
-        "lane": 25,
+        "x": -3120,
+        "y": 8740,
+        "lane": -31,
         "radius": 10,
-        "depth": 124,
+        "depth": 156,
         "is_trunk": false,
         "is_merge": true,
         "is_fork": false
@@ -2679,11 +3357,11 @@
       "subject": "security: auto-fix CodeQL alerts",
       "refs": "",
       "position": {
-        "x": -2400,
-        "y": 7020,
-        "lane": -25,
+        "x": 4440,
+        "y": 8820,
+        "lane": 32,
         "radius": 6,
-        "depth": 125,
+        "depth": 157,
         "is_trunk": false,
         "is_merge": false,
         "is_fork": false
@@ -2700,11 +3378,11 @@
       "subject": "security: auto-fix CodeQL alerts",
       "refs": "",
       "position": {
-        "x": 3720,
-        "y": 7100,
-        "lane": 26,
+        "x": -3240,
+        "y": 8900,
+        "lane": -32,
         "radius": 6,
-        "depth": 126,
+        "depth": 158,
         "is_trunk": false,
         "is_merge": false,
         "is_fork": false
@@ -2721,11 +3399,11 @@
       "subject": "Merge pull request #71 from XAOSTECH:security/autofix-1771725675",
       "refs": "",
       "position": {
-        "x": -2520,
-        "y": 7180,
-        "lane": -26,
+        "x": 4560,
+        "y": 8980,
+        "lane": 33,
         "radius": 10,
-        "depth": 127,
+        "depth": 159,
         "is_trunk": false,
         "is_merge": true,
         "is_fork": true
@@ -2742,11 +3420,11 @@
       "subject": "security: auto-fix CodeQL alerts",
       "refs": "",
       "position": {
-        "x": 3840,
-        "y": 7260,
-        "lane": 27,
+        "x": -3360,
+        "y": 9060,
+        "lane": -33,
         "radius": 6,
-        "depth": 128,
+        "depth": 160,
         "is_trunk": false,
         "is_merge": false,
         "is_fork": false
@@ -2764,10 +3442,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 7340,
+        "y": 9140,
         "lane": 0,
         "radius": 10,
-        "depth": 129,
+        "depth": 161,
         "is_trunk": true,
         "is_merge": true,
         "is_fork": true
@@ -2787,10 +3465,10 @@
       "count": 2,
       "position": {
         "x": 600,
-        "y": 7380,
+        "y": 9180,
         "lane": 0,
         "radius": 6,
-        "depth": 130,
+        "depth": 162,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -2807,11 +3485,11 @@
       "subject": "Merge pull request #45 from XAOSTECH/security/autofix-1771725086",
       "refs": "",
       "position": {
-        "x": -2640,
-        "y": 7420,
-        "lane": -27,
+        "x": 4680,
+        "y": 9220,
+        "lane": 34,
         "radius": 10,
-        "depth": 131,
+        "depth": 163,
         "is_trunk": false,
         "is_merge": true,
         "is_fork": false
@@ -2828,11 +3506,11 @@
       "subject": "security: auto-fix CodeQL alerts",
       "refs": "",
       "position": {
-        "x": 3960,
-        "y": 7500,
-        "lane": 28,
+        "x": -3480,
+        "y": 9300,
+        "lane": -34,
         "radius": 6,
-        "depth": 132,
+        "depth": 164,
         "is_trunk": false,
         "is_merge": false,
         "is_fork": false
@@ -2850,10 +3528,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 7580,
+        "y": 9380,
         "lane": 0,
         "radius": 9,
-        "depth": 133,
+        "depth": 165,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": true
@@ -2873,10 +3551,10 @@
       "count": 12,
       "position": {
         "x": 600,
-        "y": 7620,
+        "y": 9420,
         "lane": 0,
         "radius": 6,
-        "depth": 134,
+        "depth": 166,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -2894,10 +3572,10 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 7660,
+        "y": 9460,
         "lane": 0,
         "radius": 10,
-        "depth": 135,
+        "depth": 167,
         "is_trunk": true,
         "is_merge": true,
         "is_fork": false
@@ -2914,11 +3592,11 @@
       "subject": "security: auto-fix CodeQL alerts",
       "refs": "",
       "position": {
-        "x": -2760,
-        "y": 7700,
-        "lane": -28,
+        "x": 4800,
+        "y": 9500,
+        "lane": 35,
         "radius": 6,
-        "depth": 136,
+        "depth": 168,
         "is_trunk": false,
         "is_merge": false,
         "is_fork": false
@@ -2927,7 +3605,7 @@
     {
       "sha": "b96d2790514caeacfcdb0bd598661f7d12c41ffd",
       "short": "b96d279",
-      "parents": "collapsed:f4e8ac22cdd611dcf960d26ef0b8770524c20549:a8650b205384ce8b24c9d3eb5d7ea83c364f74c1",
+      "parents": "collapsed:f4e8ac22cdd611dcf960d26ef0b8770524c20549:0a0afb7a4912420215e3a6f01cbc7ab12efb528e",
       "author": "xaoscience",
       "email": "69734795+xaoscience@users.noreply.github.com",
       "date": "2026-02-21T22:06:53+01:00",
@@ -2936,247 +3614,33 @@
       "refs": "",
       "position": {
         "x": 600,
-        "y": 7780,
+        "y": 9580,
         "lane": 0,
         "radius": 9,
-        "depth": 137,
+        "depth": 169,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": true
       }
     },
     {
-      "sha": "collapsed:f4e8ac22cdd611dcf960d26ef0b8770524c20549:a8650b205384ce8b24c9d3eb5d7ea83c364f74c1",
-      "short": "24",
-      "parents": "260f985236ee3284fc8be1f3d2cd8189cc82b2f9",
+      "sha": "collapsed:f4e8ac22cdd611dcf960d26ef0b8770524c20549:0a0afb7a4912420215e3a6f01cbc7ab12efb528e",
+      "short": "11",
+      "parents": "64a73b63ae15111d2d2692dca311db4ae4e62d70",
       "author": "",
       "email": "",
       "date": "2026-02-21T03:22:58+01:00",
       "timestamp": 1771640578,
-      "subject": "24 commits",
+      "subject": "11 commits",
       "refs": "",
       "collapsed": true,
-      "count": 24,
+      "count": 11,
       "position": {
         "x": 600,
-        "y": 7820,
+        "y": 9620,
         "lane": 0,
         "radius": 6,
-        "depth": 138,
-        "is_trunk": true,
-        "is_merge": false,
-        "is_fork": false
-      }
-    },
-    {
-      "sha": "260f985236ee3284fc8be1f3d2cd8189cc82b2f9",
-      "short": "260f985",
-      "parents": "14ff10dab3b6dfa5a461db4e81e0eb317c8d2e72",
-      "author": "xaos-bot",
-      "email": "262248812+xaos-bot@users.noreply.github.com",
-      "date": "2026-02-21T00:15:16Z",
-      "timestamp": 1771632916,
-      "subject": "chore: update CHANGELOG for v0.5.5 (re-release)",
-      "refs": "tag: v0.5.5",
-      "position": {
-        "x": 600,
-        "y": 7860,
-        "lane": 0,
-        "radius": 6,
-        "depth": 139,
-        "is_trunk": true,
-        "is_merge": false,
-        "is_fork": false
-      }
-    },
-    {
-      "sha": "14ff10dab3b6dfa5a461db4e81e0eb317c8d2e72",
-      "short": "14ff10d",
-      "parents": "288bedc4165644bd98ba721b5fd8774965a89acd",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-02-21T01:14:39+01:00",
-      "timestamp": 1771632879,
-      "subject": "feat: use GitHub-style merge messages in automerge",
-      "refs": "",
-      "position": {
-        "x": 600,
-        "y": 7900,
-        "lane": 0,
-        "radius": 6,
-        "depth": 140,
-        "is_trunk": true,
-        "is_merge": false,
-        "is_fork": false
-      }
-    },
-    {
-      "sha": "288bedc4165644bd98ba721b5fd8774965a89acd",
-      "short": "288bedc",
-      "parents": "5bb6009e36fac21ff26315e79f8c40d8478cc93f f20610872b598e1e792c46cdaf75da4b24fed9da",
-      "author": "xaos-bot",
-      "email": "262248812+xaos-bot@users.noreply.github.com",
-      "date": "2026-02-21T00:09:13Z",
-      "timestamp": 1771632553,
-      "subject": "Merge remote-tracking branch 'refs/remotes/pr/36'",
-      "refs": "",
-      "position": {
-        "x": 600,
-        "y": 7940,
-        "lane": 0,
-        "radius": 10,
-        "depth": 141,
-        "is_trunk": true,
-        "is_merge": true,
-        "is_fork": false
-      }
-    },
-    {
-      "sha": "f20610872b598e1e792c46cdaf75da4b24fed9da",
-      "short": "f206108",
-      "parents": "5bb6009e36fac21ff26315e79f8c40d8478cc93f",
-      "author": "xaos-bot",
-      "email": "262248812+xaos-bot@users.noreply.github.com",
-      "date": "2026-02-21T00:08:50Z",
-      "timestamp": 1771632530,
-      "subject": "chore: convert American spellings to British English",
-      "refs": "",
-      "position": {
-        "x": 4080,
-        "y": 7980,
-        "lane": 29,
-        "radius": 6,
-        "depth": 142,
-        "is_trunk": false,
-        "is_merge": false,
-        "is_fork": false
-      }
-    },
-    {
-      "sha": "5bb6009e36fac21ff26315e79f8c40d8478cc93f",
-      "short": "5bb6009",
-      "parents": "collapsed:a379fe211dcc56130a572a9cec8eba32fda3c362:429ed52a0a4868534cc4acd8f6b22cb2fc21f2c0",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-02-21T00:57:44+01:00",
-      "timestamp": 1771631864,
-      "subject": "fix: restore GH_TOKEN to automerge merge step",
-      "refs": "",
-      "position": {
-        "x": 600,
-        "y": 8060,
-        "lane": 0,
-        "radius": 9,
-        "depth": 143,
-        "is_trunk": true,
-        "is_merge": false,
-        "is_fork": true
-      }
-    },
-    {
-      "sha": "collapsed:a379fe211dcc56130a572a9cec8eba32fda3c362:429ed52a0a4868534cc4acd8f6b22cb2fc21f2c0",
-      "short": "17",
-      "parents": "bb14c48534ac722b1a00ca51c688bd44455c142a",
-      "author": "",
-      "email": "",
-      "date": "2026-02-21T00:54:35+01:00",
-      "timestamp": 1771631675,
-      "subject": "17 commits",
-      "refs": "",
-      "collapsed": true,
-      "count": 17,
-      "position": {
-        "x": 600,
-        "y": 8100,
-        "lane": 0,
-        "radius": 6,
-        "depth": 144,
-        "is_trunk": true,
-        "is_merge": false,
-        "is_fork": false
-      }
-    },
-    {
-      "sha": "bb14c48534ac722b1a00ca51c688bd44455c142a",
-      "short": "bb14c48",
-      "parents": "b919cd8bcf9f3314227395f21d462f1030250dc0 15f31b4debd9625e163bd5abdda940a2841c207e",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-02-20T23:22:13+01:00",
-      "timestamp": 1771626133,
-      "subject": "Merge pull request #34 from XAOSTECH/anglicise/20260220-215059",
-      "refs": "",
-      "position": {
-        "x": 600,
-        "y": 8140,
-        "lane": 0,
-        "radius": 10,
-        "depth": 145,
-        "is_trunk": true,
-        "is_merge": true,
-        "is_fork": false
-      }
-    },
-    {
-      "sha": "15f31b4debd9625e163bd5abdda940a2841c207e",
-      "short": "15f31b4",
-      "parents": "b919cd8bcf9f3314227395f21d462f1030250dc0",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-02-20T23:22:13+01:00",
-      "timestamp": 1771626133,
-      "subject": "chore: convert American spellings to British English",
-      "refs": "",
-      "position": {
-        "x": -2880,
-        "y": 8180,
-        "lane": -29,
-        "radius": 6,
-        "depth": 146,
-        "is_trunk": false,
-        "is_merge": false,
-        "is_fork": false
-      }
-    },
-    {
-      "sha": "b919cd8bcf9f3314227395f21d462f1030250dc0",
-      "short": "b919cd8",
-      "parents": "collapsed:ff85a3cab21bc19b7314b541eace22cb7be5352d:012c7069402aacd92f4c5849447cba509cbea776",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-02-20T22:49:06+01:00",
-      "timestamp": 1771624146,
-      "subject": "Fix anglicise grep quoting and ignore test-repo",
-      "refs": "",
-      "position": {
-        "x": 600,
-        "y": 8260,
-        "lane": 0,
-        "radius": 9,
-        "depth": 147,
-        "is_trunk": true,
-        "is_merge": false,
-        "is_fork": true
-      }
-    },
-    {
-      "sha": "collapsed:ff85a3cab21bc19b7314b541eace22cb7be5352d:012c7069402aacd92f4c5849447cba509cbea776",
-      "short": "13",
-      "parents": "2a000fc2bfb0d388076cbe404a42253a4b3b872e",
-      "author": "",
-      "email": "",
-      "date": "2026-02-20T21:44:13Z",
-      "timestamp": 1771623853,
-      "subject": "13 commits",
-      "refs": "",
-      "collapsed": true,
-      "count": 13,
-      "position": {
-        "x": 600,
-        "y": 8300,
-        "lane": 0,
-        "radius": 6,
-        "depth": 148,
+        "depth": 170,
         "is_trunk": true,
         "is_merge": false,
         "is_fork": false
@@ -3185,7 +3649,7 @@
   ],
   "branches": [
     {
-      "name": "7a0d88a27f8448e0e6e9fc2d71960524aafca86d chore: update CHANGELOG for v0.5.14 (re-release)",
+      "name": "c2c2164ed169006c1a5abeb89cd90cfe268ca170 Merge pull request #121 from XAOSTECH:humanise/20261110-235645",
       "sha": "*",
       "current": false,
       "merged": false
@@ -3206,7 +3670,7 @@
     },
     {
       "name": "latest",
-      "sha": "049bf3e230a741ab2754585625baf9de289fedd8"
+      "sha": "ff101ac179dd6583554a037a7a27e9d5226fdfda"
     },
     {
       "name": "v0.1.0",
@@ -3259,6 +3723,10 @@
     {
       "name": "v0.5.14",
       "sha": "bb303f7898df60d01cdbed381ab7f31113cc8ea3"
+    },
+    {
+      "name": "v0.5.15",
+      "sha": "5e1975faff546b98ebb75ba8382991be1b4dc877"
     },
     {
       "name": "v0.5.2",
