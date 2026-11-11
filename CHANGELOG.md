@@ -14,6 +14,7 @@
 - fall back to v0.1.0 when no prior releases exist
 
 ### Fixed
+- read asset SHAs from GitHub API digest instead of downloading
 - fix awk regression that dropped What's Changed and Installation sections
 - sanitise version input against common typos before validation
 - compute complete checksums for all assets on every release
