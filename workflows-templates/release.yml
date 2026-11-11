@@ -191,7 +191,10 @@ jobs:
           else
             # Manual dispatch - use input or auto-detect next patch
             VERSION="${{ github.event.inputs.version }}"
-            VERSION="${VERSION#v}"  # strip leading 'v' if present
+            # Sanitise typos: trim spaces, replace commas with dots, strip repeated 'v' prefix.
+            VERSION="${VERSION// /}"
+            VERSION="${VERSION//,/.}"
+            VERSION="${VERSION#v}"; VERSION="${VERSION#v}"
             if [[ -z "$VERSION" ]]; then
               # Fetch tag name and release title in one API call for rich diagnostics.
               _REL_JSON=$(gh api repos/${{ github.repository }}/releases/latest 2>/dev/null || echo '{}')
@@ -1327,11 +1330,20 @@ jobs:
         shell: bash
         run: |
           VERSION="${{ github.event.inputs.version }}"
-          if [[ -z "$VERSION" ]]; then
+          # Sanitise typos: trim spaces, replace commas with dots, strip repeated 'v' prefix.
+          VERSION="${VERSION// /}"
+          VERSION="${VERSION//,/.}"
+          VERSION="${VERSION#v}"; VERSION="${VERSION#v}"
+          [[ "$VERSION" =~ ^v ]] || VERSION="v${VERSION}"
+          if [[ -z "${VERSION#v}" ]]; then
             echo "::error::version is required when fix_release is checked"
             exit 1
           fi
-          [[ "$VERSION" =~ ^v ]] || VERSION="v${VERSION}"
+          # Validate sanitised result is semver.
+          if [[ ! "${VERSION#v}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+)?$ ]]; then
+            echo "::error::version '${VERSION}' is not valid semver after sanitisation (expected vX.Y.Z)"
+            exit 1
+          fi
           if ! git tag -l "$VERSION" | grep -q .; then
             echo "::error::Tag $VERSION does not exist in this repository"
             exit 1
