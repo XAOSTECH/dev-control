@@ -1,8 +1,9 @@
 # Changelog
 
-## [0.5.15] - 2026-11-11
+## [0.5.15] - 2026-11-11 (re-release)
 
 ### Added
+- add fix job to backfill notes for past releases
 - add template loading test suite
 - trigger prose and security maintenance workflows from weekly run
 - add static pages and bats test runner templates
@@ -11,6 +12,9 @@
 - fall back to v0.1.0 when no prior releases exist
 
 ### Fixed
+- fix predecessor tag direction and include .sha256 sidecar in checksums
+- fix 404 log URL and bash syntax error in fix job
+- honour --exclude for multi-level relative paths at any depth
 - generate full release notes for all trigger types
 - fallback BOT_CLIENT_ID_SECRET to BOT_APP_ID_SECRET for legacy config
 - update stale action pins and parametrise hardcoded bot identity
