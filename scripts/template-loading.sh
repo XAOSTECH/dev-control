@@ -64,6 +64,8 @@ BATCH_STABILITY=""
 BATCH_STABILITY_COLOR=""
 # Creation queue for batch mode
 CREATE_QUEUE=()
+# Create missing GitHub labels required by dc-init workflow templates
+CREATE_LABELS=false
 
 # ============================================================================
 # CLI ARGUMENT PARSING
@@ -170,6 +172,10 @@ parse_args() {
                 AUTO_PUSH=true
                 shift
                 ;;
+            --tags | --labels)
+                CREATE_LABELS=true
+                shift
+                ;;
             -y | --yes)
                 ASSUME_YES=true
                 shift
@@ -193,6 +199,118 @@ parse_args() {
                 ;;
         esac
     done
+}
+
+# ============================================================================
+# LABEL MANAGEMENT
+# ============================================================================
+
+# Create all GitHub labels required by dc-init workflow templates if they don't
+# already exist. Safe to call repeatedly — existing labels are left untouched.
+ensure_repo_labels() {
+    if ! command -v gh &>/dev/null; then
+        print_warning "--tags: gh CLI not available, skipping label creation"
+        return
+    fi
+    if [[ -z "$ORG_NAME" || -z "$REPO_SLUG" ]]; then
+        print_warning "--tags: repo identity unknown (ORG_NAME/REPO_SLUG not set), skipping"
+        return
+    fi
+
+    local repo="${ORG_NAME}/${REPO_SLUG}"
+    print_info "Ensuring required labels on ${repo}..."
+
+    # name:hex-colour:description
+    local -a label_defs=(
+        "automerge:3BEF67:Automatically merge this PR"
+        "security:e11d48:Security-related change"
+        "security-review:e11d48:Security alerts requiring manual review"
+        "automated:0075ca:Created by automation"
+        "dependencies:0075ca:Dependency update"
+        "bash-linting:fbca04:Bash lint issue or fix"
+        "help-wanted:008672:Extra attention is needed"
+        "stale:ededed:No recent activity"
+    )
+
+    local existing
+    existing=$(gh label list --repo "$repo" --json name --jq '.[].name' 2>/dev/null || echo "")
+
+    local created=0
+    for def in "${label_defs[@]}"; do
+        local name color desc
+        IFS=':' read -r name color desc <<< "$def"
+        if echo "$existing" | grep -qxF "$name"; then
+            continue
+        fi
+        if gh label create "$name" --repo "$repo" --color "#${color}" --description "$desc" 2>/dev/null; then
+            print_success "Created label: $name"
+            ((created++)) || true
+        else
+            print_warning "Failed to create label: $name (check gh auth and repo permissions)"
+        fi
+    done
+
+    if [[ $created -eq 0 ]]; then
+        print_info "All required labels already exist on ${repo}"
+    else
+        print_success "Created ${created} label(s) on ${repo}"
+    fi
+}
+
+# ============================================================================
+# LABEL MANAGEMENT
+# ============================================================================
+
+# Create all GitHub labels required by dc-init workflow templates if absent.
+# Safe to call repeatedly — existing labels are left untouched.
+ensure_repo_labels() {
+    if ! command -v gh &>/dev/null; then
+        print_warning "--tags: gh CLI not available, skipping label creation"
+        return
+    fi
+    if [[ -z "$ORG_NAME" || -z "$REPO_SLUG" ]]; then
+        print_warning "--tags: repo identity unknown (ORG_NAME/REPO_SLUG not set), skipping"
+        return
+    fi
+
+    local repo="${ORG_NAME}/${REPO_SLUG}"
+    print_info "Ensuring required labels on ${repo}..."
+
+    # name:hex-colour:description
+    local -a label_defs=(
+        "automerge:3BEF67:Automatically merge this PR"
+        "security:e11d48:Security-related change"
+        "security-review:e11d48:Security alerts requiring manual review"
+        "automated:0075ca:Created by automation"
+        "dependencies:0075ca:Dependency update"
+        "bash-linting:fbca04:Bash lint issue or fix"
+        "help-wanted:008672:Extra attention is needed"
+        "stale:ededed:No recent activity"
+    )
+
+    local existing
+    existing=$(gh label list --repo "$repo" --json name --jq '.[].name' 2>/dev/null || echo "")
+
+    local created=0
+    for def in "${label_defs[@]}"; do
+        local name color desc
+        IFS=':' read -r name color desc <<< "$def"
+        if echo "$existing" | grep -qxF "$name"; then
+            continue
+        fi
+        if gh label create "$name" --repo "$repo" --color "#${color}" --description "$desc" 2>/dev/null; then
+            print_success "Created label: $name"
+            ((created++)) || true
+        else
+            print_warning "Failed to create label: $name (check gh auth and repo permissions)"
+        fi
+    done
+
+    if [[ $created -eq 0 ]]; then
+        print_info "All required labels already exist on ${repo}"
+    else
+        print_success "Created ${created} label(s) on ${repo}"
+    fi
 }
 
 # ============================================================================
@@ -1505,6 +1623,7 @@ run_batch_update() {
         print_info "Owner: ${ORG_NAME:-unknown} | Repo: ${REPO_SLUG}"
 
         # --- Install templates ---
+        [[ "$CREATE_LABELS" == "true" ]] && ensure_repo_labels
         SELECTED_TEMPLATE_CHOICES="$selection"
         install_templates "$selection"
         save_project_metadata
@@ -1848,6 +1967,7 @@ run_batch_init() {
 
         # Default to installing ALL templates unless user set a different selection
         SELECTED_TEMPLATE_CHOICES="${SELECTED_TEMPLATE_CHOICES:-A}"
+        [[ "$CREATE_LABELS" == "true" ]] && ensure_repo_labels
         print_info "Installing templates: ${SELECTED_TEMPLATE_CHOICES}"
         install_templates "${SELECTED_TEMPLATE_CHOICES}"
 
@@ -2114,6 +2234,7 @@ main() {
     local selection="${SELECTED_TEMPLATE_CHOICES:-}"
 
     echo ""
+    [[ "$CREATE_LABELS" == "true" ]] && ensure_repo_labels
     print_info "Installing templates..."
     install_templates "$selection"
 
