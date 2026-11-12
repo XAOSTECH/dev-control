@@ -8,6 +8,11 @@ on:
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
+    inputs:
+      enable_pages:
+        description: 'Enable GitHub Pages if not already active'
+        type: boolean
+        default: false
 
 # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
@@ -25,8 +30,41 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  # Single deploy job since we're just deploying
+  check:
+    name: Check Pages availability
+    runs-on: ubuntu-latest
+    outputs:
+      enabled: ${{ steps.check.outputs.enabled }}
+      should_enable: ${{ steps.check.outputs.should_enable }}
+    steps:
+      - name: Check if GitHub Pages is enabled
+        id: check
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const wantEnable = context.payload.inputs?.enable_pages === 'true';
+            try {
+              await github.rest.repos.getPages({ owner: context.repo.owner, repo: context.repo.repo });
+              core.setOutput('enabled', 'true');
+              core.setOutput('should_enable', 'false');
+            } catch (e) {
+              if (e.status === 404) {
+                core.setOutput('enabled', String(wantEnable));
+                core.setOutput('should_enable', String(wantEnable));
+                if (wantEnable) {
+                  core.info('Pages not active — will enable via configure-pages');
+                } else {
+                  core.info('Pages not enabled — skipping (re-run with enable_pages=true to activate)');
+                }
+              } else {
+                throw e;
+              }
+            }
+
   deploy:
+    name: Deploy
+    needs: check
+    if: needs.check.outputs.enabled == 'true'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -34,12 +72,17 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+
       - name: Setup Pages
         uses: actions/configure-pages@v6
+        with:
+          enablement: ${{ needs.check.outputs.should_enable }}
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v5
         with:
           path: '.github/static'
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
