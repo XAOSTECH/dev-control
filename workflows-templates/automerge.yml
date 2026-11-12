@@ -218,7 +218,7 @@ jobs:
         id: app_token
         uses: actions/create-github-app-token@v3
         with:
-          client-id: ${{ secrets.BOT_CLIENT_ID_SECRET} }}
+          client-id: ${{ secrets.BOT_CLIENT_ID_SECRET }}
           private-key: ${{ secrets.BOT_PRIVATE_KEY_SECRET }}
       
       - name: Merge PR from workflow_run via API (safe privileged path)
