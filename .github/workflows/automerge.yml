@@ -44,7 +44,7 @@ jobs:
     
     steps:
       - name: Download validation artifact
-        uses: actions/github-script@v9
+        uses: actions/github-script@v6
         with:
           script: |
             const artifacts = await github.rest.actions.listWorkflowRunArtifacts({

@@ -127,7 +127,7 @@ jobs:
     steps:
       - name: Inspect PR author/labels
         id: check
-        uses: actions/github-script@v6
+        uses: actions/github-script@v9
         env:
           PULL_NUMBERS: ${{ github.event.inputs.pull_numbers }}
         with:
@@ -218,8 +218,8 @@ jobs:
         id: app_token
         uses: actions/create-github-app-token@v3
         with:
-          client-id: ${{ secrets.BOT_CLIENT_ID_SECRET }}
-          private-key: ${{ secrets.BOT_PRIVATE_KEY_SECRET }}
+          client-id: ${{ secrets['{{BOT_CLIENT_ID_SECRET}}'] }}
+          private-key: ${{ secrets['{{BOT_PRIVATE_KEY_SECRET}}'] }}
       
       - name: Merge PR from workflow_run via API (safe privileged path)
         if: needs.verify.outputs.should_merge == 'true'
