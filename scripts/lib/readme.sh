@@ -61,7 +61,7 @@ readme_apply() {
     mkdir -p "$(dirname "$dest")"
 
     # Derive the licence badge token so {{LICENSE_TYPE_BADGE}} resolves to a static shields badge (a literal '-' must be doubled, e.g. GPL-3.0 -> GPL--3.0).
-    LICENSE_TYPE_BADGE="${LICENSE_TYPE:-unknown}"
+    LICENSE_TYPE_BADGE="${LICENCE_TYPE:-${LICENSE_TYPE:-unknown}}"
     LICENSE_TYPE_BADGE="${LICENSE_TYPE_BADGE//-/--}"
 
     local sed_args=() token value esc
@@ -102,7 +102,7 @@ readme_insert_badges() {
     tmp=$(mktemp)
 
     # Static known-licence shield; '-' must be doubled for shields.io badge/ endpoint.
-    local _lic_badge="${LICENSE_TYPE:-unknown}"
+    local _lic_badge="${LICENCE_TYPE:-${LICENSE_TYPE:-unknown}}"
     _lic_badge="${_lic_badge//-/--}"
 
     local badges
