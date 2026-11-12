@@ -14,6 +14,7 @@ on:
 permissions:
   pull-requests: read
   contents: read
+  checks: read
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -67,6 +68,57 @@ jobs:
               core.info(`✅ PR #${prNumber} validated: ${reason}`);
             } else {
               core.info(`❌ PR #${prNumber} rejected: ${reason}`);
+            }
+
+      - name: Wait for required CI checks
+        if: steps.check.outputs.should_merge == 'true'
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const sha = context.payload.pull_request.head.sha;
+            const timeoutMs = 15 * 60 * 1000;
+            const pollMs = 30 * 1000;
+
+            // Grace period: let sibling workflows register their check runs
+            await new Promise(r => setTimeout(r, 30_000));
+
+            const deadline = Date.now() + timeoutMs;
+
+            while (true) {
+              const { data } = await github.rest.checks.listForRef({
+                owner, repo, ref: sha, per_page: 100,
+              });
+
+              // Exclude this workflow's own check runs
+              const others = data.check_runs.filter(r => !r.name.startsWith(context.workflow));
+
+              if (others.length === 0) {
+                core.info('No other check runs found — proceeding');
+                break;
+              }
+
+              const failed = others.filter(r =>
+                r.status === 'completed' &&
+                !['success', 'neutral', 'skipped'].includes(r.conclusion)
+              );
+              if (failed.length > 0) {
+                const names = failed.map(r => `${r.name}: ${r.conclusion}`).join(', ');
+                throw new Error(`Required checks did not pass: ${names}`);
+              }
+
+              const pending = others.filter(r => r.status !== 'completed');
+              if (pending.length === 0) {
+                core.info(`All ${others.length} check(s) passed ✓`);
+                break;
+              }
+
+              if (Date.now() + pollMs > deadline) {
+                throw new Error(`Timed out waiting for: ${pending.map(r => r.name).join(', ')}`);
+              }
+
+              core.info(`${pending.length} check(s) pending — polling in 30s`);
+              await new Promise(r => setTimeout(r, pollMs));
             }
 
       - name: Save validation result
