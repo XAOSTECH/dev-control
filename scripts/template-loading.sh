@@ -1428,8 +1428,27 @@ run_batch_update() {
     done
 
     if [[ ${#git_dirs[@]} -eq 0 ]]; then
-        print_warning "No git repositories found to update"
-        return 1
+        # If the user passed explicit paths that all lacked .git (likely a glob expansion like *),
+        # offer to fall back to the current directory before giving up.
+        local _had_explicit=false
+        [[ ${#POSITIONAL_ARGS[@]} -gt 1 || ( ${#POSITIONAL_ARGS[@]} -eq 1 && "${POSITIONAL_ARGS[0]}" != "." ) ]] \
+            && _had_explicit=true
+        if [[ "$_had_explicit" == "true" && "${ASSUME_YES:-false}" != "true" ]]; then
+            local _cwd_name
+            _cwd_name=$(basename "$PWD")
+            print_warning "None of the given paths contain a git repository."
+            read -rp "Did you mean to update the current folder '${_cwd_name}'? [Y/n]: " _fallback
+            if [[ "${_fallback:-y}" =~ ^[Yy] ]]; then
+                dirs=(".")
+                git_dirs=(".")
+            else
+                print_info "No repositories updated."
+                return 0
+            fi
+        else
+            print_warning "No git repositories found to update"
+            return 1
+        fi
     fi
 
     print_info "Found ${#git_dirs[@]} repositories to update"
@@ -1466,7 +1485,8 @@ run_batch_update() {
 
     for d in "${git_dirs[@]}"; do
         print_header
-        print_info "Updating: $d"
+        local _d_label; _d_label="$([[ "$d" == "." ]] && basename "$PWD" || echo "$d")"
+        print_info "Updating: ${_d_label}"
 
         pushd "$d" >/dev/null || {
             print_error "Failed to enter $d"
@@ -1589,10 +1609,10 @@ run_batch_update() {
         stage_template_paths
 
         if ! git diff --cached --quiet; then
-            dc_init_commit_and_push "update" "$choice_desc" "$d"
+            dc_init_commit_and_push "update" "$choice_desc" "${_d_label}"
             ((updated++)) || true
         else
-            print_info "No template changes needed for $d"
+            print_info "No template changes needed for ${_d_label}"
             ((skipped++)) || true
         fi
 
@@ -2184,7 +2204,13 @@ main() {
     if [[ "$UPDATE_ONLY" == "true" ]]; then
         [[ ${#POSITIONAL_ARGS[@]} -eq 0 ]] && POSITIONAL_ARGS=(".")
         BATCH_MODE=true
-        print_info "Update mode: refreshing templates in ${POSITIONAL_ARGS[*]}"
+        local _display
+        if [[ ${#POSITIONAL_ARGS[@]} -eq 1 && "${POSITIONAL_ARGS[0]}" == "." ]]; then
+            _display="$(basename "$PWD") (current folder)"
+        else
+            _display="${POSITIONAL_ARGS[*]}"
+        fi
+        print_info "Update mode: refreshing templates in ${_display}"
         run_batch_update
         exit 0
     fi
