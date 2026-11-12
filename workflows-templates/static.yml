@@ -6,6 +6,8 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main, master]
+    paths:
+      - '.github/static/**'
   workflow_dispatch:
     inputs:
       enable_pages:
