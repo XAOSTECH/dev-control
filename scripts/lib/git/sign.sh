@@ -137,6 +137,15 @@ sign_mode() {
     ORIGINAL_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
     print_info "Original branch recorded: $ORIGINAL_BRANCH"
 
+    # Push a remote backup tag alongside the /tmp bundle so recovery is possible even after a reboot.
+    local _btag="backup/${ORIGINAL_BRANCH}-pre-sign-$(date -u +%Y%m%dT%H%M%SZ)"
+    git tag "$_btag" HEAD 2>/dev/null || true
+    if git remote get-url origin &>/dev/null 2>&1; then
+        git push origin "refs/tags/$_btag" --quiet 2>/dev/null \
+            && print_info "Remote backup tag created: $_btag" \
+            || print_warning "Could not push backup tag (local tag $_btag retained)"
+    fi
+
     # Validate GPG setup (only required when signing)
     if [[ "$SIGN_MODE" == "true" ]]; then
         local signingkey
