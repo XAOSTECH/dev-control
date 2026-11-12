@@ -1437,7 +1437,7 @@ run_batch_update() {
             local _cwd_name
             _cwd_name=$(basename "$PWD")
             print_warning "None of the given paths contain a git repository."
-            read -rp "Did you mean to update the current folder '${_cwd_name}'? [Y/n]: " _fallback
+            read -rp "Did you mean to update the current folder '${_cwd_name}'? [Y/n]: " _fallback < /dev/tty
             if [[ "${_fallback:-y}" =~ ^[Yy] ]]; then
                 dirs=(".")
                 git_dirs=(".")
