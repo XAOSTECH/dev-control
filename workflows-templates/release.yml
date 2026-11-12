@@ -693,6 +693,8 @@ jobs:
         run: |
           FAILED=0
           for RUN_ID in $RUN_IDS; do
+            # Guard against injected non-numeric run ID values.
+            [[ "$RUN_ID" =~ ^[0-9]+$ ]] || { echo "::warning::Skipping non-numeric run ID: $RUN_ID"; continue; }
             echo "⏳ Waiting for run ${RUN_ID}..."
             if gh run watch "$RUN_ID" --exit-status; then
               echo "✅ Run ${RUN_ID} completed successfully"
@@ -723,7 +725,8 @@ jobs:
           STAGING=$(mktemp -d)
 
           for RUN_ID in $RUN_IDS; do
-                        echo "📥 Inspecting run ${RUN_ID} before download..."
+            # Guard against injected non-numeric run ID values.
+            [[ "$RUN_ID" =~ ^[0-9]+$ ]] || { echo "::warning::Skipping non-numeric run ID: $RUN_ID"; continue; }
 
             RUN_REPO=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" --jq '.repository.full_name' 2>/dev/null || echo "")
             RUN_HEAD_SHA=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" --jq '.head_sha' 2>/dev/null || echo "")
