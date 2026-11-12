@@ -66,6 +66,8 @@ BATCH_STABILITY_COLOR=""
 CREATE_QUEUE=()
 # Create missing GitHub labels required by dc-init workflow templates
 CREATE_LABELS=false
+# Skip all template operations — only create labels
+LABELS_ONLY=false
 
 # ============================================================================
 # CLI ARGUMENT PARSING
@@ -111,7 +113,10 @@ show_help() {
     echo "  $(basename "$0") --batch --defaults <<< 'A' repo1 repo2   # Batch init with all templates"
     echo "  $(basename "$0") --batch --defaults <<< '2,3' /projects/*      # Batch init: workflows + actions only"
     echo "  $(basename "$0") --update --yes /projects/*                    # Refresh templates across all repos"
-    echo "  $(basename "$0") --batch --reuse-owner repo1 repo2        # Batch init, prompt owner once"
+    echo "  $(basename "$0") --batch --reuse-owner repo1 repo2        # Batch init, prompt owner once
+  $(basename "$0") --only-tags                              # Add missing labels to current repo
+  $(basename "$0") --only-tags repo1 repo2                  # Add missing labels to specific repos
+  $(basename "$0") --batch --only-tags                      # Add missing labels to all sub-repos"
     echo ""
     echo "Available template files:"
     for dir in "$DEV_CONTROL_DIR"/*-templates; do
@@ -176,6 +181,11 @@ parse_args() {
                 CREATE_LABELS=true
                 shift
                 ;;
+            --only-tags | --only-labels)
+                CREATE_LABELS=true
+                LABELS_ONLY=true
+                shift
+                ;;
             -y | --yes)
                 ASSUME_YES=true
                 shift
@@ -199,62 +209,6 @@ parse_args() {
                 ;;
         esac
     done
-}
-
-# ============================================================================
-# LABEL MANAGEMENT
-# ============================================================================
-
-# Create all GitHub labels required by dc-init workflow templates if they don't
-# already exist. Safe to call repeatedly — existing labels are left untouched.
-ensure_repo_labels() {
-    if ! command -v gh &>/dev/null; then
-        print_warning "--tags: gh CLI not available, skipping label creation"
-        return
-    fi
-    if [[ -z "$ORG_NAME" || -z "$REPO_SLUG" ]]; then
-        print_warning "--tags: repo identity unknown (ORG_NAME/REPO_SLUG not set), skipping"
-        return
-    fi
-
-    local repo="${ORG_NAME}/${REPO_SLUG}"
-    print_info "Ensuring required labels on ${repo}..."
-
-    # name:hex-colour:description
-    local -a label_defs=(
-        "automerge:3BEF67:Automatically merge this PR"
-        "security:e11d48:Security-related change"
-        "security-review:e11d48:Security alerts requiring manual review"
-        "automated:0075ca:Created by automation"
-        "dependencies:0075ca:Dependency update"
-        "bash-linting:fbca04:Bash lint issue or fix"
-        "help-wanted:008672:Extra attention is needed"
-        "stale:ededed:No recent activity"
-    )
-
-    local existing
-    existing=$(gh label list --repo "$repo" --json name --jq '.[].name' 2>/dev/null || echo "")
-
-    local created=0
-    for def in "${label_defs[@]}"; do
-        local name color desc
-        IFS=':' read -r name color desc <<< "$def"
-        if echo "$existing" | grep -qxF "$name"; then
-            continue
-        fi
-        if gh label create "$name" --repo "$repo" --color "#${color}" --description "$desc" 2>/dev/null; then
-            print_success "Created label: $name"
-            ((created++)) || true
-        else
-            print_warning "Failed to create label: $name (check gh auth and repo permissions)"
-        fi
-    done
-
-    if [[ $created -eq 0 ]]; then
-        print_info "All required labels already exist on ${repo}"
-    else
-        print_success "Created ${created} label(s) on ${repo}"
-    fi
 }
 
 # ============================================================================
@@ -2115,6 +2069,32 @@ main() {
     fi
 
     print_header "Dev-Control Template Loader"
+
+    # Early exit: --only-tags bypasses all template prompts and operations.
+    if [[ "$LABELS_ONLY" == "true" ]]; then
+        get_git_user_info
+        local _label_dirs=("${POSITIONAL_ARGS[@]}")
+        if [[ ${#_label_dirs[@]} -gt 0 || "$BATCH_MODE" == "true" ]]; then
+            if [[ ${#_label_dirs[@]} -eq 0 ]]; then
+                while IFS= read -r gitdir; do
+                    _label_dirs+=("$(dirname "$gitdir")")
+                done < <(find . -name .git -not -path './.git' \
+                    -not -path '*/node_modules/*' -not -path '*/.bak/*' \
+                    -not -path '*/vendor/*' | sort)
+            fi
+            for _repo in "${_label_dirs[@]}"; do
+                pushd "$_repo" >/dev/null || continue
+                get_repo_info
+                REPO_SLUG="$(basename "$PWD")"
+                ensure_repo_labels
+                popd >/dev/null || true
+            done
+        else
+            get_repo_info
+            ensure_repo_labels
+        fi
+        exit 0
+    fi
 
     # Initialise git repo if needed and get user info early
     get_git_user_info
