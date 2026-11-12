@@ -140,7 +140,7 @@ EOF
     BADGE="$badges" awk '
     BEGIN {
         new_b = ENVIRON["BADGE"]
-        phase="pre_h1"; pending=""; checking_first_p=0; checking_p=0; is_badge_p=0; p_buf=""
+        phase="pre_h1"; pending=""; checking_first_p=0; checking_p=0; is_badge_p=0; p_buf=""; skip_one_blank=0
     }
     # First <p> after H1: read it fully, keep it only if it is NOT the badge block.
     checking_first_p==1 {
@@ -149,6 +149,7 @@ EOF
         if (/<\/p>/) {
             checking_first_p=0
             if (!is_badge_p) printf "%s", p_buf
+            else skip_one_blank=1
             p_buf=""; is_badge_p=0; phase="post_first_p"
         }
         next
@@ -177,6 +178,7 @@ EOF
             if (/"GitHub repo"/) is_badge_p = 1
             if (/<\/p>/) {
                 if (!is_badge_p) printf "%s", p_buf
+                else skip_one_blank=1
                 p_buf = ""; is_badge_p = 0; phase = "post_first_p"
             } else {
                 checking_first_p = 1
@@ -190,9 +192,22 @@ EOF
             if (pending!="") printf "%s", pending
             pending=""; phase="rest"; print; next
         }
-        if (/^[[:space:]]*$/) { pending=pending"\n"; next }
+        if (/^[[:space:]]*$/) {
+            if (skip_one_blank) { skip_one_blank=0; next }
+            pending=pending"\n"; next
+        }
         if (/^<!--/) { next }
-        if (/^<p /) { p_buf=$0"\n"; is_badge_p=0; checking_p=1; next }
+        if (/^<p /) {
+            p_buf = $0 "\n"; is_badge_p = 0
+            if (/"GitHub repo"/) is_badge_p = 1
+            if (/<\/p>/) {
+                if (!is_badge_p) { printf "%s", pending; printf "%s", p_buf }
+                pending = ""; p_buf = ""; is_badge_p = 0
+            } else {
+                checking_p = 1
+            }
+            next
+        }
         if (pending!="") { printf "%s", pending; pending="" }
         phase="rest"; print; next
     }
