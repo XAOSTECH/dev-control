@@ -84,8 +84,10 @@ show_help() {
     echo "      --defaults             Use cached/default values, skip identity prompts (template selection still shown)"
     echo "  -b, --batch                Batch mode: initialise multiple repos; pass directories as positional args or use"
     echo "                             '*' to glob all sub-directories; pipe template selection via stdin (e.g. <<< '2,3')"
-    echo "  -u, --update               Update mode: refresh templates on existing repos without re-running dc-init"
-    echo "                             (stash → pull --rebase → install → commit/amend → push); implies --batch"
+    echo "  -u, --update               Update mode: refresh templates in the current repo (or given"
+    echo "                             dirs / sub-repos with --batch); stash → pull --rebase →"
+    echo "                             install → commit/amend → push. Without --batch, runs on"
+    echo "                             the current directory only."
     echo "      --update-only          Alias for --update"
     echo "      --local                Include repos with no remote in --batch/--update (skipped by default)"
     echo "      --exclude DIR [DIR..]  Exclude directories and their children from batch/update discovery"
@@ -151,7 +153,6 @@ parse_args() {
                 ;;
             -u | --update | --update-only)
                 UPDATE_ONLY=true
-                BATCH_MODE=true
                 shift
                 ;;
             --local)
@@ -2176,6 +2177,15 @@ main() {
             print_info "Batch mode enabled"
             run_batch_init
         fi
+        exit 0
+    fi
+
+    # --update without --batch: treat the current directory as the sole target.
+    if [[ "$UPDATE_ONLY" == "true" ]]; then
+        [[ ${#POSITIONAL_ARGS[@]} -eq 0 ]] && POSITIONAL_ARGS=(".")
+        BATCH_MODE=true
+        print_info "Update mode: refreshing templates in ${POSITIONAL_ARGS[*]}"
+        run_batch_update
         exit 0
     fi
 
