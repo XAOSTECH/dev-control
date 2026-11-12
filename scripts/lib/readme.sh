@@ -129,25 +129,35 @@ EOF
         fi
     fi
 
-    # State machine:
-    #   pre_h1       – print everything until H1; on H1 insert badge block then enter after_h1
-    #   after_h1     – skip blanks/comments; on first <p> enter skip_p; on other content → rest
-    #   skip_p       – skip the old first <p>…</p> block (the one we replaced)
-    #   post_first_p – after old block skipped: buffer blanks, check each subsequent <p> for
-    #                  duplicate badge content; non-badge <p> blocks are kept, badge dups removed
-    #   rest         – print everything unchanged
+    # State machine phases:
+    #   pre_h1            – emit everything until H1; on H1 emit badge block then enter after_h1
+    #   after_h1          – skip blanks/comments; on first <p> enter checking_first_p; on other content → rest
+    #   checking_first_p  – buffer the first <p>…</p>; keep it if NOT the badge block, drop if badge
+    #   post_first_p      – buffer blanks; check each subsequent <p> for duplicate badge content
+    #   checking_p        – buffer subsequent <p>…</p>; keep if not badge, drop if duplicate badge
+    #   rest              – print everything unchanged
     # ENVIRON["BADGE"] passes the multi-line badge string safely across the shell→awk boundary.
     BADGE="$badges" awk '
     BEGIN {
         new_b = ENVIRON["BADGE"]
-        phase="pre_h1"; skip_p=0; pending=""; checking_p=0; is_badge_p=0; p_buf=""
+        phase="pre_h1"; pending=""; checking_first_p=0; checking_p=0; is_badge_p=0; p_buf=""
     }
-    skip_p==1 && /^<\/p>/ { skip_p=0; phase="post_first_p"; next }
-    skip_p==1 { next }
+    # First <p> after H1: read it fully, keep it only if it is NOT the badge block.
+    checking_first_p==1 {
+        p_buf = p_buf $0 "\n"
+        if (/"GitHub repo"/) is_badge_p=1
+        if (/<\/p>/) {
+            checking_first_p=0
+            if (!is_badge_p) printf "%s", p_buf
+            p_buf=""; is_badge_p=0; phase="post_first_p"
+        }
+        next
+    }
+    # Subsequent <p> blocks: keep unless they are a duplicate badge block.
     checking_p==1 {
         p_buf = p_buf $0 "\n"
         if (/"GitHub repo"/) is_badge_p=1
-        if (/^<\/p>/) {
+        if (/<\/p>/) {
             checking_p=0
             if (!is_badge_p) { printf "%s", pending; printf "%s", p_buf }
             pending=""; p_buf=""; is_badge_p=0
@@ -162,7 +172,17 @@ EOF
     phase=="after_h1" {
         if (/^---$/ || /^##[[:space:]]/) { phase="rest"; print; next }
         if (/^[[:space:]]*$/ || /^<!--/) { next }
-        if (/^<p /) { skip_p=1; next }
+        if (/^<p /) {
+            p_buf = $0 "\n"; is_badge_p = 0
+            if (/"GitHub repo"/) is_badge_p = 1
+            if (/<\/p>/) {
+                if (!is_badge_p) printf "%s", p_buf
+                p_buf = ""; is_badge_p = 0; phase = "post_first_p"
+            } else {
+                checking_first_p = 1
+            }
+            next
+        }
         phase="rest"; print; next
     }
     phase=="post_first_p" {
