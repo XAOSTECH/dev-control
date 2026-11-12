@@ -548,6 +548,8 @@ get_repo_info() {
     if [[ -f "$global_vars_file" ]]; then
         # shellcheck source=/dev/null
         source "$global_vars_file"
+        # Normalise American LICENSE_TYPE → British LICENCE_TYPE if only the former was set.
+        [[ -z "${LICENCE_TYPE:-}" && -n "${LICENSE_TYPE:-}" ]] && LICENCE_TYPE="$LICENSE_TYPE"
         print_info "Loaded global defaults from repoVars.env"
     fi
 
@@ -1886,7 +1888,7 @@ run_batch_init() {
         if [[ "$ASSUME_YES" == "true" || "$DEFAULTS_ONLY" == "true" ]]; then
             SHORT_DESCRIPTION="${SHORT_DESCRIPTION:-A project by $ORG_NAME}"
             LONG_DESCRIPTION="${LONG_DESCRIPTION:-$SHORT_DESCRIPTION}"
-            LICENCE_TYPE="${LICENCE_TYPE:-MIT}"
+            LICENCE_TYPE="${LICENCE_TYPE:-GPL-3.0}"
             STABILITY="${STABILITY:-experimental}"
             STABILITY_COLOR="${STABILITY_COLOR:-orange}"
             CURRENT_YEAR=$(date +%Y)
@@ -2145,7 +2147,7 @@ main() {
             PROJECT_NAME="${PROJECT_NAME:-$(basename "$(pwd)")}"
             SHORT_DESCRIPTION="${SHORT_DESCRIPTION:-A project by $ORG_NAME}"
             LONG_DESCRIPTION="${LONG_DESCRIPTION:-$SHORT_DESCRIPTION}"
-            LICENCE_TYPE="${LICENCE_TYPE:-MIT}"
+            LICENCE_TYPE="${LICENCE_TYPE:-GPL-3.0}"
             STABILITY="${STABILITY:-experimental}"
             STABILITY_COLOR="${STABILITY_COLOR:-orange}"
             CURRENT_YEAR=$(date +%Y)
@@ -2200,7 +2202,7 @@ main() {
         fi
         SHORT_DESCRIPTION="${SHORT_DESCRIPTION:-A project by $ORG_NAME}"
         LONG_DESCRIPTION="${LONG_DESCRIPTION:-$SHORT_DESCRIPTION}"
-        LICENCE_TYPE="${LICENCE_TYPE:-MIT}"
+        LICENCE_TYPE="${LICENCE_TYPE:-GPL-3.0}"
         STABILITY="${STABILITY:-experimental}"
         STABILITY_COLOR="${STABILITY_COLOR:-orange}"
         CURRENT_YEAR=$(date +%Y)
