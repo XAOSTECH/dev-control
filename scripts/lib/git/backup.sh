@@ -182,17 +182,20 @@ create_branch_from_bundle() {
 # ============================================================================
 
 # Create a backup tag for the current state of a branch
-# Usage: create_backup_tag "branch_name" [prefix]
+# Usage: create_backup_tag "branch_name" [prefix] [ref]
+#   ref — optional explicit ref or SHA to tag; defaults to refs/heads/<branch>
 # Returns: Tag name created
 create_backup_tag() {
     local branch="$1"
     local prefix="${2:-backup}"
+    local ref="${3:-}"
     local ts
     ts=$(date -u +%Y%m%dT%H%M%SZ)
     local tag_name="${prefix}/${branch//\//-}-${ts}"
 
     print_info "Creating backup tag: $tag_name"
-    if git tag -f "$tag_name" "refs/heads/$branch" 2>/dev/null; then
+    local _target="${ref:-refs/heads/${branch}}"
+    if git tag -f "$tag_name" "$_target" 2>/dev/null; then
         print_success "Created tag: $tag_name"
         echo "$tag_name"
         return 0

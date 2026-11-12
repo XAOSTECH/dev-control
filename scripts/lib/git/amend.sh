@@ -41,9 +41,8 @@ fi
 # ============================================================================
 
 backup_repo() {
-    print_info "Creating backup bundle..."
-    git bundle create "$TEMP_BACKUP" --all
-    print_success "Backup saved: $TEMP_BACKUP"
+    # Delegate to backup.sh; $TEMP_BACKUP is set as a global by fix-history.sh.
+    create_backup_bundle "$TEMP_BACKUP"
 }
 
 amend_single_commit() {

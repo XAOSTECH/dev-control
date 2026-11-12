@@ -38,6 +38,7 @@ DEV_CONTROL_DIR="$(dirname "$SCRIPT_DIR")"
 # Source shared libraries
 source "$SCRIPT_DIR/lib/colours.sh"
 source "$SCRIPT_DIR/lib/print.sh"
+source "$SCRIPT_DIR/lib/git/backup.sh"
 source "$SCRIPT_DIR/lib/git/cleanup.sh"
 source "$SCRIPT_DIR/lib/git/worktree.sh"
 source "$SCRIPT_DIR/lib/git/dates.sh"

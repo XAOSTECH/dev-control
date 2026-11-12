@@ -77,10 +77,8 @@ prompt_and_push_branch() {
 
     if [[ "$CONFIRM_PUSH" =~ ^[Yy] ]]; then
         if [[ "$detached" == "true" ]]; then
-            TAG=backup/${current_sha}-pre-drop-$(date -u +%Y%m%dT%H%M%SZ)
-            print_info "Detached HEAD: creating tag $TAG pointing to $current_sha"
-            git tag -f "$TAG" "$current_sha" 2>/dev/null || true
-            git push origin "refs/tags/$TAG" || true
+            TAG=$(create_backup_tag "${current_sha}-pre-drop" "backup" "$current_sha") || TAG="backup/${current_sha}-pre-drop-$(date -u +%Y%m%dT%H%M%SZ)"
+            push_backup_tag "$TAG" || true
 
             if [[ "$NO_EDIT_MODE" == "true" ]]; then
                 TMP_BRANCH="tmp/repair-${current_sha:0:8}-$(date -u +%Y%m%dT%H%M%SZ)"
@@ -109,9 +107,8 @@ prompt_and_push_branch() {
                 fi
             fi
         else
-            TAG=backup/${branch}-pre-drop-$(date -u +%Y%m%dT%H%M%SZ)
-            git tag -f "$TAG" refs/heads/"$branch" 2>/dev/null || true
-            git push origin "refs/tags/$TAG" || true
+            TAG=$(create_backup_tag "${branch}-pre-drop" "backup" "refs/heads/${branch}") || TAG="backup/${branch}-pre-drop-$(date -u +%Y%m%dT%H%M%SZ)"
+            push_backup_tag "$TAG" || true
 
             git checkout "$branch" || git checkout -b "$branch"
             if git push --force origin "$branch"; then

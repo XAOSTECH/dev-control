@@ -143,7 +143,7 @@ harness_run() {
 
     # Create local bundle backup
     BUNDLE="/tmp/harness-backup-${TIMESTAMP}.bundle"
-    git bundle create "$BUNDLE" --all
+    BUNDLE=$(create_backup_bundle "$BUNDLE")
     echo "Backup bundle: $BUNDLE" | tee -a "$REPORT_FILE"
 
     # Honour global DRY_RUN
