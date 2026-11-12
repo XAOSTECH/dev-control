@@ -137,3 +137,48 @@ jobs:
             echo ""
             echo "Review findings in the [code-scanning alerts](../../security/code-scanning)."
           } >> "$GITHUB_STEP_SUMMARY"
+
+  sync-templates:
+    name: Sync action versions to templates
+    runs-on: ubuntu-latest
+    # Only on push to default branch — keeps templates in sync after dependabot merges
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Sync action versions from .github/workflows to workflows-templates
+        run: |
+          set -euo pipefail
+          changed=()
+          while IFS= read -r template; do
+            filename=$(basename "$template")
+            live=".github/workflows/$filename"
+            [[ -f "$live" ]] || continue
+            cp "$template" "$template.bak"
+            while IFS= read -r line; do
+              if [[ "$line" =~ ^[[:space:]]*uses:[[:space:]]*(([^@[:space:]]+)@([^[:space:]#]+)) ]]; then
+                full="${BASH_REMATCH[1]}"
+                action="${BASH_REMATCH[2]}"
+                sed -i "s|uses: ${action}@[^[:space:]#]*|uses: ${full}|g" "$template"
+              fi
+            done < "$live"
+            if ! diff -q "$template.bak" "$template" > /dev/null 2>&1; then
+              changed+=("$template")
+              diff "$template.bak" "$template" || true
+            fi
+            rm "$template.bak"
+          done < <(find workflows-templates -name '*.yml' -type f | sort)
+          if [[ ${#changed[@]} -eq 0 ]]; then
+            echo "Templates already in sync" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          echo "Updated ${#changed[@]} template(s):" >> "$GITHUB_STEP_SUMMARY"
+          printf '  - %s\n' "${changed[@]}" >> "$GITHUB_STEP_SUMMARY"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add workflows-templates/
+          git commit --no-gpg-sign -m "chore(templates): sync action versions from .github/workflows"
+          git push
