@@ -47,7 +47,7 @@ jobs:
     
     steps:
       - name: Download validation artifact
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
@@ -223,7 +223,7 @@ jobs:
       
       - name: Merge PR from workflow_run via API (safe privileged path)
         if: needs.verify.outputs.should_merge == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         env:
           PR_NUMBER_SINGLE: ${{ needs.verify.outputs.pr_number }}
           EXPECTED_HEAD_SHA: ${{ needs.verify.outputs.head_sha }}
@@ -254,7 +254,7 @@ jobs:
             core.info(`✅ Merged PR #${prNumber} via workflow_run artifact validation`);
       - name: Merge PRs from manual/anglicise via API (safe path)
         if: needs.guard.outputs.should_merge == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         env:
           PR_NUMBERS_MULTI: ${{ needs.guard.outputs.pr_numbers }}
         with:

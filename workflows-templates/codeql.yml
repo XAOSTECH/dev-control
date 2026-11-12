@@ -41,7 +41,7 @@ jobs:
       has-languages: ${{ steps.detect.outputs.has-languages }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Detect CodeQL languages from repository contents
         id: detect
@@ -92,7 +92,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Initialise CodeQL (${{ matrix.language }} / ${{ matrix.build-mode }})
         uses: github/codeql-action/init@v4
