@@ -15,6 +15,7 @@ permissions:
   pull-requests: read
   contents: read
   checks: read
+  actions: read
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -83,6 +84,12 @@ jobs:
             // Grace period: let sibling workflows register their check runs
             await new Promise(r => setTimeout(r, 30_000));
 
+            // Identify this run's check suite to exclude our own check runs
+            const { data: runData } = await github.rest.actions.getWorkflowRun({
+              owner, repo, run_id: parseInt(process.env.GITHUB_RUN_ID),
+            });
+            const selfSuiteId = runData.check_suite_id;
+
             const deadline = Date.now() + timeoutMs;
 
             while (true) {
@@ -90,8 +97,8 @@ jobs:
                 owner, repo, ref: sha, per_page: 100,
               });
 
-              // Exclude this workflow's own check runs
-              const others = data.check_runs.filter(r => !r.name.startsWith(context.workflow));
+              // Exclude check runs from this workflow run's own suite
+              const others = data.check_runs.filter(r => r.check_suite?.id !== selfSuiteId);
 
               if (others.length === 0) {
                 core.info('No other check runs found — proceeding');
