@@ -3,10 +3,115 @@
     "repository": "dev-control",
     "current_branch": "main",
     "repo_url": "https://github.com/XAOSTECH/dev-control",
-    "generated": "2026-11-10T23:57:19Z",
+    "generated": "2026-11-13T03:38:32Z",
     "max_commits": 500
   },
   "commits": [
+    {
+      "sha": "2ce5f75e85aa990760e30747cd4a894ab9fba59f",
+      "short": "2ce5f75",
+      "parents": "e7279cf9dad52512db13ffe42c9b5aed6d2bc743",
+      "author": "xaos-bot",
+      "email": "262248812+xaos-bot@users.noreply.github.com",
+      "date": "2026-11-13T03:42:12Z",
+      "timestamp": 1794541332,
+      "subject": "fix(security): apply ShellCheck, shfmt and CodeQL remediation",
+      "refs": "origin/fix/auto-remediate-20261113-034212"
+    },
+    {
+      "sha": "ca3c9820d885e2652c41305b1cf3b188bfd4eda7",
+      "short": "ca3c982",
+      "parents": "e7279cf9dad52512db13ffe42c9b5aed6d2bc743",
+      "author": "xaos-bot",
+      "email": "262248812+xaos-bot@users.noreply.github.com",
+      "date": "2026-11-13T03:39:06Z",
+      "timestamp": 1794541146,
+      "subject": "chore: humanise hard-wrapped comments and prose",
+      "refs": "origin/humanise/20261113-033906"
+    },
+    {
+      "sha": "e7279cf9dad52512db13ffe42c9b5aed6d2bc743",
+      "short": "e7279cf",
+      "parents": "collapsed:af555b48d5734b7f53d9b805644760e153cb3415:c2ed0eaf03dd6120974e83772a9668b1c68d3056",
+      "author": "xaos-bot",
+      "email": "262248812+xaos-bot@users.noreply.github.com",
+      "date": "2026-11-13T03:38:32Z",
+      "timestamp": 1794541112,
+      "subject": "chore: update CHANGELOG for v0.5.16",
+      "refs": "HEAD -> main, tag: v0.5.16, tag: latest, origin/main"
+    },
+    {
+      "sha": "collapsed:af555b48d5734b7f53d9b805644760e153cb3415:c2ed0eaf03dd6120974e83772a9668b1c68d3056",
+      "short": "4",
+      "parents": "676ca788d50df6d6f1f3a20693baa1f264873281",
+      "author": "",
+      "email": "",
+      "date": "2026-11-13T03:32:05Z",
+      "timestamp": 1794540725,
+      "subject": "4 commits",
+      "refs": "",
+      "collapsed": true,
+      "count": 4
+    },
+    {
+      "sha": "6f592c7e17608546889fe1b1e8f08faa79216c27",
+      "short": "6f592c7",
+      "parents": "676ca788d50df6d6f1f3a20693baa1f264873281",
+      "author": "xaos-bot",
+      "email": "262248812+xaos-bot@users.noreply.github.com",
+      "date": "2026-11-13T03:07:09Z",
+      "timestamp": 1794539229,
+      "subject": "chore: humanise hard-wrapped comments and prose",
+      "refs": "origin/humanise/20261113-030709"
+    },
+    {
+      "sha": "676ca788d50df6d6f1f3a20693baa1f264873281",
+      "short": "676ca78",
+      "parents": "collapsed:717eefafd5372ee22b4a255bd081b42260e06e94:f7a5533455d14319e134da00fc7ba3a044c611fc",
+      "author": "xaoscience",
+      "email": "69734795+xaoscience@users.noreply.github.com",
+      "date": "2026-11-13T02:47:31Z",
+      "timestamp": 1794538051,
+      "subject": "fix(notify): handle CheckSuite notification type alongside WorkflowRun",
+      "refs": ""
+    },
+    {
+      "sha": "collapsed:717eefafd5372ee22b4a255bd081b42260e06e94:f7a5533455d14319e134da00fc7ba3a044c611fc",
+      "short": "30",
+      "parents": "6d9e37e2bfbbe20df20db3b2bce62f6e1b177392",
+      "author": "",
+      "email": "",
+      "date": "2026-11-13T02:35:23Z",
+      "timestamp": 1794537323,
+      "subject": "30 commits",
+      "refs": "",
+      "collapsed": true,
+      "count": 30
+    },
+    {
+      "sha": "6d9e37e2bfbbe20df20db3b2bce62f6e1b177392",
+      "short": "6d9e37e",
+      "parents": "collapsed:81f857cd042c6d037ee7f1283452e03cac7056d3:c55c857f00c95e71abfa2e1f0b32a9e75425d75f",
+      "author": "xaos-bot",
+      "email": "262248812+xaos-bot@users.noreply.github.com",
+      "date": "2026-11-11T04:44:36Z",
+      "timestamp": 1794372276,
+      "subject": "chore: update CHANGELOG for v0.5.15 (re-release)",
+      "refs": "tag: v0.5.15"
+    },
+    {
+      "sha": "collapsed:81f857cd042c6d037ee7f1283452e03cac7056d3:c55c857f00c95e71abfa2e1f0b32a9e75425d75f",
+      "short": "22",
+      "parents": "c2c2164ed169006c1a5abeb89cd90cfe268ca170",
+      "author": "",
+      "email": "",
+      "date": "2026-11-11T03:28:48Z",
+      "timestamp": 1794367728,
+      "subject": "22 commits",
+      "refs": "",
+      "collapsed": true,
+      "count": 22
+    },
     {
       "sha": "c2c2164ed169006c1a5abeb89cd90cfe268ca170",
       "short": "c2c2164",
@@ -16,7 +121,7 @@
       "date": "2026-11-10T23:57:19Z",
       "timestamp": 1794355039,
       "subject": "Merge pull request #121 from XAOSTECH:humanise/20261110-235645",
-      "refs": "HEAD -> main, origin/main"
+      "refs": ""
     },
     {
       "sha": "8008572a77462c2ba69eb9180813e35e6ead2bab",
@@ -27,7 +132,7 @@
       "date": "2026-11-10T23:56:45Z",
       "timestamp": 1794355005,
       "subject": "chore: humanise hard-wrapped comments and prose",
-      "refs": "origin/humanise/20261110-235645"
+      "refs": ""
     },
     {
       "sha": "b6a0cbfd6ad91187a11e877c67302c05038d0223",
@@ -38,7 +143,7 @@
       "date": "2026-11-10T23:56:16Z",
       "timestamp": 1794354976,
       "subject": "chore: update CHANGELOG for v0.5.15",
-      "refs": "tag: v0.5.15, tag: latest"
+      "refs": ""
     },
     {
       "sha": "collapsed:cea864b89d1a1ddb5ced55051f6e43a24a52b69a:55f63af24cfe13b9eb632e3febaa9fa6dee71696",
@@ -73,12 +178,12 @@
       "date": "2026-11-10T12:21:38Z",
       "timestamp": 1794313298,
       "subject": "fix(security): apply ShellCheck, shfmt and CodeQL remediation",
-      "refs": "origin/fix/auto-remediate-20261110-122138"
+      "refs": ""
     },
     {
       "sha": "6b187a40cc12786559815a8af385c8551d28671d",
       "short": "6b187a4",
-      "parents": "collapsed:04c612b869f97170bc6989cea05f425cf91b8488:4da6547cd08073698648eaba53bd883fb95a95b4",
+      "parents": "collapsed:04c612b869f97170bc6989cea05f425cf91b8488:7e50dabc1a6157a966463181357369f484ff2f63",
       "author": "xaoscience",
       "email": "69734795+xaoscience@users.noreply.github.com",
       "date": "2026-11-10T02:34:14Z",
@@ -87,39 +192,17 @@
       "refs": ""
     },
     {
-      "sha": "collapsed:04c612b869f97170bc6989cea05f425cf91b8488:4da6547cd08073698648eaba53bd883fb95a95b4",
-      "short": "5",
-      "parents": "7e50dabc1a6157a966463181357369f484ff2f63",
+      "sha": "collapsed:04c612b869f97170bc6989cea05f425cf91b8488:7e50dabc1a6157a966463181357369f484ff2f63",
+      "short": "6",
+      "parents": "20fd2fb58b7587482b257505c77c68ac079187cc",
       "author": "",
       "email": "",
       "date": "2026-11-10T02:10:06Z",
       "timestamp": 1794276606,
-      "subject": "5 commits",
+      "subject": "6 commits",
       "refs": "",
       "collapsed": true,
-      "count": 5
-    },
-    {
-      "sha": "62b70c4043128447999f4c5e31ce331e599cacfe",
-      "short": "62b70c4",
-      "parents": "7e50dabc1a6157a966463181357369f484ff2f63",
-      "author": "copilot-swe-agent[bot]",
-      "email": "198982749+Copilot@users.noreply.github.com",
-      "date": "2026-11-10T01:06:47Z",
-      "timestamp": 1794272807,
-      "subject": "Initial plan",
-      "refs": "origin/copilot/fix-security-alerts-review"
-    },
-    {
-      "sha": "7e50dabc1a6157a966463181357369f484ff2f63",
-      "short": "7e50dab",
-      "parents": "20fd2fb58b7587482b257505c77c68ac079187cc",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-11-10T01:05:41Z",
-      "timestamp": 1794272741,
-      "subject": "refactor(auto-remediate): coordination gate + shfmt + richer AI context",
-      "refs": ""
+      "count": 6
     },
     {
       "sha": "20fd2fb58b7587482b257505c77c68ac079187cc",
@@ -152,7 +235,7 @@
       "date": "2026-11-10T01:02:09Z",
       "timestamp": 1794272529,
       "subject": "chore(deps)(deps): bump actions/checkout from 6 to 7",
-      "refs": "origin/dependabot/github_actions/actions/checkout-7"
+      "refs": ""
     },
     {
       "sha": "2780aeb56f73b12a149aa5de65d5c45efb55353e",
@@ -262,7 +345,7 @@
       "date": "2026-11-10T00:42:57Z",
       "timestamp": 1794271377,
       "subject": "fix(security): apply automated ShellCheck and CodeQL remediation",
-      "refs": "origin/fix/auto-remediate-20261110-004257"
+      "refs": ""
     },
     {
       "sha": "a6fd746fbfe4a66a0c10c8aefaeba764be592186",
@@ -273,7 +356,7 @@
       "date": "2026-11-10T00:42:18Z",
       "timestamp": 1794271338,
       "subject": "chore(deps)(deps): bump actions/upload-pages-artifact from 3 to 5",
-      "refs": "origin/dependabot/github_actions/actions/upload-pages-artifact-5"
+      "refs": ""
     },
     {
       "sha": "68b696be6e8ea219486d31a530c202fe8f1919b5",
@@ -317,7 +400,7 @@
       "date": "2026-11-10T00:41:53Z",
       "timestamp": 1794271313,
       "subject": "chore(deps)(deps-dev): bump @types/node in /github-app",
-      "refs": "origin/dependabot/npm_and_yarn/github-app/types/node-26.6.6"
+      "refs": ""
     },
     {
       "sha": "1fc51ee2f436f5ad2017e30a4a008d0bc284e7e1",
@@ -517,7 +600,7 @@
     {
       "sha": "206d1b1cbf7510c2ba4a18a7ed025939ede85288",
       "short": "206d1b1",
-      "parents": "collapsed:8c57f59a1a894c6c62d2e1e9c52d776bd7d18fe0:51dc02bfc9a0474eaf6d40762e7abf49240f109d",
+      "parents": "collapsed:8c57f59a1a894c6c62d2e1e9c52d776bd7d18fe0:607054ecb37d96c13e82cb5c5fb525494aeecc0a",
       "author": "xaoscience",
       "email": "69734795+xaoscience@users.noreply.github.com",
       "date": "2026-10-14T03:11:39Z",
@@ -526,413 +609,17 @@
       "refs": ""
     },
     {
-      "sha": "collapsed:8c57f59a1a894c6c62d2e1e9c52d776bd7d18fe0:51dc02bfc9a0474eaf6d40762e7abf49240f109d",
-      "short": "19",
-      "parents": "9bc64e300f281575c9457cfd15da439a5cac64ff",
+      "sha": "collapsed:8c57f59a1a894c6c62d2e1e9c52d776bd7d18fe0:607054ecb37d96c13e82cb5c5fb525494aeecc0a",
+      "short": "37",
+      "parents": "285667a6918515400a065bbbf9fa17934cb0e382",
       "author": "",
       "email": "",
       "date": "2026-10-14T02:57:46Z",
       "timestamp": 1791946666,
-      "subject": "19 commits",
+      "subject": "37 commits",
       "refs": "",
       "collapsed": true,
-      "count": 19
-    },
-    {
-      "sha": "e67d4f45e9fd66d9245171db352c9593628da13a",
-      "short": "e67d4f4",
-      "parents": "76db386bdae49aa1b826f1a45c3a65da969188d0",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-10-13T23:57:51Z",
-      "timestamp": 1791935871,
-      "subject": "fix(dc-fix): push after direct-rebase sign, nest-mode dedup with conservative guard, DEDUP_TIMES=5 in full-fix",
-      "refs": "tag: backup/main-pre-drop-20261014T000612Z"
-    },
-    {
-      "sha": "9bc64e300f281575c9457cfd15da439a5cac64ff",
-      "short": "9bc64e3",
-      "parents": "c15c48e2957a2d378bb60a1ecaa9ae75cfe39b33",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-10-13T23:57:51Z",
-      "timestamp": 1791935871,
-      "subject": "fix(dc-fix): push after direct-rebase sign, nest-mode dedup with conservative guard, DEDUP_TIMES=5 in full-fix",
-      "refs": ""
-    },
-    {
-      "sha": "76db386bdae49aa1b826f1a45c3a65da969188d0",
-      "short": "76db386",
-      "parents": "316b2d021dbaa0d9762f5da1dfce7d188193050e",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-10-13T23:44:42Z",
-      "timestamp": 1791935082,
-      "subject": "feat(dc-fix): --offline/--online (default), conservative dedup in full-fix (chore only)",
-      "refs": ""
-    },
-    {
-      "sha": "c15c48e2957a2d378bb60a1ecaa9ae75cfe39b33",
-      "short": "c15c48e",
-      "parents": "aa867ac5db1570802429e08856a311d8fcfac00c",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-10-13T23:44:42Z",
-      "timestamp": 1791935082,
-      "subject": "feat(dc-fix): --offline/--online (default), conservative dedup in full-fix (chore only)",
-      "refs": ""
-    },
-    {
-      "sha": "316b2d021dbaa0d9762f5da1dfce7d188193050e",
-      "short": "316b2d0",
-      "parents": "300b85b6e1a44e2250d01f044091b30833945f97",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-10-13T23:24:42Z",
-      "timestamp": 1791933882,
-      "subject": "fix(dc-fix): skip archived repos in batch — read-only, signing cannot be pushed",
-      "refs": ""
-    },
-    {
-      "sha": "aa867ac5db1570802429e08856a311d8fcfac00c",
-      "short": "aa867ac",
-      "parents": "068a51bf9c51e1839a4786c8375896afecc4b91e",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-10-13T23:24:42Z",
-      "timestamp": 1791933882,
-      "subject": "fix(dc-fix): skip archived repos in batch — read-only, signing cannot be pushed",
-      "refs": ""
-    },
-    {
-      "sha": "300b85b6e1a44e2250d01f044091b30833945f97",
-      "short": "300b85b",
-      "parents": "ff22b2820671343041f7a9e099e71c113caa7eb1",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-10-13T23:21:54Z",
-      "timestamp": 1791933714,
-      "subject": "fix(dc-fix): auto-confirm branch override prompt when ASSUME_YES",
-      "refs": ""
-    },
-    {
-      "sha": "068a51bf9c51e1839a4786c8375896afecc4b91e",
-      "short": "068a51b",
-      "parents": "f0f295823818c122cdef326ebddc2f849d252229",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-10-13T23:21:54Z",
-      "timestamp": 1791933714,
-      "subject": "fix(dc-fix): auto-confirm branch override prompt when ASSUME_YES",
-      "refs": ""
-    },
-    {
-      "sha": "ff22b2820671343041f7a9e099e71c113caa7eb1",
-      "short": "ff22b28",
-      "parents": "d4b5a0dd0f823b61ddbe0290044acb66d22674a1",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-10-13T23:19:05Z",
-      "timestamp": 1791933545,
-      "subject": "fix(dc-fix): rebase failures return 1 not exit 1, exclude test-repo from batch",
-      "refs": ""
-    },
-    {
-      "sha": "f0f295823818c122cdef326ebddc2f849d252229",
-      "short": "f0f2958",
-      "parents": "390338ad897221c9dc7e67c95afc3d0173489685",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-10-13T23:19:05Z",
-      "timestamp": 1791933545,
-      "subject": "fix(dc-fix): rebase failures return 1 not exit 1, exclude test-repo from batch",
-      "refs": ""
-    },
-    {
-      "sha": "d4b5a0dd0f823b61ddbe0290044acb66d22674a1",
-      "short": "d4b5a0d",
-      "parents": "4c60c45ea6e54f655e21333a40c016995ce93b30",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-10-14T01:15:56+02:00",
-      "timestamp": 1791933356,
-      "subject": "fix(dc-fix): IFS corruption fix, auto-select topology option 2 in batch",
-      "refs": ""
-    },
-    {
-      "sha": "390338ad897221c9dc7e67c95afc3d0173489685",
-      "short": "390338a",
-      "parents": "e808ee1e96672e83f53cc814739407f36115f1e9",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-10-14T01:15:56+02:00",
-      "timestamp": 1791933356,
-      "subject": "fix(dc-fix): IFS corruption fix, auto-select topology option 2 in batch",
-      "refs": ""
-    },
-    {
-      "sha": "4c60c45ea6e54f655e21333a40c016995ce93b30",
-      "short": "4c60c45",
-      "parents": "97b3f711dee0be21c43906a764b6ff669e647019",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-10-14T01:15:56+02:00",
-      "timestamp": 1791933356,
-      "subject": "fix(dc-fix): prevent set -e exit on stash failure — use if ! pattern",
-      "refs": ""
-    },
-    {
-      "sha": "e808ee1e96672e83f53cc814739407f36115f1e9",
-      "short": "e808ee1",
-      "parents": "8e4cedcb7a655a28e18070e17c8dbbb8d3768749",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-10-14T01:15:56+02:00",
-      "timestamp": 1791933356,
-      "subject": "fix(dc-fix): prevent set -e exit on stash failure — use if ! pattern",
-      "refs": ""
-    },
-    {
-      "sha": "97b3f711dee0be21c43906a764b6ff669e647019",
-      "short": "97b3f71",
-      "parents": "56f148142a21967820a9d7e48cc25b9aab40f4d6",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-10-14T01:15:56+02:00",
-      "timestamp": 1791933356,
-      "subject": "fix(dc-fix): pre-stash with failure-skip, pop after ops, double-stash guard, first-parent depth, -y warning prompt",
-      "refs": ""
-    },
-    {
-      "sha": "8e4cedcb7a655a28e18070e17c8dbbb8d3768749",
-      "short": "8e4cedc",
-      "parents": "fb0fe96095dbe0751ac5cc86194e0edba3bfc0de",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-10-14T01:15:56+02:00",
-      "timestamp": 1791933356,
-      "subject": "fix(dc-fix): pre-stash with failure-skip, pop after ops, double-stash guard, first-parent depth, -y warning prompt",
-      "refs": ""
-    },
-    {
-      "sha": "56f148142a21967820a9d7e48cc25b9aab40f4d6",
-      "short": "56f1481",
-      "parents": "a40862234e1288c861098b950d634fd30eff193c",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-10-14T01:15:56+02:00",
-      "timestamp": 1791933356,
-      "subject": "fix(dc-fix): box rendering, origin/HEAD push, malformed date skip, batch noise",
-      "refs": ""
-    },
-    {
-      "sha": "fb0fe96095dbe0751ac5cc86194e0edba3bfc0de",
-      "short": "fb0fe96",
-      "parents": "088de2aed7d660a9a62a3b96d792e4fd784c2f3a",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-10-14T01:15:56+02:00",
-      "timestamp": 1791933356,
-      "subject": "fix(dc-fix): box rendering, origin/HEAD push, malformed date skip, batch noise",
-      "refs": ""
-    },
-    {
-      "sha": "a40862234e1288c861098b950d634fd30eff193c",
-      "short": "a408622",
-      "parents": "bfedb69f731197f85139214f725e6f91340015ab",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-10-14T01:15:56+02:00",
-      "timestamp": 1791933356,
-      "subject": "fix(dc-fix): owner guard from MEMBERS, --range respected, correct depth clamp, skip detached HEAD",
-      "refs": ""
-    },
-    {
-      "sha": "088de2aed7d660a9a62a3b96d792e4fd784c2f3a",
-      "short": "088de2a",
-      "parents": "12bef571e81d7d63e703d35050da04ab87a0aafe",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-10-14T01:15:56+02:00",
-      "timestamp": 1791933356,
-      "subject": "fix(dc-fix): owner guard from MEMBERS, --range respected, correct depth clamp, skip detached HEAD",
-      "refs": ""
-    },
-    {
-      "sha": "bfedb69f731197f85139214f725e6f91340015ab",
-      "short": "bfedb69",
-      "parents": "24a98fe91b0abb66ed2d4831a1e3996a0800e730",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-10-14T01:15:56+02:00",
-      "timestamp": 1791933356,
-      "subject": "fix(dc-fix): arithmetic 0\\n0 bug, depth clamping for shallow repos, --allow-empty in date restore",
-      "refs": ""
-    },
-    {
-      "sha": "12bef571e81d7d63e703d35050da04ab87a0aafe",
-      "short": "12bef57",
-      "parents": "6fb4129f661b36f82f94bce413875bcab99b9ad3",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-10-14T01:15:56+02:00",
-      "timestamp": 1791933356,
-      "subject": "fix(dc-fix): arithmetic 0\\n0 bug, depth clamping for shallow repos, --allow-empty in date restore",
-      "refs": ""
-    },
-    {
-      "sha": "24a98fe91b0abb66ed2d4831a1e3996a0800e730",
-      "short": "24a98fe",
-      "parents": "ddb465d72eab074949f3f09fbaecc6c5c234cb45",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-10-14T01:15:56+02:00",
-      "timestamp": 1791933356,
-      "subject": "chore(README): americanise",
-      "refs": ""
-    },
-    {
-      "sha": "6fb4129f661b36f82f94bce413875bcab99b9ad3",
-      "short": "6fb4129",
-      "parents": "2797c10c440aa5f0d09ad73e34de26170c74068a",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-10-14T01:15:56+02:00",
-      "timestamp": 1791933356,
-      "subject": "chore(README): americanise",
-      "refs": ""
-    },
-    {
-      "sha": "ddb465d72eab074949f3f09fbaecc6c5c234cb45",
-      "short": "ddb465d",
-      "parents": "440a89c2509263c389e4c06fdccbdc0984b519a4",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-10-14T01:15:56+02:00",
-      "timestamp": 1791933356,
-      "subject": "fix(dc-fix): ASSUME_YES unblocks cleanup in batch - auto-stash and skip interactive cleanup",
-      "refs": ""
-    },
-    {
-      "sha": "2797c10c440aa5f0d09ad73e34de26170c74068a",
-      "short": "2797c10",
-      "parents": "13cb83c869d300baf8b7b665302fc64b010566c8",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-10-14T01:15:56+02:00",
-      "timestamp": 1791933356,
-      "subject": "fix(dc-fix): ASSUME_YES unblocks cleanup in batch - auto-stash and skip interactive cleanup",
-      "refs": ""
-    },
-    {
-      "sha": "440a89c2509263c389e4c06fdccbdc0984b519a4",
-      "short": "440a89c",
-      "parents": "79f910d711fbe472f5aaa0b95474ef15012e2dcf",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-10-14T01:15:56+02:00",
-      "timestamp": 1791933356,
-      "subject": "fix(dc-fix): ASSUME_YES propagates to push/replace prompts; single batch warning before loop",
-      "refs": ""
-    },
-    {
-      "sha": "13cb83c869d300baf8b7b665302fc64b010566c8",
-      "short": "13cb83c",
-      "parents": "a2b303c73831bec640e52b89257022857e362d5c",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-10-14T01:15:56+02:00",
-      "timestamp": 1791933356,
-      "subject": "fix(dc-fix): ASSUME_YES propagates to push/replace prompts; single batch warning before loop",
-      "refs": ""
-    },
-    {
-      "sha": "79f910d711fbe472f5aaa0b95474ef15012e2dcf",
-      "short": "79f910d",
-      "parents": "c447c691f14156e816fc98cd41a3304f9e8624f6",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-10-14T01:15:56+02:00",
-      "timestamp": 1791933356,
-      "subject": "fix(dc-fix): --allow-empty on rebase amend, skip sign when already signed, fix rollback branch name",
-      "refs": ""
-    },
-    {
-      "sha": "a2b303c73831bec640e52b89257022857e362d5c",
-      "short": "a2b303c",
-      "parents": "f25962af47995508b7e1a86b6309d3ac2e6eddf7",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-10-14T01:15:56+02:00",
-      "timestamp": 1791933356,
-      "subject": "fix(dc-fix): --allow-empty on rebase amend, skip sign when already signed, fix rollback branch name",
-      "refs": ""
-    },
-    {
-      "sha": "c447c691f14156e816fc98cd41a3304f9e8624f6",
-      "short": "c447c69",
-      "parents": "d90dc0b41e06d556d4d56dcc3e9d24fdc77a7799",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-10-14T01:15:56+02:00",
-      "timestamp": 1791933356,
-      "subject": "fix(dc-fix): add --batch to --full-fix — iterates every sub-repo under cwd",
-      "refs": ""
-    },
-    {
-      "sha": "f25962af47995508b7e1a86b6309d3ac2e6eddf7",
-      "short": "f25962a",
-      "parents": "cef2ddc738989d7f0ff252476c42b81b82cb80ca",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-10-14T01:15:56+02:00",
-      "timestamp": 1791933356,
-      "subject": "fix(dc-fix): add --batch to --full-fix — iterates every sub-repo under cwd",
-      "refs": ""
-    },
-    {
-      "sha": "d90dc0b41e06d556d4d56dcc3e9d24fdc77a7799",
-      "short": "d90dc0b",
-      "parents": "ec4229bd745668dbf658fc2d4c3106293989b095",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-10-14T01:15:56+02:00",
-      "timestamp": 1791933356,
-      "subject": "chore: file mods",
-      "refs": ""
-    },
-    {
-      "sha": "cef2ddc738989d7f0ff252476c42b81b82cb80ca",
-      "short": "cef2ddc",
-      "parents": "607054ecb37d96c13e82cb5c5fb525494aeecc0a",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-10-14T01:15:56+02:00",
-      "timestamp": 1791933356,
-      "subject": "chore: file mods",
-      "refs": ""
-    },
-    {
-      "sha": "ec4229bd745668dbf658fc2d4c3106293989b095",
-      "short": "ec4229b",
-      "parents": "cf24e2aac218c5503443736d6e5a9eb3721f06c4",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-10-14T01:15:56+02:00",
-      "timestamp": 1791933356,
-      "subject": "feat(dc-fix,dc-init,dc): --full-fix mode, push guard, and full-fix menu entry",
-      "refs": ""
-    },
-    {
-      "sha": "607054ecb37d96c13e82cb5c5fb525494aeecc0a",
-      "short": "607054e",
-      "parents": "285667a6918515400a065bbbf9fa17934cb0e382",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-10-14T01:15:56+02:00",
-      "timestamp": 1791933356,
-      "subject": "feat(dc-fix,dc-init,dc): --full-fix mode, push guard, and full-fix menu entry",
-      "refs": ""
+      "count": 37
     },
     {
       "sha": "094c82824da3100b2ab126d40afee9225257ce30",
@@ -957,17 +644,6 @@
       "refs": "tag: v0.5.12"
     },
     {
-      "sha": "cf24e2aac218c5503443736d6e5a9eb3721f06c4",
-      "short": "cf24e2a",
-      "parents": "776781d875aab8bf78d8f564c60d4d5f149ada18",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-10-14T01:15:55+02:00",
-      "timestamp": 1791933355,
-      "subject": "chore: update CHANGELOG for v0.5.12",
-      "refs": ""
-    },
-    {
       "sha": "f12ca48d8a19f8fa2cfd1f014c24043502f53b3f",
       "short": "f12ca48",
       "parents": "80e6eee57610f5727a7fc59bd0ad399996011142",
@@ -982,17 +658,6 @@
       "sha": "a84d2f628c49150614fff223f214e0b228e683a7",
       "short": "a84d2f6",
       "parents": "00060fbbf91d7f70365953b045a9069cbd40fa3d",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-10-14T01:15:55+02:00",
-      "timestamp": 1791933355,
-      "subject": "Merge pull request #103 from XAOSTECH:humanise/20260918-132534",
-      "refs": ""
-    },
-    {
-      "sha": "776781d875aab8bf78d8f564c60d4d5f149ada18",
-      "short": "776781d",
-      "parents": "b322e19bf3dc42685fdd40b1a7b041bbb677cdb9",
       "author": "xaoscience",
       "email": "69734795+xaoscience@users.noreply.github.com",
       "date": "2026-10-14T01:15:55+02:00",
@@ -1023,17 +688,6 @@
       "refs": ""
     },
     {
-      "sha": "b322e19bf3dc42685fdd40b1a7b041bbb677cdb9",
-      "short": "b322e19",
-      "parents": "363aacfc63d986fb7894d27f7e969de94fae2203",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-10-14T01:15:55+02:00",
-      "timestamp": 1791933355,
-      "subject": "fix(humanise): include self",
-      "refs": ""
-    },
-    {
       "sha": "1b43a5eec8dfebf652ff3f1f919d30630f1016ac",
       "short": "1b43a5e",
       "parents": "51818b8e145bad29ef382d5c0aae469d2dc2ccfd",
@@ -1048,17 +702,6 @@
       "sha": "d2e4c2730e07fd3c8ff1fe6477703215d4c78668",
       "short": "d2e4c27",
       "parents": "b27d5cb6a1ff55030ce735dfeed6f0372365d9f2",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-10-14T01:15:55+02:00",
-      "timestamp": 1791933355,
-      "subject": "chore: humanise hard-wrapped comments and prose",
-      "refs": ""
-    },
-    {
-      "sha": "363aacfc63d986fb7894d27f7e969de94fae2203",
-      "short": "363aacf",
-      "parents": "02dfe3ef491f0e1b80d73ba9e66c725f5c0f4338",
       "author": "xaoscience",
       "email": "69734795+xaoscience@users.noreply.github.com",
       "date": "2026-10-14T01:15:55+02:00",
@@ -1089,17 +732,6 @@
       "refs": ""
     },
     {
-      "sha": "02dfe3ef491f0e1b80d73ba9e66c725f5c0f4338",
-      "short": "02dfe3e",
-      "parents": "c450491c08570fd35e2646cb7850bacc0d992e0a",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-10-14T01:15:55+02:00",
-      "timestamp": 1791933355,
-      "subject": "fix(anglicise): adapt + revalidate licence",
-      "refs": ""
-    },
-    {
       "sha": "38b52aaa121407699a853f4acc48615800369a88",
       "short": "38b52aa",
       "parents": "1c54956aa5a06953cc3c9971661d63ad33001140",
@@ -1114,17 +746,6 @@
       "sha": "e01bd5cc3a3c31e5a79dfa633ab7c8ea6091b05f",
       "short": "e01bd5c",
       "parents": "7d156fc29046edd1219ce5ea58752896ab7147ff",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-10-14T01:15:55+02:00",
-      "timestamp": 1791933355,
-      "subject": "Merge pull request #102 from XAOSTECH:humanise/20260915-080613",
-      "refs": ""
-    },
-    {
-      "sha": "c450491c08570fd35e2646cb7850bacc0d992e0a",
-      "short": "c450491",
-      "parents": "1cc63ab4368ae46a599317d35808ef397fb7d636",
       "author": "xaoscience",
       "email": "69734795+xaoscience@users.noreply.github.com",
       "date": "2026-10-14T01:15:55+02:00",
@@ -1155,17 +776,6 @@
       "refs": ""
     },
     {
-      "sha": "1cc63ab4368ae46a599317d35808ef397fb7d636",
-      "short": "1cc63ab",
-      "parents": "5fc78785eacba3f644c8276046f834a98c1f1fb8",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-10-14T01:15:55+02:00",
-      "timestamp": 1791933355,
-      "subject": "Merge pull request #101 from XAOSTECH:anglicise/20260907-091602",
-      "refs": ""
-    },
-    {
       "sha": "be3b729773d75dfed56add87a1c705d450d46f32",
       "short": "be3b729",
       "parents": "5b5aa24743a0bbe4639c2dba826a5e1431f38087",
@@ -1188,20 +798,9 @@
       "refs": ""
     },
     {
-      "sha": "5fc78785eacba3f644c8276046f834a98c1f1fb8",
-      "short": "5fc7878",
-      "parents": "c849892b7f31820f16ef1200a697ed4cc4dc7c26",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-10-14T01:15:55+02:00",
-      "timestamp": 1791933355,
-      "subject": "chore(README): re-americanise",
-      "refs": ""
-    },
-    {
       "sha": "5b5aa24743a0bbe4639c2dba826a5e1431f38087",
       "short": "5b5aa24",
-      "parents": "dc67fdce7f79f536d2ef34def2f3c809e38bbbf3",
+      "parents": "collapsed:dc67fdce7f79f536d2ef34def2f3c809e38bbbf3:9a63fafffeff8ca2d45a89a8e6cef1741216eb3b",
       "author": "xaoscience",
       "email": "69734795+xaoscience@users.noreply.github.com",
       "date": "2026-10-14T01:15:55+02:00",
@@ -1221,204 +820,22 @@
       "refs": ""
     },
     {
-      "sha": "c849892b7f31820f16ef1200a697ed4cc4dc7c26",
-      "short": "c849892",
-      "parents": "collapsed:c838b69af626be4df80cff102a271c87fbb9ae17:2f8cacd0f05d94e489b4addcb3a99db116775308",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-10-14T01:15:55+02:00",
-      "timestamp": 1791933355,
-      "subject": "chore: convert American spellings to British English",
-      "refs": ""
-    },
-    {
-      "sha": "dc67fdce7f79f536d2ef34def2f3c809e38bbbf3",
-      "short": "dc67fdc",
-      "parents": "148c58ba2bda82e29441deed6298190b02bf57ee",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-10-14T01:15:55+02:00",
-      "timestamp": 1791933355,
-      "subject": "fix(container): detect GPG key from git signingkey and prevent safe.directory accumulation",
-      "refs": ""
-    },
-    {
-      "sha": "collapsed:c838b69af626be4df80cff102a271c87fbb9ae17:2f8cacd0f05d94e489b4addcb3a99db116775308",
-      "short": "3",
-      "parents": "1b43a5eec8dfebf652ff3f1f919d30630f1016ac",
-      "author": "",
-      "email": "",
-      "date": "2026-10-14T01:15:55+02:00",
-      "timestamp": 1791933355,
-      "subject": "3 commits",
-      "refs": "",
-      "collapsed": true,
-      "count": 3
-    },
-    {
-      "sha": "1217692082283c55dcf77c152ec42319aafba4e7",
-      "short": "1217692",
-      "parents": "collapsed:6f98513d37a3431bccaf5c307359217df8959bfc:f7503e983017fb3882c13af7f2a51e899d4498f1",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-10-13T23:14:41Z",
-      "timestamp": 1791933281,
-      "subject": "fix(dc-fix): IFS corruption fix, auto-select topology option 2 in batch",
-      "refs": "tag: backup/main-pre-override-20261013T231605Z"
-    },
-    {
-      "sha": "collapsed:6f98513d37a3431bccaf5c307359217df8959bfc:f7503e983017fb3882c13af7f2a51e899d4498f1",
-      "short": "13",
-      "parents": "b893f6fc19f3530bd7d14a0164919357091735f7",
-      "author": "",
-      "email": "",
-      "date": "2026-10-13T23:09:09Z",
-      "timestamp": 1791932949,
-      "subject": "13 commits",
-      "refs": "",
-      "collapsed": true,
-      "count": 13
-    },
-    {
-      "sha": "b893f6fc19f3530bd7d14a0164919357091735f7",
-      "short": "b893f6f",
-      "parents": "3662ccb0e91d2465768b4b30ef3919ace3b7ac55 9f18dbe59bb4665d6b385ca3ae78aef5fff133f8",
-      "author": "xaostech[bot]",
-      "email": "260314499+xaostech[bot]@users.noreply.github.com",
-      "date": "2026-09-18T13:26:09Z",
-      "timestamp": 1789737969,
-      "subject": "Merge pull request #103 from XAOSTECH:humanise/20260918-132534",
-      "refs": ""
-    },
-    {
-      "sha": "9f18dbe59bb4665d6b385ca3ae78aef5fff133f8",
-      "short": "9f18dbe",
-      "parents": "3662ccb0e91d2465768b4b30ef3919ace3b7ac55",
-      "author": "xaos-bot",
-      "email": "262248812+xaos-bot@users.noreply.github.com",
-      "date": "2026-09-18T13:25:34Z",
-      "timestamp": 1789737934,
-      "subject": "chore: humanise hard-wrapped comments and prose",
-      "refs": ""
-    },
-    {
-      "sha": "3662ccb0e91d2465768b4b30ef3919ace3b7ac55",
-      "short": "3662ccb",
-      "parents": "4a1e9c54ebd39a3ed13525dbfc158f8c8e2fc5b9",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-09-18T13:15:59Z",
-      "timestamp": 1789737359,
-      "subject": "fix(humanise): include self",
-      "refs": ""
-    },
-    {
-      "sha": "4a1e9c54ebd39a3ed13525dbfc158f8c8e2fc5b9",
-      "short": "4a1e9c5",
-      "parents": "277cbd9bc37f8ca40ec95d5321c107a2df56ae44",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-09-18T13:15:59Z",
-      "timestamp": 1789737359,
-      "subject": "fix(anglicise): adapt + revalidate licence",
-      "refs": ""
-    },
-    {
-      "sha": "277cbd9bc37f8ca40ec95d5321c107a2df56ae44",
-      "short": "277cbd9",
-      "parents": "97e7d618e68d96ca9a78965b23cc7c2f32cf2fa4 dbd31228d214dfafe4332fe4361090276697092d",
-      "author": "xaostech[bot]",
-      "email": "260314499+xaostech[bot]@users.noreply.github.com",
-      "date": "2026-09-15T08:06:44Z",
-      "timestamp": 1789459604,
-      "subject": "Merge pull request #102 from XAOSTECH:humanise/20260915-080613",
-      "refs": ""
-    },
-    {
-      "sha": "dbd31228d214dfafe4332fe4361090276697092d",
-      "short": "dbd3122",
-      "parents": "97e7d618e68d96ca9a78965b23cc7c2f32cf2fa4",
-      "author": "xaos-bot",
-      "email": "262248812+xaos-bot@users.noreply.github.com",
-      "date": "2026-09-15T08:06:13Z",
-      "timestamp": 1789459573,
-      "subject": "chore: humanise hard-wrapped comments and prose",
-      "refs": ""
-    },
-    {
-      "sha": "97e7d618e68d96ca9a78965b23cc7c2f32cf2fa4",
-      "short": "97e7d61",
-      "parents": "eb3d61dca201736d37dc7cec2d2cec602557b567 b297e9301c037bee9fd234ca9809a9c0e88e1f90",
-      "author": "xaostech[bot]",
-      "email": "260314499+xaostech[bot]@users.noreply.github.com",
-      "date": "2026-09-07T09:16:38Z",
-      "timestamp": 1788772598,
-      "subject": "Merge pull request #101 from XAOSTECH:anglicise/20260907-091602",
-      "refs": ""
-    },
-    {
-      "sha": "b297e9301c037bee9fd234ca9809a9c0e88e1f90",
-      "short": "b297e93",
-      "parents": "eb3d61dca201736d37dc7cec2d2cec602557b567",
-      "author": "xaos-bot",
-      "email": "262248812+xaos-bot@users.noreply.github.com",
-      "date": "2026-09-07T09:16:02Z",
-      "timestamp": 1788772562,
-      "subject": "chore: convert American spellings to British English",
-      "refs": ""
-    },
-    {
-      "sha": "eb3d61dca201736d37dc7cec2d2cec602557b567",
-      "short": "eb3d61d",
-      "parents": "collapsed:a7bd6b52423311dfc9077552e03fd6107de1504c:c74c7c749b8616fd99f09c79d5dd03d54b6f211a",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-09-07T09:13:21Z",
-      "timestamp": 1788772401,
-      "subject": "chore(README): re-americanise",
-      "refs": ""
-    },
-    {
-      "sha": "collapsed:a7bd6b52423311dfc9077552e03fd6107de1504c:c74c7c749b8616fd99f09c79d5dd03d54b6f211a",
-      "short": "10",
-      "parents": "148c58ba2bda82e29441deed6298190b02bf57ee",
-      "author": "",
-      "email": "",
-      "date": "2026-09-06T14:40:31Z",
-      "timestamp": 1788705631,
-      "subject": "10 commits",
-      "refs": "",
-      "collapsed": true,
-      "count": 10
-    },
-    {
-      "sha": "148c58ba2bda82e29441deed6298190b02bf57ee",
-      "short": "148c58b",
-      "parents": "collapsed:1772789fbe5f7998d88812f3aad732fe279ea4aa:9a63fafffeff8ca2d45a89a8e6cef1741216eb3b",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-09-05T06:02:48Z",
-      "timestamp": 1788588168,
-      "subject": "fix(containerise): restore GPG signing in containers via explicit socket and keyring mounts",
-      "refs": ""
-    },
-    {
-      "sha": "collapsed:1772789fbe5f7998d88812f3aad732fe279ea4aa:9a63fafffeff8ca2d45a89a8e6cef1741216eb3b",
-      "short": "2",
+      "sha": "collapsed:dc67fdce7f79f536d2ef34def2f3c809e38bbbf3:9a63fafffeff8ca2d45a89a8e6cef1741216eb3b",
+      "short": "4",
       "parents": "b1498432473d3388c929a0a34ad11e93072caf8e",
       "author": "",
       "email": "",
-      "date": "2026-09-05T05:48:26Z",
-      "timestamp": 1788587306,
-      "subject": "2 commits",
+      "date": "2026-10-14T01:15:55+02:00",
+      "timestamp": 1791933355,
+      "subject": "4 commits",
       "refs": "",
       "collapsed": true,
-      "count": 2
+      "count": 4
     },
     {
       "sha": "b1498432473d3388c929a0a34ad11e93072caf8e",
       "short": "b149843",
-      "parents": "collapsed:fa89f685f177f8d1d720d18a6e82032bdd1272b2:1a6eb2e4a20f9165d03e76072fdc39f40668f941",
+      "parents": "collapsed:fa89f685f177f8d1d720d18a6e82032bdd1272b2:fad70cb3c71fd799fcee0722ce46a159a16e1346",
       "author": "xaoscience",
       "email": "69734795+xaoscience@users.noreply.github.com",
       "date": "2026-09-05T04:10:02Z",
@@ -1427,28 +844,17 @@
       "refs": "tag: v0.5.10"
     },
     {
-      "sha": "collapsed:fa89f685f177f8d1d720d18a6e82032bdd1272b2:1a6eb2e4a20f9165d03e76072fdc39f40668f941",
-      "short": "35",
-      "parents": "fad70cb3c71fd799fcee0722ce46a159a16e1346",
+      "sha": "collapsed:fa89f685f177f8d1d720d18a6e82032bdd1272b2:fad70cb3c71fd799fcee0722ce46a159a16e1346",
+      "short": "36",
+      "parents": "1855a65980a4487ea0f5005fb535e5025be27ed5",
       "author": "",
       "email": "",
       "date": "2026-09-05T03:05:08Z",
       "timestamp": 1788577508,
-      "subject": "35 commits",
+      "subject": "36 commits",
       "refs": "",
       "collapsed": true,
-      "count": 35
-    },
-    {
-      "sha": "fad70cb3c71fd799fcee0722ce46a159a16e1346",
-      "short": "fad70cb",
-      "parents": "1855a65980a4487ea0f5005fb535e5025be27ed5",
-      "author": "xaoscience",
-      "email": "69734795+xaoscience@users.noreply.github.com",
-      "date": "2026-08-23T05:30:57Z",
-      "timestamp": 1787463057,
-      "subject": "docs(roadmap): check Zsh and Fish support",
-      "refs": "tag: backup/main-pre-override-20260823T055838Z"
+      "count": 36
     },
     {
       "sha": "1855a65980a4487ea0f5005fb535e5025be27ed5",
@@ -1904,7 +1310,7 @@
     {
       "sha": "b96d2790514caeacfcdb0bd598661f7d12c41ffd",
       "short": "b96d279",
-      "parents": "collapsed:f4e8ac22cdd611dcf960d26ef0b8770524c20549:0a0afb7a4912420215e3a6f01cbc7ab12efb528e",
+      "parents": "collapsed:f4e8ac22cdd611dcf960d26ef0b8770524c20549:30e3798d3706dc4e449caada8c02500ee57e9e4d",
       "author": "xaoscience",
       "email": "69734795+xaoscience@users.noreply.github.com",
       "date": "2026-02-21T22:06:53+01:00",
@@ -1924,22 +1330,22 @@
       "refs": ""
     },
     {
-      "sha": "collapsed:f4e8ac22cdd611dcf960d26ef0b8770524c20549:0a0afb7a4912420215e3a6f01cbc7ab12efb528e",
-      "short": "11",
-      "parents": "64a73b63ae15111d2d2692dca311db4ae4e62d70",
+      "sha": "collapsed:f4e8ac22cdd611dcf960d26ef0b8770524c20549:30e3798d3706dc4e449caada8c02500ee57e9e4d",
+      "short": "13",
+      "parents": "c002d10d1d8475f604afe564ba0fee437cf9e129",
       "author": "",
       "email": "",
       "date": "2026-02-21T03:22:58+01:00",
       "timestamp": 1771640578,
-      "subject": "11 commits",
+      "subject": "13 commits",
       "refs": "",
       "collapsed": true,
-      "count": 11
+      "count": 13
     }
   ],
   "branches": [
     {
-      "name": "c2c2164ed169006c1a5abeb89cd90cfe268ca170 Merge pull request #121 from XAOSTECH:humanise/20261110-235645",
+      "name": "e7279cf9dad52512db13ffe42c9b5aed6d2bc743 chore: update CHANGELOG for v0.5.16",
       "sha": "*",
       "current": false,
       "merged": false
@@ -1947,20 +1353,8 @@
   ],
   "tags": [
     {
-      "name": "backup/main-pre-drop-20261014T000612Z",
-      "sha": "e67d4f45e9fd66d9245171db352c9593628da13a"
-    },
-    {
-      "name": "backup/main-pre-override-20260823T055838Z",
-      "sha": "fad70cb3c71fd799fcee0722ce46a159a16e1346"
-    },
-    {
-      "name": "backup/main-pre-override-20261013T231605Z",
-      "sha": "1217692082283c55dcf77c152ec42319aafba4e7"
-    },
-    {
       "name": "latest",
-      "sha": "ff101ac179dd6583554a037a7a27e9d5226fdfda"
+      "sha": "952e8571ee74452a469ced1e5dd34287a924c36c"
     },
     {
       "name": "v0.1.0",
@@ -2016,7 +1410,11 @@
     },
     {
       "name": "v0.5.15",
-      "sha": "5e1975faff546b98ebb75ba8382991be1b4dc877"
+      "sha": "2301a492629c2d5bc1842d1ff0918a8c631896ab"
+    },
+    {
+      "name": "v0.5.16",
+      "sha": "c9be371c606ffe8d1dfd8790e369d5352e512ed1"
     },
     {
       "name": "v0.5.2",
