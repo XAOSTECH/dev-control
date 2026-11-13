@@ -361,7 +361,7 @@ generate_git_config_dockerfile() {
         home_prefix="HOME=$home_dir "
     fi
 
-    local config="${home_prefix}git config --global --add safe.directory '*' && ${home_prefix}git config --global init.defaultBranch main"
+    local config="${home_prefix}git config --global --add safe.directory '*' && ${home_prefix}git config --global init.defaultBranch main && ${home_prefix}git config --global core.editor nano"
 
     if [[ -n "$user" && -n "$email" ]]; then
         config+=" && ${home_prefix}git config --global user.email $email && ${home_prefix}git config --global user.name $user"
@@ -381,7 +381,7 @@ generate_git_config_postcreate() {
     local email="$2"
     local gpg_key="$3"
 
-    local config="git config --global --get safe.directory '*' 2>/dev/null || git config --global --add safe.directory '*'; git config --global init.defaultBranch main"
+    local config="git config --global --get safe.directory '*' 2>/dev/null || git config --global --add safe.directory '*'; git config --global init.defaultBranch main; git config --global core.editor nano"
 
     if [[ -n "$user" && -n "$email" ]]; then
         config+=" && git config --global user.email $email && git config --global user.name $user"
