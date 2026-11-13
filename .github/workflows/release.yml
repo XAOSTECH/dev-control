@@ -395,7 +395,7 @@ jobs:
             echo "📊 Initial release"
             COMMIT_COUNT=$(git log --oneline | wc -l)
             echo "📊 Total commits: ${COMMIT_COUNT}"
-            git log --pretty=format:"%s" -20 > .commits-subjects.txt
+            git log --pretty=format:"%s" > .commits-subjects.txt
           fi
 
           echo "prev_tag=${PREV_TAG}" >> $GITHUB_OUTPUT
@@ -1044,9 +1044,17 @@ jobs:
           else
             echo "### Initial Release" >> "$NOTES_FILE"
             echo "" >> "$NOTES_FILE"
-            git log --pretty=format:"- %s (%h)" -10 >> "$NOTES_FILE"
+            git log "$TAG_NAME" --pretty=format:"- %s (%h)" >> "$NOTES_FILE"
           fi
           
+          # Detect install.sh location
+          INSTALL_SH_PATH=$(find . -name "install.sh" ! -path "./.git/*" -maxdepth 4 | head -1 | sed 's|^\./||')
+          if [[ -n "$INSTALL_SH_PATH" ]]; then
+            INSTALL_STEP=$(printf '\nchmod +x %s && sudo ./%s' "$INSTALL_SH_PATH" "$INSTALL_SH_PATH")
+          else
+            INSTALL_STEP=""
+          fi
+
           # Add installation instructions only if tarball exists
           if [[ -n "${tarball_name:-}" && -n "${tarball_sha256:-}" ]]; then
             cat >> "$NOTES_FILE" << EOF
@@ -1056,8 +1064,7 @@ jobs:
           ### Quick Install (tarball)
           \`\`\`bash
           curl -fsSL https://github.com/$GITHUB_REPOSITORY/releases/download/${TAG_NAME}/${tarball_name} | tar xz
-          cd ${tarball_name%.tar.gz}
-          chmod +x install.sh && sudo ./install.sh
+          cd ${tarball_name%.tar.gz}${INSTALL_STEP}
           \`\`\`
           
           ## Checksums
@@ -1092,14 +1099,13 @@ jobs:
           \`\`\`bash
           git clone https://github.com/$GITHUB_REPOSITORY.git
           cd $(basename $GITHUB_REPOSITORY)
-          git checkout ${TAG_NAME}
+          git checkout ${TAG_NAME}${INSTALL_STEP}
           \`\`\`
           
           ### Download Release Archive
           \`\`\`bash
           curl -fsSL https://github.com/$GITHUB_REPOSITORY/archive/refs/tags/${TAG_NAME}.tar.gz | tar xz
-          cd $(basename $GITHUB_REPOSITORY)-${TAG_NAME#v}
-          chmod +x install.sh && sudo ./install.sh
+          cd $(basename $GITHUB_REPOSITORY)-${TAG_NAME#v}${INSTALL_STEP}
           \`\`\`
           EOF
           fi
@@ -1449,7 +1455,7 @@ jobs:
             git log "${PREV_TAG}..${TAG_NAME}" --pretty=format:'- %s (%h)' >> "$NOTES_FILE"
           else
             printf '### Initial Release\n\n' >> "$NOTES_FILE"
-            git log "$TAG_NAME" --pretty=format:'- %s (%h)' -20 >> "$NOTES_FILE"
+            git log "$TAG_NAME" --pretty=format:'- %s (%h)' >> "$NOTES_FILE"
           fi
 
           printf '\n\n## Installation\n\n' >> "$NOTES_FILE"
@@ -1457,12 +1463,21 @@ jobs:
           # Use tarball install instructions if a tarball asset exists, otherwise source archive
           TARBALL_ASSET=$(gh release view "$TAG_NAME" --json assets \
             --jq '[.assets[] | select(.name | endswith(".tar.gz"))] | .[0].name // empty')
+          INSTALL_SH_PATH=$(find . -name "install.sh" ! -path "./.git/*" -maxdepth 4 | head -1 | sed 's|^\./||')
           if [[ -n "$TARBALL_ASSET" ]]; then
-            printf '### Quick Install (tarball)\n```bash\ncurl -fsSL https://github.com/%s/releases/download/%s/%s | tar xz\ncd %s\nchmod +x install.sh && sudo ./install.sh\n```\n' \
+            printf '### Quick Install (tarball)\n```bash\ncurl -fsSL https://github.com/%s/releases/download/%s/%s | tar xz\ncd %s\n' \
               "$GITHUB_REPOSITORY" "$TAG_NAME" "$TARBALL_ASSET" "${TARBALL_ASSET%.tar.gz}" >> "$NOTES_FILE"
+            if [[ -n "$INSTALL_SH_PATH" ]]; then
+              printf 'chmod +x %s && sudo ./%s\n' "$INSTALL_SH_PATH" "$INSTALL_SH_PATH" >> "$NOTES_FILE"
+            fi
+            printf '```\n' >> "$NOTES_FILE"
           else
-            printf '### From Source\n```bash\ngit clone https://github.com/%s.git\ncd %s\ngit checkout %s\n```\n' \
+            printf '### From Source\n```bash\ngit clone https://github.com/%s.git\ncd %s\ngit checkout %s\n' \
               "$GITHUB_REPOSITORY" "${GITHUB_REPOSITORY##*/}" "$TAG_NAME" >> "$NOTES_FILE"
+            if [[ -n "$INSTALL_SH_PATH" ]]; then
+              printf 'chmod +x %s && sudo ./%s\n' "$INSTALL_SH_PATH" "$INSTALL_SH_PATH" >> "$NOTES_FILE"
+            fi
+            printf '```\n' >> "$NOTES_FILE"
           fi
 
           printf '\n## Checksums\n\n| File | SHA256 |\n|------|--------|\n' >> "$NOTES_FILE"
