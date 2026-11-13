@@ -249,7 +249,7 @@ ensure_repo_labels() {
     local created=0
     for def in "${label_defs[@]}"; do
         local name color desc
-        IFS=':' read -r name color desc <<< "$def"
+        IFS=':' read -r name color desc <<<"$def"
         if echo "$existing" | grep -qxF "$name"; then
             continue
         fi
@@ -1431,13 +1431,13 @@ run_batch_update() {
         # If the user passed explicit paths that all lacked .git (likely a glob expansion like *),
         # offer to fall back to the current directory before giving up.
         local _had_explicit=false
-        [[ ${#POSITIONAL_ARGS[@]} -gt 1 || ( ${#POSITIONAL_ARGS[@]} -eq 1 && "${POSITIONAL_ARGS[0]}" != "." ) ]] \
+        [[ ${#POSITIONAL_ARGS[@]} -gt 1 || (${#POSITIONAL_ARGS[@]} -eq 1 && "${POSITIONAL_ARGS[0]}" != ".") ]] \
             && _had_explicit=true
         if [[ "$_had_explicit" == "true" && "${ASSUME_YES:-false}" != "true" ]]; then
             local _cwd_name
             _cwd_name=$(basename "$PWD")
             print_warning "None of the given paths contain a git repository."
-            read -rp "Did you mean to update the current folder '${_cwd_name}'? [Y/n]: " _fallback < /dev/tty
+            read -rp "Did you mean to update the current folder '${_cwd_name}'? [Y/n]: " _fallback </dev/tty
             if [[ "${_fallback:-y}" =~ ^[Yy] ]]; then
                 dirs=(".")
                 git_dirs=(".")
@@ -1485,7 +1485,8 @@ run_batch_update() {
 
     for d in "${git_dirs[@]}"; do
         print_header
-        local _d_label; _d_label="$([[ "$d" == "." ]] && basename "$PWD" || echo "$d")"
+        local _d_label
+        _d_label="$([[ "$d" == "." ]] && basename "$PWD" || echo "$d")"
         print_info "Updating: ${_d_label}"
 
         pushd "$d" >/dev/null || {
@@ -1512,7 +1513,8 @@ run_batch_update() {
             local is_member=false
             IFS=',' read -ra _members <<<"$members_list"
             for m in "${_members[@]}"; do
-                m="${m#"${m%%[! ]*}"}"; m="${m%"${m##*[! ]}"}"
+                m="${m#"${m%%[! ]*}"}"
+                m="${m%"${m##*[! ]}"}"
                 if [[ "$m" == "$remote_owner" ]]; then
                     is_member=true
                     break
@@ -1849,7 +1851,8 @@ run_batch_init() {
                     local is_member=false
                     IFS=',' read -ra _members <<<"$members_list"
                     for m in "${_members[@]}"; do
-                        m="${m#"${m%%[! ]*}"}"; m="${m%"${m##*[! ]}"}"
+                        m="${m#"${m%%[! ]*}"}"
+                        m="${m%"${m##*[! ]}"}"
                         if [[ "$m" == "$remote_owner" ]]; then
                             is_member=true
                             break

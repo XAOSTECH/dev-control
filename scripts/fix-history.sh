@@ -1122,17 +1122,19 @@ run_batch_cleanup() {
     for _repo in "${repos[@]}"; do
         pushd "$_repo" >/dev/null || continue
         local lt lb rt rb
-        lt=$(get_tmp_backup_tags); lb=$(get_tmp_backup_branches)
-        rt=$(get_remote_tmp_backup_tags); rb=$(get_remote_tmp_backup_branches)
-        local n=$(( $(count_lines "$lt") + $(count_lines "$lb") + $(count_lines "$rt") + $(count_lines "$rb") ))
+        lt=$(get_tmp_backup_tags)
+        lb=$(get_tmp_backup_branches)
+        rt=$(get_remote_tmp_backup_tags)
+        rb=$(get_remote_tmp_backup_branches)
+        local n=$(($(count_lines "$lt") + $(count_lines "$lb") + $(count_lines "$rt") + $(count_lines "$rb")))
         if [[ $n -gt 0 ]]; then
             local key
             key=$(printf '%s' "$_repo" | md5sum | cut -c1-16)
-            printf '%s' "$lt" > "$tmp_dir/${key}.lt"
-            printf '%s' "$lb" > "$tmp_dir/${key}.lb"
-            printf '%s' "$rt" > "$tmp_dir/${key}.rt"
-            printf '%s' "$rb" > "$tmp_dir/${key}.rb"
-            printf '%s' "$_repo" > "$tmp_dir/${key}.path"
+            printf '%s' "$lt" >"$tmp_dir/${key}.lt"
+            printf '%s' "$lb" >"$tmp_dir/${key}.lb"
+            printf '%s' "$rt" >"$tmp_dir/${key}.rt"
+            printf '%s' "$rb" >"$tmp_dir/${key}.rb"
+            printf '%s' "$_repo" >"$tmp_dir/${key}.path"
             total_refs=$((total_refs + n))
             print_info "  $_repo (${n} ref(s))"
             [[ -n "$lt" ]] && echo "$lt" | sed 's/^/    local tag:     /'
@@ -1175,9 +1177,9 @@ run_batch_cleanup() {
         local repo_path
         repo_path=$(cat "$key_path")
         pushd "$repo_path" >/dev/null || continue
-        delete_local_tags    "$(cat "$tmp_dir/${base}.lt" 2>/dev/null || true)"
+        delete_local_tags "$(cat "$tmp_dir/${base}.lt" 2>/dev/null || true)"
         delete_local_branches "$(cat "$tmp_dir/${base}.lb" 2>/dev/null || true)"
-        delete_remote_tags   "$(cat "$tmp_dir/${base}.rt" 2>/dev/null || true)"
+        delete_remote_tags "$(cat "$tmp_dir/${base}.rt" 2>/dev/null || true)"
         delete_remote_branches "$(cat "$tmp_dir/${base}.rb" 2>/dev/null || true)"
         print_success "  Cleaned: $repo_path"
         ((cleaned_repos++)) || true
