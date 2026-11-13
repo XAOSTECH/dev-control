@@ -40,7 +40,7 @@ jobs:
       - name: Dismiss triggered workflow's notification
         if: github.event.workflow_run.conclusion != 'failure'
         env:
-          GH_TOKEN: ${{ secrets['XB_UT'] }}
+          GH_TOKEN: ${{ secrets['US_UT'] }}
         run: |
           RUN_ID="${{ github.event.workflow_run.id }}"
           THREAD_ID=$(gh api "/notifications?per_page=100&all=true" \
@@ -55,7 +55,7 @@ jobs:
       - name: Dismiss previous suppress-notifications runs
         if: always()
         env:
-          GH_TOKEN: ${{ secrets['XB_UT'] }}
+          GH_TOKEN: ${{ secrets['US_UT'] }}
         run: |
           NOTIFY_WF_ID=$(gh api "/repos/${GITHUB_REPOSITORY}/actions/workflows" \
             --jq '.workflows[] | select(.path | endswith("notify.yml")) | .id' | head -1 || echo "")
