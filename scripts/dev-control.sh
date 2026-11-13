@@ -171,20 +171,8 @@ USAGE:
   dev-control.sh [COMMAND] [OPTIONS]
 
 COMMANDS:
-  alias, aliases     Install bash aliases (dc-aliases)
-  git                Git services menu (dc-git) - unified git workflows
-  init, template     Initialise repo with templates (dc-init)
-  repo, create       Create GitHub repository (dc-repo)
-  pr                 Create pull request (dc-pr)
-  modules, nest      Manage submodules (dc-modules)
-  fix, history       Fix commit history (dc-fix)
-  full-fix, ff       Dedup + GPG-sign recent commits, then optionally refresh templates (dc-full-fix)
-  licences, lic      Audit licences (dc-licences)
-  package, pkg       Build multi-platform packages (dc-package)
-  mcp                Setup MCP servers (dc-mcp)
-  cluster            Setup fully fledged cluster (init + container + mcp)
-  container          Setup devcontainer (dc-container)
-  help               Show this help message
+alias, aliases     Install bash aliases (dc-aliases) git                Git services menu (dc-git) - unified git workflows init, template     Initialise repo with templates (dc-init) repo, create       Create GitHub repository (dc-repo) pr                 Create pull request (dc-pr) modules, nest      Manage submodules (dc-modules) fix, history       Fix commit history (dc-fix) full-fix, ff       Dedup + GPG-sign recent commits, then optionally refresh templates (dc-full-fix) licences, lic      Audit licences (dc-licences) package, pkg       Build multi-platform packages (dc-package) mcp                Setup MCP servers (dc-mcp)
+cluster            Setup fully fledged cluster (init + container + mcp) container          Setup devcontainer (dc-container) help               Show this help message
 
 INTERACTIVE MODE:
   Run without arguments to use the interactive menu.

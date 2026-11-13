@@ -94,9 +94,7 @@ OPTIONS:
   -h, --help             Show this help
 
 EXAMPLES:
-  create-repo.sh                       # Create repo for current directory
-  create-repo.sh --edit topics         # Edit topics only
-  create-repo.sh --batch dir1 dir2     # Create repos for multiple dirs
+create-repo.sh                       # Create repo for current directory create-repo.sh --edit topics         # Edit topics only create-repo.sh --batch dir1 dir2     # Create repos for multiple dirs
 
 ALIASES:
   dc-repo, dc-create

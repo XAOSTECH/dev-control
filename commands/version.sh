@@ -81,8 +81,7 @@ USAGE:
   dc version [COMMAND] [OPTIONS]
 
 COMMANDS:
-  show            Show version information (default)
-  check           Check for updates
+show            Show version information (default) check           Check for updates
   update          Update to latest version
   changelog       Show recent changes
 
@@ -96,8 +95,7 @@ EXAMPLES:
   dc version --json         # JSON output
   dc version check          # Check for updates
   dc version update         # Perform update
-  dc version changelog      # Show recent changes
-  dc version changelog 1.0.0  # Show specific version
+dc version changelog      # Show recent changes dc version changelog 1.0.0  # Show specific version
 
 EOF
 }

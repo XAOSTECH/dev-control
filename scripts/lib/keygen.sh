@@ -363,13 +363,7 @@ dc-key — unified GPG identity & repo-secret manager
 
 USAGE:
   dc-key                 Interactive menu
-  dc-key --user          Personal signing key: generate, enrol, cache
-  dc-key --bot           Refresh machine/bot repo secrets (GPG private key + passphrase)
-  dc-key --token         Set / rotate the user token (PAT) repo secret
-  dc-key --status        Show key/secret status (read-only; values are never shown)
-  dc-key --dry-run       Report actions without making changes
-  dc-key --force         Override idempotency guards (rotate even if current)
-  dc-key --help          This help
+dc-key --user          Personal signing key: generate, enrol, cache dc-key --bot           Refresh machine/bot repo secrets (GPG private key + passphrase) dc-key --token         Set / rotate the user token (PAT) repo secret dc-key --status        Show key/secret status (read-only; values are never shown) dc-key --dry-run       Report actions without making changes dc-key --force         Override idempotency guards (rotate even if current) dc-key --help          This help
 
 All secret names are resolved from config/profiles/repoVars.env; nothing is hardcoded.
 EOF

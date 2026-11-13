@@ -66,9 +66,7 @@ show_help() {
 Dev-Control Containerisation - Build base images or generate devcontainers
 
 USAGE:
-  containerise.sh --base --CATEGORY     # Build a base image
-  containerise.sh --img --CATEGORY      # Generate devcontainer using base image
-  containerise.sh [PROJECT_PATH]        # Interactive mode (legacy)
+containerise.sh --base --CATEGORY     # Build a base image containerise.sh --img --CATEGORY      # Generate devcontainer using base image containerise.sh [PROJECT_PATH]        # Interactive mode (legacy)
 
 MODES:
   --base    Build a category base image (e.g., devcontrol/game-dev:latest)
@@ -95,19 +93,16 @@ CATEGORIES:
 
 EXAMPLES:
   # Build base images
-  cd ~/.dev-control/.devcontainer && containerise.sh --base --game-dev
-  cd ~/projects/streaming && containerise.sh --base --streaming
+  cd ~/.dev-control/.devcontainer && containerise.sh --base --game-dev cd ~/projects/streaming && containerise.sh --base --streaming
 
   # Generate devcontainers
-  cd ~/projects/my-game && containerise.sh --img --game-dev
-  cd ~/projects/web-app && containerise.sh --img --web-dev
+  cd ~/projects/my-game && containerise.sh --img --game-dev cd ~/projects/web-app && containerise.sh --img --web-dev
 
   # Rebuild all containers in a project tree
   cd ~/PRO && containerise.sh --nest
 
   # Rebuild only dev-tools containers (base + img) in a project tree
-  cd ~/PRO && containerise.sh --nest --dev-tools
-  cd ~/PRO && containerise.sh --nest --regen --dev-tools
+  cd ~/PRO && containerise.sh --nest --dev-tools cd ~/PRO && containerise.sh --nest --regen --dev-tools
 
   # Rebuild multiple categories at once
   cd ~/PRO && containerise.sh --nest --web-dev --streaming

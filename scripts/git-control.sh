@@ -98,16 +98,7 @@ WORKFLOW EXAMPLE:
   4. Create pull request:      git-control pr
 
 EXAMPLES:
-  git-control.sh                         # Interactive menu
-  git-control.sh init                    # Initialise templates
-  git-control.sh init --batch -y         # Batch init multiple repos
-  git-control.sh repo                    # Create repository
-  git-control.sh pr                      # Create pull request
-  git-control.sh fix --range HEAD=5      # Fix last 5 commits
-  git-control.sh fix --sign --dry-run    # Preview signing commits
-  git-control.sh licences --deep         # Deep licence scan
-  git-control.sh licences --apply MIT    # Apply MIT licence
-  git-control.sh gpg-setup               # Setup GPG bot for Actions
+git-control.sh                         # Interactive menu git-control.sh init                    # Initialise templates git-control.sh init --batch -y         # Batch init multiple repos git-control.sh repo                    # Create repository git-control.sh pr                      # Create pull request git-control.sh fix --range HEAD=5      # Fix last 5 commits git-control.sh fix --sign --dry-run    # Preview signing commits git-control.sh licences --deep         # Deep licence scan git-control.sh licences --apply MIT    # Apply MIT licence git-control.sh gpg-setup               # Setup GPG bot for Actions
 
 ALIASES (after running dc-aliases):
   dc-git         - This unified wrapper
