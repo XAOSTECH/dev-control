@@ -34,6 +34,8 @@ env:
 jobs:
   detect:
     name: Detect languages
+    # Skip push-triggered runs for PR merge commits — the PR scan already covered them
+    if: github.event_name != 'push' || !startsWith(github.event.head_commit.message, 'Merge pull request')
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.detect.outputs.matrix }}
