@@ -34,17 +34,22 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
+      - name: Wait for GitHub notification creation
+        run: sleep 10
+
       - name: Dismiss triggered workflow's notification
         if: github.event.workflow_run.conclusion != 'failure'
         env:
           GH_TOKEN: ${{ secrets['XB_UT'] }}
         run: |
           RUN_ID="${{ github.event.workflow_run.id }}"
-          THREAD_ID=$(gh api "/notifications?per_page=100" \
-            --jq ".[] | select(.subject.url | test(\"/${RUN_ID}$\")) | .id" \
-            2>/dev/null | head -1)
+          THREAD_ID=$(gh api "/notifications?per_page=100&all=true" \
+            --jq ".[] | select(.subject.url | test(\"/${RUN_ID}$\")) | .id" | head -1)
           if [[ -n "$THREAD_ID" ]]; then
             gh api "/notifications/threads/${THREAD_ID}" -X PATCH -f state=done 2>/dev/null || true
+            echo "Dismissed thread ${THREAD_ID} for run ${RUN_ID}"
+          else
+            echo "No notification found for run ${RUN_ID}"
           fi
 
       - name: Dismiss previous suppress-notifications runs
@@ -52,8 +57,22 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets['XB_UT'] }}
         run: |
-          gh api "/notifications?per_page=100" \
-            --jq ".[] | select(.repository.full_name == \"${GITHUB_REPOSITORY}\" and (.subject.title | test(\"Suppress CI Notifications\"))) | .id" \
-            2>/dev/null | while IFS= read -r tid; do
+          NOTIFY_WF_ID=$(gh api "/repos/${GITHUB_REPOSITORY}/actions/workflows" \
+            --jq '.workflows[] | select(.path | endswith("notify.yml")) | .id' | head -1 || echo "")
+          if [[ -z "$NOTIFY_WF_ID" ]]; then
+            echo "Could not resolve notify workflow ID"
+            exit 0
+          fi
+          COUNT=0
+          while IFS='|' read -r tid run_url; do
+            run_id="${run_url##*/}"
+            [[ "$run_id" =~ ^[0-9]+$ ]] || continue
+            wf_id=$(gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}" \
+              --jq '.workflow_id // empty' 2>/dev/null || echo "")
+            if [[ "$wf_id" == "$NOTIFY_WF_ID" ]]; then
               gh api "/notifications/threads/${tid}" -X PATCH -f state=done 2>/dev/null || true
-            done
+              COUNT=$((COUNT + 1))
+            fi
+          done < <(gh api "/notifications?per_page=100&all=true" \
+            --jq ".[] | select(.repository.full_name == \"${GITHUB_REPOSITORY}\" and .subject.type == \"WorkflowRun\") | \"\(.id)|\(.subject.url)\"")
+          echo "Dismissed ${COUNT} suppress-notifications thread(s)"
