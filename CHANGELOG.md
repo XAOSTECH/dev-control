@@ -1,5 +1,47 @@
 # Changelog
 
+## [0.5.16] - 2026-11-13
+
+### Added
+- reflow prose inside show_help heredoc blocks
+- bake core.editor=nano into every container git config
+- suppress CI notifications for non-failure runs
+- add sync-templates job to keep workflows-templates in sync
+- gate automerge on all sibling CI checks passing
+- friendlier --update UX for single-repo and glob-expansion cases
+
+### Fixed
+- trim whitespace from MEMBERS entries after comma-split
+- exclude own check runs by suite ID instead of name
+- skip git init for --batch and --update modes
+- handle CheckSuite notification type alongside WorkflowRun
+- use github user token instead of machine user token
+- wait for notification creation, switch to workflow-id matching
+- always run job and self-dismiss previous suppress-notifications runs
+- add --shell=bash and shebang auto-fix
+- correct sed backslash escaping for angle brackets
+- escape angle brackets in commit subjects for markdown
+- always overwrite CHANGELOG on re-release regardless of date
+- fix initial release coverage and conditional install.sh
+- surface errors in job log and use correct annotation severity
+- only trigger on changes to .github/static/**
+- skip gracefully when GitHub Pages is not enabled
+- use placeholder bracket notation for secrets
+- read glob-fallback prompt from /dev/tty to preserve stdin
+- correct stray extra brace in BOT_CLIENT_ID_SECRET expression
+- handle single-line <p> and blank accumulation in badge state machine
+- read LICENCE_TYPE (British) first in badge generation
+- preserve non-badge <p> blocks (icons) and body in readme_insert_badges
+- --update without --batch now updates the current repo
+- add dependabot/ branches to --only-cleanup sweep
+- close artifact-poisoning alert, harden duplicate-issue guard
+- push remote backup tag after sign/full-fix to survive /tmp reboot
+- honour LICENCE_TYPE from repoVars.env by normalising American spelling
+
+### Changed
+- chore(templates): sync action versions from .github/workflows
+- refactor(dc-fix): centralise all backup logic through lib/git/backup.sh
+
 ## [0.5.15] - 2026-11-11 (re-release)
 
 ### Added
