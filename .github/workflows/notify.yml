@@ -30,11 +30,12 @@ permissions:
 
 jobs:
   dismiss:
-    # Only dismiss on non-failure — failures stay in the inbox as intended
-    if: github.event.workflow_run.conclusion != 'failure'
+    # Always run so the self-cleanup step can dismiss stale suppress-notifications runs
+    if: always()
     runs-on: ubuntu-latest
     steps:
-      - name: Dismiss notification for completed run
+      - name: Dismiss triggered workflow's notification
+        if: github.event.workflow_run.conclusion != 'failure'
         env:
           GH_TOKEN: ${{ secrets['XB_UT'] }}
         run: |
@@ -45,3 +46,14 @@ jobs:
           if [[ -n "$THREAD_ID" ]]; then
             gh api "/notifications/threads/${THREAD_ID}" -X PATCH -f state=done 2>/dev/null || true
           fi
+
+      - name: Dismiss previous suppress-notifications runs
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets['XB_UT'] }}
+        run: |
+          gh api "/notifications?per_page=100" \
+            --jq ".[] | select(.repository.full_name == \"${GITHUB_REPOSITORY}\" and (.subject.title | test(\"Suppress CI Notifications\"))) | .id" \
+            2>/dev/null | while IFS= read -r tid; do
+              gh api "/notifications/threads/${tid}" -X PATCH -f state=done 2>/dev/null || true
+            done
