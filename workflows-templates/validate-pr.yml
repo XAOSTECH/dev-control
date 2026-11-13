@@ -88,7 +88,12 @@ jobs:
             const { data: runData } = await github.rest.actions.getWorkflowRun({
               owner, repo, run_id: parseInt(process.env.GITHUB_RUN_ID),
             });
-            const selfSuiteId = runData.check_suite_id;
+            // Collect all suite IDs for every run of this workflow on this SHA
+            // so concurrent runs (opened + labeled firing together) don't deadlock
+            const { data: sameWfRuns } = await github.rest.actions.listWorkflowRuns({
+              owner, repo, workflow_id: runData.workflow_id, head_sha: sha, per_page: 50,
+            });
+            const selfSuiteIds = new Set(sameWfRuns.workflow_runs.map(r => r.check_suite_id));
 
             const deadline = Date.now() + timeoutMs;
 
@@ -97,8 +102,8 @@ jobs:
                 owner, repo, ref: sha, per_page: 100,
               });
 
-              // Exclude check runs from this workflow run's own suite
-              const others = data.check_runs.filter(r => r.check_suite?.id !== selfSuiteId);
+              // Exclude check runs from any run of this workflow on this SHA
+              const others = data.check_runs.filter(r => !selfSuiteIds.has(r.check_suite?.id));
 
               if (others.length === 0) {
                 core.info('No other check runs found — proceeding');
