@@ -1039,11 +1039,11 @@ jobs:
           if [[ -n "$PREV_TAG" ]]; then
             echo "### Commits since ${PREV_TAG}" >> "$NOTES_FILE"
             echo "" >> "$NOTES_FILE"
-            git log "${PREV_TAG}..${TAG_NAME}" --pretty=format:"- %s (%h)" | sed 's/</\</g; s/>/\>/g' >> "$NOTES_FILE"
+            git log "${PREV_TAG}..${TAG_NAME}" --pretty=format:"- %s (%h)" | sed 's/</\\</g; s/>/\\>/g' >> "$NOTES_FILE"
           else
             echo "### Initial Release" >> "$NOTES_FILE"
             echo "" >> "$NOTES_FILE"
-            git log "$TAG_NAME" --pretty=format:"- %s (%h)" | sed 's/</\</g; s/>/\>/g' >> "$NOTES_FILE"
+            git log "$TAG_NAME" --pretty=format:"- %s (%h)" | sed 's/</\\</g; s/>/\\>/g' >> "$NOTES_FILE"
           fi
           
           # Detect install.sh location
@@ -1440,10 +1440,10 @@ jobs:
 
           if [[ -n "$PREV_TAG" ]]; then
             printf '### Commits since %s\n\n' "$PREV_TAG" >> "$NOTES_FILE"
-            git log "${PREV_TAG}..${TAG_NAME}" --pretty=format:'- %s (%h)' | sed 's/</\</g; s/>/\>/g' >> "$NOTES_FILE"
+            git log "${PREV_TAG}..${TAG_NAME}" --pretty=format:'- %s (%h)' | sed 's/</\\</g; s/>/\\>/g' >> "$NOTES_FILE"
           else
             printf '### Initial Release\n\n' >> "$NOTES_FILE"
-            git log "$TAG_NAME" --pretty=format:'- %s (%h)' | sed 's/</\</g; s/>/\>/g' >> "$NOTES_FILE"
+            git log "$TAG_NAME" --pretty=format:'- %s (%h)' | sed 's/</\\</g; s/>/\\>/g' >> "$NOTES_FILE"
           fi
 
           printf '\n\n## Installation\n\n' >> "$NOTES_FILE"
