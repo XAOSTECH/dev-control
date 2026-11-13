@@ -23,20 +23,11 @@ show_help() {
 Dev-Control Configuration Manager
 
 USAGE:
-  dc config                    Show current configuration
-  dc config get <key>          Get a specific value
-  dc config set <key> <value>  Set a value (project scope)
-  dc config set --global <key> <value>  Set globally
-  dc config edit               Open config in editor
-  dc config init               Initialise project config
+dc config                    Show current configuration dc config get <key>          Get a specific value dc config set <key> <value>  Set a value (project scope) dc config set --global <key> <value>  Set globally dc config edit               Open config in editor dc config init               Initialise project config
 
 KEYS:
-  default-licence       Default licence (MIT, GPL-3.0, etc.)
-  default-branch        Default branch name
-  auto-sign-commits     Sign commits with GPG (true/false)
-  auto-push-after-fix   Push after history fix (true/false)
-  github-org            Default GitHub organisation
-  template-set          Template set (default/minimal/full)
+default-licence       Default licence (MIT, GPL-3.0, etc.) default-branch        Default branch name
+auto-sign-commits     Sign commits with GPG (true/false) auto-push-after-fix   Push after history fix (true/false) github-org            Default GitHub organisation template-set          Template set (default/minimal/full)
 
 EXAMPLES:
   dc config

@@ -42,9 +42,7 @@ main() {
 Branch Renaming Tool - Rename branches or repositories
 
 USAGE:
-  rename.sh [OPTIONS] [OWNER] [BRANCH_SPEC] [PATHS...]
-  rename.sh --branch [SPEC]    # Rename a branch
-  rename.sh --repo NEW_NAME    # Rename the GitHub repository
+rename.sh [OPTIONS] [OWNER] [BRANCH_SPEC] [PATHS...] rename.sh --branch [SPEC]    # Rename a branch rename.sh --repo NEW_NAME    # Rename the GitHub repository
 
 ARGUMENTS:
   OWNER         GitHub user/org (default: current gh user)
@@ -61,11 +59,7 @@ OPTIONS:
   -h, --help        Show this help
 
 EXAMPLES:
-  dc fix rename --branch main              # Rename default branch to main
-  dc fix rename --repo modern-dating       # Rename repo on GitHub + update remote
-  dc fix rename Main:main ~/repos/*        # Local repos, explicit spec
-  rename.sh -n xaoscience Main:main        # Dry run
-  rename.sh "" Main:main ~/proj1 ~/proj2   # Multiple local repos
+dc fix rename --branch main              # Rename default branch to main dc fix rename --repo modern-dating       # Rename repo on GitHub + update remote dc fix rename Main:main ~/repos/*        # Local repos, explicit spec rename.sh -n xaoscience Main:main        # Dry run rename.sh "" Main:main ~/proj1 ~/proj2   # Multiple local repos
 
 NOTES:
   - --repo renames on GitHub and updates the local remote.origin URL

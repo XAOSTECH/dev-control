@@ -136,8 +136,7 @@ TOKEN MANAGEMENT:
   2. Optionally copied to clipboard (for easy pasting in VS Code)
   3. Displayed once (save it if you skip keyring/clipboard)
   
-  VS Code will prompt for the token on first MCP use and store it in
-  its secure credential vault automatically.
+  VS Code will prompt for the token on first MCP use and store it in its secure credential vault automatically.
   
   Storage options:
   1. VS Code Secure Vault (automatic after first prompt) - Most secure
@@ -146,11 +145,7 @@ TOKEN MANAGEMENT:
   4. GitHub CLI (gh auth token) - For testing/development
 
 EXAMPLES:
-  mcp-setup.sh               # Full setup with VS Code secure input
-  mcp-setup.sh --create-pat  # Create PAT + store in keyring (recommended)
-  mcp-setup.sh --test        # Test existing configuration
-  mcp-setup.sh --show-token  # Retrieve token from keyring/gh
-  mcp-setup.sh --config-only # Just create config file
+mcp-setup.sh               # Full setup with VS Code secure input mcp-setup.sh --create-pat  # Create PAT + store in keyring (recommended) mcp-setup.sh --test        # Test existing configuration mcp-setup.sh --show-token  # Retrieve token from keyring/gh mcp-setup.sh --config-only # Just create config file
 
 ALIASES:
   dc-mcp

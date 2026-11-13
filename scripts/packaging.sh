@@ -111,17 +111,10 @@ OPTIONS:
   -h, --help            Show this help message
 
 THEMES:
-  matrix                Green fluorescent terminal aesthetic
-  hacker                Orange/amber retro hacker style
-  cyber                 Blue cyberpunk neon look
+matrix                Green fluorescent terminal aesthetic hacker                Orange/amber retro hacker style cyber                 Blue cyberpunk neon look
 
 EXAMPLES:
-  packaging.sh --init                    # Create config file
-  packaging.sh --tarball --homebrew      # Build tarball + Homebrew
-  packaging.sh --all                     # Build everything
-  packaging.sh --snap --verbose          # Build snap with details
-  packaging.sh --docker                  # Build Docker image
-  packaging.sh --theme cyber --all       # Build all with cyber theme
+packaging.sh --init                    # Create config file packaging.sh --tarball --homebrew      # Build tarball + Homebrew packaging.sh --all                     # Build everything packaging.sh --snap --verbose          # Build snap with details packaging.sh --docker                  # Build Docker image packaging.sh --theme cyber --all       # Build all with cyber theme
 
 CONFIG FILE (.dc-package.yaml):
   name: my-tool

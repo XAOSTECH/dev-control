@@ -58,12 +58,7 @@ OPTIONS:
   -h, --help              Show this help message
 
 EXAMPLES:
-  licences.sh                           # Show licence for current repo
-  licences.sh --deep                    # Include all submodules
-  licences.sh --json --deep             # JSON output with submodules
-  licences.sh --check GPL-3.0           # Check if deps are compatible with GPL-3.0
-  licences.sh --apply MIT               # Apply MIT licence template
-  licences.sh /path/to/repo --deep      # Scan specific directory
+licences.sh                           # Show licence for current repo licences.sh --deep                    # Include all submodules licences.sh --json --deep             # JSON output with submodules licences.sh --check GPL-3.0           # Check if deps are compatible with GPL-3.0 licences.sh --apply MIT               # Apply MIT licence template licences.sh /path/to/repo --deep      # Scan specific directory
 
 OUTPUT:
   Default output shows a table with:

@@ -1384,11 +1384,7 @@ Options:
   -h, --help           Show this help
 
 Examples:
-  module-nesting.sh                          # Interactive: scan and update .gitmodules
-  module-nesting.sh /path/to/monorepo        # Scan a specific root directory
-  module-nesting.sh --copy-temp --dry-run    # Preview temp-dir consolidation
-  module-nesting.sh --aggressive --delete    # Consolidate + delete originals
-  module-nesting.sh --prune                  # Clean up stale consolidation records
+module-nesting.sh                          # Interactive: scan and update .gitmodules module-nesting.sh /path/to/monorepo        # Scan a specific root directory module-nesting.sh --copy-temp --dry-run    # Preview temp-dir consolidation module-nesting.sh --aggressive --delete    # Consolidate + delete originals module-nesting.sh --prune                  # Clean up stale consolidation records
 
 Aliases: dc-modules, dc-nest
 HELP
