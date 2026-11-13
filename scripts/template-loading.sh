@@ -1428,8 +1428,7 @@ run_batch_update() {
     done
 
     if [[ ${#git_dirs[@]} -eq 0 ]]; then
-        # If the user passed explicit paths that all lacked .git (likely a glob expansion like *),
-        # offer to fall back to the current directory before giving up.
+        # If the user passed explicit paths that all lacked .git (likely a glob expansion like *), offer to fall back to the current directory before giving up.
         local _had_explicit=false
         [[ ${#POSITIONAL_ARGS[@]} -gt 1 || ( ${#POSITIONAL_ARGS[@]} -eq 1 && "${POSITIONAL_ARGS[0]}" != "." ) ]] \
             && _had_explicit=true
