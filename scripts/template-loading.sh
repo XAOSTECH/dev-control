@@ -2143,7 +2143,10 @@ main() {
         DEFAULT_BRANCH="${branch_input:-$branch_hint}"
     fi
 
-    check_git_repo
+    # --batch and --update operate on discovered sub-repos, not cwd
+    if [[ "$BATCH_MODE" != "true" && "$UPDATE_ONLY" != "true" ]]; then
+        check_git_repo
+    fi
 
     local template_folders
     template_folders=$(discover_template_folders)
