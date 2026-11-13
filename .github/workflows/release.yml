@@ -420,6 +420,7 @@ jobs:
             esac
             [[ -n "${SEEN_SUBJECTS["$line"]:-}" ]] && continue
             SEEN_SUBJECTS["$line"]=1
+            line="${line//</\<}"; line="${line//>/\>}"
             msg="${line#*: }"
             case "$line" in
               feat:*|feat\(*) ADDED="${ADDED}\n- ${msg}" ;;
@@ -1038,11 +1039,11 @@ jobs:
           if [[ -n "$PREV_TAG" ]]; then
             echo "### Commits since ${PREV_TAG}" >> "$NOTES_FILE"
             echo "" >> "$NOTES_FILE"
-            git log "${PREV_TAG}..${TAG_NAME}" --pretty=format:"- %s (%h)" >> "$NOTES_FILE"
+            git log "${PREV_TAG}..${TAG_NAME}" --pretty=format:"- %s (%h)" | sed 's/</\</g; s/>/\>/g' >> "$NOTES_FILE"
           else
             echo "### Initial Release" >> "$NOTES_FILE"
             echo "" >> "$NOTES_FILE"
-            git log "$TAG_NAME" --pretty=format:"- %s (%h)" >> "$NOTES_FILE"
+            git log "$TAG_NAME" --pretty=format:"- %s (%h)" | sed 's/</\</g; s/>/\>/g' >> "$NOTES_FILE"
           fi
           
           # Detect install.sh location
@@ -1450,10 +1451,10 @@ jobs:
 
           if [[ -n "$PREV_TAG" ]]; then
             printf '### Commits since %s\n\n' "$PREV_TAG" >> "$NOTES_FILE"
-            git log "${PREV_TAG}..${TAG_NAME}" --pretty=format:'- %s (%h)' >> "$NOTES_FILE"
+            git log "${PREV_TAG}..${TAG_NAME}" --pretty=format:'- %s (%h)' | sed 's/</\</g; s/>/\>/g' >> "$NOTES_FILE"
           else
             printf '### Initial Release\n\n' >> "$NOTES_FILE"
-            git log "$TAG_NAME" --pretty=format:'- %s (%h)' >> "$NOTES_FILE"
+            git log "$TAG_NAME" --pretty=format:'- %s (%h)' | sed 's/</\</g; s/>/\>/g' >> "$NOTES_FILE"
           fi
 
           printf '\n\n## Installation\n\n' >> "$NOTES_FILE"
