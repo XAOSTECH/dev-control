@@ -1512,6 +1512,7 @@ run_batch_update() {
             local is_member=false
             IFS=',' read -ra _members <<<"$members_list"
             for m in "${_members[@]}"; do
+                m="${m#"${m%%[! ]*}"}"; m="${m%"${m##*[! ]}"}"
                 if [[ "$m" == "$remote_owner" ]]; then
                     is_member=true
                     break
@@ -1848,6 +1849,7 @@ run_batch_init() {
                     local is_member=false
                     IFS=',' read -ra _members <<<"$members_list"
                     for m in "${_members[@]}"; do
+                        m="${m#"${m%%[! ]*}"}"; m="${m%"${m##*[! ]}"}"
                         if [[ "$m" == "$remote_owner" ]]; then
                             is_member=true
                             break
