@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.5.17] - 2026-11-16
+
+### Fixed
+- skip push-triggered scan on PR merge commits
+- exclude all concurrent runs of same workflow on same SHA
+- apply ShellCheck, shfmt and CodeQL remediation
+
+### Changed
+- chore: humanise hard-wrapped comments and prose
+
 ## [0.5.16] - 2026-11-13
 
 ### Added
