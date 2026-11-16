@@ -81,8 +81,7 @@ USAGE:
   dc version [COMMAND] [OPTIONS]
 
 COMMANDS:
-show            Show version information (default) check           Check for updates update          Update to latest version
-  changelog       Show recent changes
+show            Show version information (default) check           Check for updates update          Update to latest version changelog       Show recent changes
 
 OPTIONS:
   -v, --verbose   Show detailed version info
