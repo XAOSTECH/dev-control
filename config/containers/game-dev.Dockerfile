@@ -40,12 +40,18 @@ RUN GLFW_VERSION=$(curl -s https://api.github.com/repos/glfw/glfw/releases/lates
     && cd / && rm -rf /tmp/glfw \
     && ldconfig
 
-# Install CUDA Toolkit 13.1
-RUN wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-keyring_1.1-1_all.deb -O /tmp/cuda-keyring.deb \
+# Install the latest stable CUDA Toolkit from the NVIDIA Ubuntu repo
+RUN CUDA_REPO_URL="$(. /etc/os-release 2>/dev/null || true; VERSION_ID="${VERSION_ID:-26.04}"; printf '%s' "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu${VERSION_ID//.}/x86_64/")" \
+    && CUDA_PACKAGE="$(curl -fsSL "$CUDA_REPO_URL" 2>/dev/null | grep -oE 'cuda-toolkit-[0-9]+-[0-9]+' | LC_ALL=C sort -V | tail -n 1 || echo 'cuda-toolkit-13-5')" \
+    && [ -n "$CUDA_PACKAGE" ] \
+    && CUDA_NVCC_PACKAGE="${CUDA_PACKAGE/cuda-toolkit-/cuda-nvcc-}" \
+    && CUDA_LIBRARIES_PACKAGE="${CUDA_PACKAGE/cuda-toolkit-/cuda-libraries-dev-}" \
+    && CUDA_CUDART_PACKAGE="${CUDA_PACKAGE/cuda-toolkit-/cuda-cudart-dev-}" \
+    && wget "${CUDA_REPO_URL}cuda-keyring_1.1-1_all.deb" -O /tmp/cuda-keyring.deb \
     && dpkg -i /tmp/cuda-keyring.deb && rm /tmp/cuda-keyring.deb \
     && apt-get update && apt-get install -y \
-        cuda-toolkit-13-1 cuda-nvcc-13-1 \
-        cuda-libraries-dev-13-1 cuda-cudart-dev-13-1 \
+        "$CUDA_PACKAGE" "$CUDA_NVCC_PACKAGE" \
+        "$CUDA_LIBRARIES_PACKAGE" "$CUDA_CUDART_PACKAGE" \
     && rm -rf /var/lib/apt/lists/*
 
 ENV PATH=/usr/local/cuda/bin:${PATH} \

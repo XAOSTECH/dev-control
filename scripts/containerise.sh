@@ -218,6 +218,34 @@ parse_args() {
     done
 }
 
+resolve_cuda_repo_url() {
+    local ubuntu_version
+    if [[ -f /etc/os-release ]]; then
+        ubuntu_version=$(source /etc/os-release >/dev/null 2>&1 && printf '%s' "${VERSION_ID//.}")
+    fi
+
+    if [[ -z "${ubuntu_version:-}" ]]; then
+        ubuntu_version="2604"
+    fi
+
+    printf '%s\n' "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu${ubuntu_version}/x86_64/"
+}
+
+resolve_cuda_package() {
+    local package repo_url
+    repo_url=$(resolve_cuda_repo_url)
+    package=$(curl -fsSL "$repo_url" 2>/dev/null \
+        | grep -oE 'cuda-toolkit-[0-9]+-[0-9]+' \
+        | LC_ALL=C sort -V \
+        | tail -n 1 || true)
+
+    if [[ -n "$package" ]]; then
+        printf '%s\n' "$package"
+    else
+        printf '%s\n' "cuda-toolkit-13-5"
+    fi
+}
+
 ################################################################################
 # Interactive Configuration
 ################################################################################
@@ -341,7 +369,7 @@ run_interactive_config() {
         echo -e "  ${DIM}Enable these for video streaming, transcoding, and GPU-accelerated workflows${NC}"
         echo ""
 
-        if confirm "Install CUDA Toolkit 13.1? (for GPU-accelerated compute)"; then
+        if confirm "Install the latest stable CUDA Toolkit? (for GPU-accelerated compute)"; then
             CFG_INSTALL_CUDA="true"
             CFG_ENABLE_NVIDIA_DEVICES="true"
         fi
@@ -382,7 +410,7 @@ run_interactive_config() {
 
     # Only show these if they were prompted (not using pre-built images or categories)
     if [[ "$MODE" != "image" && "$MODE" != "base" && "$CFG_USE_BASE_CATEGORY" != "true" ]]; then
-        print_kv "CUDA 13.1" "${CFG_INSTALL_CUDA:-false}"
+        print_kv "CUDA (latest stable)" "${CFG_INSTALL_CUDA:-false}"
         print_kv "FFmpeg (NVENC)" "${CFG_INSTALL_FFMPEG:-false}"
         print_kv "NGINX-RTMP" "${CFG_INSTALL_NGINX_RTMP:-false}"
         print_kv "Streaming utils" "${CFG_INSTALL_STREAMING_UTILS:-false}"
@@ -533,19 +561,25 @@ DOCKERFILE_EOF
         if [[ "$CFG_INSTALL_CUDA" == "true" ]]; then
             cat >>"$dockerfile_path" <<'DOCKERFILE_EOF'
 
-# Install CUDA Toolkit 13.1
-RUN curl -fsSL --retry 5 --retry-delay 10 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-keyring_1.1-1_all.deb -o /tmp/cuda-keyring.deb \
+# Install the latest stable CUDA Toolkit available from the NVIDIA Ubuntu repo
+RUN CUDA_REPO_URL="$(. /etc/os-release 2>/dev/null || true; VERSION_ID="${VERSION_ID:-26.04}"; printf '%s' "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu${VERSION_ID//.}/x86_64/")" \
+    && CUDA_PACKAGE="$(curl -fsSL "$CUDA_REPO_URL" 2>/dev/null | grep -oE 'cuda-toolkit-[0-9]+-[0-9]+' | LC_ALL=C sort -V | tail -n 1 || echo 'cuda-toolkit-13-5')" \
+    && [ -n "$CUDA_PACKAGE" ] \
+    && CUDA_NVCC_PACKAGE="${CUDA_PACKAGE/cuda-toolkit-/cuda-nvcc-}" \
+    && CUDA_LIBRARIES_PACKAGE="${CUDA_PACKAGE/cuda-toolkit-/cuda-libraries-dev-}" \
+    && CUDA_CUDART_PACKAGE="${CUDA_PACKAGE/cuda-toolkit-/cuda-cudart-dev-}" \
+    && curl -fsSL --retry 5 --retry-delay 10 "${CUDA_REPO_URL}cuda-keyring_1.1-1_all.deb" -o /tmp/cuda-keyring.deb \
     && dpkg -i /tmp/cuda-keyring.deb && rm /tmp/cuda-keyring.deb \
     && apt-get update && apt-get install -y --no-install-recommends \
-        cuda-toolkit-13-1 \
-        cuda-nvcc-13-1 \
-        cuda-libraries-dev-13-1 \
-        cuda-cudart-dev-13-1 \
+        "$CUDA_PACKAGE" \
+        "$CUDA_NVCC_PACKAGE" \
+        "$CUDA_LIBRARIES_PACKAGE" \
+        "$CUDA_CUDART_PACKAGE" \
     && rm -rf /var/lib/apt/lists/*
 
-ENV PATH=/usr/local/cuda-13.1/bin:$PATH \
-    LD_LIBRARY_PATH=/usr/local/cuda-13.1/lib64:$LD_LIBRARY_PATH \
-    CUDA_HOME=/usr/local/cuda-13.1
+ENV PATH=/usr/local/cuda/bin:$PATH \
+    LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH \
+    CUDA_HOME=/usr/local/cuda
 DOCKERFILE_EOF
         fi
 
@@ -587,8 +621,8 @@ RUN cd /tmp && git clone --depth 1 https://github.com/FFmpeg/FFmpeg.git ffmpeg \
         --enable-libsrt --enable-librist --enable-libzmq \
         --enable-cuda-nvcc --enable-cuvid --enable-nvenc --enable-nvdec \
         --enable-ffnvcodec \
-        --extra-cflags="-I/usr/local/cuda-13.1/include" \
-        --extra-ldflags="-L/usr/local/cuda-13.1/lib64" \
+        --extra-cflags="-I/usr/local/cuda/include" \
+        --extra-ldflags="-L/usr/local/cuda/lib64" \
     && make -j$(nproc) && make install && ldconfig \
     && cd / && rm -rf /tmp/ffmpeg
 DOCKERFILE_EOF
