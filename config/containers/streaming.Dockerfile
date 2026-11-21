@@ -8,18 +8,7 @@
 # SPDX-FileCopyrightText: 2025-2026 xaoscience
 
 # Install the latest stable CUDA Toolkit from the NVIDIA Ubuntu repo
-RUN CUDA_REPO_URL="$(. /etc/os-release 2>/dev/null || true; VERSION_ID="${VERSION_ID:-26.04}"; printf '%s' "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu${VERSION_ID//.}/x86_64/")" \
-    && CUDA_PACKAGE="$(curl -fsSL "$CUDA_REPO_URL" 2>/dev/null | grep -oE 'cuda-toolkit-[0-9]+-[0-9]+' | LC_ALL=C sort -V | tail -n 1 || echo 'cuda-toolkit-13-5')" \
-    && [ -n "$CUDA_PACKAGE" ] \
-    && CUDA_NVCC_PACKAGE="${CUDA_PACKAGE/cuda-toolkit-/cuda-nvcc-}" \
-    && CUDA_LIBRARIES_PACKAGE="${CUDA_PACKAGE/cuda-toolkit-/cuda-libraries-dev-}" \
-    && CUDA_CUDART_PACKAGE="${CUDA_PACKAGE/cuda-toolkit-/cuda-cudart-dev-}" \
-    && wget "${CUDA_REPO_URL}cuda-keyring_1.1-1_all.deb" -O /tmp/cuda-keyring.deb \
-    && dpkg -i /tmp/cuda-keyring.deb && rm /tmp/cuda-keyring.deb \
-    && apt-get update && apt-get install -y \
-        "$CUDA_PACKAGE" "$CUDA_NVCC_PACKAGE" \
-        "$CUDA_LIBRARIES_PACKAGE" "$CUDA_CUDART_PACKAGE" \
-    && rm -rf /var/lib/apt/lists/*
+RUN bash -lc 'set -e; if [ -f /etc/os-release ]; then . /etc/os-release; fi; VERSION_ID="${VERSION_ID:-26.04}"; CUDA_REPO_URL="https://developer.download.nvidia.com/compute/cuda/repos/ubuntu${VERSION_ID//.}/x86_64/"; CUDA_PACKAGE="$(curl -fsSL "$CUDA_REPO_URL" 2>/dev/null | grep -oE "cuda-toolkit-[0-9]+-[0-9]+" | LC_ALL=C sort -V | tail -n 1 || echo "cuda-toolkit-13-5")"; [ -n "$CUDA_PACKAGE" ]; CUDA_NVCC_PACKAGE="${CUDA_PACKAGE/cuda-toolkit-/cuda-nvcc-}"; CUDA_LIBRARIES_PACKAGE="${CUDA_PACKAGE/cuda-toolkit-/cuda-libraries-dev-}"; CUDA_CUDART_PACKAGE="${CUDA_PACKAGE/cuda-toolkit-/cuda-cudart-dev-}"; curl -fsSL --retry 5 --retry-delay 10 "${CUDA_REPO_URL}cuda-keyring_1.1-1_all.deb" -o /tmp/cuda-keyring.deb; dpkg -i /tmp/cuda-keyring.deb; rm -f /tmp/cuda-keyring.deb; apt-get update; apt-get install -y --no-install-recommends "$CUDA_PACKAGE" "$CUDA_NVCC_PACKAGE" "$CUDA_LIBRARIES_PACKAGE" "$CUDA_CUDART_PACKAGE"; rm -rf /var/lib/apt/lists/*'
 
 # Install CUDA 12.6 runtime libraries for ONNX Runtime 1.20.x compatibility
 RUN apt-get update && apt-get install -y --no-install-recommends \
