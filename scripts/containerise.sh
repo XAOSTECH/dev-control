@@ -178,11 +178,24 @@ parse_args() {
                 shift
                 ;;
             --exclude | --skip)
-                shift
+                if [[ "$1" == "--exclude" || "$1" == "--skip" ]]; then
+                    shift
+                    if [[ $# -gt 0 && "$1" != -* ]]; then
+                        EXCLUDE_DIRS+=("$1")
+                        shift
+                    fi
+                else
+                    EXCLUDE_DIRS+=("${1#*=}")
+                    shift
+                fi
                 while [[ $# -gt 0 && ! "$1" =~ ^- ]]; do
                     EXCLUDE_DIRS+=("$1")
                     shift
                 done
+                ;;
+            --exclude=* | --skip=*)
+                EXCLUDE_DIRS+=("${1#*=}")
+                shift
                 ;;
             --game-dev | --art | --data-science | --streaming | --web-dev | --dev-tools)
                 CATEGORY_FLAG="${1#--}"
