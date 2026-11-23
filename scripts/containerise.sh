@@ -221,7 +221,7 @@ parse_args() {
 resolve_cuda_repo_url() {
     local ubuntu_version
     if [[ -f /etc/os-release ]]; then
-        ubuntu_version=$(source /etc/os-release >/dev/null 2>&1 && printf '%s' "${VERSION_ID//.}")
+        ubuntu_version=$(source /etc/os-release >/dev/null 2>&1 && printf '%s' "${VERSION_ID//./}")
     fi
 
     if [[ -z "${ubuntu_version:-}" ]]; then
