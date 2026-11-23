@@ -10,16 +10,11 @@
 # Install the latest stable CUDA Toolkit from the NVIDIA Ubuntu repo
 RUN bash -lc 'set -e; if [ -f /etc/os-release ]; then . /etc/os-release; fi; VERSION_ID="${VERSION_ID:-26.04}"; CUDA_REPO_URL="https://developer.download.nvidia.com/compute/cuda/repos/ubuntu${VERSION_ID//.}/x86_64/"; CUDA_PACKAGE="$(curl -fsSL "$CUDA_REPO_URL" 2>/dev/null | grep -oE "cuda-toolkit-[0-9]+-[0-9]+" | LC_ALL=C sort -V | tail -n 1 || echo "cuda-toolkit-13-5")"; [ -n "$CUDA_PACKAGE" ]; CUDA_NVCC_PACKAGE="${CUDA_PACKAGE/cuda-toolkit-/cuda-nvcc-}"; CUDA_LIBRARIES_PACKAGE="${CUDA_PACKAGE/cuda-toolkit-/cuda-libraries-dev-}"; CUDA_CUDART_PACKAGE="${CUDA_PACKAGE/cuda-toolkit-/cuda-cudart-dev-}"; curl -fsSL --retry 5 --retry-delay 10 "${CUDA_REPO_URL}cuda-keyring_1.1-1_all.deb" -o /tmp/cuda-keyring.deb; dpkg -i /tmp/cuda-keyring.deb; rm -f /tmp/cuda-keyring.deb; apt-get update; apt-get install -y --no-install-recommends "$CUDA_PACKAGE" "$CUDA_NVCC_PACKAGE" "$CUDA_LIBRARIES_PACKAGE" "$CUDA_CUDART_PACKAGE"; rm -rf /var/lib/apt/lists/*'
 
-# Install CUDA 12.6 runtime libraries for ONNX Runtime 1.20.x compatibility
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        cuda-cudart-12-6 cuda-nvrtc-12-6 \
-        libcublas-12-6 libcufft-12-6 libcurand-12-6 \
-        libcusparse-12-6 libcusolver-12-6 \
-        libnvjitlink-12-6 libcudnn9-cuda-12 \
-    && rm -rf /var/lib/apt/lists/*
+# Install the newest compatible CUDA runtime libraries for the active toolkit release
+RUN bash -lc 'set -e; if [ -f /etc/os-release ]; then . /etc/os-release; fi; VERSION_ID="${VERSION_ID:-26.04}"; CUDA_REPO_URL="https://developer.download.nvidia.com/compute/cuda/repos/ubuntu${VERSION_ID//.}/x86_64/"; CUDA_PACKAGE="$(curl -fsSL "$CUDA_REPO_URL" 2>/dev/null | grep -oE "cuda-toolkit-[0-9]+-[0-9]+" | LC_ALL=C sort -V | tail -n 1 || echo "cuda-toolkit-13-5")"; CUDA_VERSION="${CUDA_PACKAGE/cuda-toolkit-/}"; CUDA_RUNTIME_PACKAGES=(); for pkg in cuda-cudart cuda-nvrtc libcublas libcufft libcurand libcusparse libcusolver libnvjitlink; do CUDA_RUNTIME_PACKAGES+=("${pkg}-${CUDA_VERSION}"); done; CUDA_CUDNN_PACKAGE="libcudnn9-cuda-${CUDA_VERSION%%-*}"; apt-get update; apt-get install -y --no-install-recommends "${CUDA_RUNTIME_PACKAGES[@]}" "$CUDA_CUDNN_PACKAGE"; rm -rf /var/lib/apt/lists/*'
 
 ENV PATH=/usr/local/cuda/bin:${PATH} \
-    LD_LIBRARY_PATH=/usr/local/cuda-12.6/lib64:/usr/local/cuda/lib64:${LD_LIBRARY_PATH} \
+    LD_LIBRARY_PATH=/usr/local/cuda/lib64:${LD_LIBRARY_PATH} \
     CUDA_HOME=/usr/local/cuda
 
 # Install FFmpeg build dependencies
