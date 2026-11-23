@@ -71,7 +71,7 @@ RUN conda create -y -n datasci python=3.12 && \
 RUN conda run -n datasci pip install --no-cache-dir \
     torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu126 \
     tensorflow[and-cuda] pytorch-lightning \
-    transformers huggingface-hub
+    transformers
 
 # Install spacy model (use direct conda env paths to avoid activation issues)
 RUN /opt/conda/envs/datasci/bin/python -m spacy download en_core_web_sm
