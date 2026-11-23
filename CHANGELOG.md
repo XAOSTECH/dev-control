@@ -1,13 +1,21 @@
 # Changelog
 
-## [0.5.17] - 2026-11-16
+## [0.5.17] - 2026-11-23 (re-release)
+
+### Added
+- resolve latest CUDA and bump Ubuntu version
+- add fullscan resume capabilites
+- fix fullscan errors + refactor
 
 ### Fixed
+- resolve CUDA build break on Ubuntu 26.04
 - skip push-triggered scan on PR merge commits
 - exclude all concurrent runs of same workflow on same SHA
 - apply ShellCheck, shfmt and CodeQL remediation
 
 ### Changed
+- chore(templates): sync action versions from .github/workflows
+- chore(deps)(deps): bump XAOSTECH/dev-control/.github/actions/identity
 - chore: humanise hard-wrapped comments and prose
 
 ## [0.5.16] - 2026-11-13
