@@ -81,15 +81,23 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install ONNX Runtime GPU (latest)
-RUN ONNX_VERSION=$(curl -s https://api.github.com/repos/intel/onnxruntime/releases/latest | jq -r '.tag_name' | tr -d 'v') \
-    && curl -fsSL "https://github.com/intel/onnxruntime/releases/download/v${ONNX_VERSION}/onnxruntime-linux-x64-${ONNX_VERSION}.tgz" -o /tmp/onnxruntime.tgz \
-    && tar -xzf /tmp/onnxruntime.tgz -C /opt \
-    && mv /opt/onnxruntime-linux-x64-${ONNX_VERSION} /opt/onnxruntime \
+RUN NUGET_BASE="https://api.nuget.org/v3-flatcontainer" \
+    && GPU_PKG="microsoft.ml.onnxruntime.gpu.linux" \
+    && BASE_PKG="microsoft.ml.onnxruntime" \
+    && ONNX_VERSION=$(curl -fsSL "${NUGET_BASE}/${GPU_PKG}/index.json" | jq -r '.versions[-1]') \
+    && curl -fsSL "${NUGET_BASE}/${GPU_PKG}/${ONNX_VERSION}/${GPU_PKG}.${ONNX_VERSION}.nupkg" -o /tmp/ort-gpu.nupkg \
+    && curl -fsSL "${NUGET_BASE}/${BASE_PKG}/${ONNX_VERSION}/${BASE_PKG}.${ONNX_VERSION}.nupkg" -o /tmp/ort-base.nupkg \
+    && mkdir -p /opt/onnxruntime/include /opt/onnxruntime/lib /tmp/ort-extract \
+    && python3 -c "import zipfile; zipfile.ZipFile('/tmp/ort-gpu.nupkg').extractall('/tmp/ort-extract'); zipfile.ZipFile('/tmp/ort-base.nupkg').extractall('/tmp/ort-extract')" \
+    && mv /tmp/ort-extract/runtimes/linux-x64/native/* /opt/onnxruntime/lib/ \
+    && mv /tmp/ort-extract/build/native/include/* /opt/onnxruntime/include/ \
     && ln -sf /opt/onnxruntime/include/* /usr/local/include/ \
     && ln -sf /opt/onnxruntime/lib/libonnxruntime.so* /usr/local/lib/ \
     && ln -sf /opt/onnxruntime/lib/libonnxruntime_providers_cuda.so /usr/local/lib/ \
     && ln -sf /opt/onnxruntime/lib/libonnxruntime_providers_shared.so /usr/local/lib/ \
-    && ldconfig && rm -f /tmp/onnxruntime.tgz
+    && ldconfig \
+    && rm -rf /tmp/ort-gpu.nupkg /tmp/ort-base.nupkg /tmp/ort-extract
+
 
 ENV ONNXRUNTIME_DIR=/opt/onnxruntime \
     LD_LIBRARY_PATH=/opt/onnxruntime/lib:${LD_LIBRARY_PATH}
