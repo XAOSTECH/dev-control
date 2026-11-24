@@ -52,6 +52,8 @@ RUN git clone --depth 1 https://git.ffmpeg.org/ffmpeg.git /tmp/ffmpeg \
     && make -j$(nproc) && make install \
     && rm -rf /tmp/ffmpeg && ldconfig
 
+ENV PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH}
+
 # Build NGINX with RTMP module
 RUN apt-get update && apt-get install -y libpcre2-dev libssl-dev zlib1g-dev \
     && rm -rf /var/lib/apt/lists/* \
@@ -75,16 +77,11 @@ RUN apt-get update && apt-get install -y mediainfo && rm -rf /var/lib/apt/lists/
 RUN apt-get update && apt-get install -y sox libsox-fmt-all && rm -rf /var/lib/apt/lists/*
 RUN apt-get update && apt-get install -y v4l-utils && rm -rf /var/lib/apt/lists/*
 
-# Install FFmpeg development headers
-RUN apt-get update && apt-get install -y \
-    libavformat-dev libavcodec-dev libavutil-dev libswscale-dev \
-    && rm -rf /var/lib/apt/lists/*
-
 # Install ONNX Runtime GPU (latest)
 RUN NUGET_BASE="https://api.nuget.org/v3-flatcontainer" \
     && GPU_PKG="microsoft.ml.onnxruntime.gpu.linux" \
     && BASE_PKG="microsoft.ml.onnxruntime" \
-    && ONNX_VERSION=$(curl -fsSL "${NUGET_BASE}/${GPU_PKG}/index.json" | jq -r '.versions[-1]') \
+    && ONNX_VERSION=$(curl -fsSL "${NUGET_BASE}/${GPU_PKG}/index.json" | jq -r '[.versions[] | select(test("^[0-9]+\\.[0-9]+\\.[0-9]+$"))] | last') \
     && curl -fsSL "${NUGET_BASE}/${GPU_PKG}/${ONNX_VERSION}/${GPU_PKG}.${ONNX_VERSION}.nupkg" -o /tmp/ort-gpu.nupkg \
     && curl -fsSL "${NUGET_BASE}/${BASE_PKG}/${ONNX_VERSION}/${BASE_PKG}.${ONNX_VERSION}.nupkg" -o /tmp/ort-base.nupkg \
     && mkdir -p /opt/onnxruntime/include /opt/onnxruntime/lib /tmp/ort-extract \
@@ -114,10 +111,11 @@ RUN apt-get update \
         "libnvinfer-lean${TRT_VER}" \
         "libnvinfer-vc-plugin${TRT_VER}" \
         "libnvinfer-dispatch${TRT_VER}" \
+        "libnvinfer${TRT_VER}" \
+        "libnvonnxparsers${TRT_VER}" \
         libnvinfer-headers-dev \
         bc sqlite3 \
     && rm -rf /var/lib/apt/lists/*
-
 
 # Export YOLOv8n to ONNX format
 RUN apt-get update && apt-get install -y --no-install-recommends python3-pip python3-venv \
