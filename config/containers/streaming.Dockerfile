@@ -117,15 +117,15 @@ RUN apt-get update \
         bc sqlite3 \
     && rm -rf /var/lib/apt/lists/*
 
-# Export YOLOv8n to ONNX format
+# Export YOLO26n to ONNX format
 RUN apt-get update && apt-get install -y --no-install-recommends python3-pip python3-venv \
     && python3 -m venv /tmp/yolo-export \
     && /tmp/yolo-export/bin/pip install ultralytics onnx onnxslim onnxruntime \
     && cd /tmp/yolo-export \
-    && /tmp/yolo-export/bin/python -c "from ultralytics import YOLO; model = YOLO('yolov8n.pt'); model.export(format='onnx', imgsz=640, opset=17, simplify=True)" \
+    && /tmp/yolo-export/bin/python -c "from ultralytics import YOLO; model = YOLO('yolo26n.pt'); model.export(format='onnx', imgsz=640, opset=17, simplify=True)" \
     && mkdir -p /opt/models \
-    && mv /tmp/yolo-export/yolov8n.onnx /opt/models/yolov8n.onnx \
-    && chmod 644 /opt/models/yolov8n.* \
+    && mv /tmp/yolo-export/yolo26n.onnx /opt/models/yolo26n.onnx \
+    && chmod 644 /opt/models/yolo26n.* \
     && rm -rf /tmp/yolo-export ~/.config/Ultralytics /tmp/Ultralytics \
     && apt-get purge -y python3-pip python3-venv \
     && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
