@@ -109,8 +109,8 @@ RUN YT_DLP_VERSION=$(curl -s https://api.github.com/repos/yt-dlp/yt-dlp/releases
 
 # Install TensorRT
 RUN apt-get update && apt-get install -y \
-    libnvinfer-lean10 libnvinfer-vc-plugin10 \
-    libnvinfer-dispatch10 libnvinfer-headers-dev \
+    libnvinfer-lean11 libnvinfer-vc-plugin11 \
+    libnvinfer-dispatch11 libnvinfer-headers-dev \
     bc sqlite3 \
     && rm -rf /var/lib/apt/lists/*
 
