@@ -108,11 +108,16 @@ RUN YT_DLP_VERSION=$(curl -s https://api.github.com/repos/yt-dlp/yt-dlp/releases
     && chmod a+rx /usr/local/bin/yt-dlp
 
 # Install TensorRT
-RUN apt-get update && apt-get install -y \
-    libnvinfer-lean11 libnvinfer-vc-plugin11 \
-    libnvinfer-dispatch11 libnvinfer-headers-dev \
-    bc sqlite3 \
+RUN apt-get update \
+    && TRT_VER=$(apt-cache search --names-only '^libnvinfer[0-9]+$' | sed -E 's/^libnvinfer([0-9]+).*/\1/' | sort -n | tail -n 1) \
+    && apt-get install -y \
+        "libnvinfer-lean${TRT_VER}" \
+        "libnvinfer-vc-plugin${TRT_VER}" \
+        "libnvinfer-dispatch${TRT_VER}" \
+        libnvinfer-headers-dev \
+        bc sqlite3 \
     && rm -rf /var/lib/apt/lists/*
+
 
 # Export YOLOv8n to ONNX format
 RUN apt-get update && apt-get install -y --no-install-recommends python3-pip python3-venv \
